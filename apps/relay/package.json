@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@remote-link/protocol": "workspace:*"
+    "@remote-link/protocol": "workspace:*",
+    "@modelcontextprotocol/server": "^2.1.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260920.0",
