@@ -21,6 +21,16 @@ async function callDevice(
   tool: string,
   args: Record<string, unknown>,
 ) {
+  const ownedDevice = await env.DB.prepare(
+    "SELECT id FROM devices WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL",
+  )
+    .bind(deviceId, identity.userId)
+    .first();
+
+  if (!ownedDevice) {
+    throw new Error("device not found or revoked");
+  }
+
   const response = await registry(env).fetch(
     new Request("https://registry/call", {
       method: "POST",
