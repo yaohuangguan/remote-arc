@@ -219,8 +219,8 @@ The local MCP remains the final capability boundary: a safe-mode device never ad
 - [x] multi-device routing
 - [x] Remote MCP endpoint
 - [x] basic device dashboard
-- [ ] production deploy to `remote.samyao.me`
-- [ ] connect SamPC through production relay
+- [x] production deploy to `remote.samyao.me`
+- [ ] connect SamPC through production relay (run `pnpm dev:agent` on SamPC)
 - [ ] add Remote MCP to ChatGPT and execute a real call
 
 ### Phase 2 — simple installation
