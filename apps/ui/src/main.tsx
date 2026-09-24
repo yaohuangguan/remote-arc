@@ -208,7 +208,7 @@ function PairDevice({
   }
 
   if (user === undefined) {
-    return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Checking your RemoteArc account.", "正在检查 RemoteArc 账户。")} />;
+    return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Checking your Remote Arc account.", "正在检查 Remote Arc 账户。")} />;
   }
 
   if (!user) {
@@ -230,7 +230,7 @@ function PairDevice({
     return (
       <CenteredCard
         title={tr("Device connected", "设备已连接")}
-        body={tr("Authorization is complete. Return to your terminal — RemoteArc will connect automatically.", "授权完成。返回终端，RemoteArc 会自动完成连接。")}
+        body={tr("Authorization is complete. Return to your terminal — Remote Arc will connect automatically.", "授权完成。返回终端，Remote Arc 会自动完成连接。")}
       >
         <div className="successMark">✓</div>
         <a className="secondaryLink" href="/">{tr("Back to dashboard", "返回控制台")}</a>
@@ -318,7 +318,7 @@ function OAuthConsent({ user }: { user: User | null | undefined }) {
       <section className="consentCard">
         <div className="consentIcon">↗</div>
         <span className="eyebrow">{tr("MCP AUTHORIZATION", "MCP 授权")}</span>
-        <h1>{tr("Allow this AI client to access RemoteArc?", "允许此 AI 客户端访问 RemoteArc？")}</h1>
+        <h1>{tr("Allow this AI client to access Remote Arc?", "允许此 AI 客户端访问 Remote Arc？")}</h1>
         <p>{tr("This client is requesting access to the computers linked to", "此客户端请求访问绑定到以下账户的设备：")} <strong>{user.email}</strong></p>
         <div className="clientIdBox"><span>Client</span><code>{clientId}</code></div>
         <div className="consentScopes">
@@ -357,7 +357,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
       {children}
       <footer className="publicFooter">
         <Brand compact />
-        <span>© 2026 RemoteArc · MIT</span>
+        <span>© 2026 Remote Arc · MIT</span>
         <a href="https://github.com/yaohuangguan/remote-link">GitHub</a>
       </footer>
     </main>
@@ -366,7 +366,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
 
 function Landing() {
   const { tr } = useI18n();
-  const command = "npx remotearc@latest";
+  const command = "npx remote-arc@latest";
   return (
     <PublicLayout>
       <section className="landingHero">
@@ -391,7 +391,7 @@ function Landing() {
           <div className="terminalBar"><div className="terminalDots"><i/><i/><i/></div><span>Terminal</span></div>
           <code>
             <span>$</span> {command}{"\n"}
-            <em>RemoteArc</em>{"\n\n"}
+            <em>Remote Arc</em>{"\n\n"}
             Pairing code: <strong>J7KD-P2QF</strong>{"\n"}
             Opening browser...{"\n\n"}
             <strong>✓ Device authorized</strong>{"\n"}
@@ -418,12 +418,12 @@ function Landing() {
           <span className="eyebrow">{tr("THE DIFFERENCE", "我们的差异")}</span>
           <h2>{tr("Hosted convenience without hosted lock-in.", "享受托管的省心，但不被托管平台锁死。")}</h2>
           <p>{tr(
-            "RemoteArc is built around an escape hatch: use our hosted relay when you want zero ops, or run the same control plane yourself when ownership matters more.",
-            "RemoteArc 从一开始就保留退出通道：想省心就用托管 Relay，想完全掌控就把同一套控制面部署到自己账户里。"
+            "Remote Arc is built around an escape hatch: use our hosted relay when you want zero ops, or run the same control plane yourself when ownership matters more.",
+            "Remote Arc 从一开始就保留退出通道：想省心就用托管 Relay，想完全掌控就把同一套控制面部署到自己账户里。"
           )}</p>
         </div>
         <div className="comparisonGrid">
-          <div className="comparisonHead"><span></span><strong>RemoteArc</strong><strong>{tr("Hosted-only connector", "纯托管连接器")}</strong></div>
+          <div className="comparisonHead"><span></span><strong>Remote Arc</strong><strong>{tr("Hosted-only connector", "纯托管连接器")}</strong></div>
           {[
             [tr("Control plane", "控制面"), tr("Hosted or self-hosted", "托管或自托管"), tr("Provider-owned", "平台持有")],
             [tr("AI clients", "AI 客户端"), tr("Standards-based Remote MCP", "标准 Remote MCP"), tr("Often product-specific", "通常绑定产品")],
@@ -442,7 +442,7 @@ function Landing() {
         <div>
           <span className="eyebrow">{tr("FREE HOSTED PLAN", "免费托管方案")}</span>
           <h2>{tr("10,000 tool calls every month.", "每月 10,000 次工具调用。")}</h2>
-          <p>{tr("Enough to make RemoteArc part of your daily workflow. Need full control? Self-host it.", "足够融入日常工作流。需要完全掌控？直接自托管。")}</p>
+          <p>{tr("Enough to make Remote Arc part of your daily workflow. Need full control? Self-host it.", "足够融入日常工作流。需要完全掌控？直接自托管。")}</p>
         </div>
         <a className="primaryButton goldButton" href="/pricing">{tr("View pricing", "查看价格")}</a>
       </section>
@@ -457,7 +457,7 @@ function PricingPage() {
       <section className="publicHero compactHero">
         <span className="eyebrow">{tr("PRICING", "价格")}</span>
         <h1>{tr("Start free. Keep an exit door.", "免费开始，也永远保留退出与自托管的自由。")}</h1>
-        <p>{tr("Hosted RemoteArc gives every account 10,000 tool calls per month. The open-source self-hosted edition can run without a RemoteArc usage cap.", "RemoteArc 托管版每个账户每月包含 10,000 次工具调用；开源自托管版本可以不受 RemoteArc 调用额度限制。")}</p>
+        <p>{tr("Hosted Remote Arc gives every account 10,000 tool calls per month. The open-source self-hosted edition can run without a Remote Arc usage cap.", "Remote Arc 托管版每个账户每月包含 10,000 次工具调用；开源自托管版本可以不受 Remote Arc 调用额度限制。")}</p>
       </section>
       <section className="pricingGrid">
         <article className="priceCard featured">
@@ -477,7 +477,7 @@ function PricingPage() {
           <h2>$0 <small>{tr("software", "软件")}</small></h2>
           <p>{tr("Run the control plane on your own Cloudflare account and domain.", "把控制面部署到你自己的 Cloudflare 账户与域名。")}</p>
           <ul>
-            <li>{tr("No RemoteArc usage cap", "不受 RemoteArc 调用额度限制")}</li>
+            <li>{tr("No Remote Arc usage cap", "不受 Remote Arc 调用额度限制")}</li>
             <li>{tr("Open-source MIT codebase", "MIT 开源代码")}</li>
             <li>{tr("Own relay, D1 and device routing", "掌握 Relay、D1 与设备路由")}</li>
             <li>{tr("Bring your own infrastructure", "使用你自己的基础设施")}</li>
@@ -506,14 +506,14 @@ function ResourcesPage() {
     [tr("Quick start", "快速开始"), tr("Pair a computer with one command and connect it to the hosted relay.", "一条命令配对电脑并连接到托管 Relay。"), "/docs/mcp"],
     [tr("Architecture", "架构"), tr("Understand Worker, D1, Durable Objects, device agents and the local execution core.", "了解 Worker、D1、Durable Objects、设备 Agent 与本地执行核心。"), "https://github.com/yaohuangguan/remote-link"],
     [tr("Security model", "安全模型"), tr("Per-device credentials, local permissions, OAuth scopes and privacy-preserving audit.", "每设备凭证、本机权限、OAuth Scope 与隐私审计。"), "https://github.com/yaohuangguan/remote-link/blob/master/SECURITY.md"],
-    [tr("Source code", "源代码"), tr("RemoteArc is open source under the MIT license.", "RemoteArc 采用 MIT 许可证开源。"), "https://github.com/yaohuangguan/remote-link"],
+    [tr("Source code", "源代码"), tr("Remote Arc is open source under the MIT license.", "Remote Arc 采用 MIT 许可证开源。"), "https://github.com/yaohuangguan/remote-link"],
   ];
   return (
     <PublicLayout>
       <section className="publicHero compactHero">
         <span className="eyebrow">{tr("RESOURCES", "资源")}</span>
         <h1>{tr("Build, inspect and self-host.", "搭建、理解，并自托管。")}</h1>
-        <p>{tr("RemoteArc is designed to be understandable infrastructure, not a black box.", "RemoteArc 希望成为你能理解、能修改、能掌控的基础设施，而不是黑盒。")}</p>
+        <p>{tr("Remote Arc is designed to be understandable infrastructure, not a black box.", "Remote Arc 希望成为你能理解、能修改、能掌控的基础设施，而不是黑盒。")}</p>
       </section>
       <section className="resourceGrid">
         {items.map(([title, body, href]) => (
@@ -533,17 +533,17 @@ function McpPage() {
       <section className="publicHero compactHero">
         <span className="eyebrow">REMOTE MCP</span>
         <h1>{tr("One MCP endpoint. All your computers.", "一个 MCP 端点，连接你的所有电脑。")}</h1>
-        <p>{tr("RemoteArc exposes a standards-based Remote MCP endpoint protected by OAuth 2.1 + PKCE, then routes each call to the device you choose.", "RemoteArc 提供基于标准的 Remote MCP 端点，通过 OAuth 2.1 + PKCE 保护，并把每次调用路由到你指定的设备。")}</p>
+        <p>{tr("Remote Arc exposes a standards-based Remote MCP endpoint protected by OAuth 2.1 + PKCE, then routes each call to the device you choose.", "Remote Arc 提供基于标准的 Remote MCP 端点，通过 OAuth 2.1 + PKCE 保护，并把每次调用路由到你指定的设备。")}</p>
       </section>
       <section className="mcpDocsGrid">
         <article className="docsCard wideDocs">
           <span className="eyebrow">{tr("ENDPOINT", "端点")}</span>
           <code className="heroCode">https://remote.samyao.me/mcp</code>
-          <p>{tr("Add this once in ChatGPT Developer Mode. RemoteArc handles OAuth discovery, sign-in and device routing.", "在 ChatGPT Developer Mode 中添加一次即可。RemoteArc 会处理 OAuth 发现、登录与设备路由。")}</p>
+          <p>{tr("Add this once in ChatGPT Developer Mode. Remote Arc handles OAuth discovery, sign-in and device routing.", "在 ChatGPT Developer Mode 中添加一次即可。Remote Arc 会处理 OAuth 发现、登录与设备路由。")}</p>
         </article>
         <article className="docsCard"><h2>{tr("Scopes", "权限范围")}</h2><code>devices:read</code><code>computer:read</code><code>computer:write</code></article>
         <article className="docsCard"><h2>{tr("Core tools", "核心工具")}</h2><code>list_devices</code><code>read_file</code><code>write_file</code><code>start_process</code></article>
-        <article className="docsCard"><h2>{tr("Device install", "设备安装")}</h2><code>npx remotearc@latest</code><p>{tr("Pair in the browser, then the CLI keeps an outbound connection to the relay.", "浏览器完成配对后，CLI 会保持到 Relay 的出站连接。")}</p></article>
+        <article className="docsCard"><h2>{tr("Device install", "设备安装")}</h2><code>npx remote-arc@latest</code><p>{tr("Pair in the browser, then the CLI keeps an outbound connection to the relay.", "浏览器完成配对后，CLI 会保持到 Relay 的出站连接。")}</p></article>
         <article className="docsCard"><h2>{tr("Local control", "本机控制")}</h2><p>{tr("Safe and developer permission modes determine which tools a device advertises.", "Safe 与 Developer 权限模式决定设备实际开放哪些工具。")}</p></article>
       </section>
     </PublicLayout>
@@ -575,7 +575,7 @@ function Dashboard({
   const { tr, locale, setLocale } = useI18n();
   const [showAdd, setShowAdd] = useState(false);
   const [active, setActive] = useState<DashboardTab>("overview");
-  const command = "npx remotearc@latest";
+  const command = "npx remote-arc@latest";
   const safeCommand = command + " --safe";
   const mcpEndpoint = location.origin + "/mcp";
   const deviceNameById = useMemo(() => new Map(devices.map((device) => [device.id, device.name])), [devices]);
@@ -708,11 +708,11 @@ function Dashboard({
 
         {active === "connect" && (
           <>
-            <section className="pageHeader"><div><span className="eyebrow">{tr("CONNECT AI", "连接 AI")}</span><h1>{tr("One endpoint for every machine.", "一个端点，连接所有设备。")}</h1><p>{tr("RemoteArc exposes a standards-based Remote MCP protected by OAuth 2.1 + PKCE.", "RemoteArc 提供由 OAuth 2.1 + PKCE 保护的标准 Remote MCP。")}</p></div></section>
+            <section className="pageHeader"><div><span className="eyebrow">{tr("CONNECT AI", "连接 AI")}</span><h1>{tr("One endpoint for every machine.", "一个端点，连接所有设备。")}</h1><p>{tr("Remote Arc exposes a standards-based Remote MCP protected by OAuth 2.1 + PKCE.", "Remote Arc 提供由 OAuth 2.1 + PKCE 保护的标准 Remote MCP。")}</p></div></section>
             <section className="setupGrid">
-              <article className="setupCard featured"><span className="stepNumber">01</span><div><span className="eyebrow">REMOTE MCP URL</span><h2>{tr("Add RemoteArc to ChatGPT", "把 RemoteArc 添加到 ChatGPT")}</h2><p>{tr("In ChatGPT Developer Mode, create a Remote MCP connection with this endpoint.", "在 ChatGPT Developer Mode 中使用此端点创建 Remote MCP 连接。")}</p><div className="endpointRow large"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/></div></div></article>
-              <article className="setupCard"><span className="stepNumber">02</span><div><h2>{tr("Authorize with Google", "使用 Google 授权")}</h2><p>{tr("ChatGPT discovers RemoteArc OAuth and links to the same account.", "ChatGPT 会发现 RemoteArc OAuth，并绑定到同一个账户。")}</p><div className="scopeList"><span>devices:read</span><span>computer:read</span><span>computer:write</span></div></div></article>
-              <article className="setupCard"><span className="stepNumber">03</span><div><h2>{tr("Talk naturally", "直接自然语言操作")}</h2><p>{tr("Address a device by name. RemoteArc handles routing.", "直接说设备名称，RemoteArc 会处理路由。")}</p><div className="promptExamples"><code>{tr("“List the projects on my Mac.”", "“看看我 Mac 上有哪些项目。”")}</code><code>{tr("“Run the tests on SamPC.”", "“在 SamPC 上跑测试。”")}</code></div></div></article>
+              <article className="setupCard featured"><span className="stepNumber">01</span><div><span className="eyebrow">REMOTE MCP URL</span><h2>{tr("Add Remote Arc to ChatGPT", "把 Remote Arc 添加到 ChatGPT")}</h2><p>{tr("In ChatGPT Developer Mode, create a Remote MCP connection with this endpoint.", "在 ChatGPT Developer Mode 中使用此端点创建 Remote MCP 连接。")}</p><div className="endpointRow large"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/></div></div></article>
+              <article className="setupCard"><span className="stepNumber">02</span><div><h2>{tr("Authorize with Google", "使用 Google 授权")}</h2><p>{tr("ChatGPT discovers Remote Arc OAuth and links to the same account.", "ChatGPT 会发现 Remote Arc OAuth，并绑定到同一个账户。")}</p><div className="scopeList"><span>devices:read</span><span>computer:read</span><span>computer:write</span></div></div></article>
+              <article className="setupCard"><span className="stepNumber">03</span><div><h2>{tr("Talk naturally", "直接自然语言操作")}</h2><p>{tr("Address a device by name. Remote Arc handles routing.", "直接说设备名称，Remote Arc 会处理路由。")}</p><div className="promptExamples"><code>{tr("“List the projects on my Mac.”", "“看看我 Mac 上有哪些项目。”")}</code><code>{tr("“Run the tests on SamPC.”", "“在 SamPC 上跑测试。”")}</code></div></div></article>
             </section>
           </>
         )}
@@ -735,7 +735,7 @@ function Dashboard({
 
         {active === "settings" && (
           <>
-            <section className="pageHeader"><div><span className="eyebrow">{tr("SETTINGS", "设置")}</span><h1>{tr("Make RemoteArc yours.", "把 RemoteArc 调成你喜欢的样子。")}</h1><p>{tr("Language, plan information and account preferences.", "语言、套餐信息与账户偏好。")}</p></div></section>
+            <section className="pageHeader"><div><span className="eyebrow">{tr("SETTINGS", "设置")}</span><h1>{tr("Make Remote Arc yours.", "把 Remote Arc 调成你喜欢的样子。")}</h1><p>{tr("Language, plan information and account preferences.", "语言、套餐信息与账户偏好。")}</p></div></section>
             <section className="settingsGrid">
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
               <article className="settingsCard"><div><h2>{tr("Hosted plan", "托管方案")}</h2><p>{tr("Free includes 10,000 Remote MCP tool calls each UTC month.", "免费版每个 UTC 月包含 10,000 次 Remote MCP 工具调用。")}</p></div><div className="planValue">{usage?.unlimited ? "∞" : `${usage?.used ?? 0} / ${usage?.limit ?? 10000}`}</div></article>
@@ -744,7 +744,7 @@ function Dashboard({
           </>
         )}
 
-        <footer className="dashboardFooter"><span>RemoteArc · remote.samyao.me</span><div><a href="/pricing">{tr("Pricing", "价格")}</a><a href="/resources">{tr("Resources", "资源")}</a><a href="/docs/mcp">MCP</a></div></footer>
+        <footer className="dashboardFooter"><span>Remote Arc · remote.samyao.me</span><div><a href="/pricing">{tr("Pricing", "价格")}</a><a href="/resources">{tr("Resources", "资源")}</a><a href="/docs/mcp">MCP</a></div></footer>
       </main>
 
       {showAdd && (
@@ -817,7 +817,7 @@ function App() {
   if (location.pathname === "/resources") return <ResourcesPage />;
   if (location.pathname === "/docs/mcp") return <McpPage />;
 
-  if (user === undefined) return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to RemoteArc.", "正在连接 RemoteArc。")} />;
+  if (user === undefined) return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
   if (!user) return <Landing />;
 
   return <Dashboard user={user} devices={devices} status={status} refreshAll={loadAll} signOut={signOut} />;

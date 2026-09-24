@@ -258,7 +258,7 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
 
     if ((countRow?.count || 0) > 0) {
       return new Response(
-        "This RemoteArc instance is private. New account registration is disabled.",
+        "This Remote Arc instance is private. New account registration is disabled.",
         { status: 403 },
       );
     }

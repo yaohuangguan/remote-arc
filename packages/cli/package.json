@@ -1,11 +1,11 @@
 {
-  "name": "remotearc",
+  "name": "remote-arc",
   "version": "0.3.0",
-  "description": "Connect a computer to RemoteArc with one command.",
+  "description": "Connect a computer to Remote Arc with one command.",
   "type": "module",
   "bin": {
-    "remotearc": "dist/index.js",
-    "remote-arc": "dist/index.js"
+    "remote-arc": "dist/index.js",
+    "remotearc": "dist/index.js"
   },
   "files": [
     "dist"

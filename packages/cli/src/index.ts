@@ -75,7 +75,7 @@ async function readConfig(): Promise<SavedConfig | null> {
       ) as SavedConfig;
       await writeConfig(legacy);
       process.stdout.write(
-        "Migrated existing Remote Link pairing to RemoteArc.\n",
+        "Migrated existing Remote Link pairing to Remote Arc.\n",
       );
       return legacy;
     } catch {
@@ -96,7 +96,7 @@ async function resetConfig() {
     fs.rm(CONFIG_PATH, { force: true }),
     fs.rm(LEGACY_CONFIG_PATH, { force: true }),
   ]);
-  process.stdout.write("RemoteArc device credentials removed.\n");
+  process.stdout.write("Remote Arc device credentials removed.\n");
 }
 
 function openBrowser(url: string) {
@@ -137,7 +137,7 @@ async function pair(origin: string, mode: Mode): Promise<SavedConfig> {
 
   const pairing = (await response.json()) as PairingStart;
 
-  process.stdout.write("\nRemoteArc\n\n");
+  process.stdout.write("\nRemote Arc\n\n");
   process.stdout.write("Pair this computer in your browser.\n\n");
   process.stdout.write("  " + pairing.user_code + "\n\n");
   process.stdout.write(pairing.verification_uri_complete + "\n\n");
@@ -181,7 +181,7 @@ async function pair(origin: string, mode: Mode): Promise<SavedConfig> {
     return config;
   }
 
-  throw new Error("Pairing expired. Run RemoteArc again to retry.");
+  throw new Error("Pairing expired. Run Remote Arc again to retry.");
 }
 
 class ExecutionCore {
@@ -340,7 +340,7 @@ async function connectAgent(config: SavedConfig) {
       });
     } catch (error) {
       process.stderr.write(
-        "RemoteArc connection failed: " +
+        "Remote Arc connection failed: " +
           (error instanceof Error ? error.message : String(error)) +
           "\n",
       );
@@ -363,13 +363,13 @@ async function main() {
   if (argFlag("--help") || argFlag("-h")) {
     process.stdout.write(
       [
-        "RemoteArc",
+        "Remote Arc",
         "",
         "Usage:",
-        "  npx --yes --package=github:yaohuangguan/remote-link remotearc",
+        "  npx --yes --package=github:yaohuangguan/remote-link remote-arc",
         "",
         "After the npm release:",
-        "  npx remotearc@latest",
+        "  npx remote-arc@latest",
         "",
         "Options:",
         "  --safe        Read-only local capability mode",
@@ -411,7 +411,7 @@ async function main() {
 
 main().catch((error) => {
   process.stderr.write(
-    "\nRemoteArc error: " +
+    "\nRemote Arc error: " +
       (error instanceof Error ? error.message : String(error)) +
       "\n",
   );

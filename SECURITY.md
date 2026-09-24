@@ -1,6 +1,6 @@
 # Security
 
-RemoteArc gives AI clients access to real computers. Treat the relay, OAuth server, device credentials, and local execution layer as privileged infrastructure.
+Remote Arc gives AI clients access to real computers. Treat the relay, OAuth server, device credentials, and local execution layer as privileged infrastructure.
 
 ## Current trust boundaries
 

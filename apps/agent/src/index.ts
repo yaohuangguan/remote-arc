@@ -60,7 +60,7 @@ async function connectForever() {
 
       ws.send(JSON.stringify(hello));
       process.stdout.write(
-        `RemoteArc agent connected: ${deviceName} (${deviceId}) -> ${relayUrl}\n`,
+        `Remote Arc agent connected: ${deviceName} (${deviceId}) -> ${relayUrl}\n`,
       );
 
       await new Promise<void>((resolve) => {
@@ -97,7 +97,7 @@ async function connectForever() {
       });
     } catch (error) {
       process.stderr.write(
-        `RemoteArc agent connection failed: ${error instanceof Error ? error.message : String(error)}\n`,
+        `Remote Arc agent connection failed: ${error instanceof Error ? error.message : String(error)}\n`,
       );
     } finally {
       ws.removeAllListeners();

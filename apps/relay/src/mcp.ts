@@ -97,9 +97,9 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
     server.registerTool(
       "list_devices",
       {
-        title: "List RemoteArc devices",
+        title: "List Remote Arc devices",
         description:
-          "List computers linked to this RemoteArc account and show whether each device is online.",
+          "List computers linked to this Remote Arc account and show whether each device is online.",
         annotations: { readOnlyHint: true },
       },
       async () => {

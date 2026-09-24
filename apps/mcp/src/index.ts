@@ -33,9 +33,9 @@ const callCore = async (
 server.registerTool(
   "remote_link_status",
   {
-    title: "RemoteArc status",
+    title: "Remote Arc status",
     description:
-      "Show the active RemoteArc permission mode and local execution backend. This does not modify the computer.",
+      "Show the active Remote Arc permission mode and local execution backend. This does not modify the computer.",
     annotations: { readOnlyHint: true },
   },
   async () => ({
@@ -207,7 +207,7 @@ if (config.allowGenericCoreCall && isFullMode()) {
     {
       title: "Call raw execution-core tool",
       description:
-        "FULL MODE ONLY. Call any tool exposed by Desktop Commander by name. This bypasses RemoteArc's curated tool surface.",
+        "FULL MODE ONLY. Call any tool exposed by Desktop Commander by name. This bypasses Remote Arc's curated tool surface.",
       inputSchema: z.object({
         name: z.string(),
         arguments: z.record(z.string(), z.unknown()).default({}),
@@ -230,5 +230,5 @@ process.on("SIGTERM", shutdown);
 
 await server.connect(transport);
 process.stderr.write(
-  `RemoteArc MCP started in ${config.mode} mode (stdio)\n`,
+  `Remote Arc MCP started in ${config.mode} mode (stdio)\n`,
 );

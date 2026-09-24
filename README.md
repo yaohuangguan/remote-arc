@@ -1,26 +1,26 @@
-# RemoteArc
+# Remote Arc
 
-RemoteArc is a self-hosted Remote MCP system that connects AI clients to your computers with a Desktop Commander Remote-style onboarding flow.
+Remote Arc is a self-hosted Remote MCP system that connects AI clients to your computers with a Desktop Commander Remote-style onboarding flow.
 
 The intended user experience is:
 
 ```text
 remote.samyao.me
-   â†?
+   ï¿½?
 Continue with Google
-   â†?
+   ï¿½?
 Add device
-   â†?
-npx --yes --package=github:yaohuangguan/remote-link remotearc
-   â†?
+   ï¿½?
+npx --yes --package=github:yaohuangguan/remote-link remote-arc
+   ï¿½?
 matching pairing code opens in browser
-   â†?
+   ï¿½?
 Authorize device
-   â†?
+   ï¿½?
 computer appears in dashboard
-   â†?
+   ï¿½?
 connect https://remote.samyao.me/mcp once in ChatGPT
-   â†?
+   ï¿½?
 just talk to your computer
 ```
 
@@ -31,10 +31,10 @@ No git clone, manual token copy, public IP, or router port forwarding is require
 ```text
 remote-link/
 â”œâ”€ apps/
-â”? â”œâ”€ ui/       # React dashboard, Google login UX, device pairing
-â”? â”œâ”€ relay/    # Cloudflare Worker, D1, Durable Object, Remote MCP + OAuth
-â”? â”œâ”€ agent/    # development agent runtime
-â”? â””â”€ mcp/      # standalone local MCP server for development/testing
+ï¿½? â”œâ”€ ui/       # React dashboard, Google login UX, device pairing
+ï¿½? â”œâ”€ relay/    # Cloudflare Worker, D1, Durable Object, Remote MCP + OAuth
+ï¿½? â”œâ”€ agent/    # development agent runtime
+ï¿½? â””â”€ mcp/      # standalone local MCP server for development/testing
 â””â”€ packages/
    â”œâ”€ cli/      # distributable `remotelink` npm CLI
    â””â”€ protocol/ # shared agent/relay message types
@@ -61,7 +61,7 @@ DeviceRegistry Durable Object
           |
           | outbound WebSocket
           v
-RemoteArc CLI / Agent
+Remote Arc CLI / Agent
           |
           | local MCP client
           v
@@ -71,7 +71,7 @@ Desktop Commander OSS
 Windows / macOS / Linux
 ```
 
-A device always initiates the connection to the relay. RemoteArc does not require inbound access to the computer.
+A device always initiates the connection to the relay. Remote Arc does not require inbound access to the computer.
 
 ## Production deployment
 
@@ -91,7 +91,7 @@ The Cloudflare deployment currently includes:
 
 ## Authentication
 
-RemoteArc no longer uses a shared MCP URL key or one shared agent token.
+Remote Arc no longer uses a shared MCP URL key or one shared agent token.
 
 ### Dashboard identity
 
@@ -125,7 +125,7 @@ The credential is:
 - generated during the pairing flow
 - stored locally in `~/.remotearc/config.json`
 - stored only as a SHA-256 hash in D1
-- bound to one device and one RemoteArc user
+- bound to one device and one Remote Arc user
 - individually revocable from the dashboard
 
 ### ChatGPT / MCP identity
@@ -166,7 +166,7 @@ computer:write
 The release UX is designed around one command:
 
 ```bash
-npx --yes --package=github:yaohuangguan/remote-link remotearc
+npx --yes --package=github:yaohuangguan/remote-link remote-arc
 ```
 
 First run:
@@ -195,7 +195,7 @@ CLI options:
 
 ## Local capability boundary
 
-RemoteArc does not expose the entire Desktop Commander tool catalog by default.
+Remote Arc does not expose the entire Desktop Commander tool catalog by default.
 
 Safe mode:
 
@@ -279,7 +279,7 @@ remotelink
 remote-link
 ```
 
-Today the GitHub-backed one-line command already works without cloning. After npm publishing, the shorter `npx remotearc@latest` command can become the default.
+Today the GitHub-backed one-line command already works without cloning. After npm publishing, the shorter `npx remote-arc@latest` command can become the default.
 
 To publish the shorter npm alias later, run from `packages/cli`:
 
@@ -291,15 +291,15 @@ npm publish
 
 ## ChatGPT setup
 
-Until RemoteArc is a reviewed public Plugin, connect it once through ChatGPT Developer Mode using:
+Until Remote Arc is a reviewed public Plugin, connect it once through ChatGPT Developer Mode using:
 
 ```text
 https://remote.samyao.me/mcp
 ```
 
-ChatGPT discovers the OAuth configuration from RemoteArc, opens the RemoteArc authorization flow, and the user signs in with Google.
+ChatGPT discovers the OAuth configuration from Remote Arc, opens the Remote Arc authorization flow, and the user signs in with Google.
 
-OpenAI currently requires authenticated MCP servers to expose protected-resource metadata and an OAuth 2.1-compatible authorization server with PKCE. RemoteArc implements that contract using DCR for client registration.
+OpenAI currently requires authenticated MCP servers to expose protected-resource metadata and an OAuth 2.1-compatible authorization server with PKCE. Remote Arc implements that contract using DCR for client registration.
 
 ## Security notes
 
@@ -331,7 +331,7 @@ Still planned before broader public use:
 
 ## Roadmap
 
-### Phase 1 â€?personal RemoteArc
+### Phase 1 ï¿½?personal Remote Arc
 
 - [x] monorepo
 - [x] local MCP execution layer
@@ -348,9 +348,9 @@ Still planned before broader public use:
 - [ ] publish `remotelink` to npm
 - [ ] pair SamPC through the public CLI flow
 - [ ] connect ChatGPT Developer Mode to `/mcp`
-- [ ] perform first real ChatGPT â†?RemoteArc â†?SamPC tool call
+- [ ] perform first real ChatGPT ï¿½?Remote Arc ï¿½?SamPC tool call
 
-### Phase 2 â€?invisible background agent
+### Phase 2 ï¿½?invisible background agent
 
 - Windows service / tray app
 - macOS LaunchAgent / menu-bar app
@@ -359,7 +359,7 @@ Still planned before broader public use:
 - auto-update
 - device rename and permission profiles
 
-### Phase 3 â€?public product
+### Phase 3 ï¿½?public product
 
 - stronger approval policy
 - multi-user administration

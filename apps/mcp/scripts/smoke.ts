@@ -48,7 +48,7 @@ try {
   }
 
   process.stdout.write(
-    `RemoteArc Local MCP smoke test passed with ${tools.length} safe-mode tools.\n`,
+    `Remote Arc Local MCP smoke test passed with ${tools.length} safe-mode tools.\n`,
   );
 } finally {
   await client.close();
