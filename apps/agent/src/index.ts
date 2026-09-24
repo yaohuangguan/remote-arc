@@ -1,3 +1,4 @@
+import "dotenv/config";
 import os from "node:os";
 import process from "node:process";
 import WebSocket from "ws";
