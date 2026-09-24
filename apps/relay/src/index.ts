@@ -12,11 +12,13 @@ import {
   getDevicesForUser,
   handleDeviceList,
   handleDeviceRevoke,
+  handleDeviceRename,
   handleDeviceStart,
   handleDeviceToken,
   handlePairingApprove,
   handlePairingLookup,
 } from "./device.js";
+import { readAudit } from "./audit.js";
 import {
   authorizationServerMetadata,
   handleDynamicClientRegistration,
@@ -112,6 +114,27 @@ export default {
         : Response.json({ authenticated: false }, { status: 401 });
     }
 
+    if (url.pathname === "/api/status" && request.method === "GET") {
+      const user = await getSessionUser(request, env);
+      if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+      const devices = await getDevicesForUser(env, user.id);
+      const recent = await readAudit(env, user.id, 8);
+      return Response.json({
+        googleConfigured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+        mcpEndpoint: env.PUBLIC_ORIGIN + "/mcp",
+        totalDevices: devices.length,
+        onlineDevices: devices.filter((device) => device.status === "online").length,
+        recentActivity: recent,
+      });
+    }
+
+    if (url.pathname === "/api/activity" && request.method === "GET") {
+      const user = await getSessionUser(request, env);
+      if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+      const limit = Number(url.searchParams.get("limit") || "20");
+      return Response.json(await readAudit(env, user.id, limit));
+    }
+
     if (url.pathname === "/api/device/start" && request.method === "POST") {
       return handleDeviceStart(request, env);
     }
@@ -130,6 +153,13 @@ export default {
 
     if (url.pathname === "/api/devices" && request.method === "GET") {
       return handleDeviceList(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/rename$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDeviceRename(request, env);
     }
 
     if (
