@@ -1,0 +1,17 @@
+{
+  "name": "remote-link",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.17.1",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "dev:mcp": "pnpm --filter @remote-link/mcp dev",
+    "dev:agent": "pnpm --filter @remote-link/agent dev",
+    "dev:relay": "pnpm --filter @remote-link/relay dev",
+    "dev:ui": "pnpm --filter @remote-link/ui dev",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @remote-link/mcp test:smoke",
+    "ci": "pnpm typecheck && pnpm test"
+  }
+}
