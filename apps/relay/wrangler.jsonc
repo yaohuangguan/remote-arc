@@ -35,5 +35,16 @@
       "/health"
     ],
     "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "remote-link-auth",
+      "database_id": "5ceaf634-11ea-47e4-9834-12a133e3adcb",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "PUBLIC_ORIGIN": "https://remote.samyao.me"
   }
 }
