@@ -8,10 +8,11 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import WebSocket from "ws";
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 const DEFAULT_ORIGIN = "https://remote.samyao.me";
-const CONFIG_DIR = path.join(os.homedir(), ".remote-link");
+const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
+const LEGACY_CONFIG_PATH = path.join(os.homedir(), ".remote-link", "config.json");
 
 type Mode = "safe" | "developer";
 
@@ -68,7 +69,18 @@ async function readConfig(): Promise<SavedConfig | null> {
   try {
     return JSON.parse(await fs.readFile(CONFIG_PATH, "utf8")) as SavedConfig;
   } catch {
-    return null;
+    try {
+      const legacy = JSON.parse(
+        await fs.readFile(LEGACY_CONFIG_PATH, "utf8"),
+      ) as SavedConfig;
+      await writeConfig(legacy);
+      process.stdout.write(
+        "Migrated existing Remote Link pairing to RemoteArc.\n",
+      );
+      return legacy;
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -80,8 +92,11 @@ async function writeConfig(config: SavedConfig) {
 }
 
 async function resetConfig() {
-  await fs.rm(CONFIG_PATH, { force: true });
-  process.stdout.write("Remote Link device credentials removed.\n");
+  await Promise.all([
+    fs.rm(CONFIG_PATH, { force: true }),
+    fs.rm(LEGACY_CONFIG_PATH, { force: true }),
+  ]);
+  process.stdout.write("RemoteArc device credentials removed.\n");
 }
 
 function openBrowser(url: string) {
@@ -122,7 +137,7 @@ async function pair(origin: string, mode: Mode): Promise<SavedConfig> {
 
   const pairing = (await response.json()) as PairingStart;
 
-  process.stdout.write("\nRemote Link\n\n");
+  process.stdout.write("\nRemoteArc\n\n");
   process.stdout.write("Pair this computer in your browser.\n\n");
   process.stdout.write("  " + pairing.user_code + "\n\n");
   process.stdout.write(pairing.verification_uri_complete + "\n\n");
@@ -166,7 +181,7 @@ async function pair(origin: string, mode: Mode): Promise<SavedConfig> {
     return config;
   }
 
-  throw new Error("Pairing expired. Run Remote Link again to retry.");
+  throw new Error("Pairing expired. Run RemoteArc again to retry.");
 }
 
 class ExecutionCore {
@@ -178,7 +193,7 @@ class ExecutionCore {
     if (this.client) return this.client;
 
     const client = new Client({
-      name: "remote-link-cli-core",
+      name: "remotearc-cli-core",
       version: VERSION,
     });
 
@@ -325,7 +340,7 @@ async function connectAgent(config: SavedConfig) {
       });
     } catch (error) {
       process.stderr.write(
-        "Remote Link connection failed: " +
+        "RemoteArc connection failed: " +
           (error instanceof Error ? error.message : String(error)) +
           "\n",
       );
@@ -348,13 +363,13 @@ async function main() {
   if (argFlag("--help") || argFlag("-h")) {
     process.stdout.write(
       [
-        "Remote Link",
+        "RemoteArc",
         "",
         "Usage:",
-        "  npx --yes --package=github:yaohuangguan/remote-link remote-link",
+        "  npx --yes --package=github:yaohuangguan/remote-link remotearc",
         "",
         "After the npm release:",
-        "  npx remotelink@latest",
+        "  npx remotearc@latest",
         "",
         "Options:",
         "  --safe        Read-only local capability mode",
@@ -379,7 +394,7 @@ async function main() {
   }
 
   const origin =
-    process.env.REMOTE_LINK_ORIGIN ||
+    process.env.REMOTEARC_ORIGIN || process.env.REMOTE_LINK_ORIGIN ||
     process.argv.find((value) => value.startsWith("--origin="))?.slice(9) ||
     DEFAULT_ORIGIN;
 
@@ -396,7 +411,7 @@ async function main() {
 
 main().catch((error) => {
   process.stderr.write(
-    "\nRemote Link error: " +
+    "\nRemoteArc error: " +
       (error instanceof Error ? error.message : String(error)) +
       "\n",
   );

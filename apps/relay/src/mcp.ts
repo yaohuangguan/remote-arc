@@ -90,16 +90,16 @@ const requireScope = (identity: OAuthIdentity, scope: string) => {
 export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
   return createMcpHandler(() => {
     const server = new McpServer(
-      { name: "remote-link", version: "0.2.0" },
+      { name: "remotearc", version: "0.3.0" },
       { capabilities: { tools: {} } },
     );
 
     server.registerTool(
       "list_devices",
       {
-        title: "List Remote Link devices",
+        title: "List RemoteArc devices",
         description:
-          "List computers linked to this Remote Link account and show whether each device is online.",
+          "List computers linked to this RemoteArc account and show whether each device is online.",
         annotations: { readOnlyHint: true },
       },
       async () => {

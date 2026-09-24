@@ -1,11 +1,11 @@
 {
-  "name": "remotelink",
-  "version": "0.2.0",
-  "description": "Connect a computer to Remote Link with one command.",
+  "name": "remotearc",
+  "version": "0.3.0",
+  "description": "Connect a computer to RemoteArc with one command.",
   "type": "module",
   "bin": {
-    "remotelink": "dist/index.js",
-    "remote-link": "dist/index.js"
+    "remotearc": "dist/index.js",
+    "remote-arc": "dist/index.js"
   },
   "files": [
     "dist"

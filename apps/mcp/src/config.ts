@@ -1,6 +1,6 @@
-export type RemoteLinkMode = "safe" | "developer" | "full";
+export type RemoteArcMode = "safe" | "developer" | "full";
 
-const parseMode = (value: string | undefined): RemoteLinkMode => {
+const parseMode = (value: string | undefined): RemoteArcMode => {
   if (value === "developer" || value === "full") return value;
   return "safe";
 };

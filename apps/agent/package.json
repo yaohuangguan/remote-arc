@@ -1,5 +1,5 @@
 {
-  "name": "@remote-link/agent",
+  "name": "@remotearc/agent",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.1.0",
-    "@remote-link/protocol": "workspace:*",
+    "@remotearc/protocol": "workspace:*",
     "ws": "^8.18.3",
     "dotenv": "^17.2.3"
   },

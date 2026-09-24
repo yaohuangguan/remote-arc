@@ -5,7 +5,7 @@ import { config, isDeveloperMode, isFullMode } from "./config.js";
 import { desktopCommander } from "./desktop-commander.js";
 
 const server = new McpServer({
-  name: "remote-link-local-mcp",
+  name: "remotearc-local-mcp",
   version: "0.1.0",
 });
 
@@ -33,9 +33,9 @@ const callCore = async (
 server.registerTool(
   "remote_link_status",
   {
-    title: "Remote Link status",
+    title: "RemoteArc status",
     description:
-      "Show the active Remote Link permission mode and local execution backend. This does not modify the computer.",
+      "Show the active RemoteArc permission mode and local execution backend. This does not modify the computer.",
     annotations: { readOnlyHint: true },
   },
   async () => ({
@@ -44,7 +44,7 @@ server.registerTool(
         type: "text",
         text: JSON.stringify(
           {
-            name: "remote-link-local-mcp",
+            name: "remotearc-local-mcp",
             version: "0.1.0",
             mode: config.mode,
             backend: "Desktop Commander OSS over local stdio",
@@ -207,7 +207,7 @@ if (config.allowGenericCoreCall && isFullMode()) {
     {
       title: "Call raw execution-core tool",
       description:
-        "FULL MODE ONLY. Call any tool exposed by Desktop Commander by name. This bypasses Remote Link's curated tool surface.",
+        "FULL MODE ONLY. Call any tool exposed by Desktop Commander by name. This bypasses RemoteArc's curated tool surface.",
       inputSchema: z.object({
         name: z.string(),
         arguments: z.record(z.string(), z.unknown()).default({}),
@@ -230,5 +230,5 @@ process.on("SIGTERM", shutdown);
 
 await server.connect(transport);
 process.stderr.write(
-  `Remote Link MCP started in ${config.mode} mode (stdio)\n`,
+  `RemoteArc MCP started in ${config.mode} mode (stdio)\n`,
 );

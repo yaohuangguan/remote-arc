@@ -3,7 +3,7 @@ import type {
   AgentHelloMessage,
   AgentResultMessage,
   DeviceMetadata,
-} from "@remote-link/protocol";
+} from "@remotearc/protocol";
 
 type PendingCall = {
   resolve: (value: unknown) => void;

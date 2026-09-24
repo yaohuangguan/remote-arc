@@ -191,7 +191,7 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
   if (denied) {
     return redirectWith(redirectUri, {
       error: "access_denied",
-      error_description: "The user denied the Remote Link authorization request.",
+      error_description: "The user denied the RemoteArc authorization request.",
       state,
     });
   }

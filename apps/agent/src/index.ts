@@ -6,7 +6,7 @@ import type {
   AgentCallMessage,
   AgentResultMessage,
   AgentToRelayMessage,
-} from "@remote-link/protocol";
+} from "@remotearc/protocol";
 import { LocalMcpClient } from "./local-mcp.js";
 
 const relayUrl = process.env.REMOTE_LINK_RELAY_URL || "wss://remote.samyao.me";
@@ -60,7 +60,7 @@ async function connectForever() {
 
       ws.send(JSON.stringify(hello));
       process.stdout.write(
-        `Remote Link agent connected: ${deviceName} (${deviceId}) -> ${relayUrl}\n`,
+        `RemoteArc agent connected: ${deviceName} (${deviceId}) -> ${relayUrl}\n`,
       );
 
       await new Promise<void>((resolve) => {
@@ -97,7 +97,7 @@ async function connectForever() {
       });
     } catch (error) {
       process.stderr.write(
-        `Remote Link agent connection failed: ${error instanceof Error ? error.message : String(error)}\n`,
+        `RemoteArc agent connection failed: ${error instanceof Error ? error.message : String(error)}\n`,
       );
     } finally {
       ws.removeAllListeners();

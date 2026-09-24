@@ -63,8 +63,8 @@ export default {
     if (url.pathname === "/health") {
       return Response.json({
         ok: true,
-        service: "remote-link-relay",
-        version: "0.2.0",
+        service: "remotearc-relay",
+        version: "0.3.0",
         auth: "oauth2-pkce",
       });
     }

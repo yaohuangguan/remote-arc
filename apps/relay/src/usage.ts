@@ -72,7 +72,7 @@ export async function consumeToolCall(env: UsageEnv, userId: string) {
   if (!result.meta.changes) {
     const usage = await getMonthlyUsage(env, userId);
     const error = new Error(
-      `Monthly Remote Link tool-call limit reached (${usage.used}/${usage.limit}).`,
+      `Monthly RemoteArc tool-call limit reached (${usage.used}/${usage.limit}).`,
     );
     (error as Error & { code?: string }).code = "MONTHLY_LIMIT_REACHED";
     throw error;

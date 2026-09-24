@@ -1,6 +1,6 @@
 {
-  "name": "remote-link",
-  "version": "0.2.0",
+  "name": "remotearc-monorepo",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.17.1",
@@ -8,20 +8,20 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev:mcp": "pnpm --filter @remote-link/mcp dev",
-    "dev:agent": "pnpm --filter @remote-link/agent dev",
-    "dev:relay": "pnpm --filter @remote-link/relay dev",
-    "dev:ui": "pnpm --filter @remote-link/ui dev",
+    "dev:mcp": "pnpm --filter @remotearc/mcp dev",
+    "dev:agent": "pnpm --filter @remotearc/agent dev",
+    "dev:relay": "pnpm --filter @remotearc/relay dev",
+    "dev:ui": "pnpm --filter @remotearc/ui dev",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm --filter @remote-link/mcp test:smoke",
+    "test": "pnpm --filter @remotearc/mcp test:smoke",
     "ci": "pnpm typecheck && pnpm test",
-    "build:ui": "pnpm --filter @remote-link/ui build",
-    "deploy:relay": "pnpm build:ui && pnpm --filter @remote-link/relay run deploy",
-    "build:cli": "pnpm --filter remotelink build"
+    "build:ui": "pnpm --filter @remotearc/ui build",
+    "deploy:relay": "pnpm build:ui && pnpm --filter @remotearc/relay run deploy",
+    "build:cli": "pnpm --filter remotearc build"
   },
   "bin": {
-    "remotelink": "bin/remotelink.js",
-    "remote-link": "bin/remotelink.js"
+    "remotearc": "bin/remotearc.js",
+    "remote-arc": "bin/remotearc.js"
   },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.1.0",

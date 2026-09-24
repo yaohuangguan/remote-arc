@@ -8,13 +8,13 @@ export class LocalMcpClient {
     if (this.client) return this.client;
 
     const client = new Client({
-      name: "remote-link-agent",
+      name: "remotearc-agent",
       version: "0.1.0",
     });
 
     const transport = new StdioClientTransport({
       command: process.platform === "win32" ? "pnpm.cmd" : "pnpm",
-      args: ["--filter", "@remote-link/mcp", "start"],
+      args: ["--filter", "@remotearc/mcp", "start"],
       cwd: process.cwd(),
       stderr: "inherit",
       env: {

@@ -20,7 +20,7 @@ importers:
       '@modelcontextprotocol/client':
         specifier: ^2.1.0
         version: 2.1.0
-      '@remote-link/protocol':
+      '@remotearc/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
       dotenv:
@@ -70,7 +70,7 @@ importers:
       '@modelcontextprotocol/server':
         specifier: ^2.1.0
         version: 2.1.0
-      '@remote-link/protocol':
+      '@remotearc/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
       zod:

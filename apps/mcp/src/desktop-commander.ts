@@ -12,7 +12,7 @@ class DesktopCommanderBridge {
 
     this.connecting = (async () => {
       const client = new Client({
-        name: "remote-link-local-core-client",
+        name: "remotearc-local-core-client",
         version: "0.1.0",
       });
 

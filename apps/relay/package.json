@@ -1,5 +1,5 @@
 {
-  "name": "@remote-link/relay",
+  "name": "@remotearc/relay",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@remote-link/protocol": "workspace:*",
+    "@remotearc/protocol": "workspace:*",
     "@modelcontextprotocol/server": "^2.1.0",
     "zod": "^4.6.5"
   },

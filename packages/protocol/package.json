@@ -1,5 +1,5 @@
 {
-  "name": "@remote-link/protocol",
+  "name": "@remotearc/protocol",
   "version": "0.1.0",
   "private": true,
   "type": "module",

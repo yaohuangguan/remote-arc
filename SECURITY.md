@@ -1,6 +1,6 @@
 # Security
 
-Remote Link gives AI clients access to real computers. Treat the relay, OAuth server, device credentials, and local execution layer as privileged infrastructure.
+RemoteArc gives AI clients access to real computers. Treat the relay, OAuth server, device credentials, and local execution layer as privileged infrastructure.
 
 ## Current trust boundaries
 

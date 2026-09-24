@@ -12,7 +12,7 @@ const I18nContext = createContext<I18n | null>(null);
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => {
-    const saved = localStorage.getItem("remote-link-locale");
+    const saved = localStorage.getItem("remotearc-locale") ?? localStorage.getItem("remote-link-locale");
     if (saved === "en" || saved === "zh") return saved;
     return navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
   });
@@ -20,7 +20,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<I18n>(() => ({
     locale,
     setLocale(next) {
-      localStorage.setItem("remote-link-locale", next);
+      localStorage.setItem("remotearc-locale", next);
       document.documentElement.lang = next === "zh" ? "zh-CN" : "en";
       setLocaleState(next);
     },
