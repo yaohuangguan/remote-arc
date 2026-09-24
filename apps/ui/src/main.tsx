@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
@@ -31,6 +31,23 @@ type Pairing = {
   expires_at: string;
 };
 
+type AuditEvent = {
+  id: string;
+  device_id: string | null;
+  event_type: string;
+  tool_name: string | null;
+  success: number;
+  created_at: string;
+};
+
+type ProductStatus = {
+  googleConfigured: boolean;
+  mcpEndpoint: string;
+  totalDevices: number;
+  onlineDevices: number;
+  recentActivity: AuditEvent[];
+};
+
 const platformLabel = (platform?: string | null) => {
   if (platform === "win32") return "Windows";
   if (platform === "darwin") return "macOS";
@@ -38,8 +55,73 @@ const platformLabel = (platform?: string | null) => {
   return platform || "Unknown";
 };
 
+const platformGlyph = (platform?: string | null) => {
+  if (platform === "darwin") return "⌘";
+  if (platform === "win32") return "⊞";
+  return "›_";
+};
+
 const returnTo = () =>
   encodeURIComponent(location.pathname + location.search);
+
+const timeAgo = (value?: string | null) => {
+  if (!value) return "Never";
+  const delta = Math.max(0, Date.now() - new Date(value).getTime());
+  if (delta < 60_000) return "Just now";
+  if (delta < 3_600_000) return Math.floor(delta / 60_000) + "m ago";
+  if (delta < 86_400_000) return Math.floor(delta / 3_600_000) + "h ago";
+  return Math.floor(delta / 86_400_000) + "d ago";
+};
+
+const eventLabel = (event: AuditEvent) => {
+  if (event.event_type === "device.paired") return "Device paired";
+  if (event.event_type === "device.revoked") return "Device revoked";
+  if (event.event_type === "device.renamed") return "Device renamed";
+  if (event.event_type === "mcp.tool_call") {
+    return event.tool_name ? "MCP · " + event.tool_name : "MCP tool call";
+  }
+  return event.event_type;
+};
+
+function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1300);
+  }
+
+  return (
+    <button className="ghostButton" onClick={() => void copy()}>
+      {copied ? "Copied" : label}
+    </button>
+  );
+}
+
+function CenteredCard({
+  title,
+  body,
+  children,
+}: {
+  title: string;
+  body: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <main className="centerShell">
+      <a href="/" className="brand compactBrand">
+        <span className="brandMark">RL</span>
+        <span>Remote Link</span>
+      </a>
+      <section className="centerCard">
+        <h1>{title}</h1>
+        <p>{body}</p>
+        {children}
+      </section>
+    </main>
+  );
+}
 
 function PairDevice({
   user,
@@ -48,9 +130,8 @@ function PairDevice({
   user: User | null | undefined;
   onSignedIn: () => Promise<void>;
 }) {
-  const initialCode = new URLSearchParams(location.search)
-    .get("code")
-    ?.toUpperCase() || "";
+  const initialCode =
+    new URLSearchParams(location.search).get("code")?.toUpperCase() || "";
   const [code, setCode] = useState(initialCode);
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [message, setMessage] = useState("");
@@ -125,10 +206,14 @@ function PairDevice({
     return (
       <CenteredCard
         title="Device connected"
-        body="Authorization complete. Return to your terminal — Remote Link will finish connecting automatically."
+        body="Authorization is complete. Return to your terminal — the Remote Link agent will connect automatically."
       >
         <div className="successMark">✓</div>
-        <a className="secondaryLink" href="/">Back to devices</a>
+        <div className="successDetails">
+          <strong>Encrypted device credential created</strong>
+          <span>Only a hash is stored on the server.</span>
+        </div>
+        <a className="secondaryLink" href="/">Back to dashboard</a>
       </CenteredCard>
     );
   }
@@ -136,7 +221,7 @@ function PairDevice({
   return (
     <CenteredCard
       title="Pair a computer"
-      body="Confirm that this is the same code and computer shown in your terminal."
+      body="Confirm the code and device below match what is shown in your terminal."
     >
       {!pairing && (
         <div className="pairLookup">
@@ -156,20 +241,26 @@ function PairDevice({
       {pairing && (
         <div className="pairDevice">
           <div className="pairCode">{pairing.user_code}</div>
-          <div className="pairMeta">
-            <strong>{pairing.device_name}</strong>
-            <span>
-              {platformLabel(pairing.platform)}
-              {pairing.arch ? " · " + pairing.arch : ""}
-            </span>
-            {pairing.hostname && <span>{pairing.hostname}</span>}
+          <div className="pairComputer">
+            <div className="deviceIcon large">{platformGlyph(pairing.platform)}</div>
+            <div className="pairMeta">
+              <strong>{pairing.device_name}</strong>
+              <span>
+                {platformLabel(pairing.platform)}
+                {pairing.arch ? " · " + pairing.arch : ""}
+              </span>
+              {pairing.hostname && <span>{pairing.hostname}</span>}
+            </div>
           </div>
           <div className="permissionBox">
-            <strong>Developer access</strong>
-            <span>Read and edit files, inspect processes, and run development commands.</span>
+            <div>
+              <strong>Developer access</strong>
+              <span>Files, processes, and development commands</span>
+            </div>
+            <span className="permissionBadge">Local policy enforced</span>
           </div>
           <button className="approveButton" onClick={() => void approve()} disabled={busy}>
-            {busy ? "Authorizing…" : "Authorize device"}
+            {busy ? "Authorizing…" : "Authorize this device"}
           </button>
         </div>
       )}
@@ -178,204 +269,525 @@ function PairDevice({
       <p className="signedInAs">
         Signed in as {user.email}.{" "}
         <button className="textButton" onClick={() => void onSignedIn()}>
-          Refresh
+          Refresh session
         </button>
       </p>
     </CenteredCard>
   );
 }
 
-function CenteredCard({
-  title,
-  body,
-  children,
+function Metric({
+  label,
+  value,
+  detail,
+  tone,
 }: {
-  title: string;
-  body: string;
-  children?: React.ReactNode;
+  label: string;
+  value: string | number;
+  detail: string;
+  tone?: "good" | "neutral";
 }) {
   return (
-    <main className="centerShell">
-      <a href="/" className="brand compactBrand">
-        <span className="brandMark">RL</span>
-        <span>Remote Link</span>
-      </a>
-      <section className="centerCard">
-        <h1>{title}</h1>
-        <p>{body}</p>
-        {children}
-      </section>
-    </main>
+    <article className="metricCard">
+      <div className="metricTop">
+        <span>{label}</span>
+        <i className={"statusDot " + (tone === "good" ? "good" : "")} />
+      </div>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </article>
   );
 }
 
 function Dashboard({
   user,
   devices,
-  refreshDevices,
+  status,
+  refreshAll,
   signOut,
 }: {
   user: User;
   devices: Device[];
-  refreshDevices: () => Promise<void>;
+  status: ProductStatus | null;
+  refreshAll: () => Promise<void>;
   signOut: () => Promise<void>;
 }) {
   const [showAdd, setShowAdd] = useState(false);
+  const [active, setActive] = useState<"overview" | "devices" | "connect" | "security">("overview");
   const command = "npx remotelink@latest";
+  const safeCommand = "npx remotelink@latest --safe";
   const mcpEndpoint = location.origin + "/mcp";
+
+  const deviceNameById = useMemo(
+    () => new Map(devices.map((device) => [device.id, device.name])),
+    [devices],
+  );
 
   async function revoke(deviceId: string) {
     if (!confirm("Revoke this device? It will need to pair again.")) return;
     await fetch("/api/devices/" + encodeURIComponent(deviceId) + "/revoke", {
       method: "POST",
     });
-    await refreshDevices();
+    await refreshAll();
+  }
+
+  async function rename(device: Device) {
+    const next = prompt("Device name", device.name)?.trim();
+    if (!next || next === device.name) return;
+    const response = await fetch(
+      "/api/devices/" + encodeURIComponent(device.id) + "/rename",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: next }),
+      },
+    );
+    if (!response.ok) {
+      alert("Could not rename this device.");
+      return;
+    }
+    await refreshAll();
   }
 
   return (
-    <main className="shell">
-      <header className="topbar">
-        <a href="/" className="brand">
+    <div className="appFrame">
+      <aside className="sidebar">
+        <a href="/" className="brand sidebarBrand">
           <span className="brandMark">RL</span>
           <span>Remote Link</span>
         </a>
-        <div className="account">
-          {user.avatarUrl && <img src={user.avatarUrl} alt="" />}
+
+        <nav className="sideNav">
+          <button className={active === "overview" ? "active" : ""} onClick={() => setActive("overview")}>
+            <span>⌂</span> Overview
+          </button>
+          <button className={active === "devices" ? "active" : ""} onClick={() => setActive("devices")}>
+            <span>▣</span> Devices
+          </button>
+          <button className={active === "connect" ? "active" : ""} onClick={() => setActive("connect")}>
+            <span>↗</span> Connect AI
+          </button>
+          <button className={active === "security" ? "active" : ""} onClick={() => setActive("security")}>
+            <span>◇</span> Security
+          </button>
+        </nav>
+
+        <div className="sidebarStatus">
+          <div className="livePulse" />
           <div>
-            <strong>{user.name || user.email}</strong>
+            <strong>Relay online</strong>
+            <span>remote.samyao.me</span>
+          </div>
+        </div>
+
+        <div className="sidebarAccount">
+          {user.avatarUrl ? (
+            <img src={user.avatarUrl} alt="" />
+          ) : (
+            <div className="avatarFallback">{(user.name || user.email).slice(0, 1).toUpperCase()}</div>
+          )}
+          <div>
+            <strong>{user.name || "Owner"}</strong>
             <span>{user.email}</span>
           </div>
-          <button className="ghostButton" onClick={() => void signOut()}>
-            Sign out
-          </button>
+          <button onClick={() => void signOut()} title="Sign out">↪</button>
         </div>
-      </header>
+      </aside>
 
-      <section className="dashboardHero">
-        <div>
-          <span className="eyebrow">REMOTE MCP</span>
-          <h1>Your computers.<br />Available to your AI.</h1>
-          <p>
-            Pair a computer once. Remote Link keeps an outbound encrypted connection
-            ready for ChatGPT and other MCP clients.
-          </p>
-        </div>
-        <button className="addButton" onClick={() => setShowAdd(true)}>
-          + Add device
-        </button>
-      </section>
+      <main className="dashboardMain">
+        <header className="mobileTopbar">
+          <a href="/" className="brand">
+            <span className="brandMark">RL</span>
+            <span>Remote Link</span>
+          </a>
+          <button className="addButton compact" onClick={() => setShowAdd(true)}>+ Device</button>
+        </header>
 
-      <section className="section">
-        <div className="sectionHead">
-          <div>
-            <h2>Devices</h2>
-            <p>{devices.length} linked computer{devices.length === 1 ? "" : "s"}</p>
-          </div>
-          <button className="ghostButton" onClick={() => void refreshDevices()}>
-            Refresh
-          </button>
-        </div>
+        {active === "overview" && (
+          <>
+            <section className="pageHeader">
+              <div>
+                <span className="eyebrow">PRIVATE REMOTE MCP</span>
+                <h1>Good to see you, {user.name?.split(" ")[0] || "Sam"}.</h1>
+                <p>Your computers are one secure MCP hop away from ChatGPT.</p>
+              </div>
+              <button className="addButton" onClick={() => setShowAdd(true)}>+ Add device</button>
+            </section>
 
-        <div className="deviceGrid">
-          {devices.map((device) => (
-            <article className="deviceCard" key={device.id}>
-              <div className="deviceTop">
-                <div className="deviceIdentity">
-                  <div className="deviceIcon">
-                    {device.platform === "darwin" ? "⌘" : device.platform === "win32" ? "⊞" : "›_"}
-                  </div>
+            <section className="metricsGrid">
+              <Metric
+                label="Online now"
+                value={status?.onlineDevices ?? devices.filter((d) => d.status === "online").length}
+                detail="Ready for MCP calls"
+                tone="good"
+              />
+              <Metric
+                label="Linked devices"
+                value={status?.totalDevices ?? devices.length}
+                detail="Windows · macOS · Linux"
+              />
+              <Metric
+                label="Remote MCP"
+                value="Ready"
+                detail="/mcp · OAuth 2.1 + PKCE"
+                tone="good"
+              />
+              <Metric
+                label="Account mode"
+                value="Private"
+                detail="First account owns this instance"
+                tone="good"
+              />
+            </section>
+
+            <section className="contentGrid">
+              <div className="panelBlock">
+                <div className="blockHeader">
                   <div>
-                    <h3>{device.name}</h3>
-                    <span>{platformLabel(device.platform)} · {device.arch || "unknown"}</span>
+                    <span className="eyebrow">DEVICES</span>
+                    <h2>Connected computers</h2>
+                  </div>
+                  <button className="ghostButton" onClick={() => setActive("devices")}>View all</button>
+                </div>
+                <div className="compactDeviceList">
+                  {devices.slice(0, 4).map((device) => (
+                    <button className="compactDevice" key={device.id} onClick={() => setActive("devices")}>
+                      <div className="deviceIcon">{platformGlyph(device.platform)}</div>
+                      <div className="compactDeviceText">
+                        <strong>{device.name}</strong>
+                        <span>{platformLabel(device.platform)} · {device.tools.length} tools</span>
+                      </div>
+                      <span className={"badge " + device.status}>
+                        <i />{device.status}
+                      </span>
+                    </button>
+                  ))}
+                  {!devices.length && (
+                    <button className="compactDevice empty" onClick={() => setShowAdd(true)}>
+                      <div className="deviceIcon">＋</div>
+                      <div className="compactDeviceText">
+                        <strong>Add your first computer</strong>
+                        <span>One npx command, then approve in the browser</span>
+                      </div>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="panelBlock">
+                <div className="blockHeader">
+                  <div>
+                    <span className="eyebrow">ACTIVITY</span>
+                    <h2>Recent activity</h2>
+                  </div>
+                  <span className="privacyPill">Arguments not logged</span>
+                </div>
+                <div className="activityList">
+                  {(status?.recentActivity || []).map((event) => (
+                    <div className="activityItem" key={event.id}>
+                      <i className={event.success ? "eventIcon success" : "eventIcon failed"}>
+                        {event.success ? "✓" : "!"}
+                      </i>
+                      <div>
+                        <strong>{eventLabel(event)}</strong>
+                        <span>
+                          {event.device_id ? deviceNameById.get(event.device_id) || event.device_id.slice(0, 8) : "Account"}
+                          {" · "}{timeAgo(event.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {!status?.recentActivity?.length && (
+                    <div className="activityEmpty">
+                      <strong>No activity yet</strong>
+                      <span>Pair a device or call a tool from ChatGPT.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section className="connectBanner">
+              <div className="connectIcon">↗</div>
+              <div>
+                <span className="eyebrow">CHATGPT</span>
+                <h2>Connect once. Then just talk.</h2>
+                <p>Add the Remote MCP endpoint in Developer Mode. OAuth links ChatGPT to this account.</p>
+              </div>
+              <div className="connectBannerActions">
+                <code>{mcpEndpoint}</code>
+                <CopyButton value={mcpEndpoint} />
+                <button className="ghostButton" onClick={() => setActive("connect")}>Setup</button>
+              </div>
+            </section>
+          </>
+        )}
+
+        {active === "devices" && (
+          <>
+            <section className="pageHeader">
+              <div>
+                <span className="eyebrow">DEVICES</span>
+                <h1>Your computers.</h1>
+                <p>Each computer has its own revocable credential and local capability policy.</p>
+              </div>
+              <button className="addButton" onClick={() => setShowAdd(true)}>+ Add device</button>
+            </section>
+
+            <div className="deviceGrid rich">
+              {devices.map((device) => (
+                <article className="deviceCard" key={device.id}>
+                  <div className="deviceTop">
+                    <div className="deviceIdentity">
+                      <div className="deviceIcon large">{platformGlyph(device.platform)}</div>
+                      <div>
+                        <h3>{device.name}</h3>
+                        <span>{platformLabel(device.platform)} · {device.arch || "unknown"}</span>
+                      </div>
+                    </div>
+                    <span className={"badge " + device.status}><i />{device.status}</span>
+                  </div>
+
+                  <div className="deviceMetaGrid">
+                    <div><span>Hostname</span><strong>{device.hostname || "—"}</strong></div>
+                    <div><span>Tools</span><strong>{device.tools.length}</strong></div>
+                    <div><span>Last seen</span><strong>{timeAgo(device.last_seen)}</strong></div>
+                    <div><span>Device ID</span><strong>{device.id.slice(0, 8)}</strong></div>
+                  </div>
+
+                  <div className="toolPills">
+                    {device.tools.slice(0, 5).map((tool) => <span key={tool}>{tool}</span>)}
+                    {device.tools.length > 5 && <span>+{device.tools.length - 5}</span>}
+                    {!device.tools.length && <span>Offline — capabilities hidden</span>}
+                  </div>
+
+                  <div className="deviceActions">
+                    <button className="ghostButton" onClick={() => void rename(device)}>Rename</button>
+                    <CopyButton value={device.id} label="Copy ID" />
+                    <button className="dangerButton" onClick={() => void revoke(device.id)}>Revoke</button>
+                  </div>
+                </article>
+              ))}
+
+              {!devices.length && (
+                <article className="emptyCard wide">
+                  <div className="emptyIcon">⌁</div>
+                  <h3>No paired computers</h3>
+                  <p>Windows, macOS, and Linux are supported. No public IP or port forwarding required.</p>
+                  <button onClick={() => setShowAdd(true)}>Add your first device</button>
+                </article>
+              )}
+            </div>
+          </>
+        )}
+
+        {active === "connect" && (
+          <>
+            <section className="pageHeader">
+              <div>
+                <span className="eyebrow">CONNECT AI</span>
+                <h1>One endpoint for your computers.</h1>
+                <p>Remote Link exposes a standards-based Remote MCP protected by OAuth 2.1 + PKCE.</p>
+              </div>
+            </section>
+
+            <section className="setupGrid">
+              <article className="setupCard featured">
+                <span className="stepNumber">01</span>
+                <div>
+                  <span className="eyebrow">REMOTE MCP URL</span>
+                  <h2>Add Remote Link to ChatGPT</h2>
+                  <p>In ChatGPT Developer Mode, create a Remote MCP connection using this endpoint.</p>
+                  <div className="endpointRow large">
+                    <code>{mcpEndpoint}</code>
+                    <CopyButton value={mcpEndpoint} />
                   </div>
                 </div>
-                <span className={"badge " + device.status}>
-                  <i />
-                  {device.status === "online" ? "Online" : "Offline"}
-                </span>
-              </div>
+              </article>
 
-              <dl>
+              <article className="setupCard">
+                <span className="stepNumber">02</span>
                 <div>
-                  <dt>Tools</dt>
-                  <dd>{device.tools.length}</dd>
+                  <h2>Authorize with Google</h2>
+                  <p>ChatGPT discovers Remote Link OAuth metadata, opens this site, and links to the same owner account.</p>
+                  <div className="scopeList">
+                    <span>devices:read</span>
+                    <span>computer:read</span>
+                    <span>computer:write</span>
+                  </div>
                 </div>
+              </article>
+
+              <article className="setupCard">
+                <span className="stepNumber">03</span>
                 <div>
-                  <dt>Last seen</dt>
-                  <dd>{device.last_seen ? new Date(device.last_seen).toLocaleString() : "Never"}</dd>
+                  <h2>Talk naturally</h2>
+                  <p>Once connected, address a device by name and Remote Link handles routing.</p>
+                  <div className="promptExamples">
+                    <code>“List the projects on my Mac.”</code>
+                    <code>“Run the tests on SamPC.”</code>
+                    <code>“Read package.json from my MacBook.”</code>
+                  </div>
                 </div>
-              </dl>
+              </article>
+            </section>
 
-              <div className="cardActions">
-                <code>{device.id.slice(0, 8)}</code>
-                <button className="dangerLink" onClick={() => void revoke(device.id)}>
-                  Revoke
-                </button>
+            <section className="protocolCard">
+              <div>
+                <span className="eyebrow">DISCOVERY</span>
+                <h2>OAuth discovery is live</h2>
+                <p>Remote Link publishes protected-resource metadata, authorization-server metadata, DCR, PKCE, refresh tokens, and per-user device routing.</p>
               </div>
-            </article>
-          ))}
+              <div className="protocolEndpoints">
+                <code>/.well-known/oauth-protected-resource</code>
+                <code>/.well-known/oauth-authorization-server</code>
+                <code>/oauth/register · /oauth/authorize · /oauth/token</code>
+              </div>
+            </section>
+          </>
+        )}
 
-          {!devices.length && (
-            <article className="emptyCard">
-              <div className="emptyIcon">⌁</div>
-              <h3>No computers yet</h3>
-              <p>Add your first Windows, macOS, or Linux computer with one command.</p>
-              <button onClick={() => setShowAdd(true)}>Add a device</button>
-            </article>
-          )}
-        </div>
-      </section>
+        {active === "security" && (
+          <>
+            <section className="pageHeader">
+              <div>
+                <span className="eyebrow">SECURITY</span>
+                <h1>Control stays local.</h1>
+                <p>The relay routes requests. Your computer remains the final execution and permission boundary.</p>
+              </div>
+            </section>
 
-      <section className="connectCard">
-        <div>
-          <span className="eyebrow">CHATGPT</span>
-          <h2>Connect Remote Link to ChatGPT</h2>
-          <p>
-            Add the Remote MCP endpoint once in Developer Mode. ChatGPT will open
-            this site and ask you to sign in with Google.
-          </p>
-        </div>
-        <div className="endpointRow">
-          <code>{mcpEndpoint}</code>
-          <button
-            className="ghostButton"
-            onClick={() => void navigator.clipboard.writeText(mcpEndpoint)}
-          >
-            Copy
-          </button>
-        </div>
-      </section>
+            <section className="securityGrid">
+              <article className="securityCard">
+                <span className="securityIcon">◇</span>
+                <h2>Private owner mode</h2>
+                <p>The first Google account becomes the instance owner. New account registration is disabled by default.</p>
+                <span className="securityState good">Enabled</span>
+              </article>
+              <article className="securityCard">
+                <span className="securityIcon">⌁</span>
+                <h2>Per-device credentials</h2>
+                <p>Every computer gets a unique credential. Only SHA-256 hashes are persisted in D1.</p>
+                <span className="securityState good">Enabled</span>
+              </article>
+              <article className="securityCard">
+                <span className="securityIcon">↗</span>
+                <h2>Outbound-only connection</h2>
+                <p>Your computer opens the WebSocket to Cloudflare. No inbound port, VPN, or public IP is required.</p>
+                <span className="securityState good">Enabled</span>
+              </article>
+              <article className="securityCard">
+                <span className="securityIcon">◎</span>
+                <h2>OAuth 2.1 + PKCE</h2>
+                <p>MCP clients receive short-lived access tokens with rotating refresh tokens and explicit scopes.</p>
+                <span className="securityState good">Enabled</span>
+              </article>
+              <article className="securityCard">
+                <span className="securityIcon">▦</span>
+                <h2>Privacy-preserving audit</h2>
+                <p>Remote Link records tool name, device, success, and time — never command arguments or file contents.</p>
+                <span className="securityState good">Enabled</span>
+              </article>
+              <article className="securityCard">
+                <span className="securityIcon">⊞</span>
+                <h2>Local permission modes</h2>
+                <p>Use developer mode for editing and commands, or safe mode for a read-oriented tool surface.</p>
+                <span className="securityState">Per device</span>
+              </article>
+            </section>
+          </>
+        )}
 
-      <footer>
-        <span>Remote Link · self-hosted on samyao.me</span>
-        <a href="https://github.com/yaohuangguan/remote-link">GitHub</a>
-      </footer>
+        <footer className="dashboardFooter">
+          <span>Remote Link · self-hosted on samyao.me</span>
+          <div>
+            <a href="https://github.com/yaohuangguan/remote-link">GitHub</a>
+            <a href="/health">Health</a>
+          </div>
+        </footer>
+      </main>
 
       {showAdd && (
         <div className="modalBackdrop" onMouseDown={() => setShowAdd(false)}>
           <section className="modal" onMouseDown={(event) => event.stopPropagation()}>
             <button className="modalClose" onClick={() => setShowAdd(false)}>×</button>
             <span className="eyebrow">ADD A DEVICE</span>
-            <h2>One command. That's it.</h2>
-            <p>
-              Run this on the computer you want to connect. A browser window will
-              open with a pairing code for you to confirm.
-            </p>
+            <h2>Connect a computer in one command.</h2>
+            <p>No repository clone, environment file, token copy, public IP, or router configuration.</p>
+
+            <div className="commandLabel">Developer mode · recommended</div>
             <div className="commandBox">
               <code>{command}</code>
-              <button onClick={() => void navigator.clipboard.writeText(command)}>
-                Copy
-              </button>
+              <CopyButton value={command} />
             </div>
-            <ol>
-              <li>Run the command in Terminal or PowerShell.</li>
-              <li>Confirm the matching code in your browser.</li>
-              <li>The computer appears here automatically.</li>
-            </ol>
-            <div className="supportLine">Windows · macOS · Linux · Node.js 20+</div>
+
+            <div className="commandLabel secondary">Read-oriented safe mode</div>
+            <div className="commandBox muted">
+              <code>{safeCommand}</code>
+              <CopyButton value={safeCommand} />
+            </div>
+
+            <div className="onboardingSteps">
+              <div><b>1</b><span><strong>Run the command</strong><small>Terminal or PowerShell · Node.js 20+</small></span></div>
+              <div><b>2</b><span><strong>Match the pairing code</strong><small>Your browser opens automatically</small></span></div>
+              <div><b>3</b><span><strong>Authorize the computer</strong><small>It appears here as soon as the agent connects</small></span></div>
+            </div>
+            <div className="supportLine">Windows · macOS · Linux</div>
           </section>
         </div>
       )}
+    </div>
+  );
+}
+
+function Landing() {
+  return (
+    <main className="landing">
+      <header className="landingNav">
+        <div className="brand">
+          <span className="brandMark">RL</span>
+          <span>Remote Link</span>
+        </div>
+        <div className="landingLinks">
+          <a href="https://github.com/yaohuangguan/remote-link">GitHub</a>
+          <a className="navLogin" href="/auth/google?return_to=/">Sign in</a>
+        </div>
+      </header>
+
+      <section className="landingHero">
+        <span className="eyebrow">SELF-HOSTED REMOTE MCP</span>
+        <h1>Your computer,<br />one AI call away.</h1>
+        <p>
+          Connect Windows, macOS, and Linux to ChatGPT through your own
+          Remote MCP infrastructure. Pair once, then just talk.
+        </p>
+        <div className="landingActions">
+          <a className="primaryButton" href="/auth/google?return_to=/">Continue with Google</a>
+          <a className="ghostLink" href="https://github.com/yaohuangguan/remote-link">View source ↗</a>
+        </div>
+
+        <div className="terminalPreview">
+          <div className="terminalBar">
+            <div className="terminalDots"><i /><i /><i /></div>
+            <span>Terminal</span>
+          </div>
+          <code>
+            <span>$</span> npx remotelink@latest{"\n"}
+            <em>Remote Link</em>{"\n\n"}
+            Pairing code: <strong>J7KD-P2QF</strong>{"\n"}
+            Opening browser...{"\n\n"}
+            <strong>✓ Device authorized</strong>{"\n"}
+            <strong>✓ Connected</strong> as Sam MacBook
+          </code>
+        </div>
+      </section>
+
+      <section className="landingFeatures">
+        <article><span>01</span><h2>One command</h2><p>No clone, config file, token copy, or port forwarding.</p></article>
+        <article><span>02</span><h2>Your infrastructure</h2><p>Cloudflare Worker, Durable Objects, D1, and your own domain.</p></article>
+        <article><span>03</span><h2>Open MCP</h2><p>OAuth-protected Remote MCP for ChatGPT and compatible AI clients.</p></article>
+        <article><span>04</span><h2>Local control</h2><p>The computer enforces its own allowed tool surface before execution.</p></article>
+      </section>
     </main>
   );
 }
@@ -383,6 +795,7 @@ function Dashboard({
 function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [status, setStatus] = useState<ProductStatus | null>(null);
 
   async function loadMe() {
     const response = await fetch("/api/me");
@@ -394,16 +807,24 @@ function App() {
     setUser(payload.user);
   }
 
-  async function loadDevices() {
-    const response = await fetch("/api/devices");
-    if (!response.ok) return;
-    setDevices((await response.json()) as Device[]);
+  async function loadAll() {
+    const [devicesResponse, statusResponse] = await Promise.all([
+      fetch("/api/devices"),
+      fetch("/api/status"),
+    ]);
+    if (devicesResponse.ok) {
+      setDevices((await devicesResponse.json()) as Device[]);
+    }
+    if (statusResponse.ok) {
+      setStatus((await statusResponse.json()) as ProductStatus);
+    }
   }
 
   async function signOut() {
     await fetch("/auth/logout", { method: "POST" });
     setUser(null);
     setDevices([]);
+    setStatus(null);
   }
 
   useEffect(() => {
@@ -412,8 +833,8 @@ function App() {
 
   useEffect(() => {
     if (!user) return;
-    void loadDevices();
-    const timer = window.setInterval(() => void loadDevices(), 5000);
+    void loadAll();
+    const timer = window.setInterval(() => void loadAll(), 5000);
     return () => window.clearInterval(timer);
   }, [user?.id]);
 
@@ -425,47 +846,14 @@ function App() {
     return <CenteredCard title="Loading…" body="Connecting to Remote Link." />;
   }
 
-  if (!user) {
-    return (
-      <main className="landing">
-        <header className="landingNav">
-          <div className="brand">
-            <span className="brandMark">RL</span>
-            <span>Remote Link</span>
-          </div>
-          <a className="navLogin" href="/auth/google?return_to=/">
-            Sign in
-          </a>
-        </header>
-        <section className="landingHero">
-          <span className="eyebrow">SELF-HOSTED REMOTE MCP</span>
-          <h1>Your computer,<br />one AI call away.</h1>
-          <p>
-            Connect Windows, macOS, and Linux to ChatGPT through your own
-            Remote MCP infrastructure. Pair once, then just talk.
-          </p>
-          <a className="primaryButton" href="/auth/google?return_to=/">
-            Continue with Google
-          </a>
-          <div className="terminalPreview">
-            <div className="terminalDots"><i /><i /><i /></div>
-            <code>
-              <span>$</span> npx remotelink@latest{"\n"}
-              <em>Remote Link</em>{"\n\n"}
-              Pairing code: <strong>J7KD-P2QF</strong>{"\n"}
-              Opening browser...
-            </code>
-          </div>
-        </section>
-      </main>
-    );
-  }
+  if (!user) return <Landing />;
 
   return (
     <Dashboard
       user={user}
       devices={devices}
-      refreshDevices={loadDevices}
+      status={status}
+      refreshAll={loadAll}
       signOut={signOut}
     />
   );
