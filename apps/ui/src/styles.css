@@ -359,3 +359,114 @@ button:disabled { opacity: .48; cursor: not-allowed; }
   .modal { padding:23px; }
   .dashboardFooter { flex-direction:column; }
 }
+
+.consentShell {
+  width:min(620px,calc(100% - 24px));
+  margin:0 auto;
+  min-height:100vh;
+  padding:28px 0 50px;
+}
+.consentCard {
+  margin-top:88px;
+  border:1px solid #242c36;
+  border-radius:20px;
+  background:rgba(14,17,22,.92);
+  box-shadow:0 34px 110px rgba(0,0,0,.34);
+  padding:30px;
+}
+.consentIcon {
+  display:grid;
+  place-items:center;
+  width:46px;
+  height:46px;
+  margin-bottom:20px;
+  border:1px solid #29323d;
+  border-radius:13px;
+  background:#11161c;
+  color:#a2adff;
+  font-size:18px;
+}
+.consentCard h1 {
+  margin:10px 0 10px;
+  font-size:34px;
+  line-height:1.05;
+  letter-spacing:-.045em;
+}
+.consentCard > p {
+  margin:0;
+  color:#8a94a1;
+  font-size:12px;
+  line-height:1.6;
+}
+.clientIdBox {
+  display:grid;
+  gap:5px;
+  margin-top:22px;
+  padding:13px;
+  border:1px solid #252d37;
+  border-radius:11px;
+  background:#0a0d11;
+}
+.clientIdBox span {
+  color:#646e7b;
+  font-size:8px;
+  text-transform:uppercase;
+  letter-spacing:.1em;
+}
+.clientIdBox code {
+  color:#aab4ff;
+  font-size:9px;
+  overflow:auto;
+}
+.consentScopes {
+  display:grid;
+  gap:8px;
+  margin-top:18px;
+}
+.consentScopes > div {
+  display:grid;
+  grid-template-columns:26px minmax(0,1fr);
+  gap:10px;
+  padding:12px;
+  border:1px solid #202832;
+  border-radius:11px;
+  background:#0c1014;
+}
+.consentScopes i {
+  display:grid;
+  place-items:center;
+  width:23px;
+  height:23px;
+  border-radius:7px;
+  background:rgba(86,217,154,.08);
+  color:#69daa1;
+  font-style:normal;
+  font-size:9px;
+}
+.consentScopes span {
+  display:grid;
+  gap:3px;
+}
+.consentScopes strong {
+  font-size:10px;
+}
+.consentScopes small {
+  color:#6f7986;
+  font-size:9px;
+  line-height:1.45;
+}
+.consentNotice {
+  margin-top:16px;
+  padding:12px;
+  border-left:2px solid #6679ff;
+  background:rgba(102,121,255,.05);
+  color:#737d8a;
+  font-size:9px;
+  line-height:1.55;
+}
+.consentActions {
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-top:22px;
+}
