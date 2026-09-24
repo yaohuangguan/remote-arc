@@ -18,5 +18,13 @@
     "build:ui": "pnpm --filter @remote-link/ui build",
     "deploy:relay": "pnpm build:ui && pnpm --filter @remote-link/relay run deploy",
     "build:cli": "pnpm --filter remotelink build"
+  },
+  "bin": {
+    "remotelink": "bin/remotelink.js",
+    "remote-link": "bin/remotelink.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.1.0",
+    "ws": "^8.18.3"
   }
 }
