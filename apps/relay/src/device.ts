@@ -6,6 +6,7 @@ import {
   randomUserCode,
   sha256Hex,
 } from "./auth.js";
+import { writeAudit } from "./audit.js";
 
 type DeviceEnv = {
   DB: D1Database;
@@ -224,6 +225,12 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
     ).bind(user.id, deviceId, createdAt, userCode),
   ]);
 
+  await writeAudit(env, {
+    userId: user.id,
+    deviceId,
+    eventType: "device.paired",
+  });
+
   return Response.json({
     ok: true,
     device: {
@@ -318,5 +325,47 @@ export async function handleDeviceRevoke(request: Request, env: DeviceEnv) {
     return Response.json({ error: "device not found" }, { status: 404 });
   }
 
+  await writeAudit(env, {
+    userId: user.id,
+    deviceId,
+    eventType: "device.revoked",
+  });
+
   return Response.json({ ok: true });
+}
+
+
+export async function handleDeviceRename(request: Request, env: DeviceEnv) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const match = url.pathname.match(/^\/api\/devices\/([^/]+)\/rename$/);
+  const deviceId = match?.[1];
+  if (!deviceId) return new Response("Not found", { status: 404 });
+
+  const body = (await request.json().catch(() => ({}))) as { name?: string };
+  const name = (body.name || "").trim().slice(0, 80);
+  if (!name) {
+    return Response.json({ error: "name is required" }, { status: 400 });
+  }
+
+  const result = await env.DB.prepare(
+    `UPDATE devices SET name = ?1
+     WHERE id = ?2 AND user_id = ?3 AND revoked_at IS NULL`,
+  )
+    .bind(name, deviceId, user.id)
+    .run();
+
+  if (!result.meta.changes) {
+    return Response.json({ error: "device not found" }, { status: 404 });
+  }
+
+  await writeAudit(env, {
+    userId: user.id,
+    deviceId,
+    eventType: "device.renamed",
+  });
+
+  return Response.json({ ok: true, name });
 }
