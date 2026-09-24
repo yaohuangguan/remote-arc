@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "remote-link-relay",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-20",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "REGISTRY",
+        "class_name": "DeviceRegistry"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["DeviceRegistry"]
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "remote.samyao.me",
+      "custom_domain": true
+    }
+  ]
+}
