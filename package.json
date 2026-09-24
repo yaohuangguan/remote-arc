@@ -16,6 +16,7 @@
     "test": "pnpm --filter @remote-link/mcp test:smoke",
     "ci": "pnpm typecheck && pnpm test",
     "build:ui": "pnpm --filter @remote-link/ui build",
-    "deploy:relay": "pnpm build:ui && pnpm --filter @remote-link/relay deploy"
+    "deploy:relay": "pnpm build:ui && pnpm --filter @remote-link/relay deploy",
+    "build:cli": "pnpm --filter remotelink build"
   }
 }
