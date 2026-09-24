@@ -11,7 +11,7 @@ Continue with Google
    ↓
 Add device
    ↓
-npx remotelink@latest
+npx --yes --package=github:yaohuangguan/remote-link remote-link
    ↓
 matching pairing code opens in browser
    ↓
@@ -166,7 +166,7 @@ computer:write
 The release UX is designed around one command:
 
 ```bash
-npx remotelink@latest
+npx --yes --package=github:yaohuangguan/remote-link remote-link
 ```
 
 First run:
@@ -279,9 +279,9 @@ remotelink
 remote-link
 ```
 
-Before the public command `npx remotelink@latest` works, the package must be published to npm.
+Today the GitHub-backed one-line command already works without cloning. After npm publishing, the shorter `npx remotelink@latest` command can become the default.
 
-From `packages/cli`:
+To publish the shorter npm alias later, run from `packages/cli`:
 
 ```bash
 npm login
