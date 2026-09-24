@@ -345,6 +345,31 @@ async function connectAgent(config: SavedConfig) {
 }
 
 async function main() {
+  if (argFlag("--help") || argFlag("-h")) {
+    process.stdout.write(
+      [
+        "Remote Link",
+        "",
+        "Usage:",
+        "  npx remotelink@latest",
+        "",
+        "Options:",
+        "  --safe        Read-only local capability mode",
+        "  --developer   Read/write/shell mode (default)",
+        "  --reset       Remove this computer's saved pairing",
+        "  --version     Print CLI version",
+        "  --help        Show this help",
+        "",
+      ].join("\n"),
+    );
+    return;
+  }
+
+  if (argFlag("--version") || argFlag("-v")) {
+    process.stdout.write(VERSION + "\n");
+    return;
+  }
+
   if (argFlag("--reset")) {
     await resetConfig();
     return;
