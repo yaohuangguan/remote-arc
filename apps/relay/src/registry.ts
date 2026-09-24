@@ -71,8 +71,10 @@ export class DeviceRegistry {
 
   private listDevices() {
     return this.ctx.getWebSockets().map((socket) => {
-      const attachment =
-        (socket.deserializeAttachment() as SocketAttachment | null) || {};
+      const attachment: SocketAttachment =
+        (socket.deserializeAttachment() as SocketAttachment | null) || {
+          deviceId: "unknown",
+        };
       return {
         id: attachment.deviceId,
         ...(attachment.device || {}),
@@ -101,8 +103,10 @@ export class DeviceRegistry {
       return Response.json({ error: "device offline" }, { status: 404 });
     }
 
-    const attachment =
-      (socket.deserializeAttachment() as SocketAttachment | null) || {};
+    const attachment: SocketAttachment =
+      (socket.deserializeAttachment() as SocketAttachment | null) || {
+        deviceId: body.deviceId,
+      };
     const tools = attachment.tools || [];
 
     if (!tools.includes(body.tool)) {
