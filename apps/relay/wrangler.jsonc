@@ -49,6 +49,8 @@
     }
   ],
   "vars": {
-    "PUBLIC_ORIGIN": "https://remote.samyao.me"
+    "PUBLIC_ORIGIN": "https://remote.samyao.me",
+    "ALLOW_SIGNUPS": "1",
+    "MONTHLY_TOOL_CALL_LIMIT": "10000"
   }
 }
