@@ -76,7 +76,6 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
         description:
           "List computers linked to this Remote Link account and show whether each device is online.",
         annotations: { readOnlyHint: true },
-        securitySchemes: [{ type: "oauth2", scopes: ["devices:read"] }],
       },
       async () => {
         requireScope(identity, "devices:read");
@@ -94,7 +93,6 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
           device_id: z.string(),
         }),
         annotations: { readOnlyHint: true },
-        securitySchemes: [{ type: "oauth2", scopes: ["devices:read"] }],
       },
       async ({ device_id }) => {
         requireScope(identity, "devices:read");
@@ -116,7 +114,6 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
           depth: z.number().int().min(1).max(10).default(2),
         }),
         annotations: { readOnlyHint: true },
-        securitySchemes: [{ type: "oauth2", scopes: ["computer:read"] }],
       },
       async ({ device_id, path, depth }) => {
         requireScope(identity, "computer:read");
@@ -141,7 +138,6 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
           length: z.number().int().positive().optional(),
         }),
         annotations: { readOnlyHint: true },
-        securitySchemes: [{ type: "oauth2", scopes: ["computer:read"] }],
       },
       async ({ device_id, path, offset, length }) => {
         requireScope(identity, "computer:read");
@@ -165,7 +161,6 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
           path: z.string(),
         }),
         annotations: { readOnlyHint: true },
-        securitySchemes: [{ type: "oauth2", scopes: ["computer:read"] }],
       },
       async ({ device_id, path }) => {
         requireScope(identity, "computer:read");
@@ -184,7 +179,6 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
           device_id: z.string(),
         }),
         annotations: { readOnlyHint: true },
-        securitySchemes: [{ type: "oauth2", scopes: ["computer:read"] }],
       },
       async ({ device_id }) => {
         requireScope(identity, "computer:read");
@@ -207,7 +201,6 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
             timeout_ms: z.number().int().positive().default(5000),
           }),
           annotations: { destructiveHint: true },
-          securitySchemes: [{ type: "oauth2", scopes: ["computer:write"] }],
         },
         async ({ device_id, command, timeout_ms }) => {
           requireScope(identity, "computer:write");
@@ -233,7 +226,6 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
             mode: z.enum(["rewrite", "append"]).default("rewrite"),
           }),
           annotations: { destructiveHint: true },
-          securitySchemes: [{ type: "oauth2", scopes: ["computer:write"] }],
         },
         async ({ device_id, path, content, mode }) => {
           requireScope(identity, "computer:write");
@@ -261,7 +253,6 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
             expected_replacements: z.number().int().positive().default(1),
           }),
           annotations: { destructiveHint: true },
-          securitySchemes: [{ type: "oauth2", scopes: ["computer:write"] }],
         },
         async ({
           device_id,
