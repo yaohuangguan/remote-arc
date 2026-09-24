@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n";
+import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
 import "./styles.css";
 
 type User = {
@@ -604,7 +604,7 @@ function Dashboard({
         </nav>
         <div className="sidebarStatus"><div className="livePulse"/><div><strong>{tr("Relay online", "Relay 在线")}</strong><span>remote.samyao.me</span></div></div>
         <div className="sidebarAccount">
-          {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email)[0].toUpperCase()}</div>}
+          {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email).charAt(0).toUpperCase()}</div>}
           <div><strong>{user.name || "Owner"}</strong><span>{user.email}</span></div>
           <button onClick={() => void signOut()} title={tr("Sign out", "退出登录")}>↪</button>
         </div>
