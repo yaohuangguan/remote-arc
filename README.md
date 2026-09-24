@@ -1,20 +1,43 @@
 # Remote Link
 
-Remote Link is a self-hosted remote MCP system that connects AI clients to your computers.
+Remote Link is a self-hosted Remote MCP system that connects AI clients to your computers with a Desktop Commander Remote-style onboarding flow.
 
-The first goal is simple: make it as easy to use as Desktop Commander Remote, while keeping the relay and device connection under your control.
+The intended user experience is:
+
+```text
+remote.samyao.me
+   ↓
+Continue with Google
+   ↓
+Add device
+   ↓
+npx remotelink@latest
+   ↓
+matching pairing code opens in browser
+   ↓
+Authorize device
+   ↓
+computer appears in dashboard
+   ↓
+connect https://remote.samyao.me/mcp once in ChatGPT
+   ↓
+just talk to your computer
+```
+
+No git clone, manual token copy, public IP, or router port forwarding is required for end users.
 
 ## Monorepo
 
 ```text
 remote-link/
 ├─ apps/
-│  ├─ ui/       # Remote Link dashboard
-│  ├─ relay/    # Cloudflare Worker + Durable Object + Remote MCP
-│  ├─ agent/    # Local device agent (Windows/macOS/Linux)
-│  └─ mcp/      # Local MCP execution layer
+│  ├─ ui/       # React dashboard, Google login UX, device pairing
+│  ├─ relay/    # Cloudflare Worker, D1, Durable Object, Remote MCP + OAuth
+│  ├─ agent/    # development agent runtime
+│  └─ mcp/      # standalone local MCP server for development/testing
 └─ packages/
-   └─ protocol/ # Shared agent/relay protocol types
+   ├─ cli/      # distributable `remotelink` npm CLI
+   └─ protocol/ # shared agent/relay message types
 ```
 
 ## Architecture
@@ -22,167 +45,176 @@ remote-link/
 ```text
 ChatGPT / Claude / Codex
           |
-          | Remote MCP HTTPS
+          | OAuth 2.1 + Remote MCP
           v
-  remote.samyao.me
+https://remote.samyao.me/mcp
           |
-          | Cloudflare Worker
           v
-  DeviceRegistry Durable Object
+Cloudflare Worker
+  ├─ Google login / sessions
+  ├─ OAuth 2.1 + PKCE authorization server
+  ├─ device pairing API
+  └─ D1 identity database
+          |
+          v
+DeviceRegistry Durable Object
           |
           | outbound WebSocket
           v
-  Remote Link Agent
+Remote Link CLI / Agent
           |
-          | local stdio MCP
+          | local MCP client
           v
-  Remote Link MCP
-          |
-          v
-  Desktop Commander OSS
+Desktop Commander OSS
           |
           v
 Windows / macOS / Linux
 ```
 
-The local device always initiates the connection to the relay. No inbound port forwarding or public IP is required.
+A device always initiates the connection to the relay. Remote Link does not require inbound access to the computer.
 
-## Current phase
+## Production deployment
 
-Phase 1 is single-user and self-hosted.
-
-- one Cloudflare deployment
-- one private MCP access key
-- one private agent token
-- multiple personal computers
-- safe/developer/full local permission modes
-- one dashboard at `remote.samyao.me`
-
-Multi-user accounts, OAuth, public onboarding, billing, and an installer are intentionally deferred.
-
-## Requirements
-
-- Node.js 24+
-- pnpm 10
-- Cloudflare account for relay deployment
-- a domain on Cloudflare DNS for the custom domain flow
-
-## Install
-
-```bash
-git clone https://github.com/yaohuangguan/remote-link.git
-cd remote-link
-pnpm install
-pnpm run ci
-```
-
-## Local MCP
-
-Safe mode is the default:
-
-```bash
-pnpm dev:mcp
-```
-
-Developer mode:
-
-### macOS / Linux
-
-```bash
-REMOTE_LINK_MODE=developer pnpm dev:mcp
-```
-
-### PowerShell
-
-```powershell
-$env:REMOTE_LINK_MODE="developer"
-pnpm dev:mcp
-```
-
-The local MCP delegates filesystem/process execution to Desktop Commander OSS over stdio.
-
-## Agent
-
-The agent connects one computer to the relay and advertises only the tools exposed by that computer's local MCP permission mode.
-
-Required environment variables:
+Current production endpoint:
 
 ```text
-REMOTE_LINK_DEVICE_ID=sam-pc
-REMOTE_LINK_DEVICE_NAME=SamPC
-REMOTE_LINK_RELAY_URL=wss://remote.samyao.me
-REMOTE_LINK_AGENT_TOKEN=<private-agent-token>
-REMOTE_LINK_MODE=safe
+https://remote.samyao.me
 ```
 
-Run:
+The Cloudflare deployment currently includes:
+
+- Workers Static Assets for the dashboard
+- one Worker for UI/API/OAuth/MCP routing
+- one Durable Object class for live device connections
+- D1 database `remote-link-auth`
+- custom domain `remote.samyao.me`
+
+## Authentication
+
+Remote Link no longer uses a shared MCP URL key or one shared agent token.
+
+### Dashboard identity
+
+Users sign in with Google. The Worker creates a private HTTP-only session cookie backed by D1.
+
+Required Wrangler secrets:
+
+```text
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+```
+
+Optional:
+
+```text
+ALLOWED_EMAILS=user@example.com,second@example.com
+```
+
+Google OAuth redirect URI:
+
+```text
+https://remote.samyao.me/auth/google/callback
+```
+
+### Device identity
+
+Every paired computer receives its own long random credential.
+
+The credential is:
+
+- generated during the pairing flow
+- stored locally in `~/.remote-link/config.json`
+- stored only as a SHA-256 hash in D1
+- bound to one device and one Remote Link user
+- individually revocable from the dashboard
+
+### ChatGPT / MCP identity
+
+Remote MCP is available at:
+
+```text
+https://remote.samyao.me/mcp
+```
+
+It uses OAuth 2.1 authorization code + PKCE with dynamic client registration.
+
+Discovery endpoints:
+
+```text
+/.well-known/oauth-protected-resource
+/.well-known/oauth-authorization-server
+```
+
+OAuth endpoints:
+
+```text
+/oauth/register
+/oauth/authorize
+/oauth/token
+```
+
+Scopes:
+
+```text
+devices:read
+computer:read
+computer:write
+```
+
+## Device onboarding
+
+The release UX is designed around one command:
 
 ```bash
-pnpm dev:agent
+npx remotelink@latest
 ```
 
-For a Mac, change the device identity, for example:
+First run:
+
+1. CLI requests a short-lived device pairing.
+2. Terminal shows a code such as `J7KD-P2QF`.
+3. CLI opens `remote.samyao.me/device?code=J7KD-P2QF`.
+4. User signs in with Google if necessary.
+5. Browser shows the same code and computer details.
+6. User selects **Authorize device**.
+7. CLI receives the approved device identity and stores it locally.
+8. CLI connects the computer to the relay over an outbound WebSocket.
+9. Dashboard shows the computer as online.
+
+Later runs reuse the saved device credential and connect immediately.
+
+CLI options:
 
 ```text
-REMOTE_LINK_DEVICE_ID=sam-macbook
-REMOTE_LINK_DEVICE_NAME=Sam MacBook
+--safe        read-only capability mode
+--developer   read/write/shell capability mode (default)
+--reset       remove local pairing credentials
+--version
+--help
 ```
 
-No relay code changes are required.
+## Local capability boundary
 
-## Relay
+Remote Link does not expose the entire Desktop Commander tool catalog by default.
 
-The relay runs on Cloudflare Workers and uses one Durable Object as the personal device registry in Phase 1.
+Safe mode:
 
-The production custom domain is configured as:
+- `list_directory`
+- `read_file`
+- `get_file_info`
+- `list_processes`
 
-```text
-remote.samyao.me
-```
+Developer mode additionally exposes:
 
-Two Wrangler secrets are required:
+- `start_process`
+- `write_file`
+- `edit_block`
 
-```text
-AGENT_TOKEN
-MCP_ACCESS_KEY
-```
+The device advertises its actual available tools when it connects. The relay refuses to forward tools the device did not advertise.
 
-Set them from `apps/relay`:
+## Remote MCP tools
 
-```bash
-pnpm exec wrangler secret put AGENT_TOKEN
-pnpm exec wrangler secret put MCP_ACCESS_KEY
-```
-
-Then deploy from the repository root:
-
-```bash
-pnpm deploy:relay
-```
-
-The Worker deploy includes the React dashboard through Workers Static Assets.
-
-## Endpoints
-
-```text
-https://remote.samyao.me/                  Dashboard
-https://remote.samyao.me/health            Health check
-wss://remote.samyao.me/agent               Agent WebSocket
-https://remote.samyao.me/api/devices       Dashboard API
-https://remote.samyao.me/mcp/<access-key>  Remote MCP
-```
-
-The access key is currently carried in the private MCP URL because Phase 1 is for one user only. Public/multi-user deployment should replace this with OAuth.
-
-## ChatGPT
-
-After the relay is deployed and an agent is online, add this as a Remote MCP endpoint in ChatGPT Developer Mode:
-
-```text
-https://remote.samyao.me/mcp/<your-private-access-key>
-```
-
-Remote tools currently include:
+Current remote tools:
 
 - `list_devices`
 - `device_tools`
@@ -194,51 +226,144 @@ Remote tools currently include:
 - `write_file`
 - `edit_block`
 
-Mutation calls still fail at the device boundary unless that device agent is started with `REMOTE_LINK_MODE=developer` or `full`.
+Every device call is checked against the authenticated user's D1 device ownership before it reaches the live WebSocket.
 
-## Security model
+## Development
 
-There are two independent credentials in Phase 1:
+Requirements:
 
-- `AGENT_TOKEN`: lets a local computer connect to the relay.
-- `MCP_ACCESS_KEY`: lets an MCP client call the relay and lets the dashboard query device state.
+- Node.js 20+
+- pnpm 10
+- Cloudflare Wrangler for relay work
 
-Do not reuse the same secret for both.
+Install:
 
-Remote Link does not log either secret by design. Do not commit them to Git.
+```bash
+git clone https://github.com/yaohuangguan/remote-link.git
+cd remote-link
+pnpm install
+pnpm run ci
+```
 
-The local MCP remains the final capability boundary: a safe-mode device never advertises mutation tools, and the relay refuses to forward a tool that the device did not advertise.
+Useful commands:
+
+```bash
+pnpm dev:mcp
+pnpm dev:agent
+pnpm dev:relay
+pnpm dev:ui
+pnpm build:ui
+pnpm build:cli
+pnpm deploy:relay
+```
+
+Apply production D1 migrations:
+
+```bash
+cd apps/relay
+pnpm exec wrangler d1 migrations apply remote-link-auth --remote
+```
+
+## CLI publishing
+
+The npm package is prepared as:
+
+```text
+remotelink
+```
+
+with these binaries:
+
+```text
+remotelink
+remote-link
+```
+
+Before the public command `npx remotelink@latest` works, the package must be published to npm.
+
+From `packages/cli`:
+
+```bash
+npm login
+pnpm build
+npm publish
+```
+
+## ChatGPT setup
+
+Until Remote Link is a reviewed public Plugin, connect it once through ChatGPT Developer Mode using:
+
+```text
+https://remote.samyao.me/mcp
+```
+
+ChatGPT discovers the OAuth configuration from Remote Link, opens the Remote Link authorization flow, and the user signs in with Google.
+
+OpenAI currently requires authenticated MCP servers to expose protected-resource metadata and an OAuth 2.1-compatible authorization server with PKCE. Remote Link implements that contract using DCR for client registration.
+
+## Security notes
+
+Remote computer control is high impact.
+
+Current protections include:
+
+- per-user Google sessions
+- per-device random credentials
+- hashed device credentials in D1
+- OAuth 2.1 + PKCE for Remote MCP
+- short-lived authorization codes
+- rotating refresh tokens
+- per-user device routing
+- revoked-device checks before every MCP device call
+- local tool allowlists
+- outbound-only device connections
+
+Still planned before broader public use:
+
+- explicit per-command approval policies
+- sensitive-path deny rules
+- audit log with secret redaction
+- rate limiting for login and pairing endpoints
+- CSRF hardening for state-changing dashboard actions
+- signed/notarized background installers
+- auto-update
+- public Plugin review
 
 ## Roadmap
 
-### Phase 1 — personal usable remote
+### Phase 1 — personal Remote Link
 
-- [x] local MCP
-- [x] cross-platform agent
-- [x] Cloudflare relay architecture
-- [x] multi-device routing
-- [x] Remote MCP endpoint
-- [x] basic device dashboard
-- [x] production deploy to `remote.samyao.me`
-- [ ] connect SamPC through production relay (run `pnpm dev:agent` on SamPC)
-- [ ] add Remote MCP to ChatGPT and execute a real call
+- [x] monorepo
+- [x] local MCP execution layer
+- [x] Cloudflare relay
+- [x] Durable Object device routing
+- [x] D1 identity/device/OAuth schema
+- [x] browser-approved device pairing protocol
+- [x] Google login implementation
+- [x] OAuth 2.1 + PKCE Remote MCP implementation
+- [x] one-command CLI implementation
+- [x] device dashboard implementation
+- [x] production deployment to `remote.samyao.me`
+- [ ] configure Google OAuth client credentials
+- [ ] publish `remotelink` to npm
+- [ ] pair SamPC through the public CLI flow
+- [ ] connect ChatGPT Developer Mode to `/mcp`
+- [ ] perform first real ChatGPT → Remote Link → SamPC tool call
 
-### Phase 2 — simple installation
+### Phase 2 — invisible background agent
 
-- one-line macOS/Linux installer
-- Windows installer / background service
-- device pairing flow
-- generated device credentials
-- tray/menu-bar status
-- auto update
+- Windows service / tray app
+- macOS LaunchAgent / menu-bar app
+- Linux service
+- auto-start
+- auto-update
+- device rename and permission profiles
 
-### Phase 3 — product hardening
+### Phase 3 — public product
 
-- OAuth
-- multi-user tenancy
-- per-device capability policy
-- approval gates
-- audit log with secret redaction
-- session revocation
+- stronger approval policy
+- multi-user administration
+- OAuth consent UI
+- audit history
 - installer signing/notarization
-- public Plugin review
+- public Plugin submission
