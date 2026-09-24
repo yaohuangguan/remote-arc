@@ -413,6 +413,31 @@ function Landing() {
         </div>
       </section>
 
+      <section className="differenceSection">
+        <div className="sectionIntro">
+          <span className="eyebrow">{tr("THE DIFFERENCE", "我们的差异")}</span>
+          <h2>{tr("Hosted convenience without hosted lock-in.", "享受托管的省心，但不被托管平台锁死。")}</h2>
+          <p>{tr(
+            "Remote Link is built around an escape hatch: use our hosted relay when you want zero ops, or run the same control plane yourself when ownership matters more.",
+            "Remote Link 从一开始就保留退出通道：想省心就用托管 Relay，想完全掌控就把同一套控制面部署到自己账户里。"
+          )}</p>
+        </div>
+        <div className="comparisonGrid">
+          <div className="comparisonHead"><span></span><strong>Remote Link</strong><strong>{tr("Hosted-only connector", "纯托管连接器")}</strong></div>
+          {[
+            [tr("Control plane", "控制面"), tr("Hosted or self-hosted", "托管或自托管"), tr("Provider-owned", "平台持有")],
+            [tr("AI clients", "AI 客户端"), tr("Standards-based Remote MCP", "标准 Remote MCP"), tr("Often product-specific", "通常绑定产品")],
+            [tr("Device permissions", "设备权限"), tr("Final boundary stays local", "最终边界留在本机"), tr("Cloud policy first", "云端策略优先")],
+            [tr("Exit path", "退出路径"), tr("Fork, deploy, keep running", "Fork、部署、继续运行"), tr("Migration required", "需要迁移")],
+            [tr("Free hosted usage", "免费托管额度"), tr("10,000 tool calls / month", "每月 10,000 次调用"), tr("Depends on provider", "取决于平台")],
+          ].map(([label, ours, other]) => (
+            <div className="comparisonRow" key={label}>
+              <span>{label}</span><strong>✓ {ours}</strong><em>{other}</em>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="ctaStrip">
         <div>
           <span className="eyebrow">{tr("FREE HOSTED PLAN", "免费托管方案")}</span>
@@ -772,9 +797,18 @@ function App() {
   useEffect(() => { void loadMe(); }, []);
   useEffect(() => {
     if (!user) return;
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") void loadAll();
+    };
     void loadAll();
-    const timer = window.setInterval(() => void loadAll(), 5000);
-    return () => window.clearInterval(timer);
+    const timer = window.setInterval(refreshIfVisible, 30_000);
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
   }, [user?.id]);
 
   if (location.pathname === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;
