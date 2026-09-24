@@ -73,7 +73,7 @@ Multi-user accounts, OAuth, public onboarding, billing, and an installer are int
 git clone https://github.com/yaohuangguan/remote-link.git
 cd remote-link
 pnpm install
-pnpm ci
+pnpm run ci
 ```
 
 ## Local MCP
