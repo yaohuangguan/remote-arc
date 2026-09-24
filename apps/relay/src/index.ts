@@ -7,6 +7,7 @@ type Env = {
   REGISTRY: DurableObjectNamespace;
   AGENT_TOKEN: string;
   MCP_ACCESS_KEY: string;
+  ASSETS: Fetcher;
 };
 
 function bearerToken(request: Request) {
@@ -61,16 +62,6 @@ export default {
       return handler.fetch(request);
     }
 
-    return new Response(
-      [
-        "Remote Link relay",
-        "",
-        "Health: /health",
-        "MCP: /mcp/<private-access-key>",
-      ].join("\n"),
-      {
-        headers: { "content-type": "text/plain; charset=utf-8" },
-      },
-    );
+    return env.ASSETS.fetch(request);
   },
 };
