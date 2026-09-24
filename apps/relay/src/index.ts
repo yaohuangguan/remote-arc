@@ -19,6 +19,7 @@ import {
   handlePairingLookup,
 } from "./device.js";
 import { readAudit } from "./audit.js";
+import { getMonthlyUsage } from "./usage.js";
 import {
   authorizationServerMetadata,
   handleDynamicClientRegistration,
@@ -38,6 +39,8 @@ type Env = {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
+  ALLOW_SIGNUPS?: string;
+  MONTHLY_TOOL_CALL_LIMIT?: string;
 };
 
 function withTrustedDeviceHeaders(
@@ -119,12 +122,14 @@ export default {
       if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
       const devices = await getDevicesForUser(env, user.id);
       const recent = await readAudit(env, user.id, 8);
+      const usage = await getMonthlyUsage(env, user.id);
       return Response.json({
         googleConfigured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
         mcpEndpoint: env.PUBLIC_ORIGIN + "/mcp",
         totalDevices: devices.length,
         onlineDevices: devices.filter((device) => device.status === "online").length,
         recentActivity: recent,
+        usage,
       });
     }
 
