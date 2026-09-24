@@ -1,0 +1,30 @@
+{
+  "name": "@remote-link/cli",
+  "version": "0.1.0",
+  "description": "Connect a computer to Remote Link with one command.",
+  "type": "module",
+  "bin": {
+    "remote-link": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --platform node --target node20 --sourcemap",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.1.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.6",
+    "@types/ws": "^8.18.1",
+    "tsup": "^8.5.0",
+    "typescript": "^6.0.3"
+  }
+}
