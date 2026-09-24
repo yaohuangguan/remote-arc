@@ -10,14 +10,14 @@ import type {
 import { LocalMcpClient } from "./local-mcp.js";
 
 const relayUrl = process.env.REMOTE_LINK_RELAY_URL || "wss://remote.samyao.me";
-const token = process.env.REMOTE_LINK_AGENT_TOKEN;
+const token = process.env.REMOTE_LINK_DEVICE_TOKEN;
 const deviceId =
   process.env.REMOTE_LINK_DEVICE_ID ||
   os.hostname().toLowerCase().replace(/[^a-z0-9-]+/g, "-");
 const deviceName = process.env.REMOTE_LINK_DEVICE_NAME || os.hostname();
 
 if (!token) {
-  throw new Error("REMOTE_LINK_AGENT_TOKEN is required");
+  throw new Error("REMOTE_LINK_DEVICE_TOKEN is required");
 }
 
 const mcp = new LocalMcpClient();
