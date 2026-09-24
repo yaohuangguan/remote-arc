@@ -3,17 +3,22 @@ import { z } from "zod";
 import { getDevicesForUser } from "./device.js";
 import type { OAuthIdentity } from "./auth.js";
 import { writeAudit } from "./audit.js";
+import { consumeToolCall } from "./usage.js";
 
 type Env = {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   PUBLIC_ORIGIN: string;
+  MONTHLY_TOOL_CALL_LIMIT?: string;
 };
 
 const registry = (env: Env) => env.REGISTRY.getByName("global");
 
 const hasScope = (identity: OAuthIdentity, scope: string) =>
   identity.scope.split(/\s+/).includes(scope);
+
+const consume = async (env: Env, identity: OAuthIdentity) =>
+  consumeToolCall(env, identity.userId);
 
 async function callDevice(
   env: Env,
@@ -99,6 +104,7 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
       },
       async () => {
         requireScope(identity, "devices:read");
+        await consume(env, identity);
         return textResult(await getDevicesForUser(env, identity.userId));
       },
     );
@@ -116,6 +122,7 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
       },
       async ({ device_id }) => {
         requireScope(identity, "devices:read");
+        await consume(env, identity);
         const devices = await getDevicesForUser(env, identity.userId);
         const device = devices.find((item) => item.id === device_id);
         if (!device) throw new Error("device not found");
@@ -137,6 +144,7 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
       },
       async ({ device_id, path, depth }) => {
         requireScope(identity, "computer:read");
+        await consume(env, identity);
         return textResult(
           await callDevice(env, identity, device_id, "list_directory", {
             path,
@@ -161,6 +169,7 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
       },
       async ({ device_id, path, offset, length }) => {
         requireScope(identity, "computer:read");
+        await consume(env, identity);
         return textResult(
           await callDevice(env, identity, device_id, "read_file", {
             path,
@@ -184,6 +193,7 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
       },
       async ({ device_id, path }) => {
         requireScope(identity, "computer:read");
+        await consume(env, identity);
         return textResult(
           await callDevice(env, identity, device_id, "get_file_info", { path }),
         );
@@ -202,6 +212,7 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
       },
       async ({ device_id }) => {
         requireScope(identity, "computer:read");
+        await consume(env, identity);
         return textResult(
           await callDevice(env, identity, device_id, "list_processes", {}),
         );
@@ -224,6 +235,7 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
         },
         async ({ device_id, command, timeout_ms }) => {
           requireScope(identity, "computer:write");
+          await consume(env, identity);
           return textResult(
             await callDevice(env, identity, device_id, "start_process", {
               command,
@@ -249,6 +261,7 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
         },
         async ({ device_id, path, content, mode }) => {
           requireScope(identity, "computer:write");
+          await consume(env, identity);
           return textResult(
             await callDevice(env, identity, device_id, "write_file", {
               path,
@@ -282,6 +295,7 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
           expected_replacements,
         }) => {
           requireScope(identity, "computer:write");
+          await consume(env, identity);
           return textResult(
             await callDevice(env, identity, device_id, "edit_block", {
               file_path,
