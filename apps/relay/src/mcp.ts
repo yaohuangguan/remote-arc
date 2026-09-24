@@ -2,6 +2,7 @@ import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { getDevicesForUser } from "./device.js";
 import type { OAuthIdentity } from "./auth.js";
+import { writeAudit } from "./audit.js";
 
 type Env = {
   DB: D1Database;
@@ -47,7 +48,16 @@ async function callDevice(
     error?: string;
   };
 
-  if (!response.ok || payload.error) {
+  const success = response.ok && !payload.error;
+  await writeAudit(env, {
+    userId: identity.userId,
+    deviceId,
+    eventType: "mcp.tool_call",
+    toolName: tool,
+    success,
+  }).catch(() => undefined);
+
+  if (!success) {
     throw new Error(payload.error || `device call failed: ${response.status}`);
   }
 
