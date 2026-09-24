@@ -1,23 +1,54 @@
 import { DeviceRegistry } from "./registry.js";
 import { createRemoteLinkMcp } from "./mcp.js";
+import {
+  authenticateDevice,
+  authenticateMcp,
+  getSessionUser,
+  handleGoogleCallback,
+  handleGoogleLogin,
+  handleLogout,
+} from "./auth.js";
+import {
+  getDevicesForUser,
+  handleDeviceList,
+  handleDeviceRevoke,
+  handleDeviceStart,
+  handleDeviceToken,
+  handlePairingApprove,
+  handlePairingLookup,
+} from "./device.js";
+import {
+  authorizationServerMetadata,
+  handleDynamicClientRegistration,
+  handleOAuthAuthorize,
+  handleOAuthToken,
+  mcpUnauthorized,
+  protectedResourceMetadata,
+} from "./oauth.js";
 
 export { DeviceRegistry };
 
 type Env = {
+  DB: D1Database;
   REGISTRY: DurableObjectNamespace;
-  AGENT_TOKEN: string;
-  MCP_ACCESS_KEY: string;
   ASSETS: Fetcher;
+  PUBLIC_ORIGIN: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  ALLOWED_EMAILS?: string;
 };
 
-function bearerToken(request: Request) {
-  const value = request.headers.get("authorization") || "";
-  return value.startsWith("Bearer ") ? value.slice(7) : "";
-}
-
-function accessKeyFromPath(pathname: string) {
-  const match = pathname.match(/^\/mcp\/([^/]+)\/?$/);
-  return match?.[1] || "";
+function withTrustedDeviceHeaders(
+  request: Request,
+  identity: {
+    id: string;
+    user_id: string;
+  },
+) {
+  const headers = new Headers(request.headers);
+  headers.set("x-remote-link-user-id", identity.user_id);
+  headers.set("x-remote-link-device-id", identity.id);
+  return new Request(request, { headers });
 }
 
 export default {
@@ -28,38 +59,111 @@ export default {
       return Response.json({
         ok: true,
         service: "remote-link-relay",
-        version: "0.1.0",
+        version: "0.2.0",
+        auth: "oauth2-pkce",
       });
     }
 
-    if (url.pathname === "/agent") {
-      if (bearerToken(request) !== env.AGENT_TOKEN) {
-        return new Response("Unauthorized", { status: 401 });
-      }
-
-      return env.REGISTRY.getByName("global").fetch(request);
+    if (
+      url.pathname === "/.well-known/oauth-protected-resource" ||
+      url.pathname === "/.well-known/oauth-protected-resource/mcp"
+    ) {
+      return protectedResourceMetadata(env);
     }
 
-    if (url.pathname === "/api/devices") {
-      const key =
-        url.searchParams.get("key") || request.headers.get("x-remote-link-key");
-      if (key !== env.MCP_ACCESS_KEY) {
-        return new Response("Unauthorized", { status: 401 });
+    if (
+      url.pathname === "/.well-known/oauth-authorization-server" ||
+      url.pathname === "/.well-known/openid-configuration"
+    ) {
+      return authorizationServerMetadata(env);
+    }
+
+    if (url.pathname === "/oauth/register" && request.method === "POST") {
+      return handleDynamicClientRegistration(request, env);
+    }
+
+    if (url.pathname === "/oauth/authorize" && request.method === "GET") {
+      return handleOAuthAuthorize(request, env);
+    }
+
+    if (url.pathname === "/oauth/token" && request.method === "POST") {
+      return handleOAuthToken(request, env);
+    }
+
+    if (url.pathname === "/auth/google" && request.method === "GET") {
+      return handleGoogleLogin(request, env);
+    }
+
+    if (
+      url.pathname === "/auth/google/callback" &&
+      request.method === "GET"
+    ) {
+      return handleGoogleCallback(request, env);
+    }
+
+    if (url.pathname === "/auth/logout" && request.method === "POST") {
+      return handleLogout(request, env);
+    }
+
+    if (url.pathname === "/api/me" && request.method === "GET") {
+      const user = await getSessionUser(request, env);
+      return user
+        ? Response.json({ authenticated: true, user })
+        : Response.json({ authenticated: false }, { status: 401 });
+    }
+
+    if (url.pathname === "/api/device/start" && request.method === "POST") {
+      return handleDeviceStart(request, env);
+    }
+
+    if (url.pathname === "/api/device/token" && request.method === "POST") {
+      return handleDeviceToken(request, env);
+    }
+
+    if (url.pathname === "/api/pairing" && request.method === "GET") {
+      return handlePairingLookup(request, env);
+    }
+
+    if (url.pathname === "/api/pairing/approve" && request.method === "POST") {
+      return handlePairingApprove(request, env);
+    }
+
+    if (url.pathname === "/api/devices" && request.method === "GET") {
+      return handleDeviceList(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/revoke$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDeviceRevoke(request, env);
+    }
+
+    if (url.pathname === "/agent") {
+      const identity = await authenticateDevice(request, env);
+      if (!identity) {
+        return new Response("Unauthorized device", { status: 401 });
       }
 
       return env.REGISTRY
         .getByName("global")
-        .fetch("https://registry/devices");
+        .fetch(withTrustedDeviceHeaders(request, identity));
     }
 
-    const mcpAccessKey = accessKeyFromPath(url.pathname);
-    if (mcpAccessKey) {
-      if (mcpAccessKey !== env.MCP_ACCESS_KEY) {
-        return new Response("Unauthorized", { status: 401 });
+    if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
+      const identity = await authenticateMcp(request, env);
+      if (!identity || identity.resource !== env.PUBLIC_ORIGIN + "/mcp") {
+        return mcpUnauthorized(env);
       }
 
-      const handler = createRemoteLinkMcp(env);
+      const handler = createRemoteLinkMcp(env, identity);
       return handler.fetch(request);
+    }
+
+    if (url.pathname === "/api/debug/devices" && request.method === "GET") {
+      const user = await getSessionUser(request, env);
+      if (!user) return new Response("Unauthorized", { status: 401 });
+      return Response.json(await getDevicesForUser(env, user.id));
     }
 
     return env.ASSETS.fetch(request);
