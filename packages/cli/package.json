@@ -1,9 +1,10 @@
 {
-  "name": "@remote-link/cli",
+  "name": "remotelink",
   "version": "0.1.0",
   "description": "Connect a computer to Remote Link with one command.",
   "type": "module",
   "bin": {
+    "remotelink": "./dist/index.js",
     "remote-link": "./dist/index.js"
   },
   "files": [
