@@ -245,7 +245,7 @@ export async function handleDeviceList(
   return listDevicesForUser(env, user.id);
 }
 
-export async function listDevicesForUser(
+export async function getDevicesForUser(
   env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
   userId: string,
 ) {
@@ -281,16 +281,21 @@ export async function listDevicesForUser(
 
   const onlineById = new Map(online.map((device) => [device.id, device]));
 
-  return Response.json(
-    (rows.results || []).map((device) => {
-      const live = onlineById.get(device.id);
-      return {
-        ...device,
-        status: live ? "online" : "offline",
-        tools: live?.tools || [],
-      };
-    }),
-  );
+  return (rows.results || []).map((device) => {
+    const live = onlineById.get(device.id);
+    return {
+      ...device,
+      status: live ? "online" : "offline",
+      tools: live?.tools || [],
+    };
+  });
+}
+
+export async function listDevicesForUser(
+  env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
+  userId: string,
+) {
+  return Response.json(await getDevicesForUser(env, userId));
 }
 
 export async function handleDeviceRevoke(request: Request, env: DeviceEnv) {
