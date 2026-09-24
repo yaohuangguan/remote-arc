@@ -141,6 +141,8 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
   const state = url.searchParams.get("state") || undefined;
   const resource = url.searchParams.get("resource") || mcpResource(env);
   const scope = normalizeScope(url.searchParams.get("scope"));
+  const approved = url.searchParams.get("approved") === "1";
+  const denied = url.searchParams.get("denied") === "1";
 
   if (
     responseType !== "code" ||
@@ -184,6 +186,23 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
         encodeURIComponent(returnTo),
       302,
     );
+  }
+
+  if (denied) {
+    return redirectWith(redirectUri, {
+      error: "access_denied",
+      error_description: "The user denied the Remote Link authorization request.",
+      state,
+    });
+  }
+
+  if (!approved) {
+    const consent = new URL(env.PUBLIC_ORIGIN + "/oauth/consent");
+    for (const [key, value] of url.searchParams.entries()) {
+      consent.searchParams.append(key, value);
+    }
+    consent.searchParams.set("scope", scope);
+    return Response.redirect(consent.toString(), 302);
   }
 
   const code = randomToken();
