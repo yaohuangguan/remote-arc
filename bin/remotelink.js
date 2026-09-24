@@ -9,7 +9,7 @@ import process from "process";
 import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import WebSocket from "ws";
-var VERSION = "0.1.0";
+var VERSION = "0.2.0";
 var DEFAULT_ORIGIN = "https://remote.samyao.me";
 var CONFIG_DIR = path.join(os.homedir(), ".remote-link");
 var CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -261,6 +261,9 @@ async function main() {
         "Remote Link",
         "",
         "Usage:",
+        "  npx --yes --package=github:yaohuangguan/remote-link remote-link",
+        "",
+        "After the npm release:",
         "  npx remotelink@latest",
         "",
         "Options:",
