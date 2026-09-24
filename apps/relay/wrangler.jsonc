@@ -31,8 +31,12 @@
     "run_worker_first": [
       "/api/*",
       "/agent",
+      "/mcp",
       "/mcp/*",
-      "/health"
+      "/health",
+      "/.well-known/*",
+      "/oauth/*",
+      "/auth/*"
     ],
     "not_found_handling": "single-page-application"
   },
