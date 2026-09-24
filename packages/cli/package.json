@@ -4,8 +4,8 @@
   "description": "Connect a computer to Remote Link with one command.",
   "type": "module",
   "bin": {
-    "remotelink": "./dist/index.js",
-    "remote-link": "./dist/index.js"
+    "remotelink": "dist/index.js",
+    "remote-link": "dist/index.js"
   },
   "files": [
     "dist"
