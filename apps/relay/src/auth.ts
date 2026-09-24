@@ -4,6 +4,7 @@ type AuthEnv = {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
+  ALLOW_SIGNUPS?: string;
 };
 
 export type SessionUser = {
@@ -249,6 +250,19 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
   )
     .bind(profile.sub, profile.email)
     .first<{ id: string }>();
+
+  if (!existing && env.ALLOW_SIGNUPS !== "1") {
+    const countRow = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM users",
+    ).first<{ count: number }>();
+
+    if ((countRow?.count || 0) > 0) {
+      return new Response(
+        "This Remote Link instance is private. New account registration is disabled.",
+        { status: 403 },
+      );
+    }
+  }
 
   const userId = existing?.id || crypto.randomUUID();
   if (existing) {
