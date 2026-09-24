@@ -314,8 +314,9 @@ function Dashboard({
 }) {
   const [showAdd, setShowAdd] = useState(false);
   const [active, setActive] = useState<"overview" | "devices" | "connect" | "security">("overview");
-  const command = "npx remotelink@latest";
-  const safeCommand = "npx remotelink@latest --safe";
+  const command =
+    "npx --yes --package=github:yaohuangguan/remote-link remote-link";
+  const safeCommand = command + " --safe";
   const mcpEndpoint = location.origin + "/mcp";
 
   const deviceNameById = useMemo(
@@ -772,7 +773,7 @@ function Landing() {
             <span>Terminal</span>
           </div>
           <code>
-            <span>$</span> npx remotelink@latest{"\n"}
+            <span>$</span> npx --package=github:yaohuangguan/remote-link remote-link{"\n"}
             <em>Remote Link</em>{"\n\n"}
             Pairing code: <strong>J7KD-P2QF</strong>{"\n"}
             Opening browser...{"\n\n"}
@@ -787,6 +788,101 @@ function Landing() {
         <article><span>02</span><h2>Your infrastructure</h2><p>Cloudflare Worker, Durable Objects, D1, and your own domain.</p></article>
         <article><span>03</span><h2>Open MCP</h2><p>OAuth-protected Remote MCP for ChatGPT and compatible AI clients.</p></article>
         <article><span>04</span><h2>Local control</h2><p>The computer enforces its own allowed tool surface before execution.</p></article>
+      </section>
+    </main>
+  );
+}
+
+function OAuthConsent({
+  user,
+}: {
+  user: User | null | undefined;
+}) {
+  const params = new URLSearchParams(location.search);
+  const scopes = (params.get("scope") || "")
+    .split(/\s+/)
+    .filter(Boolean);
+  const clientId = params.get("client_id") || "Unknown MCP client";
+
+  function continueAuthorization(mode: "allow" | "deny") {
+    const next = new URLSearchParams(params);
+    next.delete("approved");
+    next.delete("denied");
+    next.set(mode === "allow" ? "approved" : "denied", "1");
+    location.assign("/oauth/authorize?" + next.toString());
+  }
+
+  if (user === undefined) {
+    return <CenteredCard title="Loading…" body="Checking your Remote Link session." />;
+  }
+
+  if (!user) {
+    return (
+      <CenteredCard
+        title="Sign in to continue"
+        body="Sign in with Google before authorizing this MCP client."
+      >
+        <a className="primaryButton" href={"/auth/google?return_to=" + returnTo()}>
+          Continue with Google
+        </a>
+      </CenteredCard>
+    );
+  }
+
+  return (
+    <main className="consentShell">
+      <a href="/" className="brand compactBrand">
+        <span className="brandMark">RL</span>
+        <span>Remote Link</span>
+      </a>
+
+      <section className="consentCard">
+        <div className="consentIcon">↗</div>
+        <span className="eyebrow">MCP AUTHORIZATION</span>
+        <h1>Allow this AI client to access Remote Link?</h1>
+        <p>
+          This client is requesting access to the computers linked to
+          <strong> {user.email}</strong>.
+        </p>
+
+        <div className="clientIdBox">
+          <span>Client</span>
+          <code>{clientId}</code>
+        </div>
+
+        <div className="consentScopes">
+          {scopes.map((scope) => (
+            <div key={scope}>
+              <i>✓</i>
+              <span>
+                <strong>{scope}</strong>
+                <small>
+                  {scope === "devices:read"
+                    ? "See your linked computers and their online status."
+                    : scope === "computer:read"
+                      ? "Read files, directories, metadata, and process information."
+                      : scope === "computer:write"
+                        ? "Edit files and run commands on devices that allow developer access."
+                        : "Access granted by this OAuth scope."}
+                </small>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="consentNotice">
+          Remote Link still enforces the local permission mode on each computer.
+          OAuth access cannot enable a tool that the device did not advertise.
+        </div>
+
+        <div className="consentActions">
+          <button className="ghostButton" onClick={() => continueAuthorization("deny")}>
+            Deny
+          </button>
+          <button className="approveButton" onClick={() => continueAuthorization("allow")}>
+            Allow access
+          </button>
+        </div>
       </section>
     </main>
   );
@@ -840,6 +936,10 @@ function App() {
 
   if (location.pathname === "/device") {
     return <PairDevice user={user} onSignedIn={loadMe} />;
+  }
+
+  if (location.pathname === "/oauth/consent") {
+    return <OAuthConsent user={user} />;
   }
 
   if (user === undefined) {
