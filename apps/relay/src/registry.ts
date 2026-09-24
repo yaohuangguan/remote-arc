@@ -5,12 +5,6 @@ import type {
   DeviceMetadata,
 } from "@remote-link/protocol";
 
-type Env = {
-  REGISTRY: DurableObjectNamespace;
-  AGENT_TOKEN: string;
-  MCP_ACCESS_KEY: string;
-};
-
 type PendingCall = {
   resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
@@ -18,6 +12,7 @@ type PendingCall = {
 };
 
 type SocketAttachment = {
+  userId: string;
   deviceId: string;
   device?: DeviceMetadata;
   tools?: string[];
@@ -26,20 +21,17 @@ type SocketAttachment = {
 export class DeviceRegistry {
   private pending = new Map<string, PendingCall>();
 
-  constructor(
-    private readonly ctx: DurableObjectState,
-    private readonly env: Env,
-  ) {}
+  constructor(private readonly ctx: DurableObjectState) {}
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/agent") {
-      return this.handleAgentConnect(request, url);
+      return this.handleAgentConnect(request);
     }
 
     if (url.pathname === "/devices" && request.method === "GET") {
-      return Response.json(this.listDevices());
+      return Response.json(this.listDevices(request));
     }
 
     if (url.pathname === "/call" && request.method === "POST") {
@@ -49,32 +41,49 @@ export class DeviceRegistry {
     return new Response("Not found", { status: 404 });
   }
 
-  private handleAgentConnect(request: Request, url: URL): Response {
+  private handleAgentConnect(request: Request): Response {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
       return new Response("Expected websocket", { status: 426 });
     }
 
-    const deviceId = url.searchParams.get("device");
-    if (!deviceId) {
-      return new Response("Missing device id", { status: 400 });
+    const userId = request.headers.get("x-remote-link-user-id");
+    const deviceId = request.headers.get("x-remote-link-device-id");
+    if (!userId || !deviceId) {
+      return new Response("Missing trusted device identity", { status: 401 });
     }
 
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
 
-    server.serializeAttachment({ deviceId } satisfies SocketAttachment);
-    this.ctx.acceptWebSocket(server, [deviceId]);
+    server.serializeAttachment({
+      userId,
+      deviceId,
+    } satisfies SocketAttachment);
+
+    this.ctx.acceptWebSocket(server, [
+      "user:" + userId,
+      "device:" + deviceId,
+    ]);
 
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  private listDevices() {
-    return this.ctx.getWebSockets().map((socket) => {
-      const attachment: SocketAttachment =
-        (socket.deserializeAttachment() as SocketAttachment | null) || {
-          deviceId: "unknown",
+  private listDevices(request: Request) {
+    const userId = request.headers.get("x-remote-link-user-id");
+    if (!userId) return [];
+
+    return this.ctx.getWebSockets("user:" + userId).map((socket) => {
+      const attachment =
+        socket.deserializeAttachment() as SocketAttachment | null;
+      if (!attachment) {
+        return {
+          id: "unknown",
+          status: "online",
+          tools: [],
         };
+      }
+
       return {
         id: attachment.deviceId,
         ...(attachment.device || {}),
@@ -85,6 +94,11 @@ export class DeviceRegistry {
   }
 
   private async handleCall(request: Request): Promise<Response> {
+    const userId = request.headers.get("x-remote-link-user-id");
+    if (!userId) {
+      return Response.json({ error: "missing user identity" }, { status: 401 });
+    }
+
     const body = (await request.json()) as {
       deviceId?: string;
       tool?: string;
@@ -98,17 +112,19 @@ export class DeviceRegistry {
       );
     }
 
-    const socket = this.ctx.getWebSockets(body.deviceId)[0];
+    const socket = this.ctx.getWebSockets("device:" + body.deviceId)[0];
     if (!socket) {
       return Response.json({ error: "device offline" }, { status: 404 });
     }
 
-    const attachment: SocketAttachment =
-      (socket.deserializeAttachment() as SocketAttachment | null) || {
-        deviceId: body.deviceId,
-      };
-    const tools = attachment.tools || [];
+    const attachment =
+      socket.deserializeAttachment() as SocketAttachment | null;
 
+    if (!attachment || attachment.userId !== userId) {
+      return Response.json({ error: "device not found" }, { status: 404 });
+    }
+
+    const tools = attachment.tools || [];
     if (!tools.includes(body.tool)) {
       return Response.json(
         { error: `tool not available on device: ${body.tool}` },
@@ -143,7 +159,11 @@ export class DeviceRegistry {
       "__remoteLinkError" in result
     ) {
       return Response.json(
-        { error: String((result as { __remoteLinkError: unknown }).__remoteLinkError) },
+        {
+          error: String(
+            (result as { __remoteLinkError: unknown }).__remoteLinkError,
+          ),
+        },
         { status: 504 },
       );
     }
@@ -163,15 +183,14 @@ export class DeviceRegistry {
 
     if (parsed.type === "hello") {
       const attachment =
-        (socket.deserializeAttachment() as SocketAttachment | null) || {
-          deviceId: parsed.device.id,
-        };
+        socket.deserializeAttachment() as SocketAttachment | null;
+      if (!attachment) return;
 
       socket.serializeAttachment({
         ...attachment,
-        deviceId: parsed.device.id,
         device: {
           ...parsed.device,
+          id: attachment.deviceId,
           connectedAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
         },
