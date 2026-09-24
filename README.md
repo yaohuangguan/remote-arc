@@ -279,7 +279,7 @@ remotelink
 remote-link
 ```
 
-Today the GitHub-backed one-line command already works without cloning. After npm publishing, the shorter `npx remote-arc@latest` command can become the default.
+Today the GitHub-backed one-line command already works without cloning. After npm publishing, the shorter `npx remote-arc-mcp@latest` command can become the default.
 
 To publish the shorter npm alias later, run from `packages/cli`:
 

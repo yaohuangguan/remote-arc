@@ -366,7 +366,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
 
 function Landing() {
   const { tr } = useI18n();
-  const command = "npx remote-arc@latest";
+  const command = "npx remote-arc-mcp@latest";
   return (
     <PublicLayout>
       <section className="landingHero">
@@ -543,7 +543,7 @@ function McpPage() {
         </article>
         <article className="docsCard"><h2>{tr("Scopes", "权限范围")}</h2><code>devices:read</code><code>computer:read</code><code>computer:write</code></article>
         <article className="docsCard"><h2>{tr("Core tools", "核心工具")}</h2><code>list_devices</code><code>read_file</code><code>write_file</code><code>start_process</code></article>
-        <article className="docsCard"><h2>{tr("Device install", "设备安装")}</h2><code>npx remote-arc@latest</code><p>{tr("Pair in the browser, then the CLI keeps an outbound connection to the relay.", "浏览器完成配对后，CLI 会保持到 Relay 的出站连接。")}</p></article>
+        <article className="docsCard"><h2>{tr("Device install", "设备安装")}</h2><code>npx remote-arc-mcp@latest</code><p>{tr("Pair in the browser, then the CLI keeps an outbound connection to the relay.", "浏览器完成配对后，CLI 会保持到 Relay 的出站连接。")}</p></article>
         <article className="docsCard"><h2>{tr("Local control", "本机控制")}</h2><p>{tr("Safe and developer permission modes determine which tools a device advertises.", "Safe 与 Developer 权限模式决定设备实际开放哪些工具。")}</p></article>
       </section>
     </PublicLayout>
@@ -575,7 +575,7 @@ function Dashboard({
   const { tr, locale, setLocale } = useI18n();
   const [showAdd, setShowAdd] = useState(false);
   const [active, setActive] = useState<DashboardTab>("overview");
-  const command = "npx remote-arc@latest";
+  const command = "npx remote-arc-mcp@latest";
   const safeCommand = command + " --safe";
   const mcpEndpoint = location.origin + "/mcp";
   const deviceNameById = useMemo(() => new Map(devices.map((device) => [device.id, device.name])), [devices]);

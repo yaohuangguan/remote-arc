@@ -17,7 +17,7 @@
     "ci": "pnpm typecheck && pnpm test",
     "build:ui": "pnpm --filter @remotearc/ui build",
     "deploy:relay": "pnpm build:ui && pnpm --filter @remotearc/relay run deploy",
-    "build:cli": "pnpm --filter remote-arc build"
+    "build:cli": "pnpm --filter remote-arc-mcp build"
   },
   "bin": {
     "remote-arc": "bin/remotearc.js",

@@ -1,11 +1,10 @@
 {
-  "name": "remote-arc",
+  "name": "remote-arc-mcp",
   "version": "0.3.0",
-  "description": "Connect a computer to Remote Arc with one command.",
+  "description": "Remote MCP client and device agent for Remote Arc.",
   "type": "module",
   "bin": {
-    "remote-arc": "dist/index.js",
-    "remotearc": "dist/index.js"
+    "remote-arc": "dist/index.js"
   },
   "files": [
     "dist"
