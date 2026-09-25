@@ -476,7 +476,7 @@ function Landing({ user }: { user?: User | null }) {
       <section className="landingHero">
         <div className="heroCopy">
           <span className="eyebrow">{tr("THE OPEN CONTROL PLANE FOR AI", "面向 AI 的开源远程控制层")}</span>
-          <h1>{tr("Your computer. One prompt away.", "你的电脑，一句话就能触达。")}</h1>
+          <h1>{tr("Your computer. Within reach of AI.", "让 AI 真正触达你的电脑。")}</h1>
           <p>{tr(
             "Give ChatGPT, Claude and compatible MCP clients secure access to your real Windows, macOS and Linux machines — without public IPs, VPNs or surrendering control.",
             "让 ChatGPT、Claude 与兼容 MCP 的 AI 安全访问你的真实 Windows、macOS 和 Linux 设备。无需公网 IP，无需 VPN，控制权始终在你手里。"
