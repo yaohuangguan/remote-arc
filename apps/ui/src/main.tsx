@@ -420,7 +420,7 @@ function DashboardAccess() {
 
 function Landing({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const command = "npx remote-arc";
+  const command = "npx --yes --package=github:yaohuangguan/remote-arc remote-arc";
   return (
     <PublicLayout user={user}>
       <section className="landingHero">
@@ -500,7 +500,7 @@ function Landing({ user }: { user?: User | null }) {
             <span className="stepIndex">01</span>
             <div className="stepIcon">〉_</div>
             <h3>{tr("Run one command", "\u8fd0\u884c\u4e00\u6761\u547d\u4ee4")}</h3>
-            <code>npx remote-arc</code>
+            <code>npx --yes --package=github:yaohuangguan/remote-arc remote-arc</code>
             <p>{tr("No repository clone, inbound port, VPN or token copy-paste.", "\u65e0\u9700 clone \u4ed3\u5e93\u3001\u5f00\u653e\u5165\u7ad9\u7aef\u53e3\u3001VPN \u6216\u590d\u5236 Token\u3002")}</p>
           </article>
           <article>
@@ -757,7 +757,7 @@ function McpPage({ user }: { user?: User | null }) {
         </article>
         <article className="docsCard"><h2>{tr("Scopes", "权限范围")}</h2><code>devices:read</code><code>computer:read</code><code>computer:write</code></article>
         <article className="docsCard"><h2>{tr("Core tools", "核心工具")}</h2><code>list_devices</code><code>read_file</code><code>write_file</code><code>start_process</code></article>
-        <article className="docsCard"><h2>{tr("Device install", "设备安装")}</h2><code>npx remote-arc</code><p>{tr("Pair in the browser, then the CLI keeps an outbound connection to the relay.", "浏览器完成配对后，CLI 会保持到 Relay 的出站连接。")}</p></article>
+        <article className="docsCard"><h2>{tr("Device install", "设备安装")}</h2><code>npx --yes --package=github:yaohuangguan/remote-arc remote-arc</code><p>{tr("Pair in the browser, then the CLI keeps an outbound connection to the relay.", "浏览器完成配对后，CLI 会保持到 Relay 的出站连接。")}</p></article>
         <article className="docsCard"><h2>{tr("Local control", "本机控制")}</h2><p>{tr("Safe and developer permission modes determine which tools a device advertises.", "Safe 与 Developer 权限模式决定设备实际开放哪些工具。")}</p></article>
       </section>
     </PublicLayout>
@@ -790,7 +790,7 @@ function Dashboard({
   const { theme, setTheme } = useTheme();
   const [showAdd, setShowAdd] = useState(false);
   const [active, setActive] = useState<DashboardTab>("overview");
-  const command = "npx remote-arc";
+  const command = "npx --yes --package=github:yaohuangguan/remote-arc remote-arc";
   const safeCommand = command + " --safe";
   const mcpEndpoint = location.origin + "/mcp";
   const deviceNameById = useMemo(() => new Map(devices.map((device) => [device.id, device.name])), [devices]);

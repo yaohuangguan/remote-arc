@@ -366,7 +366,7 @@ async function main() {
         "Remote Arc",
         "",
         "Usage:",
-        "  npx --yes --package=github:yaohuangguan/remote-link remote-arc",
+        "  npx --yes --package=github:yaohuangguan/remote-arc remote-arc",
         "",
         "After the npm release:",
         "  npx remote-arc",

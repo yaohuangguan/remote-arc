@@ -11,7 +11,7 @@ Continue with Google
    �?
 Add device
    �?
-npx --yes --package=github:yaohuangguan/remote-link remote-arc
+npx --yes --package=github:yaohuangguan/remote-arc remote-arc
    �?
 matching pairing code opens in browser
    �?
@@ -29,7 +29,7 @@ No git clone, manual token copy, public IP, or router port forwarding is require
 ## Monorepo
 
 ```text
-remote-link/
+remote-arc/
 ├─ apps/
 �? ├─ ui/       # React dashboard, Google login UX, device pairing
 �? ├─ relay/    # Cloudflare Worker, D1, Durable Object, Remote MCP + OAuth
@@ -166,7 +166,7 @@ computer:write
 The release UX is designed around one command:
 
 ```bash
-npx --yes --package=github:yaohuangguan/remote-link remote-arc
+npx --yes --package=github:yaohuangguan/remote-arc remote-arc
 ```
 
 First run:
@@ -239,8 +239,8 @@ Requirements:
 Install:
 
 ```bash
-git clone https://github.com/yaohuangguan/remote-link.git
-cd remote-link
+git clone https://github.com/yaohuangguan/remote-arc.git
+cd remote-arc
 pnpm install
 pnpm run ci
 ```
@@ -264,29 +264,26 @@ cd apps/relay
 pnpm exec wrangler d1 migrations apply remote-link-auth --remote
 ```
 
-## CLI publishing
+## CLI distribution
 
-The npm package is prepared as:
-
-```text
-remotelink
-```
-
-with these binaries:
-
-```text
-remotelink
-remote-link
-```
-
-Today the GitHub-backed one-line command already works without cloning. After npm publishing, the shorter `npx remote-arc` command can become the default.
-
-To publish the shorter npm alias later, run from `packages/cli`:
+Current working one-line command:
 
 ```bash
-npm login
-pnpm build
-npm publish
+npx --yes --package=github:yaohuangguan/remote-arc remote-arc
+```
+
+The CLI package and binary are prepared for the final npm command:
+
+```bash
+npx remote-arc
+```
+
+The npm registry currently rejects the unscoped `remote-arc` package name as too similar to a reserved/existing `remotearc` name, so the GitHub-backed command remains the public fallback until the npm namespace is released.
+
+The CLI binary itself is named:
+
+```text
+remote-arc
 ```
 
 ## ChatGPT setup
