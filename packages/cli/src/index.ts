@@ -8,8 +8,8 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import WebSocket from "ws";
 
-const VERSION = "0.3.2";
-const DEFAULT_ORIGIN = "https://remotearc.app";
+const VERSION = "0.3.3";
+const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
 const LEGACY_CONFIG_PATH = path.join(os.homedir(), ".remote-link", "config.json");
@@ -446,6 +446,11 @@ async function main() {
     DEFAULT_ORIGIN;
 
   let config = await readConfig();
+  if (config && ["https://remote.samyao.me", "https://remotearc.app"].includes(config.origin)) {
+    config.origin = DEFAULT_ORIGIN;
+    await writeConfig(config);
+    logLine("info", "Migrated relay origin to " + DEFAULT_ORIGIN);
+  }
   if (!config) {
     config = await pair(origin, selectedMode());
   } else if (argFlag("--safe") || argFlag("--developer")) {

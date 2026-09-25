@@ -1823,3 +1823,16 @@ a:focus-visible {
 .toolToggle input{accent-color:var(--sky)}
 @media(max-width:720px){.pageHeader{align-items:flex-start}.pageHeader .addButton{flex:0 0 auto!important}.themeSetting button,.languageSetting button{min-width:68px}.toolPermissionsHeader{align-items:flex-start;flex-direction:column}.publicNavActions{gap:6px}}
 @media(max-width:460px){.pageHeader{flex-wrap:wrap}.pageHeader .addButton{width:auto!important}.themeSetting,.languageSetting{max-width:100%;overflow-x:auto}.themeSetting button,.languageSetting button{min-width:64px;padding:0 10px!important}}
+
+
+.installSection,.faqSection{padding:88px 0;border-top:1px solid var(--border)}
+.installGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:30px}
+.installGrid article{padding:26px;border:1px solid var(--border);border-radius:24px;background:var(--panel)}
+.installGrid h3{margin:18px 0 8px;font-size:1.15rem}
+.installGrid p{color:var(--muted);line-height:1.65;min-height:54px}
+.installGrid .commandBox,.installGrid .endpointRow{margin-top:18px}
+.faqList{display:grid;gap:12px;margin-top:28px}
+.faqList details{border:1px solid var(--border);border-radius:18px;background:var(--panel);padding:0 20px}
+.faqList summary{cursor:pointer;font-weight:700;padding:18px 0}
+.faqList p{margin:0;padding:0 0 18px;color:var(--muted);line-height:1.65}
+@media (max-width:900px){.installGrid{grid-template-columns:1fr}.installSection,.faqSection{padding:58px 0}}

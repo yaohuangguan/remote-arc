@@ -1,6 +1,8 @@
 type AuthEnv = {
   DB: D1Database;
   PUBLIC_ORIGIN: string;
+  APP_ORIGIN?: string;
+  MARKETING_ORIGIN?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
@@ -123,6 +125,7 @@ function sessionCookie(token: string) {
   return [
     "rl_session=" + encodeURIComponent(token),
     "Path=/",
+    "Domain=.remotearc.app",
     "HttpOnly",
     "Secure",
     "SameSite=Lax",
@@ -154,7 +157,7 @@ export async function handleGoogleLogin(request: Request, env: AuthEnv) {
 
   const target = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   target.searchParams.set("client_id", env.GOOGLE_CLIENT_ID);
-  target.searchParams.set("redirect_uri", env.PUBLIC_ORIGIN + "/auth/google/callback");
+  target.searchParams.set("redirect_uri", (env.MARKETING_ORIGIN || "https://remotearc.app") + "/auth/google/callback");
   target.searchParams.set("response_type", "code");
   target.searchParams.set("scope", "openid email profile");
   target.searchParams.set("state", state);
@@ -199,7 +202,7 @@ export async function handleGoogleCallback(request: Request, env: AuthEnv) {
       code,
       client_id: env.GOOGLE_CLIENT_ID,
       client_secret: env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: env.PUBLIC_ORIGIN + "/auth/google/callback",
+      redirect_uri: (env.MARKETING_ORIGIN || "https://remotearc.app") + "/auth/google/callback",
       grant_type: "authorization_code",
     }),
   });
@@ -318,7 +321,7 @@ export async function handleLogout(request: Request, env: AuthEnv) {
     status: 204,
     headers: {
       "set-cookie":
-        "rl_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
+        "rl_session=; Path=/; Domain=.remotearc.app; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
     },
   });
 }

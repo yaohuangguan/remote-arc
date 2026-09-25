@@ -63,6 +63,19 @@ type ProductStatus = {
 
 type DashboardTab = "overview" | "devices" | "connect" | "security" | "settings";
 
+const MARKETING_ORIGIN = "https://remotearc.app";
+const APP_ORIGIN = "https://mcp.remotearc.app";
+const MCP_ENDPOINT = APP_ORIGIN + "/mcp";
+const DASHBOARD_PATHS: Record<DashboardTab, string> = {
+  overview: "/overview",
+  devices: "/devices",
+  connect: "/connect",
+  security: "/security",
+  settings: "/settings",
+};
+const dashboardTabFromPath = (pathname: string): DashboardTab =>
+  (Object.entries(DASHBOARD_PATHS).find(([, path]) => path === pathname)?.[0] as DashboardTab | undefined) || "overview";
+
 const DEVICE_TOOL_CATALOG = [
   "read_file",
   "write_file",
@@ -151,17 +164,17 @@ function PublicHeader({ user }: { user?: User | null }) {
       <Brand />
       <nav className="publicNavLinks">
         <a href="/#how-it-works">{tr("How it works", "如何使用")}</a>
-        <a href="/docs/mcp">{tr("MCP", "MCP")}</a>
-        <a href="/pricing">{tr("Pricing", "价格")}</a>
-        <a href="/resources">{tr("Resources", "资源")}</a>
+        <a href={MARKETING_ORIGIN + "/docs/mcp"}>{tr("MCP", "MCP")}</a>
+        <a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a>
+        <a href={MARKETING_ORIGIN + "/resources"}>{tr("Resources", "资源")}</a>
         <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
       </nav>
       <div className="publicNavActions">
         <ThemeSwitcher compact />
         {user ? (
-          <a className="navDashboard" href="/dashboard">{tr("Dashboard", "控制台")} <span>↗</span></a>
+          <a className="navDashboard" href={APP_ORIGIN + "/overview"}>{tr("Dashboard", "控制台")} <span>↗</span></a>
         ) : (
-          <a className="navLogin" href="/auth/google?return_to=/dashboard">{tr("Sign in", "登录")}</a>
+          <a className="navLogin" href={APP_ORIGIN + "/auth/google?return_to=/overview"}>{tr("Sign in", "登录")}</a>
         )}
       </div>
     </header>
@@ -453,7 +466,7 @@ function DashboardAccess() {
             "Sign in to pair computers, inspect online state, review usage and connect your AI clients. The public website always remains available at the root domain.",
             "登录后可配对电脑、查看在线状态、用量与 AI 客户端连接。根域名始终保留为公开官网。"
           )}</p>
-          <a className="primaryButton" href="/auth/google?return_to=/dashboard">
+          <a className="primaryButton" href={APP_ORIGIN + "/auth/google?return_to=/overview"}>
             {tr("Continue with Google", "使用 Google 继续")} <span>→</span>
           </a>
         </div>
@@ -487,7 +500,7 @@ function Landing({ user }: { user?: User | null }) {
             "让 ChatGPT、Claude 与兼容 MCP 的 AI 安全访问你的真实 Windows、macOS 和 Linux 设备。无需公网 IP，无需 VPN，控制权始终在你手里。"
           )}</p>
           <div className="landingActions">
-            <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboard"}>{user ? tr("Open dashboard", "打开控制台") : tr("Connect a computer", "连接一台电脑")}</a>
+            <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : APP_ORIGIN + "/auth/google?return_to=/overview"}>{user ? tr("Open dashboard", "打开控制台") : tr("Connect a computer", "连接一台电脑")}</a>
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
@@ -538,7 +551,7 @@ function Landing({ user }: { user?: User | null }) {
         </div>
         <div className="journeyGrid">
           <article><span className="stepNumber">01</span><div className="journeyIcon">›_</div><h3>{tr("Run one command", "运行一条命令")}</h3><p>{tr("The CLI opens a pairing page automatically. No clone, token copy, VPN or router setup.", "CLI 自动打开配对页面，无需 clone、复制 Token、VPN 或路由器配置。")}</p><code>{command}</code></article>
-          <article><span className="stepNumber">02</span><div className="journeyLogos">{aiClients.map((client) => <img key={client.name} src={client.icon} alt="" />)}</div><h3>{tr("Add your AI client", "添加到你的 AI")}</h3><p>{tr("Use the same Remote MCP URL in ChatGPT or Claude. OAuth discovers and handles sign-in automatically.", "在 ChatGPT 或 Claude 中使用同一个 Remote MCP URL，OAuth 会自动发现并完成登录。")}</p><code>remotearc.app/mcp</code></article>
+          <article><span className="stepNumber">02</span><div className="journeyLogos">{aiClients.map((client) => <img key={client.name} src={client.icon} alt="" />)}</div><h3>{tr("Add your AI client", "添加到你的 AI")}</h3><p>{tr("Use the same Remote MCP URL in ChatGPT or Claude. OAuth discovers and handles sign-in automatically.", "在 ChatGPT 或 Claude 中使用同一个 Remote MCP URL，OAuth 会自动发现并完成登录。")}</p><code>mcp.remotearc.app/mcp</code></article>
           <article><span className="stepNumber">03</span><div className="journeyIcon">✦</div><h3>{tr("Ask in natural language", "直接自然语言操作")}</h3><p>{tr("Say which computer you mean. Remote Arc finds it, checks its local capability policy and routes the tool call.", "只需说出设备名称。Remote Arc 会找到它、检查本机权限，再把工具调用路由过去。")}</p><blockquote>{tr("“Run the tests on SamPC.”", "“在 SamPC 上跑一下测试。”")}</blockquote></article>
         </div>
         <div className="clientSetupNote">
@@ -589,13 +602,38 @@ function Landing({ user }: { user?: User | null }) {
         </div>
       </section>
 
+      <section className="installSection" id="install">
+        <div className="sectionIntro splitIntro">
+          <div><span className="eyebrow">{tr("INSTALL", "安装")}</span><h2>{tr("One command on your computer.", "电脑上只需要一条命令。")}</h2></div>
+          <p>{tr("Remote Arc runs as a lightweight local agent. It opens a browser pairing flow, then keeps an outbound encrypted connection to your account.", "Remote Arc 以轻量本地 Agent 运行。执行后会打开浏览器完成配对，并保持到你账户的加密出站连接。")}</p>
+        </div>
+        <div className="installGrid">
+          <article><span className="stepNumber">01</span><h3>Windows · macOS · Linux</h3><p>{tr("Requires Node.js 20 or newer.", "需要 Node.js 20 或更高版本。")}</p><div className="commandBox"><code>npx remotelink</code><CopyButton value="npx remotelink"/></div></article>
+          <article><span className="stepNumber">02</span><h3>{tr("Approve in your browser", "浏览器确认配对")}</h3><p>{tr("Match the short pairing code and approve the computer. No token copying, public IP or port forwarding.", "核对短配对码并授权电脑，无需复制 Token、公网 IP 或端口映射。")}</p></article>
+          <article><span className="stepNumber">03</span><h3>{tr("Connect your AI", "连接你的 AI")}</h3><p>{tr("Add the Remote MCP endpoint and complete OAuth once.", "添加 Remote MCP 地址并完成一次 OAuth 授权。")}</p><div className="endpointRow"><code>{MCP_ENDPOINT}</code><CopyButton value={MCP_ENDPOINT}/></div></article>
+        </div>
+      </section>
+
+      <section className="faqSection" id="faq">
+        <div className="sectionIntro"><span className="eyebrow">{tr("Q&A", "常见问题")}</span><h2>{tr("Before you connect.", "连接前你可能想知道。")}</h2></div>
+        <div className="faqList">
+          {[
+            [tr("Does Remote Arc expose my computer to the internet?", "Remote Arc 会把我的电脑暴露到公网吗？"), tr("No inbound port is required. Your computer initiates the connection outward to the relay.", "不需要开放入站端口。电脑主动向 Relay 建立出站连接。")],
+            [tr("What is the MCP URL?", "MCP 地址是什么？"), MCP_ENDPOINT],
+            [tr("Do I need to copy API keys or device tokens?", "需要复制 API Key 或设备 Token 吗？"), tr("No. Device pairing is browser-approved, and compatible AI clients use OAuth.", "不需要。设备通过浏览器配对，兼容的 AI 客户端通过 OAuth 授权。")],
+            [tr("Can I control which tools a computer exposes?", "可以限制每台电脑开放哪些工具吗？"), tr("Yes. Tool access can be managed per device from the dashboard, while the local agent remains the final permission boundary.", "可以。看板里可以按设备管理工具权限，同时本地 Agent 仍是最终权限边界。")],
+            [tr("Where is the dashboard?", "控制台在哪里？"), APP_ORIGIN],
+          ].map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}
+        </div>
+      </section>
+
       <section className="ctaStrip">
         <div>
           <span className="eyebrow">{tr("FREE HOSTED PLAN", "免费托管方案")}</span>
           <h2>{tr("Connect one machine in minutes.", "几分钟内，让第一台电脑上线。")}</h2>
           <p>{tr("Start with 10,000 hosted tool calls each month. Move to your own infrastructure whenever you want.", "每月先用 10,000 次免费托管调用；任何时候都可以迁移到你自己的基础设施。")}</p>
         </div>
-        <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboard"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start with Remote Arc", "开始使用 Remote Arc")}</a>
+        <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : APP_ORIGIN + "/auth/google?return_to=/overview"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start with Remote Arc", "开始使用 Remote Arc")}</a>
       </section>
     </PublicLayout>
   );
@@ -621,7 +659,7 @@ function PricingPage({ user }: { user?: User | null }) {
             <li>{tr("Google sign-in and OAuth MCP", "Google 登录与 OAuth MCP")}</li>
             <li>{tr("ChatGPT + compatible MCP clients", "ChatGPT + 兼容 MCP 客户端")}</li>
           </ul>
-          <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboard"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start free", "免费开始")}</a>
+          <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : APP_ORIGIN + "/auth/google?return_to=/overview"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start free", "免费开始")}</a>
         </article>
         <article className="priceCard">
           <span className="planTag">{tr("SELF-HOSTED", "自托管")}</span>
@@ -679,7 +717,7 @@ function ResourcesPage({ user }: { user?: User | null }) {
 
 function McpPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const endpoint = "https://remotearc.app/mcp";
+  const endpoint = MCP_ENDPOINT;
   return (
     <PublicLayout user={user}>
       <section className="publicHero compactHero mcpHero">
@@ -761,10 +799,15 @@ function Dashboard({
 }) {
   const { tr, locale, setLocale } = useI18n();
   const [showAdd, setShowAdd] = useState(false);
-  const [active, setActive] = useState<DashboardTab>(location.pathname === "/settings" ? "settings" : "overview");
+  const [active, setActive] = useState<DashboardTab>(dashboardTabFromPath(location.pathname));
+  useEffect(() => {
+    const syncRoute = () => setActive(dashboardTabFromPath(location.pathname));
+    window.addEventListener("popstate", syncRoute);
+    return () => window.removeEventListener("popstate", syncRoute);
+  }, []);
   const command = "npx remotelink";
   const safeCommand = command + " --safe";
-  const mcpEndpoint = location.origin + "/mcp";
+  const mcpEndpoint = MCP_ENDPOINT;
   const deviceNameById = useMemo(() => new Map(devices.map((device) => [device.id, device.name])), [devices]);
 
   const usage = status?.usage;
@@ -802,7 +845,7 @@ function Dashboard({
   }
 
   function navigateTab(tab: DashboardTab) {
-    const path = tab === "settings" ? "/settings" : "/dashboard";
+    const path = DASHBOARD_PATHS[tab];
     if (location.pathname !== path) history.pushState({}, "", path);
     setActive(tab);
   }
@@ -834,7 +877,7 @@ function Dashboard({
             </button>
           ))}
         </nav>
-        <div className="sidebarStatus"><div className="livePulse"/><div><strong>{tr("Relay online", "Relay 在线")}</strong><span>remotearc.app</span></div></div>
+        <div className="sidebarStatus"><div className="livePulse"/><div><strong>{tr("Relay online", "Relay 在线")}</strong><span>mcp.remotearc.app</span></div></div>
         <div className="sidebarAccount">
           {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email).charAt(0).toUpperCase()}</div>}
           <div><strong>{user.name || "Owner"}</strong><span>{user.email}</span></div>
@@ -952,7 +995,7 @@ function Dashboard({
           </>
         )}
 
-        <footer className="dashboardFooter"><span>Remote Arc · remotearc.app</span><div><a href="/pricing">{tr("Pricing", "价格")}</a><a href="/resources">{tr("Resources", "资源")}</a><a href="/docs/mcp">MCP</a><a href="/privacy">{tr("Privacy", "隐私")}</a><a href="/terms">{tr("Terms", "条款")}</a><a href="/support">{tr("Support", "支持")}</a></div></footer>
+        <footer className="dashboardFooter"><span>Remote Arc · mcp.remotearc.app</span><div><a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a><a href={MARKETING_ORIGIN + "/resources"}>{tr("Resources", "资源")}</a><a href={MARKETING_ORIGIN + "/docs/mcp"}>MCP</a><a href={MARKETING_ORIGIN + "/privacy"}>{tr("Privacy", "隐私")}</a><a href={MARKETING_ORIGIN + "/terms"}>{tr("Terms", "条款")}</a><a href={MARKETING_ORIGIN + "/support"}>{tr("Support", "支持")}</a></div></footer>
       </main>
 
       {showAdd && (
@@ -1050,9 +1093,9 @@ function LegalPage({
           ))}
         </div>
         <div className="legalLinks">
-          <a href="/privacy">{tr("Privacy", "隐私")}</a>
-          <a href="/terms">{tr("Terms", "条款")}</a>
-          <a href="/support">{tr("Support", "支持")}</a>
+          <a href={MARKETING_ORIGIN + "/privacy"}>{tr("Privacy", "隐私")}</a>
+          <a href={MARKETING_ORIGIN + "/terms"}>{tr("Terms", "条款")}</a>
+          <a href={MARKETING_ORIGIN + "/support"}>{tr("Support", "支持")}</a>
           <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
         </div>
       </main>
@@ -1112,6 +1155,11 @@ function App() {
     };
   }, [user?.id]);
 
+  const isAppHost = location.hostname === "mcp.remotearc.app";
+  if (isAppHost && location.pathname === "/") {
+    history.replaceState({}, "", "/overview");
+  }
+
   if (location.pathname === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;
   if (location.pathname === "/oauth/consent") return <OAuthConsent user={user} />;
   if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
@@ -1121,7 +1169,7 @@ function App() {
   if (location.pathname === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
   if (location.pathname === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
 
-  if (location.pathname === "/dashboard" || location.pathname === "/settings") {
+  if (isAppHost && (location.pathname === "/dashboard" || Object.values(DASHBOARD_PATHS).includes(location.pathname))) {
     if (user === undefined) {
       return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
     }

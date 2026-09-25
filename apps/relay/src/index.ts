@@ -37,6 +37,8 @@ type Env = {
   REGISTRY: DurableObjectNamespace;
   ASSETS: Fetcher;
   PUBLIC_ORIGIN: string;
+  APP_ORIGIN?: string;
+  MARKETING_ORIGIN?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
@@ -61,9 +63,40 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    const marketingOrigin = env.MARKETING_ORIGIN || "https://remotearc.app";
+    const appOrigin = env.APP_ORIGIN || env.PUBLIC_ORIGIN;
+
     if (url.hostname === "www.remotearc.app") {
-      const canonical = new URL(url.pathname + url.search, env.PUBLIC_ORIGIN);
+      const canonical = new URL(url.pathname + url.search, marketingOrigin);
       return Response.redirect(canonical.toString(), 301);
+    }
+
+    if (url.hostname === "remotearc.app" && (
+      url.pathname === "/dashboard" ||
+      url.pathname === "/overview" ||
+      url.pathname === "/devices" ||
+      url.pathname === "/connect" ||
+      url.pathname === "/security" ||
+      url.pathname === "/settings" ||
+      url.pathname === "/device" ||
+      url.pathname === "/oauth/consent"
+    )) {
+      const nextPath = url.pathname === "/dashboard" ? "/overview" : url.pathname;
+      return Response.redirect(new URL(nextPath + url.search, appOrigin).toString(), 302);
+    }
+
+    if (url.hostname === "mcp.remotearc.app" && url.pathname === "/dashboard") {
+      return Response.redirect(new URL("/overview", appOrigin).toString(), 302);
+    }
+
+    if (url.hostname === "remotearc.app" && (
+      url.pathname === "/mcp" ||
+      url.pathname.startsWith("/oauth/") ||
+      url.pathname.startsWith("/auth/") ||
+      url.pathname.startsWith("/.well-known/") ||
+      url.pathname === "/agent"
+    )) {
+      return Response.redirect(new URL(url.pathname + url.search, appOrigin).toString(), 307);
     }
 
     if (
@@ -145,7 +178,7 @@ export default {
       const usage = await getMonthlyUsage(env, user.id);
       return Response.json({
         googleConfigured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
-        mcpEndpoint: env.PUBLIC_ORIGIN + "/mcp",
+        mcpEndpoint: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp",
         totalDevices: devices.length,
         onlineDevices: devices.filter((device) => device.status === "online").length,
         recentActivity: recent,
@@ -215,7 +248,7 @@ export default {
     if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
       const identity = await authenticateMcp(request, env);
       const validIdentity =
-        identity && identity.resource === env.PUBLIC_ORIGIN + "/mcp"
+        identity && identity.resource === (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp"
           ? identity
           : null;
 

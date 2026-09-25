@@ -10,6 +10,7 @@ import {
 type OAuthEnv = {
   DB: D1Database;
   PUBLIC_ORIGIN: string;
+  APP_ORIGIN?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
@@ -21,7 +22,8 @@ const SUPPORTED_SCOPES = [
   "computer:write",
 ] as const;
 
-const mcpResource = (env: OAuthEnv) => env.PUBLIC_ORIGIN + "/mcp";
+const appOrigin = (env: OAuthEnv) => env.APP_ORIGIN || env.PUBLIC_ORIGIN;
+const mcpResource = (env: OAuthEnv) => appOrigin(env) + "/mcp";
 
 function normalizeScope(value: string | null) {
   const requested = (value || "devices:read computer:read computer:write")
@@ -47,18 +49,18 @@ function redirectWith(
 export function protectedResourceMetadata(env: OAuthEnv) {
   return Response.json({
     resource: mcpResource(env),
-    authorization_servers: [env.PUBLIC_ORIGIN],
+    authorization_servers: [appOrigin(env)],
     scopes_supported: [...SUPPORTED_SCOPES],
-    resource_documentation: env.PUBLIC_ORIGIN,
+    resource_documentation: appOrigin(env),
   });
 }
 
 export function authorizationServerMetadata(env: OAuthEnv) {
   return Response.json({
-    issuer: env.PUBLIC_ORIGIN,
-    authorization_endpoint: env.PUBLIC_ORIGIN + "/oauth/authorize",
-    token_endpoint: env.PUBLIC_ORIGIN + "/oauth/token",
-    registration_endpoint: env.PUBLIC_ORIGIN + "/oauth/register",
+    issuer: appOrigin(env),
+    authorization_endpoint: appOrigin(env) + "/oauth/authorize",
+    token_endpoint: appOrigin(env) + "/oauth/token",
+    registration_endpoint: appOrigin(env) + "/oauth/register",
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: ["S256"],
@@ -181,7 +183,7 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
   if (!user) {
     const returnTo = url.pathname + url.search;
     return Response.redirect(
-      env.PUBLIC_ORIGIN +
+      appOrigin(env) +
         "/auth/google?return_to=" +
         encodeURIComponent(returnTo),
       302,
@@ -197,7 +199,7 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
   }
 
   if (!approved) {
-    const consent = new URL(env.PUBLIC_ORIGIN + "/oauth/consent");
+    const consent = new URL(appOrigin(env) + "/oauth/consent");
     for (const [key, value] of url.searchParams.entries()) {
       consent.searchParams.append(key, value);
     }
@@ -228,7 +230,7 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
   return redirectWith(redirectUri, {
     code,
     state,
-    iss: env.PUBLIC_ORIGIN,
+    iss: appOrigin(env),
   });
 }
 

@@ -29,6 +29,10 @@
       "custom_domain": true
     },
     {
+      "pattern": "mcp.remotearc.app",
+      "custom_domain": true
+    },
+    {
       "pattern": "remote.samyao.me",
       "custom_domain": true
     }
@@ -45,12 +49,14 @@
     {
       "binding": "DB",
       "database_name": "remote-link-auth",
-      "database_id": "5ceaf634-11ea-47e4-9834-12a133e3adcb",
+      "database_id": "3cf318cb-99e4-4bc8-af20-55d634e354fd",
       "migrations_dir": "migrations"
     }
   ],
   "vars": {
-    "PUBLIC_ORIGIN": "https://remotearc.app",
+    "PUBLIC_ORIGIN": "https://mcp.remotearc.app",
+    "APP_ORIGIN": "https://mcp.remotearc.app",
+    "MARKETING_ORIGIN": "https://remotearc.app",
     "ALLOW_SIGNUPS": "1",
     "MONTHLY_TOOL_CALL_LIMIT": "10000"
   }
