@@ -25,6 +25,10 @@
       "zone_name": "remotearc.app"
     },
     {
+      "pattern": "www.remotearc.app/*",
+      "zone_name": "remotearc.app"
+    },
+    {
       "pattern": "remote.samyao.me",
       "custom_domain": true
     }
