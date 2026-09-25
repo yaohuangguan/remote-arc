@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { I18nProvider, useI18n } from "./i18n.js";
+import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import "./styles.css";
 
@@ -83,10 +83,28 @@ const timeAgo = (value?: string | null) => {
   return Math.floor(delta / 86_400_000) + "d";
 };
 
+function LogoMark({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 64 64" role="img" aria-label="Remote Arc">
+      <defs>
+        <linearGradient id="remote-arc-gradient" x1="8" y1="48" x2="56" y2="16" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#22d3ee" />
+          <stop offset="1" stopColor="#2563eb" />
+        </linearGradient>
+      </defs>
+      <path d="M10 42C15 20 27 12 44 17C50 19 54 24 56 30" fill="none" stroke="url(#remote-arc-gradient)" strokeWidth="7" strokeLinecap="round" />
+      <path d="M54 42C49 29 42 24 32 24C22 24 15 31 10 42" fill="none" stroke="url(#remote-arc-gradient)" strokeWidth="7" strokeLinecap="round" opacity=".78" />
+      <circle cx="10" cy="42" r="5" fill="#22d3ee" />
+      <circle cx="54" cy="42" r="5" fill="#2563eb" />
+      <circle cx="32" cy="24" r="3.5" fill="var(--logo-spark, #e6fbff)" />
+    </svg>
+  );
+}
+
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <a href="/" className={"brand" + (compact ? " compactBrand" : "")}>
-      <img className="brandLogo" src="/logo-mark.svg" alt="" />
+      <LogoMark className="brandLogo" />
       <span className="brandWords">
         <b>Remote</b><b>Arc</b>
       </span>
@@ -94,26 +112,52 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
+function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
+  const { tr } = useI18n();
+  const { theme, resolvedTheme, setTheme } = useTheme();
+
+  if (!compact) {
+    return (
+      <div className="languageSetting themeSetting">
+        <button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")}>{tr("Light", "浅色")}</button>
+        <button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}>{tr("Dark", "深色")}</button>
+        <button className={theme === "system" ? "active" : ""} onClick={() => setTheme("system")}>{tr("System", "跟随系统")}</button>
+      </div>
+    );
+  }
+
+  const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
+  return (
+    <button
+      className="themeSwitch compact"
+      type="button"
+      onClick={() => setTheme(nextTheme)}
+      aria-label={resolvedTheme === "dark" ? tr("Switch to light mode", "切换到浅色模式") : tr("Switch to dark mode", "切换到深色模式")}
+      title={resolvedTheme === "dark" ? tr("Light mode", "浅色模式") : tr("Dark mode", "深色模式")}
+    >
+      <span aria-hidden="true">{resolvedTheme === "dark" ? "☼" : "◐"}</span>
+    </button>
+  );
+}
 function PublicHeader({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   return (
     <header className="landingNav publicNav">
       <Brand />
       <nav className="publicNavLinks">
-        <a href="/docs/mcp">MCP</a>
+        <a href="/#how-it-works">{tr("How it works", "如何使用")}</a>
+        <a href="/docs/mcp">{tr("MCP", "MCP")}</a>
         <a href="/pricing">{tr("Pricing", "价格")}</a>
         <a href="/resources">{tr("Resources", "资源")}</a>
         <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
       </nav>
       <div className="publicNavActions">
+        <LanguageSwitcher compact />
+        <ThemeSwitcher compact />
         {user ? (
-          <a className="navDashboard" href="/dashboard">
-            {tr("Dashboard", "控制台")} <span>↗</span>
-          </a>
+          <a className="navDashboard" href="/dashboard">{tr("Dashboard", "控制台")} <span>↗</span></a>
         ) : (
-          <a className="navLogin" href="/auth/google?return_to=/dashboard">
-            {tr("Sign in", "登录")}
-          </a>
+          <a className="navLogin" href="/auth/google?return_to=/dashboard">{tr("Sign in", "登录")}</a>
         )}
       </div>
     </header>
@@ -239,7 +283,7 @@ function PairDevice({
         body={tr("Authorization is complete. Return to your terminal — Remote Arc will connect automatically.", "授权完成。返回终端，Remote Arc 会自动完成连接。")}
       >
         <div className="successMark">✓</div>
-        <a className="secondaryLink" href="/dashboard">{tr("Back to dashboard", "返回控制台")}</a>
+        <a className="secondaryLink" href="/">{tr("Back to dashboard", "返回控制台")}</a>
       </CenteredCard>
     );
   }
@@ -370,14 +414,23 @@ function PublicLayout({
       <footer className="publicFooter">
         <Brand compact />
         <span>© 2026 Remote Arc · MIT</span>
-        <div className="footerLinks">
-          <a href="/docs/mcp">MCP</a>
-          <a href="/pricing">Pricing</a>
-          <a href="/resources">Resources</a>
-          <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
-        </div>
+        <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
       </footer>
     </main>
+  );
+}
+
+const aiClients = [
+  { name: "ChatGPT", icon: "/ai-openai.svg" },
+  { name: "Claude", icon: "/ai-anthropic.svg" },
+] as const;
+
+function AiClientBadge({ name, icon, note }: { name: string; icon: string; note: string }) {
+  return (
+    <div className="aiClientBadge">
+      <img src={icon} alt="" />
+      <span><strong>{name}</strong><small>{note}</small></span>
+    </div>
   );
 }
 
@@ -387,17 +440,17 @@ function DashboardAccess() {
     <PublicLayout>
       <section className="dashboardAccess">
         <div className="dashboardAccessCopy">
-          <span className="eyebrow">{tr("REMOTE ARC DASHBOARD", "REMOTE ARC \u63a7\u5236\u53f0")}</span>
+          <span className="eyebrow">{tr("REMOTE ARC DASHBOARD", "REMOTE ARC 控制台")}</span>
           <h1>{tr(
             "Your devices, connections and access policy in one place.",
-            "\u5728\u4e00\u4e2a\u9875\u9762\u7ba1\u7406\u8bbe\u5907\u3001\u8fde\u63a5\u4e0e\u8bbf\u95ee\u7b56\u7565\u3002"
+            "在一个页面管理设备、连接与访问策略。"
           )}</h1>
           <p>{tr(
             "Sign in to pair computers, inspect online state, review usage and connect your AI clients. The public website always remains available at the root domain.",
-            "\u767b\u5f55\u540e\u53ef\u914d\u5bf9\u7535\u8111\u3001\u67e5\u770b\u5728\u7ebf\u72b6\u6001\u3001\u7528\u91cf\u4e0e AI \u5ba2\u6237\u7aef\u8fde\u63a5\u3002\u6839\u57df\u540d\u59cb\u7ec8\u4fdd\u7559\u4e3a\u516c\u5f00\u5b98\u7f51\u3002"
+            "登录后可配对电脑、查看在线状态、用量与 AI 客户端连接。根域名始终保留为公开官网。"
           )}</p>
           <a className="primaryButton" href="/auth/google?return_to=/dashboard">
-            {tr("Continue with Google", "\u4f7f\u7528 Google \u7ee7\u7eed")} <span>{"\u2192"}</span>
+            {tr("Continue with Google", "使用 Google 继续")} <span>→</span>
           </a>
         </div>
         <div className="dashboardAccessPreview" aria-hidden="true">
@@ -420,102 +473,110 @@ function Landing({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const command = "npx remotelink";
   return (
-    <PublicLayout user={user}>
+    <PublicLayout>
       <section className="landingHero">
-        <span className="eyebrow">{tr("OPEN · SELF-HOSTABLE · REMOTE MCP", "开源 · 可自托管 · REMOTE MCP")}</span>
-        <h1>{tr("Your computer. Your rules. Your AI.", "你的电脑。你的规则。你的 AI。")}</h1>
-        <p>
-          {tr(
-            "Secure Remote MCP access to real Windows, macOS and Linux computers. Remote Arc handles identity and routing in the control plane while execution and the final permission boundary stay on your device.",
-            "让 AI 安全访问真实的 Windows、macOS 与 Linux 电脑。Remote Arc 在控制面处理身份与路由，实际执行与最终权限边界始终留在你的设备上。"
-          )}
-        </p>
-        <div className="landingActions">
-          <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboard"}>
-            {user ? tr("Open dashboard", "打开控制台") : tr("Start free", "免费开始")}
-          </a>
-          <a className="ghostLink" href="/docs/mcp">{tr("Explore MCP →", "了解 MCP →")}</a>
+        <div className="heroCopy">
+          <span className="eyebrow">{tr("THE OPEN CONTROL PLANE FOR AI", "面向 AI 的开源远程控制层")}</span>
+          <h1>{tr("Let AI work on your computer. From anywhere.", "让 AI 随时随地，操作你的电脑。")}</h1>
+          <p>{tr(
+            "Give ChatGPT, Claude and compatible MCP clients secure access to your real Windows, macOS and Linux machines — without public IPs, VPNs or surrendering control.",
+            "让 ChatGPT、Claude 与兼容 MCP 的 AI 安全访问你的真实 Windows、macOS 和 Linux 设备。无需公网 IP，无需 VPN，控制权始终在你手里。"
+          )}</p>
+          <div className="landingActions">
+            <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboard"}>{user ? tr("Open dashboard", "打开控制台") : tr("Connect a computer", "连接一台电脑")}</a>
+            <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
+          </div>
+          <div className="heroBadges">
+            <span>{tr("10,000 hosted calls / month", "每月 10,000 次托管调用")}</span>
+            <span>{tr("Open source + self-hostable", "开源且可自托管")}</span>
+            <span>{tr("Outbound connection only", "仅需出站连接")}</span>
+          </div>
         </div>
-        <div className="heroBadges">
-          <span>{tr("10,000 hosted tool calls / month", "每月 10,000 次托管工具调用")}</span>
-          <span>OAuth 2.1 + PKCE</span>
-          <span>{tr("No port forwarding", "无需端口映射")}</span>
+        <div className="heroProduct" aria-label={tr("Remote Arc connection preview", "Remote Arc 连接预览")}>
+          <div className="aiStack">
+            {aiClients.map((client) => (
+              <AiClientBadge
+                key={client.name}
+                {...client}
+                note={client.name === "ChatGPT" ? tr("Custom MCP app", "自定义 MCP 应用") : tr("Custom connector", "自定义连接器")}
+              />
+            ))}
+            <div className="aiClientBadge protocolBadge">
+              <span className="protocolMark">M</span>
+              <span><strong>{tr("Any MCP client", "其他 MCP 客户端")}</strong><small>{tr("Standards-based", "遵循标准协议")}</small></span>
+            </div>
+          </div>
+          <div className="flowLine"><span>OAuth 2.1 + Remote MCP</span></div>
+          <div className="arcNode">
+            <LogoMark />
+            <div><strong>Remote Arc</strong><span>{tr("routes each call to the right machine", "把每次调用安全路由到正确设备")}</span></div>
+            <b>{tr("ONLINE", "在线")}</b>
+          </div>
+          <div className="deviceNodes">
+            <span><i>⊞</i><strong>SamPC</strong><small>Windows</small></span>
+            <span><i>⌘</i><strong>MacBook</strong><small>macOS</small></span>
+            <span><i>›_</i><strong>Home lab</strong><small>Linux</small></span>
+          </div>
         </div>
-        <div className="terminalPreview">
-          <div className="terminalBar"><div className="terminalDots"><i/><i/><i/></div><span>Terminal</span></div>
-          <code>
-            <span>$</span> {command}{"\n"}
-            <em>Remote Arc</em>{"\n\n"}
-            Pairing code: <strong>J7KD-P2QF</strong>{"\n"}
-            Opening browser...{"\n\n"}
-            <strong>✓ Device authorized</strong>{"\n"}
-            <strong>✓ Connected</strong> as Sam MacBook
-          </code>
+      </section>
+
+      <section className="trustRail" aria-label={tr("Supported AI clients", "支持的 AI 客户端")}>
+        <span>{tr("Built for the AI tools you already use", "连接你已经在用的 AI")}</span>
+        {aiClients.map((client) => <div key={client.name}><img src={client.icon} alt="" /><strong>{client.name}</strong></div>)}
+        <div><span className="miniMcp">M</span><strong>Remote MCP</strong></div>
+        <small>{tr("One endpoint. No client lock-in.", "一个端点，不绑定任何 AI。")}</small>
+      </section>
+
+      <section className="howSection" id="how-it-works">
+        <div className="sectionIntro splitIntro">
+          <div><span className="eyebrow">{tr("FROM ZERO TO CONNECTED", "从零到连通")}</span><h2>{tr("Three steps. Then just talk.", "三步连接，之后直接开口。")}</h2></div>
+          <p>{tr("Remote Arc turns a multi-layer remote MCP stack into a browser-approved setup flow. Pair the machine once, connect your AI once, and reuse both securely.", "Remote Arc 把复杂的远程 MCP 架构收进一次浏览器授权流程：设备配对一次，AI 连接一次，之后长期安全复用。")}</p>
+        </div>
+        <div className="journeyGrid">
+          <article><span className="stepNumber">01</span><div className="journeyIcon">›_</div><h3>{tr("Run one command", "运行一条命令")}</h3><p>{tr("The CLI opens a pairing page automatically. No clone, token copy, VPN or router setup.", "CLI 自动打开配对页面，无需 clone、复制 Token、VPN 或路由器配置。")}</p><code>{command}</code></article>
+          <article><span className="stepNumber">02</span><div className="journeyLogos">{aiClients.map((client) => <img key={client.name} src={client.icon} alt="" />)}</div><h3>{tr("Add your AI client", "添加到你的 AI")}</h3><p>{tr("Use the same Remote MCP URL in ChatGPT or Claude. OAuth discovers and handles sign-in automatically.", "在 ChatGPT 或 Claude 中使用同一个 Remote MCP URL，OAuth 会自动发现并完成登录。")}</p><code>remote.samyao.me/mcp</code></article>
+          <article><span className="stepNumber">03</span><div className="journeyIcon">✦</div><h3>{tr("Ask in natural language", "直接自然语言操作")}</h3><p>{tr("Say which computer you mean. Remote Arc finds it, checks its local capability policy and routes the tool call.", "只需说出设备名称。Remote Arc 会找到它、检查本机权限，再把工具调用路由过去。")}</p><blockquote>{tr("“Run the tests on SamPC.”", "“在 SamPC 上跑一下测试。”")}</blockquote></article>
+        </div>
+        <div className="clientSetupNote">
+          <div><img src={aiClients[0].icon} alt="" /><p><strong>{tr("ChatGPT today", "目前的 ChatGPT")}</strong><span>{tr("Custom MCP apps currently require Developer Mode. Remote Arc itself is the app connection — no extra desktop plugin is required.", "添加自定义 MCP 应用目前需要开启 Developer Mode。Remote Arc 的连接就是这个应用，不需要额外安装桌面插件。")}</span></p></div>
+          <div><img src={aiClients[1].icon} alt="" /><p><strong>{tr("Claude today", "目前的 Claude")}</strong><span>{tr("Add Remote Arc under Settings → Connectors. No developer mode or local plugin is required.", "在 Settings → Connectors 中添加 Remote Arc，不需要 Developer Mode，也不需要本地插件。")}</span></p></div>
         </div>
       </section>
 
       <section className="valueSection">
         <div className="sectionIntro">
           <span className="eyebrow">{tr("WHY REMOTE ARC", "为什么选择 REMOTE ARC")}</span>
-          <h2>{tr(
-            "Simple like a hosted service. Controllable like open source.",
-            "像托管服务一样简单，像开源软件一样可控。"
-          )}</h2>
+          <h2>{tr("The convenience of a service. The leverage of open infrastructure.", "托管服务的省心，开放基础设施的掌控力。")}</h2>
         </div>
         <div className="landingFeatures">
-          <article>
-            <span>01</span>
-            <h2>{tr("One-command pairing", "一条命令完成配对")}</h2>
-            <p>{tr(
-              "Run npx remotelink, confirm the short code in your browser, and the device connects outbound to the relay.",
-              "运行 npx remotelink，在浏览器确认短配对码，设备随后主动出站连接 Relay。"
-            )}</p>
-          </article>
-          <article>
-            <span>02</span>
-            <h2>{tr("Self-host the control plane", "控制面也能自托管")}</h2>
-            <p>{tr(
-              "The hosted service uses Worker, D1 and Durable Objects. The same control plane can run in your own Cloudflare account and domain.",
-              "托管版基于 Worker、D1 与 Durable Objects；同一套控制面也可以部署到你自己的 Cloudflare 账户和域名。"
-            )}</p>
-          </article>
-          <article>
-            <span>03</span>
-            <h2>{tr("OAuth-native Remote MCP", "原生 OAuth Remote MCP")}</h2>
-            <p>{tr(
-              "One standards-based Remote MCP endpoint uses OAuth 2.1 + PKCE to authorize compatible AI clients without sharing device credentials.",
-              "一个标准 Remote MCP 端点通过 OAuth 2.1 + PKCE 授权兼容 AI 客户端，无需暴露设备凭证。"
-            )}</p>
-          </article>
-          <article>
-            <span>04</span>
-            <h2>{tr("Local permission boundary", "权限边界留在本机")}</h2>
-            <p>{tr(
-              "Each machine advertises its own allowed capabilities. Cloud authorization cannot silently enable a tool that the local agent did not expose.",
-              "每台设备自行声明允许的能力；云端授权无法静默启用本地 Agent 没有开放的工具。"
-            )}</p>
-          </article>
+          <article><span>01</span><h2>{tr("One endpoint, every machine", "一个端点，所有设备")}</h2><p>{tr("Name the computer in your prompt. Remote Arc handles identity, presence and routing behind the scenes.", "在提示词里说出电脑名称，身份、在线状态与路由都由 Remote Arc 处理。")}</p></article>
+          <article><span>02</span><h2>{tr("Local-first permissions", "权限最终由本机决定")}</h2><p>{tr("Safe mode is read-only. Developer mode adds write and shell tools. The relay cannot expand what a device exposes.", "Safe 模式只读；Developer 模式开放写入与命令。Relay 无法扩大设备本机声明的权限。")}</p></article>
+          <article><span>03</span><h2>{tr("Open, not trapped", "开源，不被锁定")}</h2><p>{tr("Use the hosted relay for zero ops or run the same control plane in your own Cloudflare account.", "想省心就用托管 Relay，想完全掌控就部署到自己的 Cloudflare 账户。")}</p></article>
+          <article><span>04</span><h2>{tr("No inbound attack surface", "无需暴露入站端口")}</h2><p>{tr("Each machine creates an outbound encrypted connection. No public IP, port forwarding or always-on VPN.", "每台设备主动建立加密出站连接，无需公网 IP、端口映射或常驻 VPN。")}</p></article>
+          <article><span>05</span><h2>{tr("Real OAuth, not copied secrets", "标准 OAuth，不复制密钥")}</h2><p>{tr("OAuth 2.1, PKCE, short-lived codes and rotating refresh tokens replace shared URLs and pasted credentials.", "OAuth 2.1、PKCE、短期授权码与轮换 Refresh Token，替代共享链接和手动粘贴凭证。")}</p></article>
+          <article><span>06</span><h2>{tr("Private, useful audit", "隐私友好的可用审计")}</h2><p>{tr("See the device, tool, result and time without storing file contents or command arguments.", "记录设备、工具、结果与时间，但不保存文件内容或命令参数。")}</p></article>
         </div>
       </section>
 
       <section className="differenceSection">
         <div className="sectionIntro">
           <span className="eyebrow">{tr("THE DIFFERENCE", "我们的差异")}</span>
-          <h2>{tr("Hosted convenience without hosted lock-in.", "享受托管的省心，但不被托管平台锁死。")}</h2>
+          <h2>{tr("More than a tunnel. A complete AI control plane.", "不只是隧道，而是一套完整的 AI 控制面。")}</h2>
           <p>{tr(
-            "Use Remote Arc's hosted relay when you want zero ops. When ownership matters more, deploy the same open-source control plane yourself while keeping the device-side permission model unchanged.",
-            "想省心时使用 Remote Arc 托管 Relay；更重视所有权时，可以自行部署同一套开源控制面，同时保持设备侧权限模型不变。"
+            "Remote Arc combines device presence, account identity, OAuth, per-device credentials, capability discovery and auditable routing in one open system.",
+            "Remote Arc 把设备在线状态、账户身份、OAuth、每设备凭证、能力发现与可审计路由整合进同一套开放系统。"
           )}</p>
         </div>
         <div className="comparisonGrid">
           <div className="comparisonHead"><span></span><strong>Remote Arc</strong><strong>{tr("Hosted-only connector", "纯托管连接器")}</strong></div>
           {[
             [tr("Control plane", "控制面"), tr("Hosted or self-hosted", "托管或自托管"), tr("Provider-owned", "平台持有")],
-            [tr("AI authorization", "AI 授权"), "OAuth 2.1 + PKCE", tr("Product-specific", "通常绑定产品")],
-            [tr("Device connection", "设备连接"), tr("Outbound WebSocket", "主动出站 WebSocket"), tr("Varies by provider", "取决于平台")],
+            [tr("AI clients", "AI 客户端"), tr("ChatGPT, Claude + Remote MCP", "ChatGPT、Claude + Remote MCP"), tr("Often product-specific", "通常绑定单一产品")],
+            [tr("Onboarding", "上手方式"), tr("One command + browser approval", "一条命令 + 浏览器授权"), tr("Tokens and manual config", "Token 与手动配置")],
             [tr("Device permissions", "设备权限"), tr("Final boundary stays local", "最终边界留在本机"), tr("Cloud policy first", "云端策略优先")],
+            [tr("Network exposure", "网络暴露"), tr("Outbound connection only", "仅需出站连接"), tr("VPN, tunnel or open port", "VPN、隧道或开放端口")],
             [tr("Exit path", "退出路径"), tr("Fork, deploy, keep running", "Fork、部署、继续运行"), tr("Migration required", "需要迁移")],
-            [tr("Free hosted usage", "免费托管额度"), tr("10,000 tool calls / month", "每月 10,000 次调用"), tr("Depends on provider", "取决于平台")],
+            [tr("Hosted usage", "托管额度"), tr("10,000 free calls / month", "每月 10,000 次免费调用"), tr("Depends on provider", "取决于平台")],
           ].map(([label, ours, other]) => (
             <div className="comparisonRow" key={label}>
               <span>{label}</span><strong>✓ {ours}</strong><em>{other}</em>
@@ -527,18 +588,10 @@ function Landing({ user }: { user?: User | null }) {
       <section className="ctaStrip">
         <div>
           <span className="eyebrow">{tr("FREE HOSTED PLAN", "免费托管方案")}</span>
-          <h2>{tr("10,000 tool calls every month.", "每月 10,000 次工具调用。")}</h2>
-          <p>{tr(
-            "Enough for everyday personal workflows. Need full ownership? Self-host the same control plane.",
-            "足够覆盖日常个人工作流。需要完整所有权？直接自托管同一套控制面。"
-          )}</p>
+          <h2>{tr("Connect one machine in minutes.", "几分钟内，让第一台电脑上线。")}</h2>
+          <p>{tr("Start with 10,000 hosted tool calls each month. Move to your own infrastructure whenever you want.", "每月先用 10,000 次免费托管调用；任何时候都可以迁移到你自己的基础设施。")}</p>
         </div>
-        <div className="ctaActions">
-          <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboard"}>
-            {user ? tr("Open dashboard", "打开控制台") : tr("Start free", "免费开始")}
-          </a>
-          <a className="ghostLink" href="/pricing">{tr("View pricing", "查看价格")}</a>
-        </div>
+        <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboard"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start with Remote Arc", "开始使用 Remote Arc")}</a>
       </section>
     </PublicLayout>
   );
@@ -564,7 +617,7 @@ function PricingPage({ user }: { user?: User | null }) {
             <li>{tr("Google sign-in and OAuth MCP", "Google 登录与 OAuth MCP")}</li>
             <li>{tr("ChatGPT + compatible MCP clients", "ChatGPT + 兼容 MCP 客户端")}</li>
           </ul>
-          <a className="primaryButton goldButton" href="/auth/google?return_to=/dashboard">{tr("Start free", "免费开始")}</a>
+          <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboard"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start free", "免费开始")}</a>
         </article>
         <article className="priceCard">
           <span className="planTag">{tr("SELF-HOSTED", "自托管")}</span>
@@ -622,23 +675,59 @@ function ResourcesPage({ user }: { user?: User | null }) {
 
 function McpPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
+  const endpoint = "https://remote.samyao.me/mcp";
   return (
     <PublicLayout user={user}>
-      <section className="publicHero compactHero">
+      <section className="publicHero compactHero mcpHero">
         <span className="eyebrow">REMOTE MCP</span>
-        <h1>{tr("One MCP endpoint. All your computers.", "一个 MCP 端点，连接你的所有电脑。")}</h1>
-        <p>{tr("Remote Arc exposes a standards-based Remote MCP endpoint protected by OAuth 2.1 + PKCE, then routes each call to the device you choose.", "Remote Arc 提供基于标准的 Remote MCP 端点，通过 OAuth 2.1 + PKCE 保护，并把每次调用路由到你指定的设备。")}</p>
+        <h1>{tr("Connect your AI once. Reach every machine.", "连接一次 AI，访问你的所有电脑。")}</h1>
+        <p>{tr("Remote Arc gives ChatGPT, Claude and compatible clients one OAuth-protected endpoint, then securely routes each tool call to the computer you name.", "Remote Arc 为 ChatGPT、Claude 与兼容客户端提供一个受 OAuth 保护的端点，再把每次工具调用安全路由到你指定的电脑。")}</p>
+        <div className="mcpHeroClients">
+          {aiClients.map((client) => <div key={client.name}><img src={client.icon} alt="" /><span>{client.name}</span></div>)}
+          <small>+ {tr("compatible Remote MCP clients", "兼容 Remote MCP 的客户端")}</small>
+        </div>
       </section>
-      <section className="mcpDocsGrid">
-        <article className="docsCard wideDocs">
-          <span className="eyebrow">{tr("ENDPOINT", "端点")}</span>
-          <code className="heroCode">https://remote.samyao.me/mcp</code>
-          <p>{tr("Add this once in ChatGPT Developer Mode. Remote Arc handles OAuth discovery, sign-in and device routing.", "在 ChatGPT Developer Mode 中添加一次即可。Remote Arc 会处理 OAuth 发现、登录与设备路由。")}</p>
-        </article>
-        <article className="docsCard"><h2>{tr("Scopes", "权限范围")}</h2><code>devices:read</code><code>computer:read</code><code>computer:write</code></article>
-        <article className="docsCard"><h2>{tr("Core tools", "核心工具")}</h2><code>list_devices</code><code>read_file</code><code>write_file</code><code>start_process</code></article>
-        <article className="docsCard"><h2>{tr("Device install", "设备安装")}</h2><code>npx remotelink</code><p>{tr("Pair in the browser, then the CLI keeps an outbound connection to the relay.", "浏览器完成配对后，CLI 会保持到 Relay 的出站连接。")}</p></article>
-        <article className="docsCard"><h2>{tr("Local control", "本机控制")}</h2><p>{tr("Safe and developer permission modes determine which tools a device advertises.", "Safe 与 Developer 权限模式决定设备实际开放哪些工具。")}</p></article>
+
+      <section className="endpointHero">
+        <div><span className="eyebrow">{tr("YOUR REMOTE MCP URL", "你的 REMOTE MCP 地址")}</span><h2>{tr("One URL is the entire connection.", "一个 URL，就是全部连接。")}</h2><p>{tr("OAuth discovery, Google sign-in, scopes, refresh tokens and device routing are handled automatically.", "OAuth 发现、Google 登录、权限范围、Token 刷新与设备路由都会自动处理。")}</p></div>
+        <div className="endpointCopy"><code>{endpoint}</code><CopyButton value={endpoint} /></div>
+      </section>
+
+      <section className="clientGuideSection">
+        <div className="sectionIntro"><span className="eyebrow">{tr("CHOOSE YOUR CLIENT", "选择你的 AI 客户端")}</span><h2>{tr("The setup is different. The endpoint is the same.", "入口不同，但端点完全相同。")}</h2></div>
+        <div className="clientGuideGrid">
+          <article className="clientGuideCard">
+            <header><img src={aiClients[0].icon} alt="" /><div><h3>ChatGPT</h3><span>{tr("Developer Mode required today", "目前需要 Developer Mode")}</span></div></header>
+            <ol>
+              <li><b>1</b><span>{tr("Open Settings → Apps → Advanced Settings and enable Developer Mode.", "打开 Settings → Apps → Advanced Settings，开启 Developer Mode。")}</span></li>
+              <li><b>2</b><span>{tr("Create a custom app and paste the Remote Arc MCP URL.", "创建 Custom App，并粘贴 Remote Arc MCP 地址。")}</span></li>
+              <li><b>3</b><span>{tr("Scan tools, complete Google OAuth, then select Remote Arc in chat.", "扫描工具、完成 Google OAuth，然后在对话中选择 Remote Arc。")}</span></li>
+            </ol>
+            <p className="clientReality"><strong>{tr("Do I need your plugin?", "还需要安装你的 Plugin 吗？")}</strong>{tr(" No. The MCP connection is enough. A reviewed Remote Arc app/plugin would make discovery and installation one-click later.", " 不需要，MCP 连接本身已经足够。未来通过审核的 Remote Arc App/Plugin 可以把发现与安装进一步变成一键操作。")}</p>
+            <a href="https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt">{tr("OpenAI setup guide ↗", "查看 OpenAI 官方指南 ↗")}</a>
+          </article>
+          <article className="clientGuideCard">
+            <header><img src={aiClients[1].icon} alt="" /><div><h3>Claude</h3><span>{tr("No developer mode required", "无需 Developer Mode")}</span></div></header>
+            <ol>
+              <li><b>1</b><span>{tr("Open Settings → Connectors.", "打开 Settings → Connectors。")}</span></li>
+              <li><b>2</b><span>{tr("Choose Add custom connector and paste the Remote Arc MCP URL.", "选择 Add custom connector，并粘贴 Remote Arc MCP 地址。")}</span></li>
+              <li><b>3</b><span>{tr("Click Connect, complete OAuth, then enable the tools you want to use.", "点击 Connect、完成 OAuth，再启用需要的工具。")}</span></li>
+            </ol>
+            <p className="clientReality"><strong>{tr("Desktop plugin required?", "需要桌面插件吗？")}</strong>{tr(" No. Claude and Claude Desktop both connect to remote servers from Settings → Connectors.", " 不需要。Claude 网页版与 Claude Desktop 都通过 Settings → Connectors 连接远程服务器。")}</p>
+            <a href="https://support.anthropic.com/en/articles/11175166-about-custom-integrations-using-remote-mcp">{tr("Anthropic setup guide ↗", "查看 Anthropic 官方指南 ↗")}</a>
+          </article>
+        </div>
+      </section>
+
+      <section className="mcpSystemGrid">
+        <article><span className="eyebrow">{tr("1 · PAIR THE DEVICE", "1 · 配对设备")}</span><h3>{tr("Install the device agent", "安装设备 Agent")}</h3><code>npx remotelink</code><p>{tr("The browser confirms the pairing code and stores a unique revocable credential on that machine.", "浏览器确认配对码，并在这台设备上保存一份独立、可撤销的凭证。")}</p></article>
+        <article><span className="eyebrow">{tr("2 · GRANT SCOPES", "2 · 授予权限")}</span><h3>{tr("OAuth stays explicit", "OAuth 权限清晰可见")}</h3><div className="scopeChips"><code>devices:read</code><code>computer:read</code><code>computer:write</code></div><p>{tr("AI access can be revoked without re-pairing the computer.", "可以单独撤销 AI 的访问权限，而不需要重新配对电脑。")}</p></article>
+        <article><span className="eyebrow">{tr("3 · CHOOSE LOCAL POWER", "3 · 选择本机能力")}</span><h3>{tr("Safe or Developer device mode", "Safe 或 Developer 设备模式")}</h3><div className="modeRows"><span><b>Safe</b>{tr("Read files and inspect processes", "读取文件与查看进程")}</span><span><b>Developer</b>{tr("Write files and run commands", "写入文件与运行命令")}</span></div><p>{tr("This local Developer mode is separate from ChatGPT Developer Mode. The device always has the final say.", "这里的本机 Developer 模式与 ChatGPT Developer Mode 是两回事；最终权限始终由设备决定。")}</p></article>
+      </section>
+
+      <section className="pluginPath">
+        <div><span className="eyebrow">{tr("THE SILKY-SMOOTH PATH", "真正丝滑的路径")}</span><h2>{tr("MCP works now. A published app makes it one click.", "MCP 现在就能用；发布 App 后，安装可以只点一下。")}</h2></div>
+        <p>{tr("The current universal path is a standards-based Remote MCP URL plus OAuth. For the same discoverability as Remote Desktop Commander, publish a branded Remote Arc app/plugin that preconfigures the endpoint and explains its permissions. Keep the MCP server as the shared backend so ChatGPT, Claude and future clients all use the same secure core.", "当前最通用的路径是标准 Remote MCP URL + OAuth。要做到像 Remote Desktop Commander 一样容易发现和安装，建议再发布一个带品牌的 Remote Arc App/Plugin，预置端点并解释权限；底层仍共用同一套 MCP 服务，这样 ChatGPT、Claude 与未来客户端都会使用同一个安全核心。")}</p>
       </section>
     </PublicLayout>
   );
@@ -667,7 +756,6 @@ function Dashboard({
   signOut: () => Promise<void>;
 }) {
   const { tr, locale, setLocale } = useI18n();
-  const { theme, setTheme } = useTheme();
   const [showAdd, setShowAdd] = useState(false);
   const [active, setActive] = useState<DashboardTab>("overview");
   const command = "npx remotelink";
@@ -722,6 +810,7 @@ function Dashboard({
             </button>
           ))}
         </nav>
+        <div className="sidebarControls"><ThemeSwitcher /><LanguageSwitcher compact /></div>
         <div className="sidebarStatus"><div className="livePulse"/><div><strong>{tr("Relay online", "Relay 在线")}</strong><span>remote.samyao.me</span></div></div>
         <div className="sidebarAccount">
           {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email).charAt(0).toUpperCase()}</div>}
@@ -731,7 +820,7 @@ function Dashboard({
       </aside>
 
       <main className="dashboardMain">
-        <header className="mobileTopbar"><Brand/><button className="addButton compact" onClick={() => setShowAdd(true)}>+ {tr("Device", "设备")}</button></header>
+        <header className="mobileTopbar"><Brand/><div className="mobileActions"><ThemeSwitcher compact/><button className="addButton compact" onClick={() => setShowAdd(true)}>+ {tr("Device", "设备")}</button></div></header>
 
         {active === "overview" && (
           <>
@@ -778,7 +867,7 @@ function Dashboard({
             </section>
 
             <section className="connectBanner">
-              <div className="connectIcon">↗</div><div><span className="eyebrow">CHATGPT</span><h2>{tr("Connect once. Then just talk.", "连接一次，之后直接对话。")}</h2><p>{tr("Add the endpoint in Developer Mode. OAuth handles the rest.", "在 Developer Mode 添加端点，剩下交给 OAuth。")}</p></div>
+              <div className="connectIcon">↗</div><div><span className="eyebrow">CHATGPT · CLAUDE · REMOTE MCP</span><h2>{tr("Connect once. Then just talk.", "连接一次，之后直接对话。")}</h2><p>{tr("Use one OAuth-protected endpoint across compatible AI clients.", "同一个受 OAuth 保护的端点，连接所有兼容 AI 客户端。")}</p></div>
               <div className="connectBannerActions"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/><button className="ghostButton" onClick={() => setActive("connect")}>{tr("Setup", "设置")}</button></div>
             </section>
           </>
@@ -804,10 +893,10 @@ function Dashboard({
         {active === "connect" && (
           <>
             <section className="pageHeader"><div><span className="eyebrow">{tr("CONNECT AI", "连接 AI")}</span><h1>{tr("One endpoint for every machine.", "一个端点，连接所有设备。")}</h1><p>{tr("Remote Arc exposes a standards-based Remote MCP protected by OAuth 2.1 + PKCE.", "Remote Arc 提供由 OAuth 2.1 + PKCE 保护的标准 Remote MCP。")}</p></div></section>
-            <section className="setupGrid">
-              <article className="setupCard featured"><span className="stepNumber">01</span><div><span className="eyebrow">REMOTE MCP URL</span><h2>{tr("Add Remote Arc to ChatGPT", "把 Remote Arc 添加到 ChatGPT")}</h2><p>{tr("In ChatGPT Developer Mode, create a Remote MCP connection with this endpoint.", "在 ChatGPT Developer Mode 中使用此端点创建 Remote MCP 连接。")}</p><div className="endpointRow large"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/></div></div></article>
-              <article className="setupCard"><span className="stepNumber">02</span><div><h2>{tr("Authorize with Google", "使用 Google 授权")}</h2><p>{tr("ChatGPT discovers Remote Arc OAuth and links to the same account.", "ChatGPT 会发现 Remote Arc OAuth，并绑定到同一个账户。")}</p><div className="scopeList"><span>devices:read</span><span>computer:read</span><span>computer:write</span></div></div></article>
-              <article className="setupCard"><span className="stepNumber">03</span><div><h2>{tr("Talk naturally", "直接自然语言操作")}</h2><p>{tr("Address a device by name. Remote Arc handles routing.", "直接说设备名称，Remote Arc 会处理路由。")}</p><div className="promptExamples"><code>{tr("“List the projects on my Mac.”", "“看看我 Mac 上有哪些项目。”")}</code><code>{tr("“Run the tests on SamPC.”", "“在 SamPC 上跑测试。”")}</code></div></div></article>
+            <section className="setupGrid aiSetupGrid">
+              <article className="setupCard featured clientSetupCard"><span className="stepNumber"><img src={aiClients[0].icon} alt="" /></span><div><span className="eyebrow">CHATGPT</span><h2>{tr("Create a custom MCP app", "创建自定义 MCP 应用")}</h2><p>{tr("Enable ChatGPT Developer Mode, create an app, paste this endpoint and complete OAuth.", "开启 ChatGPT Developer Mode，创建 App，粘贴此端点并完成 OAuth。")}</p><div className="endpointRow large"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/></div></div></article>
+              <article className="setupCard featured clientSetupCard"><span className="stepNumber"><img src={aiClients[1].icon} alt="" /></span><div><span className="eyebrow">CLAUDE</span><h2>{tr("Add a custom connector", "添加自定义连接器")}</h2><p>{tr("Open Settings → Connectors, add the same endpoint and click Connect. No Developer Mode required.", "打开 Settings → Connectors，添加同一个端点并点击 Connect，无需 Developer Mode。")}</p><div className="endpointRow large"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/></div></div></article>
+              <article className="setupCard fullSetupCard"><span className="stepNumber">03</span><div><h2>{tr("Authorize once, then talk naturally", "授权一次，之后直接自然语言操作")}</h2><p>{tr("Address a device by name. Remote Arc checks its local Safe or Developer policy and handles routing.", "直接说设备名称；Remote Arc 会检查它的本机 Safe 或 Developer 权限并完成路由。")}</p><div className="promptExamples"><code>{tr("“List the projects on my Mac.”", "“看看我 Mac 上有哪些项目。”")}</code><code>{tr("“Run the tests on SamPC.”", "“在 SamPC 上跑测试。”")}</code></div></div></article>
             </section>
           </>
         )}
@@ -832,8 +921,8 @@ function Dashboard({
           <>
             <section className="pageHeader"><div><span className="eyebrow">{tr("SETTINGS", "设置")}</span><h1>{tr("Make Remote Arc yours.", "把 Remote Arc 调成你喜欢的样子。")}</h1><p>{tr("Language, plan information and account preferences.", "语言、套餐信息与账户偏好。")}</p></div></section>
             <section className="settingsGrid">
+              <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Choose Light, Dark or System. Your preference is saved in this browser.", "选择浅色、深色或跟随系统；偏好会保存在当前浏览器。")}</p></div><ThemeSwitcher /></article>
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
-              <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Dark is the default. You can switch to Light or follow your system.", "默认使用浅色模式，也可以切换深色或跟随系统。")}</p></div><div className="languageSetting"><button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")}>{tr("Light", "浅色")}</button><button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}>{tr("Dark", "深色")}</button><button className={theme === "system" ? "active" : ""} onClick={() => setTheme("system")}>{tr("System", "跟随系统")}</button></div></article>
               <article className="settingsCard"><div><h2>{tr("Hosted plan", "托管方案")}</h2><p>{tr("Free includes 10,000 Remote MCP tool calls each UTC month.", "免费版每个 UTC 月包含 10,000 次 Remote MCP 工具调用。")}</p></div><div className="planValue">{usage?.unlimited ? "∞" : `${usage?.used ?? 0} / ${usage?.limit ?? 10000}`}</div></article>
               <article className="settingsCard"><div><h2>{tr("Self-hosting", "自托管")}</h2><p>{tr("Set MONTHLY_TOOL_CALL_LIMIT=0 on your own deployment for unlimited calls.", "在自己的部署中设置 MONTHLY_TOOL_CALL_LIMIT=0 即可取消调用额度限制。")}</p></div><a className="ghostButton" href="https://github.com/yaohuangguan/remote-arc">{tr("Open GitHub", "打开 GitHub")}</a></article>
             </section>
@@ -873,16 +962,27 @@ function App() {
   const [status, setStatus] = useState<ProductStatus | null>(null);
 
   async function loadMe() {
-    const response = await fetch("/api/me");
-    if (!response.ok) return setUser(null);
-    const payload = (await response.json()) as { user: User };
-    setUser(payload.user);
+    try {
+      const response = await fetch("/api/me", { headers: { accept: "application/json" } });
+      if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
+        setUser(null);
+        return;
+      }
+      const payload = (await response.json()) as { user: User };
+      setUser(payload.user);
+    } catch {
+      setUser(null);
+    }
   }
 
   async function loadAll() {
-    const [devicesResponse, statusResponse] = await Promise.all([fetch("/api/devices"), fetch("/api/status")]);
-    if (devicesResponse.ok) setDevices((await devicesResponse.json()) as Device[]);
-    if (statusResponse.ok) setStatus((await statusResponse.json()) as ProductStatus);
+    try {
+      const [devicesResponse, statusResponse] = await Promise.all([fetch("/api/devices"), fetch("/api/status")]);
+      if (devicesResponse.ok) setDevices((await devicesResponse.json()) as Device[]);
+      if (statusResponse.ok) setStatus((await statusResponse.json()) as ProductStatus);
+    } catch {
+      // Keep the last known dashboard state during a temporary network interruption.
+    }
   }
 
   async function signOut() {
@@ -915,10 +1015,7 @@ function App() {
 
   if (location.pathname === "/dashboard") {
     if (user === undefined) {
-      return <CenteredCard
-        title={tr("Loading…", "\u52a0\u8f7d\u4e2d\u2026")}
-        body={tr("Connecting to Remote Arc.", "\u6b63\u5728\u8fde\u63a5 Remote Arc\u3002")}
-      />;
+      return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
     }
     if (!user) return <DashboardAccess />;
     return <Dashboard user={user} devices={devices} status={status} refreshAll={loadAll} signOut={signOut} />;
