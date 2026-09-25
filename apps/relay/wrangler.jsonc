@@ -37,14 +37,7 @@
     "directory": "../ui/dist",
     "binding": "ASSETS",
     "run_worker_first": [
-      "/api/*",
-      "/agent",
-      "/mcp",
-      "/mcp/*",
-      "/health",
-      "/.well-known/*",
-      "/oauth/*",
-      "/auth/*"
+      "/*"
     ],
     "not_found_handling": "single-page-application"
   },
