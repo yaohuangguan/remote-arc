@@ -477,9 +477,9 @@ function DashboardAccess() {
             <div><small>USAGE</small><strong>1.8k</strong><span>/ 10k calls</span></div>
             <div><small>POLICY</small><strong>Safe</strong><span>default mode</span></div>
           </div>
-          <div className="previewDevice"><i className="onlineDot" /><div><strong>Sam MacBook</strong><span>macOS · online now</span></div><b>Read + Dev</b></div>
-          <div className="previewDevice"><i className="onlineDot" /><div><strong>SamPC</strong><span>Windows · online now</span></div><b>Developer</b></div>
-          <div className="previewActivity"><span>Recent activity</span><strong>read_file</strong><small>Sam MacBook · 12s ago</small></div>
+          <div className="previewDevice"><i className="onlineDot" /><div><strong>Personal Mac</strong><span>macOS · online now</span></div><b>Read + Dev</b></div>
+          <div className="previewDevice"><i className="onlineDot" /><div><strong>Desktop PC</strong><span>Windows · online now</span></div><b>Developer</b></div>
+          <div className="previewActivity"><span>Recent activity</span><strong>read_file</strong><small>Personal Mac · 12s ago</small></div>
         </div>
       </section>
     </PublicLayout>
@@ -509,31 +509,48 @@ function Landing({ user }: { user?: User | null }) {
             <span>{tr("Outbound connection only", "仅需出站连接")}</span>
           </div>
         </div>
-        <div className="heroProduct" aria-label={tr("Remote Arc connection preview", "Remote Arc 连接预览")}>
-          <div className="aiStack">
-            {aiClients.map((client) => (
-              <AiClientBadge
-                key={client.name}
-                {...client}
-                note={client.name === "ChatGPT" ? tr("Custom MCP app", "自定义 MCP 应用") : tr("Custom connector", "自定义连接器")}
-              />
-            ))}
-            <div className="aiClientBadge protocolBadge">
-              <span className="protocolMark">M</span>
-              <span><strong>{tr("Any MCP client", "其他 MCP 客户端")}</strong><small>{tr("Standards-based", "遵循标准协议")}</small></span>
+        <div className="heroFlow" aria-label={tr("Remote Arc connection flow", "Remote Arc 连接链路")}>
+          <div className="flowAgentCard flowStageCard">
+            <span className="flowKicker">{tr("AI AGENTS", "AI AGENTS")}</span>
+            <div className="flowAiClients">
+              {aiClients.map((client) => (
+                <div className="flowAiClient" key={client.name}>
+                  <img src={client.icon} alt="" />
+                  <span><strong>{client.name}</strong><small>MCP</small></span>
+                </div>
+              ))}
+              <div className="flowAiClient">
+                <span className="protocolMark">M</span>
+                <span><strong>{tr("Any MCP client", "任意 MCP 客户端")}</strong><small>{tr("Standards-based", "标准协议")}</small></span>
+              </div>
+            </div>
+            <div className="flowAgentLog">
+              <span><i />{tr("Plugin / MCP connected", "Plugin / MCP 已连接")}</span>
+              <span><i />OAuth 2.1 + PKCE</span>
             </div>
           </div>
-          <div className="flowLine"><span>OAuth 2.1 + Remote MCP</span></div>
-          <div className="arcNode">
+
+          <div className="flowTrack flowTrackIn" aria-hidden="true">
+            <i className="flowPacket p1" /><i className="flowPacket p2" /><i className="flowPacket p3" />
+          </div>
+
+          <div className="flowHubCard flowStageCard">
             <LogoMark />
-            <div><strong>Remote Arc</strong><span>{tr("routes each call to the right machine", "把每次调用安全路由到正确设备")}</span></div>
-            <b>{tr("ONLINE", "在线")}</b>
+            <strong>Remote Arc</strong>
+            <span>{tr("OAuth · routing · presence", "OAuth · 路由 · 在线状态")}</span>
+            <b>{tr("SECURE CONTROL PLANE", "安全控制层")}</b>
           </div>
-          <div className="deviceNodes">
-            <span><i>⊞</i><strong>SamPC</strong><small>Windows</small></span>
-            <span><i>⌘</i><strong>MacBook</strong><small>macOS</small></span>
-            <span><i>›_</i><strong>Home lab</strong><small>Linux</small></span>
+
+          <div className="flowTrack flowTrackOut" aria-hidden="true">
+            <i className="flowPacket p1" /><i className="flowPacket p2" /><i className="flowPacket p3" />
           </div>
+
+          <div className="flowDeviceStack">
+            <div className="flowDevice"><i>⊞</i><span><strong>{tr("Personal desktop", "个人桌面电脑")}</strong><small>Windows</small></span><b>{tr("Online", "在线")}</b></div>
+            <div className="flowDevice"><i>⌘</i><span><strong>{tr("Personal Mac", "个人 Mac")}</strong><small>macOS</small></span><b>{tr("Online", "在线")}</b></div>
+            <div className="flowDevice"><i>›_</i><span><strong>{tr("Linux host", "Linux 主机")}</strong><small>Linux</small></span><b>{tr("Online", "在线")}</b></div>
+          </div>
+          <span className="flowCaption">{tr("Agent → Remote Arc → your devices", "Agent → Remote Arc → 你的设备")}</span>
         </div>
       </section>
 
@@ -551,12 +568,12 @@ function Landing({ user }: { user?: User | null }) {
         </div>
         <div className="journeyGrid">
           <article><span className="stepNumber">01</span><div className="journeyIcon">›_</div><h3>{tr("Run one command", "运行一条命令")}</h3><p>{tr("The CLI opens a pairing page automatically. No clone, token copy, VPN or router setup.", "CLI 自动打开配对页面，无需 clone、复制 Token、VPN 或路由器配置。")}</p><code>{command}</code></article>
-          <article><span className="stepNumber">02</span><div className="journeyLogos">{aiClients.map((client) => <img key={client.name} src={client.icon} alt="" />)}</div><h3>{tr("Add your AI client", "添加到你的 AI")}</h3><p>{tr("Use the same Remote MCP URL in ChatGPT or Claude. OAuth discovers and handles sign-in automatically.", "在 ChatGPT 或 Claude 中使用同一个 Remote MCP URL，OAuth 会自动发现并完成登录。")}</p><code>mcp.remotearc.app/mcp</code></article>
-          <article><span className="stepNumber">03</span><div className="journeyIcon">✦</div><h3>{tr("Ask in natural language", "直接自然语言操作")}</h3><p>{tr("Say which computer you mean. Remote Arc finds it, checks its local capability policy and routes the tool call.", "只需说出设备名称。Remote Arc 会找到它、检查本机权限，再把工具调用路由过去。")}</p><blockquote>{tr("“Run the tests on SamPC.”", "“在 SamPC 上跑一下测试。”")}</blockquote></article>
+          <article><span className="stepNumber">02</span><div className="journeyLogos">{aiClients.map((client) => <img key={client.name} src={client.icon} alt="" />)}</div><h3>{tr("Install Remote Arc in your AI", "在你的 AI 中安装 Remote Arc")}</h3><p>{tr("After public launch, find Remote Arc in Plugins and install it. OAuth connects your Remote Arc account; no MCP setup is required for normal users.", "公开上架后，在 Plugins 中搜索并安装 Remote Arc。通过 OAuth 连接你的 Remote Arc 账户，普通用户无需自己配置 MCP。")}</p><code>{tr("Plugins → Remote Arc → Install", "Plugins → Remote Arc → 安装")}</code></article>
+          <article><span className="stepNumber">03</span><div className="journeyIcon">✦</div><h3>{tr("Ask in natural language", "直接自然语言操作")}</h3><p>{tr("Say which computer you mean. Remote Arc finds it, checks its local capability policy and routes the tool call.", "只需说出设备名称。Remote Arc 会找到它、检查本机权限，再把工具调用路由过去。")}</p><blockquote>{tr("“Run the tests on my desktop.”", "“在我的桌面电脑上跑一下测试。”")}</blockquote></article>
         </div>
         <div className="clientSetupNote">
-          <div><img src={aiClients[0].icon} alt="" /><p><strong>{tr("ChatGPT today", "目前的 ChatGPT")}</strong><span>{tr("Custom MCP apps currently require Developer Mode. Remote Arc itself is the app connection — no extra desktop plugin is required.", "添加自定义 MCP 应用目前需要开启 Developer Mode。Remote Arc 的连接就是这个应用，不需要额外安装桌面插件。")}</span></p></div>
-          <div><img src={aiClients[1].icon} alt="" /><p><strong>{tr("Claude today", "目前的 Claude")}</strong><span>{tr("Add Remote Arc under Settings → Connectors. No developer mode or local plugin is required.", "在 Settings → Connectors 中添加 Remote Arc，不需要 Developer Mode，也不需要本地插件。")}</span></p></div>
+          <div><img src={aiClients[0].icon} alt="" /><p><strong>{tr("For normal ChatGPT users", "普通 ChatGPT 用户")}</strong><span>{tr("Once Remote Arc is public, install it from Plugins, connect your account with OAuth, and start using it. No Create-MCP flow.", "Remote Arc 公开上架后，直接在 Plugins 中安装，通过 OAuth 连接账户即可使用，不需要自己 Create MCP。")}</span></p></div>
+          <div><span className="miniMcp">M</span><p><strong>{tr("Early access / manual MCP setup", "Early access / 手动 MCP")}</strong><span>{tr("Until the public listing is live, developers and early testers can add the production MCP endpoint manually in a client that supports remote MCP.", "在公开插件正式上线前，开发者和 Early Access 测试者可以在支持远程 MCP 的客户端中手动添加生产 MCP 地址。")}</span></p></div>
         </div>
       </section>
 
@@ -564,11 +581,11 @@ function Landing({ user }: { user?: User | null }) {
         <div className="sectionIntro splitIntro">
           <div>
             <span className="eyebrow">{tr("SEE IT IN ACTION", "看看实际效果")}</span>
-            <h2>{tr("From a prompt to a real machine.", "从一句话，到真实电脑执行。")}</h2>
+            <h2>{tr("See setup and device management in motion.", "看看安装与设备管理的真实流程。")}</h2>
           </div>
           <p>{tr(
-            "Two short walkthroughs show the whole Remote Arc experience: ask from your phone, or add the Remote MCP endpoint to an AI client and authorize once.",
-            "两段短演示展示完整 Remote Arc 体验：在手机上直接自然语言操作，或者把 Remote MCP 地址添加到 AI 客户端并完成一次 OAuth 授权。"
+            "Two short walkthroughs show the current product: manage a paired device from the mobile dashboard, and use the manual MCP setup path for early access before the public plugin listing is live.",
+            "两段短演示展示当前真实产品流程：在手机端 Dashboard 管理已配对设备，以及在公开插件上架前用于 Early Access 的手动 MCP 接入流程。"
           )}</p>
         </div>
         <div className="demoGrid">
@@ -578,11 +595,11 @@ function Landing({ user }: { user?: User | null }) {
               <span className="demoBadge">{tr("MOBILE", "手机")}</span>
             </div>
             <div className="demoCopy">
-              <span className="eyebrow">{tr("NATURAL LANGUAGE", "自然语言")}</span>
-              <h3>{tr("Ask from your phone. Route to the right machine.", "手机直接输入，自动路由到正确设备。")}</h3>
+              <span className="eyebrow">{tr("MOBILE DASHBOARD", "移动端控制台")}</span>
+              <h3>{tr("Manage your paired devices from iPhone.", "在 iPhone 上管理已配对设备。")}</h3>
               <p>{tr(
-                "Name the machine in plain language. Remote Arc resolves the device, checks its exposed tools and routes the request without opening inbound ports.",
-                "用自然语言说出设备名称。Remote Arc 会识别设备、检查可用工具并完成路由，全程无需开放入站端口。"
+                "The Remote Arc dashboard is responsive on mobile, so you can review status, rename devices and manage access from Safari.",
+                "Remote Arc Dashboard 已适配手机端，可直接在 Safari 查看在线状态、重命名设备并管理访问。"
               )}</p>
             </div>
           </article>
@@ -592,11 +609,11 @@ function Landing({ user }: { user?: User | null }) {
               <span className="demoBadge">MCP</span>
             </div>
             <div className="demoCopy">
-              <span className="eyebrow">{tr("ONE ENDPOINT", "一个端点")}</span>
-              <h3>{tr("Add the MCP app once. OAuth does the rest.", "MCP 应用添加一次，后续交给 OAuth。")}</h3>
+              <span className="eyebrow">{tr("EARLY ACCESS", "EARLY ACCESS")}</span>
+              <h3>{tr("Manual MCP setup for developers and testers.", "开发者与测试用户的手动 MCP 接入。")}</h3>
               <p>{tr(
-                "Paste the Remote MCP endpoint, approve OAuth, and the client can securely discover the tools exposed by your paired computers.",
-                "粘贴 Remote MCP 地址并完成 OAuth 授权，AI 客户端即可安全发现你已配对电脑开放的工具。"
+                "Before the public listing is live, use ChatGPT Settings → Apps → Create, paste the production MCP endpoint, Scan Tools, complete OAuth, then create the app.",
+                "公开插件正式上线前，可在 ChatGPT 的 Settings → Apps → Create 中填写生产 MCP 地址，Scan Tools，完成 OAuth 后创建应用。"
               )}</p>
               <code className="demoEndpoint">{MCP_ENDPOINT}</code>
             </div>
@@ -1006,7 +1023,7 @@ function Dashboard({
             <section className="setupGrid aiSetupGrid">
               <article className="setupCard featured clientSetupCard"><span className="stepNumber"><img src={aiClients[0].icon} alt="" /></span><div><span className="eyebrow">CHATGPT</span><h2>{tr("Create a custom MCP app", "创建自定义 MCP 应用")}</h2><p>{tr("Enable ChatGPT Developer Mode, create an app, paste this endpoint and complete OAuth.", "开启 ChatGPT Developer Mode，创建 App，粘贴此端点并完成 OAuth。")}</p><div className="endpointRow large"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/></div></div></article>
               <article className="setupCard featured clientSetupCard"><span className="stepNumber"><img src={aiClients[1].icon} alt="" /></span><div><span className="eyebrow">CLAUDE</span><h2>{tr("Add a custom connector", "添加自定义连接器")}</h2><p>{tr("Open Settings → Connectors, add the same endpoint and click Connect. No Developer Mode required.", "打开 Settings → Connectors，添加同一个端点并点击 Connect，无需 Developer Mode。")}</p><div className="endpointRow large"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/></div></div></article>
-              <article className="setupCard fullSetupCard"><span className="stepNumber">03</span><div><h2>{tr("Authorize once, then talk naturally", "授权一次，之后直接自然语言操作")}</h2><p>{tr("Address a device by name. Remote Arc checks its local Safe or Developer policy and handles routing.", "直接说设备名称；Remote Arc 会检查它的本机 Safe 或 Developer 权限并完成路由。")}</p><div className="promptExamples"><code>{tr("“List the projects on my Mac.”", "“看看我 Mac 上有哪些项目。”")}</code><code>{tr("“Run the tests on SamPC.”", "“在 SamPC 上跑测试。”")}</code></div></div></article>
+              <article className="setupCard fullSetupCard"><span className="stepNumber">03</span><div><h2>{tr("Authorize once, then talk naturally", "授权一次，之后直接自然语言操作")}</h2><p>{tr("Address a device by name. Remote Arc checks its local Safe or Developer policy and handles routing.", "直接说设备名称；Remote Arc 会检查它的本机 Safe 或 Developer 权限并完成路由。")}</p><div className="promptExamples"><code>{tr("“List the projects on my Mac.”", "“看看我 Mac 上有哪些项目。”")}</code><code>{tr("“Run the tests on my desktop.”", "“在我的桌面电脑上跑测试。”")}</code></div></div></article>
             </section>
           </>
         )}
