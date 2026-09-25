@@ -841,7 +841,6 @@ function Dashboard({
             </button>
           ))}
         </nav>
-        <div className="sidebarControls"><ThemeSwitcher /></div>
         <div className="sidebarStatus"><div className="livePulse"/><div><strong>{tr("Relay online", "Relay 在线")}</strong><span>remote.samyao.me</span></div></div>
         <div className="sidebarAccount">
           {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email).charAt(0).toUpperCase()}</div>}
