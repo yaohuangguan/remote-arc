@@ -1,5 +1,5 @@
 {
-  "name": "remote-arc-mcp",
+  "name": "remote-arc",
   "version": "0.3.0",
   "description": "Remote MCP client and device agent for Remote Arc.",
   "type": "module",

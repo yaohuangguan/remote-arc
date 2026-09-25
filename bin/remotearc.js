@@ -279,7 +279,7 @@ async function main() {
         "  npx --yes --package=github:yaohuangguan/remote-link remote-arc",
         "",
         "After the npm release:",
-        "  npx remote-arc-mcp@latest",
+        "  npx remote-arc",
         "",
         "Options:",
         "  --safe        Read-only local capability mode",
