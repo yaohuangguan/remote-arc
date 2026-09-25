@@ -14,7 +14,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => {
     const saved = localStorage.getItem("remotearc-locale") ?? localStorage.getItem("remote-link-locale");
     if (saved === "en" || saved === "zh") return saved;
-    return navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
+    return "en";
   });
 
   const value = useMemo<I18n>(() => ({

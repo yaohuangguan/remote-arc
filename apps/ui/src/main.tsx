@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
+import { I18nProvider, useI18n } from "./i18n.js";
+import { ThemeProvider, useTheme } from "./theme.js";
 import "./styles.css";
 
 type User = {
@@ -102,10 +103,9 @@ function PublicHeader() {
         <a href="/docs/mcp">{tr("MCP", "MCP")}</a>
         <a href="/pricing">{tr("Pricing", "价格")}</a>
         <a href="/resources">{tr("Resources", "资源")}</a>
-        <a href="https://github.com/yaohuangguan/remote-link">GitHub</a>
+        <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
       </nav>
       <div className="publicNavActions">
-        <LanguageSwitcher compact />
         <a className="navLogin" href="/auth/google?return_to=/">
           {tr("Sign in", "登录")}
         </a>
@@ -358,7 +358,7 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
       <footer className="publicFooter">
         <Brand compact />
         <span>© 2026 Remote Arc · MIT</span>
-        <a href="https://github.com/yaohuangguan/remote-link">GitHub</a>
+        <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
       </footer>
     </main>
   );
@@ -482,7 +482,7 @@ function PricingPage() {
             <li>{tr("Own relay, D1 and device routing", "掌握 Relay、D1 与设备路由")}</li>
             <li>{tr("Bring your own infrastructure", "使用你自己的基础设施")}</li>
           </ul>
-          <a className="ghostButton priceLink" href="https://github.com/yaohuangguan/remote-link">{tr("View source", "查看源码")}</a>
+          <a className="ghostButton priceLink" href="https://github.com/yaohuangguan/remote-arc">{tr("View source", "查看源码")}</a>
         </article>
         <article className="priceCard">
           <span className="planTag">{tr("PRO", "PRO")}</span>
@@ -504,9 +504,9 @@ function ResourcesPage() {
   const { tr } = useI18n();
   const items = [
     [tr("Quick start", "快速开始"), tr("Pair a computer with one command and connect it to the hosted relay.", "一条命令配对电脑并连接到托管 Relay。"), "/docs/mcp"],
-    [tr("Architecture", "架构"), tr("Understand Worker, D1, Durable Objects, device agents and the local execution core.", "了解 Worker、D1、Durable Objects、设备 Agent 与本地执行核心。"), "https://github.com/yaohuangguan/remote-link"],
-    [tr("Security model", "安全模型"), tr("Per-device credentials, local permissions, OAuth scopes and privacy-preserving audit.", "每设备凭证、本机权限、OAuth Scope 与隐私审计。"), "https://github.com/yaohuangguan/remote-link/blob/master/SECURITY.md"],
-    [tr("Source code", "源代码"), tr("Remote Arc is open source under the MIT license.", "Remote Arc 采用 MIT 许可证开源。"), "https://github.com/yaohuangguan/remote-link"],
+    [tr("Architecture", "架构"), tr("Understand Worker, D1, Durable Objects, device agents and the local execution core.", "了解 Worker、D1、Durable Objects、设备 Agent 与本地执行核心。"), "https://github.com/yaohuangguan/remote-arc"],
+    [tr("Security model", "安全模型"), tr("Per-device credentials, local permissions, OAuth scopes and privacy-preserving audit.", "每设备凭证、本机权限、OAuth Scope 与隐私审计。"), "https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md"],
+    [tr("Source code", "源代码"), tr("Remote Arc is open source under the MIT license.", "Remote Arc 采用 MIT 许可证开源。"), "https://github.com/yaohuangguan/remote-arc"],
   ];
   return (
     <PublicLayout>
@@ -573,6 +573,7 @@ function Dashboard({
   signOut: () => Promise<void>;
 }) {
   const { tr, locale, setLocale } = useI18n();
+  const { theme, setTheme } = useTheme();
   const [showAdd, setShowAdd] = useState(false);
   const [active, setActive] = useState<DashboardTab>("overview");
   const command = "npx remote-arc-mcp@latest";
@@ -738,8 +739,9 @@ function Dashboard({
             <section className="pageHeader"><div><span className="eyebrow">{tr("SETTINGS", "设置")}</span><h1>{tr("Make Remote Arc yours.", "把 Remote Arc 调成你喜欢的样子。")}</h1><p>{tr("Language, plan information and account preferences.", "语言、套餐信息与账户偏好。")}</p></div></section>
             <section className="settingsGrid">
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
+              <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Light is the default. You can switch to Dark or follow your system.", "默认使用浅色模式，也可以切换深色或跟随系统。")}</p></div><div className="languageSetting"><button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")}>{tr("Light", "浅色")}</button><button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}>{tr("Dark", "深色")}</button><button className={theme === "system" ? "active" : ""} onClick={() => setTheme("system")}>{tr("System", "跟随系统")}</button></div></article>
               <article className="settingsCard"><div><h2>{tr("Hosted plan", "托管方案")}</h2><p>{tr("Free includes 10,000 Remote MCP tool calls each UTC month.", "免费版每个 UTC 月包含 10,000 次 Remote MCP 工具调用。")}</p></div><div className="planValue">{usage?.unlimited ? "∞" : `${usage?.used ?? 0} / ${usage?.limit ?? 10000}`}</div></article>
-              <article className="settingsCard"><div><h2>{tr("Self-hosting", "自托管")}</h2><p>{tr("Set MONTHLY_TOOL_CALL_LIMIT=0 on your own deployment for unlimited calls.", "在自己的部署中设置 MONTHLY_TOOL_CALL_LIMIT=0 即可取消调用额度限制。")}</p></div><a className="ghostButton" href="https://github.com/yaohuangguan/remote-link">{tr("Open GitHub", "打开 GitHub")}</a></article>
+              <article className="settingsCard"><div><h2>{tr("Self-hosting", "自托管")}</h2><p>{tr("Set MONTHLY_TOOL_CALL_LIMIT=0 on your own deployment for unlimited calls.", "在自己的部署中设置 MONTHLY_TOOL_CALL_LIMIT=0 即可取消调用额度限制。")}</p></div><a className="ghostButton" href="https://github.com/yaohuangguan/remote-arc">{tr("Open GitHub", "打开 GitHub")}</a></article>
             </section>
           </>
         )}
@@ -825,6 +827,8 @@ function App() {
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <I18nProvider><App /></I18nProvider>
+    <ThemeProvider>
+      <I18nProvider><App /></I18nProvider>
+    </ThemeProvider>
   </React.StrictMode>,
 );
