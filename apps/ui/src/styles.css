@@ -1836,3 +1836,57 @@ a:focus-visible {
 .faqList summary{cursor:pointer;font-weight:700;padding:18px 0}
 .faqList p{margin:0;padding:0 0 18px;color:var(--muted);line-height:1.65}
 @media (max-width:900px){.installGrid{grid-template-columns:1fr}.installSection,.faqSection{padding:58px 0}}
+
+/* Readability pass: larger type scale across marketing + dashboard */
+body{font-size:18px;line-height:1.6}
+
+.publicNavLinks a,.navLogin,.navDashboard{font-size:16px}
+.eyebrow{font-size:14px}
+.landingHero .heroCopy>p,.publicHero p{font-size:21px;line-height:1.7}
+.heroBadges span{font-size:14px}
+.sectionIntro p,.splitIntro>p,.differenceSection .sectionIntro p{font-size:18px;line-height:1.75}
+.landingFeatures h2{font-size:24px}
+.landingFeatures p,.installGrid p,.faqList p,.priceCard>p,.priceCard li,.resourceCard p,.docsCard p{font-size:16px;line-height:1.72}
+.installGrid h3{font-size:21px}
+.faqList summary{font-size:17px}
+
+.pageHeader p{font-size:17px;line-height:1.7}
+.sideNav button{font-size:15px}
+.sidebarStatus strong,.sidebarAccount strong{font-size:15px}
+.sidebarStatus span,.sidebarAccount span{font-size:13px}
+
+.metricTop{font-size:14px;letter-spacing:.07em}
+.metricCard>strong{font-size:38px;line-height:1.05}
+.metricCard>small{font-size:14px;line-height:1.5}
+.blockHeader h2,.connectBanner h2,.protocolCard h2,.setupCard h2,.securityCard h2{font-size:19px}
+.connectBanner p,.protocolCard p,.setupCard p,.securityCard p{font-size:15px;line-height:1.65}
+.compactDeviceText strong,.activityItem strong{font-size:15px}
+.compactDeviceText span,.activityItem span,.activityEmpty span{font-size:14px}
+.activityEmpty strong{font-size:15px}
+.deviceCard h3{font-size:19px}
+.deviceIdentity span{font-size:14px}
+.deviceMetaGrid span,.toolPills span,.badge{font-size:13px}
+.deviceMetaGrid strong{font-size:15px}
+.settingsCard p,.usagePanel p{font-size:15px;line-height:1.65}
+.usagePanel h2{font-size:28px}
+.planValue{font-size:30px}
+.securityState,.privacyPill{font-size:13px}
+.protocolEndpoints code,.endpointRow code,.commandBox code{font-size:14px}
+.modal>p{font-size:15px}
+.commandLabel,.supportLine{font-size:13px}
+.onboardingSteps strong{font-size:15px}
+.onboardingSteps small{font-size:13px}
+.dashboardFooter{font-size:13px}
+.toolPermissionsHeader strong{font-size:15px}
+.toolPermissionsHeader span,.offlineTools{font-size:13px}
+.toolToggle{font-size:13px}
+
+@media(max-width:720px){
+  body{font-size:17px}
+  .landingHero .heroCopy>p,.publicHero p{font-size:18px}
+  .sectionIntro p,.splitIntro>p,.differenceSection .sectionIntro p{font-size:16px}
+  .pageHeader p{font-size:16px}
+  .metricCard>strong{font-size:34px}
+  .metricTop{font-size:13px}
+  .metricCard>small{font-size:13px}
+}
