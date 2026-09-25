@@ -18,7 +18,7 @@ function resolveTheme(theme: ThemePreference): "light" | "dark" {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(() => {
     const saved = localStorage.getItem("remote-arc-theme");
-    return saved === "light" || saved === "dark" || saved === "system" ? saved : "light";
+    return saved === "light" || saved === "dark" || saved === "system" ? saved : "dark";
   });
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => resolveTheme(theme));
 
