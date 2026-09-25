@@ -5,7 +5,7 @@
   "description": "Securely connect ChatGPT to your Windows, macOS, and Linux computers through Remote Arc.",
   "homepage": "https://remotearc.app",
   "repository": "https://github.com/yaohuangguan/remote-arc",
-  "license": "MIT",
+  "license": "Proprietary",
   "keywords": [
     "remote",
     "mcp",
