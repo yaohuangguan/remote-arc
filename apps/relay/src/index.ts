@@ -61,6 +61,25 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    if (url.hostname === "www.remotearc.app") {
+      const canonical = new URL(url.pathname + url.search, env.PUBLIC_ORIGIN);
+      return Response.redirect(canonical.toString(), 301);
+    }
+
+    if (
+      url.hostname === "remote.samyao.me" &&
+      !url.pathname.startsWith("/agent") &&
+      !url.pathname.startsWith("/mcp") &&
+      !url.pathname.startsWith("/api/") &&
+      !url.pathname.startsWith("/.well-known/") &&
+      !url.pathname.startsWith("/oauth/") &&
+      !url.pathname.startsWith("/auth/") &&
+      url.pathname !== "/health"
+    ) {
+      const canonical = new URL(url.pathname + url.search, env.PUBLIC_ORIGIN);
+      return Response.redirect(canonical.toString(), 301);
+    }
+
     if (url.pathname === "/health") {
       return Response.json({
         ok: true,
