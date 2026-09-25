@@ -417,7 +417,7 @@ function PublicLayout({
       {children}
       <footer className="publicFooter">
         <Brand compact />
-        <span>© 2026 Remote Arc · MIT</span>
+        <span>© 2026 Remote Arc · Proprietary</span>
         <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
       </footer>
     </main>
@@ -492,7 +492,7 @@ function Landing({ user }: { user?: User | null }) {
           </div>
           <div className="heroBadges">
             <span>{tr("10,000 hosted calls / month", "每月 10,000 次托管调用")}</span>
-            <span>{tr("Open source + self-hostable", "开源且可自托管")}</span>
+            <span>{tr("Source-available + self-hostable", "源码可见且可自托管")}</span>
             <span>{tr("Outbound connection only", "仅需出站连接")}</span>
           </div>
         </div>
@@ -608,7 +608,7 @@ function PricingPage({ user }: { user?: User | null }) {
       <section className="publicHero compactHero">
         <span className="eyebrow">{tr("PRICING", "价格")}</span>
         <h1>{tr("Start free. Keep an exit door.", "免费开始，也永远保留退出与自托管的自由。")}</h1>
-        <p>{tr("Hosted Remote Arc gives every account 10,000 tool calls per month. The open-source self-hosted edition can run without a Remote Arc usage cap.", "Remote Arc 托管版每个账户每月包含 10,000 次工具调用；开源自托管版本可以不受 Remote Arc 调用额度限制。")}</p>
+        <p>{tr("Hosted Remote Arc gives every account 10,000 tool calls per month. The source-available self-hosted edition can run without a Remote Arc usage cap.", "Remote Arc 托管版每个账户每月包含 10,000 次工具调用；源码可见的自托管版本可以不受 Remote Arc 调用额度限制。")}</p>
       </section>
       <section className="pricingGrid">
         <article className="priceCard featured">
@@ -629,7 +629,7 @@ function PricingPage({ user }: { user?: User | null }) {
           <p>{tr("Run the control plane on your own Cloudflare account and domain.", "把控制面部署到你自己的 Cloudflare 账户与域名。")}</p>
           <ul>
             <li>{tr("No Remote Arc usage cap", "不受 Remote Arc 调用额度限制")}</li>
-            <li>{tr("Open-source MIT codebase", "MIT 开源代码")}</li>
+            <li>{tr("Source-available codebase", "源码可见代码")}</li>
             <li>{tr("Own relay, D1 and device routing", "掌握 Relay、D1 与设备路由")}</li>
             <li>{tr("Bring your own infrastructure", "使用你自己的基础设施")}</li>
           </ul>
@@ -657,7 +657,7 @@ function ResourcesPage({ user }: { user?: User | null }) {
     [tr("Quick start", "快速开始"), tr("Pair a computer with one command and connect it to the hosted relay.", "一条命令配对电脑并连接到托管 Relay。"), "/docs/mcp"],
     [tr("Architecture", "架构"), tr("Understand Worker, D1, Durable Objects, device agents and the local execution core.", "了解 Worker、D1、Durable Objects、设备 Agent 与本地执行核心。"), "https://github.com/yaohuangguan/remote-arc"],
     [tr("Security model", "安全模型"), tr("Per-device credentials, local permissions, OAuth scopes and privacy-preserving audit.", "每设备凭证、本机权限、OAuth Scope 与隐私审计。"), "https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md"],
-    [tr("Source code", "源代码"), tr("Remote Arc is open source under the MIT license.", "Remote Arc 采用 MIT 许可证开源。"), "https://github.com/yaohuangguan/remote-arc"],
+    [tr("Source code", "源代码"), tr("Remote Arc is source-available under the Remote Arc Proprietary Source License.", "Remote Arc 当前版本采用 Remote Arc Proprietary Source License，源码公开可审查但并非第三方开源软件。"), "https://github.com/yaohuangguan/remote-arc"],
   ];
   return (
     <PublicLayout user={user}>
@@ -1014,7 +1014,7 @@ function LegalPage({
         [tr("Authorized use", "授权使用"), tr("You must have permission to access every computer, file, account and service you control through Remote Arc. Do not use Remote Arc to bypass access controls or interfere with systems you do not own or administer.", "你必须有权访问通过 Remote Arc 控制的每台电脑、文件、账户和服务。不得使用 Remote Arc 绕过访问控制或干扰你无权管理的系统。")],
         [tr("Your responsibility", "你的责任"), tr("Remote computer control can modify files, execute commands and affect running software. You are responsible for reviewing permissions, prompts and commands before allowing high-impact actions.", "远程电脑控制可能修改文件、执行命令并影响运行中的软件。你有责任在允许高影响操作前检查权限、提示和命令。")],
         [tr("Service availability", "服务可用性"), tr("The hosted service is provided without a guarantee of uninterrupted availability. Features, quotas and supported integrations may change as Remote Arc develops.", "托管服务不保证持续无中断可用。随着 Remote Arc 的发展，功能、额度和支持的集成可能发生变化。")],
-        [tr("Open-source software", "开源软件"), tr("Open-source portions of Remote Arc are also governed by the licenses included with the source code. Self-hosted deployments are operated by their deployer, not by the hosted Remote Arc service.", "Remote Arc 的开源部分同时受源码中附带的许可证约束。自托管部署由其部署者负责运行，不属于 Remote Arc 托管服务。")],
+        [tr("Third-party open-source software", "第三方开源软件"), tr("Third-party open-source components are governed by the licenses included with those components. Self-hosted deployments are operated by their deployer, not by the hosted Remote Arc service.", "Remote Arc 使用的第三方开源组件受各自随附许可证约束。自托管部署由其部署者负责运行，不属于 Remote Arc 托管服务。")],
         [tr("Suspension", "暂停服务"), tr("Access may be limited or suspended for abuse, security risks, legal requirements or material violations of these terms.", "如存在滥用、安全风险、法律要求或重大违反本条款的情况，访问可能会被限制或暂停。")],
       ],
     },
@@ -1026,7 +1026,7 @@ function LegalPage({
         "如需安装帮助、Bug 反馈、安全问题或账户与数据请求，可使用以下渠道。",
       ),
       sections: [
-        [tr("Documentation", "文档"), tr("Start with the MCP setup guide and the open-source README for pairing, permissions and self-hosting instructions.", "可先查看 MCP 接入指南和开源 README，了解配对、权限与自托管说明。")],
+        [tr("Documentation", "文档"), tr("Start with the MCP setup guide and repository README for pairing, permissions and self-hosting instructions.", "可先查看 MCP 接入指南和仓库 README，了解配对、权限与自托管说明。")],
         [tr("Bug reports", "Bug 反馈"), tr("Use the GitHub repository for reproducible product and developer issues. Do not include device credentials, OAuth tokens or private file contents.", "可通过 GitHub 仓库提交可复现的产品与开发问题。请勿附带设备凭证、OAuth Token 或私人文件内容。")],
         [tr("Security", "安全问题"), tr("Review SECURITY.md before reporting a vulnerability and avoid publishing sensitive exploit details in a public issue.", "报告漏洞前请阅读 SECURITY.md，不要在公开 Issue 中发布敏感漏洞利用细节。")],
         [tr("Account and data requests", "账户与数据请求"), tr("For account deletion or hosted-data requests, contact the project maintainer through the support channel published on the Remote Arc website or repository.", "如需删除账户或请求托管数据，请通过 Remote Arc 官网或仓库公开的支持渠道联系项目维护者。")],
