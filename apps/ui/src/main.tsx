@@ -94,21 +94,29 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function PublicHeader() {
+function PublicHeader({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   return (
     <header className="landingNav publicNav">
       <Brand />
       <nav className="publicNavLinks">
-        <a href="/docs/mcp">{tr("MCP", "MCP")}</a>
-        <a href="/pricing">{tr("Pricing", "价格")}</a>
-        <a href="/resources">{tr("Resources", "资源")}</a>
+        <a href="/#product">{tr("Product", "\u4ea7\u54c1")}</a>
+        <a href="/#architecture">{tr("Architecture", "\u67b6\u6784")}</a>
+        <a href="/#security">{tr("Security", "\u5b89\u5168")}</a>
+        <a href="/pricing">{tr("Pricing", "\u4ef7\u683c")}</a>
+        <a href="/resources">{tr("Resources", "\u8d44\u6e90")}</a>
         <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
       </nav>
       <div className="publicNavActions">
-        <a className="navLogin" href="/auth/google?return_to=/">
-          {tr("Sign in", "登录")}
-        </a>
+        {user ? (
+          <a className="navDashboard" href="/dashboard">
+            {tr("Dashboard", "\u63a7\u5236\u53f0")} <span>{"\u2197"}</span>
+          </a>
+        ) : (
+          <a className="navLogin" href="/auth/google?return_to=/dashboarddashboard">
+            {tr("Sign in", "\u767b\u5f55")}
+          </a>
+        )}
       </div>
     </header>
   );
@@ -233,7 +241,7 @@ function PairDevice({
         body={tr("Authorization is complete. Return to your terminal — Remote Arc will connect automatically.", "授权完成。返回终端，Remote Arc 会自动完成连接。")}
       >
         <div className="successMark">✓</div>
-        <a className="secondaryLink" href="/">{tr("Back to dashboard", "返回控制台")}</a>
+        <a className="secondaryLink" href="/dashboard">{tr("Back to dashboard", "返回控制台")}</a>
       </CenteredCard>
     );
   }
@@ -350,86 +358,255 @@ function OAuthConsent({ user }: { user: User | null | undefined }) {
   );
 }
 
-function PublicLayout({ children }: { children: React.ReactNode }) {
+function PublicLayout({
+  children,
+  user,
+}: {
+  children: React.ReactNode;
+  user?: User | null;
+}) {
   return (
     <main className="landing publicPage">
-      <PublicHeader />
+      <PublicHeader user={user} />
       {children}
       <footer className="publicFooter">
         <Brand compact />
         <span>© 2026 Remote Arc · MIT</span>
-        <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
+        <div className="footerLinks">
+          <a href="/docs/mcp">MCP</a>
+          <a href="/pricing">Pricing</a>
+          <a href="/resources">Resources</a>
+          <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
+        </div>
       </footer>
     </main>
   );
 }
 
-function Landing() {
+function DashboardAccess() {
   const { tr } = useI18n();
-  const command = "npx remote-arc-mcp@latest";
   return (
     <PublicLayout>
+      <section className="dashboardAccess">
+        <div className="dashboardAccessCopy">
+          <span className="eyebrow">{tr("REMOTE ARC DASHBOARD", "REMOTE ARC \u63a7\u5236\u53f0")}</span>
+          <h1>{tr(
+            "Your devices, connections and access policy in one place.",
+            "\u5728\u4e00\u4e2a\u9875\u9762\u7ba1\u7406\u8bbe\u5907\u3001\u8fde\u63a5\u4e0e\u8bbf\u95ee\u7b56\u7565\u3002"
+          )}</h1>
+          <p>{tr(
+            "Sign in to pair computers, inspect online state, review usage and connect your AI clients. The public website always remains available at the root domain.",
+            "\u767b\u5f55\u540e\u53ef\u914d\u5bf9\u7535\u8111\u3001\u67e5\u770b\u5728\u7ebf\u72b6\u6001\u3001\u7528\u91cf\u4e0e AI \u5ba2\u6237\u7aef\u8fde\u63a5\u3002\u6839\u57df\u540d\u59cb\u7ec8\u4fdd\u7559\u4e3a\u516c\u5f00\u5b98\u7f51\u3002"
+          )}</p>
+          <a className="primaryButton" href="/auth/google?return_to=/dashboarddashboard">
+            {tr("Continue with Google", "\u4f7f\u7528 Google \u7ee7\u7eed")} <span>{"\u2192"}</span>
+          </a>
+        </div>
+        <div className="dashboardAccessPreview" aria-hidden="true">
+          <div className="previewTop"><span>Remote Arc</span><i>Dashboard</i></div>
+          <div className="previewMetricRow">
+            <div><small>ONLINE</small><strong>2</strong><span>devices</span></div>
+            <div><small>USAGE</small><strong>1.8k</strong><span>/ 10k calls</span></div>
+            <div><small>POLICY</small><strong>Safe</strong><span>default mode</span></div>
+          </div>
+          <div className="previewDevice"><i className="onlineDot" /><div><strong>Sam MacBook</strong><span>macOS · online now</span></div><b>Read + Dev</b></div>
+          <div className="previewDevice"><i className="onlineDot" /><div><strong>SamPC</strong><span>Windows · online now</span></div><b>Developer</b></div>
+          <div className="previewActivity"><span>Recent activity</span><strong>read_file</strong><small>Sam MacBook · 12s ago</small></div>
+        </div>
+      </section>
+    </PublicLayout>
+  );
+}
+
+function Landing({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  const command = "npx remote-arc";
+  return (
+    <PublicLayout user={user}>
       <section className="landingHero">
-        <span className="eyebrow">{tr("OPEN · SELF-HOSTABLE · REMOTE MCP", "开源 · 可自托管 · REMOTE MCP")}</span>
-        <h1>{tr("Your computer. Your rules. Your AI.", "你的电脑。你的规则。你的 AI。")}</h1>
-        <p>
-          {tr(
-            "Remote access for AI without giving up control. Connect real Windows, macOS and Linux machines to ChatGPT and any compatible MCP client.",
-            "让 AI 远程操作你的真实 Windows、macOS 和 Linux 设备，同时把控制权留在你手里。支持 ChatGPT 与兼容 MCP 的 AI 客户端。"
-          )}
-        </p>
-        <div className="landingActions">
-          <a className="primaryButton goldButton" href="/auth/google?return_to=/">{tr("Start free", "免费开始")}</a>
-          <a className="ghostLink" href="/docs/mcp">{tr("Explore MCP →", "了解 MCP →")}</a>
+        <div className="heroCopy">
+          <span className="eyebrow">{tr(
+            "OPEN SOURCE · SELF-HOSTABLE · REMOTE MCP",
+            "\u5f00\u6e90 · \u53ef\u81ea\u6258\u7ba1 · REMOTE MCP"
+          )}</span>
+          <h1>{tr(
+            "Give your AI a secure path to the computers you already use.",
+            "\u8ba9 AI \u5b89\u5168\u5730\u8fde\u63a5\u4f60\u771f\u6b63\u5728\u4f7f\u7528\u7684\u7535\u8111\u3002"
+          )}</h1>
+          <p>{tr(
+            "Remote Arc is an open Remote MCP control plane for Windows, macOS and Linux. Pair a computer with one command, connect an MCP-capable AI client once, and keep the final permission boundary on the device.",
+            "Remote Arc \u662f\u9762\u5411 Windows\u3001macOS \u548c Linux \u7684\u5f00\u6e90 Remote MCP \u63a7\u5236\u9762\u3002\u4e00\u6761\u547d\u4ee4\u914d\u5bf9\u8bbe\u5907\uff0c\u4e00\u6b21\u8fde\u63a5 MCP \u5ba2\u6237\u7aef\uff0c\u6700\u7ec8\u6743\u9650\u8fb9\u754c\u59cb\u7ec8\u7559\u5728\u672c\u673a\u3002"
+          )}</p>
+          <div className="landingActions">
+            <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboarddashboard"}>
+              {user ? tr("Open dashboard", "\u6253\u5f00\u63a7\u5236\u53f0") : tr("Start free", "\u514d\u8d39\u5f00\u59cb")} <span>{"\u2192"}</span>
+            </a>
+            <a className="ghostLink" href="#architecture">{tr("View architecture", "\u67e5\u770b\u67b6\u6784")} {"\u2193"}</a>
+          </div>
+          <div className="heroBadges">
+            <span>{tr("Outbound-only device connection", "\u8bbe\u5907\u4ec5\u4e3b\u52a8\u51fa\u7ad9\u8fde\u63a5")}</span>
+            <span>OAuth 2.1 + PKCE</span>
+            <span>{tr("Self-hostable control plane", "\u63a7\u5236\u9762\u53ef\u81ea\u6258\u7ba1")}</span>
+          </div>
         </div>
-        <div className="heroBadges">
-          <span>{tr("10,000 hosted tool calls / month", "每月 10,000 次云端工具调用")}</span>
-          <span>{tr("Self-host for unlimited calls", "自托管可无限调用")}</span>
-          <span>{tr("No port forwarding", "无需端口映射")}</span>
-        </div>
-        <div className="terminalPreview">
-          <div className="terminalBar"><div className="terminalDots"><i/><i/><i/></div><span>Terminal</span></div>
-          <code>
-            <span>$</span> {command}{"\n"}
-            <em>Remote Arc</em>{"\n\n"}
-            Pairing code: <strong>J7KD-P2QF</strong>{"\n"}
-            Opening browser...{"\n\n"}
-            <strong>✓ Device authorized</strong>{"\n"}
-            <strong>✓ Connected</strong> as Sam MacBook
-          </code>
+
+        <div className="heroConsole">
+          <div className="terminalPreview">
+            <div className="terminalBar"><div className="terminalDots"><i/><i/><i/></div><span>Terminal</span></div>
+            <code>
+              <span>$</span> {command}{"\n"}
+              <em>Remote Arc</em>{"\n\n"}
+              Pairing code: <strong>J7KD-P2QF</strong>{"\n"}
+              Opening browser...{"\n\n"}
+              <strong>✓ Device authorized</strong>{"\n"}
+              <strong>✓ Connected</strong> as Sam MacBook
+            </code>
+          </div>
+          <div className="heroRouteCard">
+            <div><span>AI CLIENT</span><strong>MCP request</strong></div>
+            <i>{"\u2193"}</i>
+            <div><span>REMOTE ARC</span><strong>OAuth + relay</strong></div>
+            <i>{"\u2193"}</i>
+            <div><span>YOUR DEVICE</span><strong>Local policy decides</strong></div>
+          </div>
         </div>
       </section>
 
-      <section className="valueSection">
-        <div className="sectionIntro">
-          <span className="eyebrow">{tr("WHY REMOTE LINK", "为什么选择 REMOTE LINK")}</span>
-          <h2>{tr("Simple like a hosted service. Controllable like open source.", "像托管服务一样简单，像开源软件一样可控。")}</h2>
+      <section className="protocolStrip" aria-label="Remote Arc technology">
+        <span>REMOTE MCP</span><i />
+        <span>OAUTH 2.1 + PKCE</span><i />
+        <span>OUTBOUND WEBSOCKET</span><i />
+        <span>PER-DEVICE CREDENTIALS</span><i />
+        <span>OPEN SOURCE</span>
+      </section>
+
+      <section className="productSection" id="product">
+        <div className="sectionIntro splitIntro">
+          <div>
+            <span className="eyebrow">{tr("THE PRODUCT", "\u4ea7\u54c1")}</span>
+            <h2>{tr(
+              "Remote computer access designed as infrastructure, not a remote-desktop session.",
+              "\u628a AI \u8fdc\u7a0b\u8bbf\u95ee\u505a\u6210\u57fa\u7840\u8bbe\u65bd\uff0c\u800c\u4e0d\u662f\u4e00\u6b21\u8fdc\u7a0b\u684c\u9762\u4f1a\u8bdd\u3002"
+            )}</h2>
+          </div>
+          <p>{tr(
+            "The AI sees structured MCP tools. Remote Arc handles identity, device routing and policy. Your local agent performs only the capabilities that machine has explicitly advertised.",
+            "AI \u770b\u5230\u7684\u662f\u7ed3\u6784\u5316 MCP \u5de5\u5177\u3002Remote Arc \u8d1f\u8d23\u8eab\u4efd\u3001\u8bbe\u5907\u8def\u7531\u548c\u7b56\u7565\uff0c\u672c\u5730 Agent \u53ea\u6267\u884c\u8be5\u8bbe\u5907\u660e\u786e\u58f0\u660e\u7684\u80fd\u529b\u3002"
+          )}</p>
         </div>
-        <div className="landingFeatures">
-          <article><span>01</span><h2>{tr("One-command pairing", "一条命令完成配对")}</h2><p>{tr("No clone, config file, token copy, VPN or router setup.", "无需 clone、配置文件、复制 Token、VPN 或路由器设置。")}</p></article>
-          <article><span>02</span><h2>{tr("Self-host the control plane", "控制面也能自托管")}</h2><p>{tr("Own the relay, identity database and domain — not only the local MCP server.", "不只是本地 MCP，Relay、身份数据库与域名也可以完全掌握在自己手里。")}</p></article>
-          <article><span>03</span><h2>{tr("Protocol-native", "原生 MCP 协议")}</h2><p>{tr("One Remote MCP endpoint for ChatGPT and other compatible clients.", "一个 Remote MCP 端点连接 ChatGPT 与其他兼容客户端。")}</p></article>
-          <article><span>04</span><h2>{tr("Local permission boundary", "权限边界留在本机")}</h2><p>{tr("Each device advertises its own allowed tools. Cloud access cannot silently expand them.", "每台设备自行声明可用工具，云端授权无法静默扩大本机权限。")}</p></article>
+
+        <div className="workflowGrid">
+          <article>
+            <span className="stepIndex">01</span>
+            <div className="stepIcon">〉_</div>
+            <h3>{tr("Run one command", "\u8fd0\u884c\u4e00\u6761\u547d\u4ee4")}</h3>
+            <code>npx remote-arc</code>
+            <p>{tr("No repository clone, inbound port, VPN or token copy-paste.", "\u65e0\u9700 clone \u4ed3\u5e93\u3001\u5f00\u653e\u5165\u7ad9\u7aef\u53e3\u3001VPN \u6216\u590d\u5236 Token\u3002")}</p>
+          </article>
+          <article>
+            <span className="stepIndex">02</span>
+            <div className="stepIcon">◇</div>
+            <h3>{tr("Pair in the browser", "\u5728\u6d4f\u89c8\u5668\u4e2d\u914d\u5bf9")}</h3>
+            <p>{tr("A short code links the local agent to your account. The device receives its own credential and connects outbound.", "\u77ed\u914d\u5bf9\u7801\u5c06\u672c\u5730 Agent \u7ed1\u5b9a\u5230\u8d26\u6237\uff0c\u6bcf\u53f0\u8bbe\u5907\u62e5\u6709\u72ec\u7acb\u51ed\u636e\u5e76\u4e3b\u52a8\u51fa\u7ad9\u8fde\u63a5\u3002")}</p>
+          </article>
+          <article>
+            <span className="stepIndex">03</span>
+            <div className="stepIcon">MCP</div>
+            <h3>{tr("Connect your AI once", "\u53ea\u9700\u8fde\u63a5 AI \u4e00\u6b21")}</h3>
+            <code>https://remote.samyao.me/mcp</code>
+            <p>{tr("The same Remote MCP endpoint can route authorized requests to any device linked to the account.", "\u540c\u4e00\u4e2a Remote MCP \u7aef\u70b9\u53ef\u628a\u5df2\u6388\u6743\u8bf7\u6c42\u8def\u7531\u5230\u8d26\u6237\u4e0b\u7684\u4efb\u610f\u8bbe\u5907\u3002")}</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="architectureSection" id="architecture">
+        <div className="sectionIntro architectureIntro">
+          <span className="eyebrow">{tr("ARCHITECTURE", "\u67b6\u6784")}</span>
+          <h2>{tr(
+            "A small control plane between the AI and your machines.",
+            "\u5728 AI \u548c\u4f60\u7684\u8bbe\u5907\u4e4b\u95f4\uff0c\u53ea\u653e\u4e00\u5c42\u6e05\u6670\u7684\u63a7\u5236\u9762\u3002"
+          )}</h2>
+          <p>{tr(
+            "Cloud identity and routing stay separate from local execution. That separation is the core of the security model and the reason the system is self-hostable end to end.",
+            "\u4e91\u7aef\u8eab\u4efd\u4e0e\u8def\u7531\u548c\u672c\u5730\u6267\u884c\u5f7b\u5e95\u5206\u79bb\u3002\u8fd9\u4e2a\u8fb9\u754c\u65e2\u662f\u5b89\u5168\u6a21\u578b\u7684\u6838\u5fc3\uff0c\u4e5f\u662f\u6574\u5957\u7cfb\u7edf\u53ef\u7aef\u5230\u7aef\u81ea\u6258\u7ba1\u7684\u57fa\u7840\u3002"
+          )}</p>
+        </div>
+
+        <div className="architectureDiagram">
+          <div className="architectureLane"><small>CLIENT</small><strong>ChatGPT / MCP client</strong><span>Remote MCP tools</span></div>
+          <div className="architectureArrow"><b>HTTPS</b><i>{"\u2192"}</i><small>OAuth 2.1 + PKCE</small></div>
+          <div className="architectureLane featuredLane"><small>CONTROL PLANE</small><strong>Remote Arc Relay</strong><span>Identity · routing · quota · audit metadata</span></div>
+          <div className="architectureArrow"><b>OUTBOUND</b><i>{"\u2192"}</i><small>WebSocket</small></div>
+          <div className="architectureLane"><small>DEVICE</small><strong>Remote Arc Agent</strong><span>Local MCP client · capability policy</span></div>
+          <div className="architectureArrow"><b>LOCAL</b><i>{"\u2192"}</i><small>stdio / MCP</small></div>
+          <div className="architectureLane"><small>EXECUTION</small><strong>Your computer</strong><span>Files · processes · development tools</span></div>
+        </div>
+
+        <div className="architectureNotes">
+          <span><b>{tr("No inbound device port", "\u8bbe\u5907\u65e0\u9700\u5165\u7ad9\u7aef\u53e3")}</b><small>{tr("The agent initiates the connection.", "Agent \u4e3b\u52a8\u5efa\u7acb\u8fde\u63a5\u3002")}</small></span>
+          <span><b>{tr("Cloud cannot invent tools", "\u4e91\u7aef\u4e0d\u80fd\u51ed\u7a7a\u589e\u52a0\u5de5\u5177")}</b><small>{tr("Only device-advertised capabilities can run.", "\u53ea\u80fd\u6267\u884c\u8bbe\u5907\u5df2\u516c\u5e03\u7684\u80fd\u529b\u3002")}</small></span>
+          <span><b>{tr("One account, multiple devices", "\u4e00\u4e2a\u8d26\u6237\u7ba1\u7406\u591a\u53f0\u8bbe\u5907")}</b><small>{tr("Identity and routing stay centralized.", "\u8eab\u4efd\u4e0e\u8def\u7531\u96c6\u4e2d\u7ba1\u7406\u3002")}</small></span>
+        </div>
+      </section>
+
+      <section className="securitySection" id="security">
+        <div className="sectionIntro splitIntro">
+          <div>
+            <span className="eyebrow">{tr("SECURITY MODEL", "\u5b89\u5168\u6a21\u578b")}</span>
+            <h2>{tr(
+              "Access is layered. Execution still ends at a local decision.",
+              "\u8bbf\u95ee\u662f\u5206\u5c42\u7684\uff0c\u6267\u884c\u6700\u7ec8\u4ecd\u7531\u672c\u5730\u51b3\u5b9a\u3002"
+            )}</h2>
+          </div>
+          <p>{tr(
+            "Remote Arc deliberately separates account authorization from device capability. A valid cloud token is necessary, but it is not sufficient to execute a capability the local device has not exposed.",
+            "Remote Arc \u523b\u610f\u628a\u8d26\u6237\u6388\u6743\u548c\u8bbe\u5907\u80fd\u529b\u5206\u5f00\u3002\u6709\u6548\u7684\u4e91\u7aef Token \u662f\u5fc5\u8981\u6761\u4ef6\uff0c\u4f46\u4e0d\u8db3\u4ee5\u8d8a\u8fc7\u672c\u5730\u6ca1\u6709\u5f00\u653e\u7684\u80fd\u529b\u3002"
+          )}</p>
+        </div>
+        <div className="securityGrid">
+          <article><span>01</span><h3>{tr("Outbound by default", "\u9ed8\u8ba4\u53ea\u51fa\u7ad9")}</h3><p>{tr("Devices establish their own authenticated socket to the relay. No public IP or port forwarding is required.", "\u8bbe\u5907\u4e3b\u52a8\u5411 Relay \u5efa\u7acb\u8ba4\u8bc1\u8fde\u63a5\uff0c\u65e0\u9700\u516c\u7f51 IP \u6216\u7aef\u53e3\u6620\u5c04\u3002")}</p></article>
+          <article><span>02</span><h3>{tr("Per-device credentials", "\u6bcf\u8bbe\u5907\u72ec\u7acb\u51ed\u636e")}</h3><p>{tr("A paired computer gets its own credential and can be revoked independently from the dashboard.", "\u6bcf\u53f0\u5df2\u914d\u5bf9\u8bbe\u5907\u90fd\u6709\u72ec\u7acb\u51ed\u636e\uff0c\u53ef\u5728\u63a7\u5236\u53f0\u4e2d\u5355\u72ec\u64a4\u9500\u3002")}</p></article>
+          <article><span>03</span><h3>{tr("Scoped AI authorization", "\u5206\u8303\u56f4 AI \u6388\u6743")}</h3><p><code>devices:read</code> <code>computer:read</code> <code>computer:write</code></p></article>
+          <article><span>04</span><h3>{tr("Minimal audit surface", "\u6700\u5c0f\u5ba1\u8ba1\u9762")}</h3><p>{tr("Hosted audit events record operational metadata such as device, tool and outcome, not file contents or command arguments.", "\u6258\u7ba1\u5ba1\u8ba1\u53ea\u8bb0\u5f55\u8bbe\u5907\u3001\u5de5\u5177\u548c\u7ed3\u679c\u7b49\u8fd0\u884c\u5143\u6570\u636e\uff0c\u4e0d\u8bb0\u5f55\u6587\u4ef6\u5185\u5bb9\u6216\u547d\u4ee4\u53c2\u6570\u3002")}</p></article>
+        </div>
+      </section>
+
+      <section className="useCasesSection">
+        <div className="sectionIntro">
+          <span className="eyebrow">{tr("BUILT FOR REAL WORK", "\u9762\u5411\u771f\u5b9e\u5de5\u4f5c\u6d41")}</span>
+          <h2>{tr(
+            "One connection layer for the machines where your work already lives.",
+            "\u4e00\u5c42\u8fde\u63a5\uff0c\u8986\u76d6\u4f60\u5de5\u4f5c\u771f\u6b63\u6240\u5728\u7684\u8bbe\u5907\u3002"
+          )}</h2>
+        </div>
+        <div className="useCaseGrid">
+          <article><div>⌨</div><h3>{tr("Developer workstation", "\u5f00\u53d1\u5de5\u4f5c\u7ad9")}</h3><p>{tr("Inspect repositories, edit files, run builds and work with local development tools.", "\u67e5\u770b\u4ed3\u5e93\u3001\u7f16\u8f91\u6587\u4ef6\u3001\u8fd0\u884c\u6784\u5efa\uff0c\u8c03\u7528\u672c\u5730\u5f00\u53d1\u5de5\u5177\u3002")}</p></article>
+          <article><div>□</div><h3>{tr("File workflows", "\u6587\u4ef6\u5de5\u4f5c\u6d41")}</h3><p>{tr("Read project files, inspect directories and move work between AI reasoning and the filesystem.", "\u8bfb\u53d6\u9879\u76ee\u6587\u4ef6\u3001\u67e5\u770b\u76ee\u5f55\uff0c\u5728 AI \u63a8\u7406\u4e0e\u672c\u5730\u6587\u4ef6\u7cfb\u7edf\u4e4b\u95f4\u8854\u63a5\u5de5\u4f5c\u3002")}</p></article>
+          <article><div>▷</div><h3>{tr("Remote operations", "\u8fdc\u7a0b\u8fd0\u7ef4")}</h3><p>{tr("Inspect process state and execute development commands without opening a general-purpose remote shell to the internet.", "\u67e5\u770b\u8fdb\u7a0b\u72b6\u6001\u5e76\u6267\u884c\u5f00\u53d1\u547d\u4ee4\uff0c\u65e0\u9700\u628a\u901a\u7528\u8fdc\u7a0b Shell \u66b4\u9732\u5230\u516c\u7f51\u3002")}</p></article>
+          <article><div>◎</div><h3>{tr("Multi-device setup", "\u591a\u8bbe\u5907")}</h3><p>{tr("Keep Windows, Mac and Linux machines under one account while each computer keeps its own policy.", "\u5728\u540c\u4e00\u8d26\u6237\u4e0b\u7ba1\u7406 Windows\u3001Mac \u548c Linux\uff0c\u540c\u65f6\u4fdd\u7559\u6bcf\u53f0\u8bbe\u5907\u81ea\u5df1\u7684\u6743\u9650\u7b56\u7565\u3002")}</p></article>
         </div>
       </section>
 
       <section className="differenceSection">
         <div className="sectionIntro">
-          <span className="eyebrow">{tr("THE DIFFERENCE", "我们的差异")}</span>
-          <h2>{tr("Hosted convenience without hosted lock-in.", "享受托管的省心，但不被托管平台锁死。")}</h2>
+          <span className="eyebrow">{tr("HOSTED OR SELF-HOSTED", "\u6258\u7ba1\u6216\u81ea\u6258\u7ba1")}</span>
+          <h2>{tr(
+            "Managed convenience without making the hosted service your only exit.",
+            "\u4eab\u53d7\u6258\u7ba1\u4fbf\u5229\uff0c\u4f46\u4e0d\u628a\u81ea\u5df1\u9501\u5728\u6258\u7ba1\u5e73\u53f0\u91cc\u3002"
+          )}</h2>
           <p>{tr(
-            "Remote Arc is built around an escape hatch: use our hosted relay when you want zero ops, or run the same control plane yourself when ownership matters more.",
-            "Remote Arc 从一开始就保留退出通道：想省心就用托管 Relay，想完全掌控就把同一套控制面部署到自己账户里。"
+            "Use Remote Arc's hosted relay when you want zero ops. Run the control plane in your own Cloudflare account when ownership, policy or scale matters more.",
+            "\u60f3\u96f6\u8fd0\u7ef4\u65f6\u7528 Remote Arc \u6258\u7ba1 Relay\uff1b\u66f4\u5728\u610f\u6240\u6709\u6743\u3001\u7b56\u7565\u6216\u89c4\u6a21\u65f6\uff0c\u76f4\u63a5\u5728\u81ea\u5df1\u7684 Cloudflare \u8d26\u6237\u4e2d\u8fd0\u884c\u63a7\u5236\u9762\u3002"
           )}</p>
         </div>
         <div className="comparisonGrid">
-          <div className="comparisonHead"><span></span><strong>Remote Arc</strong><strong>{tr("Hosted-only connector", "纯托管连接器")}</strong></div>
+          <div className="comparisonHead"><span></span><strong>Remote Arc</strong><strong>{tr("Hosted-only connector", "\u7eaf\u6258\u7ba1\u8fde\u63a5\u5668")}</strong></div>
           {[
-            [tr("Control plane", "控制面"), tr("Hosted or self-hosted", "托管或自托管"), tr("Provider-owned", "平台持有")],
-            [tr("AI clients", "AI 客户端"), tr("Standards-based Remote MCP", "标准 Remote MCP"), tr("Often product-specific", "通常绑定产品")],
-            [tr("Device permissions", "设备权限"), tr("Final boundary stays local", "最终边界留在本机"), tr("Cloud policy first", "云端策略优先")],
-            [tr("Exit path", "退出路径"), tr("Fork, deploy, keep running", "Fork、部署、继续运行"), tr("Migration required", "需要迁移")],
-            [tr("Free hosted usage", "免费托管额度"), tr("10,000 tool calls / month", "每月 10,000 次调用"), tr("Depends on provider", "取决于平台")],
+            [tr("Control plane", "\u63a7\u5236\u9762"), tr("Hosted or self-hosted", "\u6258\u7ba1\u6216\u81ea\u6258\u7ba1"), tr("Provider-owned", "\u5e73\u53f0\u6301\u6709")],
+            [tr("AI clients", "AI \u5ba2\u6237\u7aef"), tr("Standards-based Remote MCP", "\u57fa\u4e8e\u6807\u51c6 Remote MCP"), tr("Often product-specific", "\u901a\u5e38\u7ed1\u5b9a\u7279\u5b9a\u4ea7\u54c1")],
+            [tr("Device permissions", "\u8bbe\u5907\u6743\u9650"), tr("Final boundary stays local", "\u6700\u7ec8\u8fb9\u754c\u7559\u5728\u672c\u673a"), tr("Cloud policy first", "\u4e91\u7aef\u7b56\u7565\u4f18\u5148")],
+            [tr("Exit path", "\u9000\u51fa\u8def\u5f84"), tr("Fork, deploy, keep running", "Fork\u3001\u90e8\u7f72\u3001\u7ee7\u7eed\u8fd0\u884c"), tr("Migration required", "\u9700\u8981\u8fc1\u79fb")],
+            [tr("Free hosted usage", "\u514d\u8d39\u6258\u7ba1\u989d\u5ea6"), tr("10,000 tool calls / month", "\u6bcf\u6708 10,000 \u6b21\u5de5\u5177\u8c03\u7528"), tr("Depends on provider", "\u53d6\u51b3\u4e8e\u5e73\u53f0")],
           ].map(([label, ours, other]) => (
             <div className="comparisonRow" key={label}>
               <span>{label}</span><strong>✓ {ours}</strong><em>{other}</em>
@@ -438,22 +615,59 @@ function Landing() {
         </div>
       </section>
 
+      <section className="dashboardShowcase">
+        <div className="dashboardShowcaseCopy">
+          <span className="eyebrow">{tr("CONTROL WITHOUT THE TERMINAL", "\u4e0d\u7528\u7ec8\u7aef\u4e5f\u80fd\u638c\u63a7")}</span>
+          <h2>{tr(
+            "A dedicated dashboard for devices, access and usage.",
+            "\u72ec\u7acb\u63a7\u5236\u53f0\uff0c\u7ba1\u7406\u8bbe\u5907\u3001\u8bbf\u95ee\u4e0e\u7528\u91cf\u3002"
+          )}</h2>
+          <p>{tr(
+            "The dashboard is intentionally separate from the public website. Return to the root domain any time and the product site remains the product site.",
+            "\u63a7\u5236\u53f0\u4e0e\u516c\u5f00\u5b98\u7f51\u660e\u786e\u5206\u79bb\u3002\u4efb\u4f55\u65f6\u5019\u56de\u5230\u6839\u57df\u540d\uff0c\u770b\u5230\u7684\u90fd\u4ecd\u7136\u662f\u4ea7\u54c1\u5b98\u7f51\u3002"
+          )}</p>
+          <a className="ghostLink" href={user ? "/dashboard" : "/auth/google?return_to=/dashboarddashboard"}>
+            {user ? tr("Open dashboard", "\u6253\u5f00\u63a7\u5236\u53f0") : tr("Sign in to dashboard", "\u767b\u5f55\u63a7\u5236\u53f0")} {"\u2192"}
+          </a>
+        </div>
+        <div className="dashboardMock" aria-hidden="true">
+          <div className="mockSidebar"><Brand compact /><span className="active">Overview</span><span>Devices</span><span>Connect</span><span>Security</span><span>Settings</span></div>
+          <div className="mockMain">
+            <div className="mockTitle"><div><small>OVERVIEW</small><strong>Your Remote Arc</strong></div><span>2 devices online</span></div>
+            <div className="mockMetrics"><article><small>DEVICES</small><strong>3</strong><span>2 online</span></article><article><small>TOOL CALLS</small><strong>1,842</strong><span>of 10,000</span></article><article><small>POLICY</small><strong>Safe</strong><span>default</span></article></div>
+            <div className="mockDeviceRow"><i/><div><strong>Sam MacBook</strong><span>macOS · online</span></div><b>Developer</b></div>
+            <div className="mockDeviceRow"><i/><div><strong>SamPC</strong><span>Windows · online</span></div><b>Developer</b></div>
+          </div>
+        </div>
+      </section>
+
       <section className="ctaStrip">
         <div>
-          <span className="eyebrow">{tr("FREE HOSTED PLAN", "免费托管方案")}</span>
-          <h2>{tr("10,000 tool calls every month.", "每月 10,000 次工具调用。")}</h2>
-          <p>{tr("Enough to make Remote Arc part of your daily workflow. Need full control? Self-host it.", "足够融入日常工作流。需要完全掌控？直接自托管。")}</p>
+          <span className="eyebrow">{tr("HOSTED FREE", "\u6258\u7ba1\u514d\u8d39\u7248")}</span>
+          <h2>{tr(
+            "Start with 10,000 hosted tool calls each month.",
+            "\u6bcf\u6708 10,000 \u6b21\u6258\u7ba1\u5de5\u5177\u8c03\u7528\u8d77\u6b65\u3002"
+          )}</h2>
+          <p>{tr(
+            "Or self-host the same control plane when you want to own the entire path.",
+            "\u5f53\u4f60\u5e0c\u671b\u5b8c\u5168\u62e5\u6709\u6574\u6761\u8def\u5f84\u65f6\uff0c\u4e5f\u53ef\u76f4\u63a5\u81ea\u6258\u7ba1\u540c\u4e00\u5957\u63a7\u5236\u9762\u3002"
+          )}</p>
         </div>
-        <a className="primaryButton goldButton" href="/pricing">{tr("View pricing", "查看价格")}</a>
+        <div className="ctaActions">
+          <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboarddashboard"}>
+            {user ? tr("Open dashboard", "\u6253\u5f00\u63a7\u5236\u53f0") : tr("Start free", "\u514d\u8d39\u5f00\u59cb")}
+          </a>
+          <a className="ghostLink" href="/pricing">{tr("View pricing", "\u67e5\u770b\u4ef7\u683c")}</a>
+        </div>
       </section>
     </PublicLayout>
   );
 }
 
-function PricingPage() {
+function PricingPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   return (
-    <PublicLayout>
+    <PublicLayout user={user}>
       <section className="publicHero compactHero">
         <span className="eyebrow">{tr("PRICING", "价格")}</span>
         <h1>{tr("Start free. Keep an exit door.", "免费开始，也永远保留退出与自托管的自由。")}</h1>
@@ -470,7 +684,7 @@ function PricingPage() {
             <li>{tr("Google sign-in and OAuth MCP", "Google 登录与 OAuth MCP")}</li>
             <li>{tr("ChatGPT + compatible MCP clients", "ChatGPT + 兼容 MCP 客户端")}</li>
           </ul>
-          <a className="primaryButton goldButton" href="/auth/google?return_to=/">{tr("Start free", "免费开始")}</a>
+          <a className="primaryButton goldButton" href="/auth/google?return_to=/dashboard">{tr("Start free", "免费开始")}</a>
         </article>
         <article className="priceCard">
           <span className="planTag">{tr("SELF-HOSTED", "自托管")}</span>
@@ -500,7 +714,7 @@ function PricingPage() {
   );
 }
 
-function ResourcesPage() {
+function ResourcesPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const items = [
     [tr("Quick start", "快速开始"), tr("Pair a computer with one command and connect it to the hosted relay.", "一条命令配对电脑并连接到托管 Relay。"), "/docs/mcp"],
@@ -509,7 +723,7 @@ function ResourcesPage() {
     [tr("Source code", "源代码"), tr("Remote Arc is open source under the MIT license.", "Remote Arc 采用 MIT 许可证开源。"), "https://github.com/yaohuangguan/remote-arc"],
   ];
   return (
-    <PublicLayout>
+    <PublicLayout user={user}>
       <section className="publicHero compactHero">
         <span className="eyebrow">{tr("RESOURCES", "资源")}</span>
         <h1>{tr("Build, inspect and self-host.", "搭建、理解，并自托管。")}</h1>
@@ -526,10 +740,10 @@ function ResourcesPage() {
   );
 }
 
-function McpPage() {
+function McpPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   return (
-    <PublicLayout>
+    <PublicLayout user={user}>
       <section className="publicHero compactHero">
         <span className="eyebrow">REMOTE MCP</span>
         <h1>{tr("One MCP endpoint. All your computers.", "一个 MCP 端点，连接你的所有电脑。")}</h1>
@@ -543,7 +757,7 @@ function McpPage() {
         </article>
         <article className="docsCard"><h2>{tr("Scopes", "权限范围")}</h2><code>devices:read</code><code>computer:read</code><code>computer:write</code></article>
         <article className="docsCard"><h2>{tr("Core tools", "核心工具")}</h2><code>list_devices</code><code>read_file</code><code>write_file</code><code>start_process</code></article>
-        <article className="docsCard"><h2>{tr("Device install", "设备安装")}</h2><code>npx remote-arc-mcp@latest</code><p>{tr("Pair in the browser, then the CLI keeps an outbound connection to the relay.", "浏览器完成配对后，CLI 会保持到 Relay 的出站连接。")}</p></article>
+        <article className="docsCard"><h2>{tr("Device install", "设备安装")}</h2><code>npx remote-arc</code><p>{tr("Pair in the browser, then the CLI keeps an outbound connection to the relay.", "浏览器完成配对后，CLI 会保持到 Relay 的出站连接。")}</p></article>
         <article className="docsCard"><h2>{tr("Local control", "本机控制")}</h2><p>{tr("Safe and developer permission modes determine which tools a device advertises.", "Safe 与 Developer 权限模式决定设备实际开放哪些工具。")}</p></article>
       </section>
     </PublicLayout>
@@ -576,7 +790,7 @@ function Dashboard({
   const { theme, setTheme } = useTheme();
   const [showAdd, setShowAdd] = useState(false);
   const [active, setActive] = useState<DashboardTab>("overview");
-  const command = "npx remote-arc-mcp@latest";
+  const command = "npx remote-arc";
   const safeCommand = command + " --safe";
   const mcpEndpoint = location.origin + "/mcp";
   const deviceNameById = useMemo(() => new Map(devices.map((device) => [device.id, device.name])), [devices]);
@@ -815,14 +1029,22 @@ function App() {
 
   if (location.pathname === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;
   if (location.pathname === "/oauth/consent") return <OAuthConsent user={user} />;
-  if (location.pathname === "/pricing") return <PricingPage />;
-  if (location.pathname === "/resources") return <ResourcesPage />;
-  if (location.pathname === "/docs/mcp") return <McpPage />;
+  if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/resources") return <ResourcesPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
 
-  if (user === undefined) return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
-  if (!user) return <Landing />;
+  if (location.pathname === "/dashboard") {
+    if (user === undefined) {
+      return <CenteredCard
+        title={tr("Loading…", "\u52a0\u8f7d\u4e2d\u2026")}
+        body={tr("Connecting to Remote Arc.", "\u6b63\u5728\u8fde\u63a5 Remote Arc\u3002")}
+      />;
+    }
+    if (!user) return <DashboardAccess />;
+    return <Dashboard user={user} devices={devices} status={status} refreshAll={loadAll} signOut={signOut} />;
+  }
 
-  return <Dashboard user={user} devices={devices} status={status} refreshAll={loadAll} signOut={signOut} />;
+  return <Landing user={user === undefined ? null : user} />;
 }
 
 createRoot(document.getElementById("root")!).render(
