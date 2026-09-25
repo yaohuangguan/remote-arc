@@ -787,3 +787,359 @@ body {
   .comparisonHead strong:last-child { display: none; }
   .comparisonRow > em::before { content: "Typical hosted: "; color: #5f574c; }
 }
+
+
+/* Remote Arc light + teal theme */
+:root {
+  color: #142321;
+  background: #f7fbfb;
+  --bg: #f7fbfb;
+  --panel: rgba(255,255,255,.94);
+  --panel-2: #f1f7f6;
+  --line: #dce9e7;
+  --muted: #687875;
+  --muted-2: #879592;
+  --text: #142321;
+  --accent: #14b8a6;
+  --gold: #14b8a6;
+  --gold-2: #2dd4bf;
+  --green: #16a085;
+  --red: #c96060;
+}
+
+html { background:#f7fbfb; color-scheme:light; }
+
+body {
+  color:#142321;
+  background:
+    radial-gradient(circle at 18% -10%, rgba(45,212,191,.14), transparent 31rem),
+    radial-gradient(circle at 92% 8%, rgba(14,165,164,.07), transparent 27rem),
+    #f7fbfb;
+}
+
+.brandWords b:first-child { color:#142321; }
+.brandWords b:last-child { color:#0f9f91; }
+.eyebrow { color:#0f9f91; }
+
+.primaryButton,
+.addButton,
+.approveButton,
+.goldButton {
+  background:linear-gradient(135deg,#81eee1,#2dd4bf 62%,#14b8a6);
+  color:#073b36;
+  border:1px solid #39cdbd;
+  box-shadow:0 8px 28px rgba(20,184,166,.14);
+}
+.primaryButton:hover,
+.addButton:hover,
+.approveButton:hover,
+.goldButton:hover {
+  background:linear-gradient(135deg,#97f2e8,#3bdbc7 62%,#18b8a7);
+}
+
+.ghostButton {
+  border-color:#d6e5e2;
+  background:#ffffff;
+  color:#4f605d;
+}
+.ghostButton:hover {
+  border-color:#a9d5cf;
+  background:#f4fbfa;
+}
+
+.publicNavLinks a,
+.landingLinks,
+.ghostLink,
+.secondaryLink { color:#657572; }
+.publicNavLinks a:hover,
+.navLogin { color:#173330; }
+
+.languageSwitch {
+  border-color:#d6e6e3;
+  background:#eef7f5;
+}
+.languageSwitch button { color:#6f7e7b; }
+.languageSwitch button.active,
+.languageSetting button.active {
+  color:#073b36;
+  background:linear-gradient(135deg,#8deee3,#32d2bf);
+  border-color:#48cbbb;
+}
+
+.landingHero h1,
+.pageHeader h1,
+.publicHero h1,
+.sectionIntro h2,
+.ctaStrip h2,
+h1,h2,h3 {
+  color:#142321;
+  text-shadow:none;
+}
+
+.landingHero > p,
+.publicHero p,
+.sectionIntro p,
+.differenceSection .sectionIntro p,
+.pageHeader p,
+.priceCard > p,
+.resourceCard p,
+.docsCard p,
+.settingsCard p,
+.usagePanel p,
+.securityCard p,
+.setupCard p {
+  color:#6b7977;
+}
+
+.heroBadges span {
+  border-color:#cfe5e1;
+  background:#eefaf8;
+  color:#486b66;
+}
+
+.landingFeatures {
+  border-color:#d9e9e6;
+  background:#d9e9e6;
+  box-shadow:0 16px 44px rgba(17,71,64,.04);
+}
+.landingFeatures article { background:#ffffff; }
+.landingFeatures p { color:#667673; }
+.landingFeatures article > span { color:#10998b; }
+
+.ctaStrip {
+  border-color:#cce7e3;
+  background:linear-gradient(135deg,#eafaf7,#ffffff 68%);
+  box-shadow:0 18px 52px rgba(14,104,95,.055);
+}
+.ctaStrip p { color:#697875; }
+
+.publicFooter {
+  border-color:#dfeae8;
+  color:#7f8c89;
+}
+
+.priceCard,
+.resourceCard,
+.docsCard,
+.centerCard,
+.consentCard,
+.modal {
+  border-color:#dce9e7;
+  background:#ffffff;
+  box-shadow:0 18px 58px rgba(17,72,65,.045);
+}
+.priceCard.featured {
+  border-color:#8bd5cc;
+  background:linear-gradient(180deg,#eafaf7,#ffffff 46%);
+  box-shadow:0 22px 60px rgba(20,184,166,.08);
+}
+.planTag { color:#0f9f91; }
+.priceCard h2 small,
+.priceCard li,
+.resourceCard p { color:#687875; }
+.priceCard li::before { color:#14b8a6; }
+.resourceCard:hover { border-color:#92cfc7; }
+
+.docsCard code,
+.scopeList span,
+.promptExamples code,
+.protocolEndpoints code,
+.endpointRow code,
+.connectBannerActions code {
+  border-color:#d4e7e3;
+  background:#eff8f7;
+  color:#0f756b;
+}
+
+.comparisonGrid {
+  border-color:#d9e8e5;
+  background:#ffffff;
+}
+.comparisonHead {
+  background:#eaf9f6;
+  border-color:#d4e9e5;
+  color:#0d8d80;
+}
+.comparisonHead strong:last-child { color:#7b8885; }
+.comparisonRow { border-color:#e7efed; }
+.comparisonRow > span,
+.comparisonRow > em { color:#74827f; }
+.comparisonRow > strong { color:#0e8d80; }
+
+.centerCard > p,
+.pairMeta span,
+.signedInAs,
+.successDetails span { color:#71817e !important; }
+
+.codeInput,
+.pairCode,
+.commandBox,
+.clientIdBox,
+.consentScopes > div {
+  border-color:#d6e6e3;
+  background:#f3f9f8;
+  color:#17302d;
+}
+.codeInput:focus {
+  border-color:#22b8a8;
+  box-shadow:0 0 0 3px rgba(20,184,166,.12);
+}
+.permissionBox {
+  border-color:#d8e7e4;
+  background:#f3f9f8;
+}
+.permissionBox span { color:#71807d; }
+.permissionBadge { color:#0f8e82 !important; }
+.successMark {
+  background:#e7f8f5;
+  color:#0f9f91;
+}
+
+.sidebar {
+  border-color:#dfeae8;
+  background:rgba(255,255,255,.93);
+  box-shadow:8px 0 30px rgba(18,68,62,.03);
+}
+.sideNav button { color:#667673; }
+.sideNav button span { color:#82928f; }
+.sideNav button:hover {
+  color:#17312e;
+  background:#eef7f5;
+}
+.sideNav button.active {
+  color:#10312d;
+  background:#e4f6f2;
+}
+.sideNav button.active span { color:#0fa393; }
+.sidebarStatus {
+  border-color:#d8e7e4;
+  background:#f2f9f8;
+}
+.sidebarStatus span,
+.sidebarAccount span,
+.sidebarAccount button { color:#74827f; }
+.avatarFallback {
+  background:#e4f2ef;
+  color:#45625d;
+}
+
+.metricCard,
+.panelBlock,
+.connectBanner,
+.deviceCard,
+.emptyCard,
+.setupCard,
+.protocolCard,
+.securityCard,
+.settingsCard,
+.usagePanel {
+  border-color:#dce9e7;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 10px 32px rgba(17,72,65,.035);
+}
+.metricTop,
+.metricCard > small { color:#70807d; }
+.metricCard > strong { color:#162724; }
+.statusDot.good,
+.livePulse {
+  background:#14b8a6;
+  box-shadow:0 0 0 4px rgba(20,184,166,.10);
+}
+
+.compactDevice {
+  border-color:#e4eeec;
+  background:#ffffff;
+}
+.compactDevice:hover {
+  border-color:#b8dcd7;
+  background:#f5fbfa;
+}
+.compactDeviceText span,
+.activityItem span,
+.activityEmpty span { color:#75837f; }
+
+.usageBar { background:#e1ecea; }
+.usageBar i {
+  background:linear-gradient(90deg,#0ea5a4,#2dd4bf);
+}
+.usagePanel h2,
+.planValue { color:#0b746b; }
+
+.settingsCard { border-color:#dce9e7; }
+.languageSetting button {
+  border-color:#d7e5e2;
+  background:#ffffff;
+  color:#5d6c69;
+}
+.languageSetting button:hover { background:#f1f9f8; }
+
+.deviceIdentity span,
+.deviceMetaGrid span,
+.toolPills span { color:#6e7d7a; }
+.toolPills span {
+  border-color:#d7e7e4;
+  background:#f3f9f8;
+}
+.badge.online {
+  border-color:#9ddbd3;
+  color:#0e766d;
+  background:#eaf9f6;
+}
+.badge.online i { background:#14b8a6; }
+
+.securityIcon,
+.connectIcon,
+.deviceIcon {
+  border-color:#cfe4e0;
+  background:#ecf8f6;
+  color:#0f988b;
+}
+.securityState.good {
+  color:#0c766d;
+  border-color:#9bd7cf;
+  background:#eaf8f6;
+}
+
+.modalBackdrop {
+  background:rgba(20,45,41,.18);
+  backdrop-filter:blur(5px);
+}
+.modalClose { color:#70807d; }
+.commandBox code,
+.clientIdBox code { color:#0d766d; }
+.consentIcon {
+  color:#0f988b;
+  border-color:#cfe4e0;
+  background:#ecf8f6;
+}
+.consentNotice {
+  border-color:#d6e6e3;
+  background:#f2f9f8;
+  color:#6a7976;
+}
+
+.dashboardFooter {
+  border-color:#dfeae8;
+  color:#7b8986;
+}
+.dashboardFooter a:hover { color:#0e8f82; }
+
+/* Keep terminal dark as a code surface, not as the app theme. */
+.terminalPreview {
+  border-color:#163b37;
+  background:#071816;
+  box-shadow:0 28px 80px rgba(12,63,58,.16);
+}
+.terminalBar { border-color:#15332f; color:#79908c; }
+.terminalDots i { background:#27534d; }
+.terminalPreview code { color:#c9dedb; }
+.terminalPreview code span { color:#2dd4bf; }
+.terminalPreview code strong { color:#7ce9dc; }
+.terminalPreview code em { color:#8da39f; }
+
+@media (max-width:700px) {
+  .mobileTopbar {
+    background:rgba(255,255,255,.93);
+    border-color:#dfeae8;
+  }
+}
