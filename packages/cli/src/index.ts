@@ -205,7 +205,8 @@ async function pair(origin: string, mode: Mode): Promise<SavedConfig> {
     }
 
     const result = (await tokenResponse.json()) as PairingToken;
-    process.stdout.write("\n");\n    logLine("success", "Device authorized.");
+    process.stdout.write("\n");
+    logLine("success", "Device authorized.");
 
     const config: SavedConfig = {
       deviceId: result.device_id,
