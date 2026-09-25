@@ -88,15 +88,15 @@ function LogoMark({ className = "" }: { className?: string }) {
     <svg className={className} viewBox="0 0 64 64" role="img" aria-label="Remote Arc">
       <defs>
         <linearGradient id="remote-arc-gradient" x1="8" y1="48" x2="56" y2="16" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#60a5fa" />
-          <stop offset="1" stopColor="#2563eb" />
+          <stop stopColor="#7dd3fc" />
+          <stop offset="1" stopColor="#38bdf8" />
         </linearGradient>
       </defs>
       <path d="M10 42C15 20 27 12 44 17C50 19 54 24 56 30" fill="none" stroke="url(#remote-arc-gradient)" strokeWidth="7" strokeLinecap="round" />
       <path d="M54 42C49 29 42 24 32 24C22 24 15 31 10 42" fill="none" stroke="url(#remote-arc-gradient)" strokeWidth="7" strokeLinecap="round" opacity=".78" />
-      <circle cx="10" cy="42" r="5" fill="#60a5fa" />
-      <circle cx="54" cy="42" r="5" fill="#2563eb" />
-      <circle cx="32" cy="24" r="3.5" fill="var(--logo-spark, #e6fbff)" />
+      <circle cx="10" cy="42" r="5" fill="#7dd3fc" />
+      <circle cx="54" cy="42" r="5" fill="#38bdf8" />
+      <circle cx="32" cy="24" r="3.5" fill="var(--logo-spark, #f0f9ff)" />
     </svg>
   );
 }
@@ -476,7 +476,7 @@ function Landing({ user }: { user?: User | null }) {
       <section className="landingHero">
         <div className="heroCopy">
           <span className="eyebrow">{tr("THE OPEN CONTROL PLANE FOR AI", "面向 AI 的开源远程控制层")}</span>
-          <h1>{tr("Let AI work on your computer. From anywhere.", "让 AI 随时随地，操作你的电脑。")}</h1>
+          <h1>{tr("Your computer. One prompt away.", "你的电脑，一句话就能触达。")}</h1>
           <p>{tr(
             "Give ChatGPT, Claude and compatible MCP clients secure access to your real Windows, macOS and Linux machines — without public IPs, VPNs or surrendering control.",
             "让 ChatGPT、Claude 与兼容 MCP 的 AI 安全访问你的真实 Windows、macOS 和 Linux 设备。无需公网 IP，无需 VPN，控制权始终在你手里。"
