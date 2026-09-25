@@ -1,0 +1,37 @@
+name: Publish remotelink
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "remotelink-v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify
+        run: pnpm --filter remotelink typecheck
+
+      - name: Publish
+        working-directory: packages/cli
+        run: npm publish --access public --provenance
