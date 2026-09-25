@@ -1761,20 +1761,65 @@ a:focus-visible {
 
 
 /* Settings + device permission fixes */
-.addButton{white-space:nowrap!important;flex-wrap:nowrap!important;width:max-content}
-.publicNavActions{align-items:center}
-.publicNavActions .themeSwitch,.publicNavActions .navLogin,.publicNavActions .navDashboard{min-height:42px;background:var(--control-bg)!important;color:var(--text)!important}
+.addButton{
+  display:inline-flex!important;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto!important;
+  flex-wrap:nowrap!important;
+  width:max-content;
+  max-width:100%;
+  white-space:nowrap!important;
+  line-height:1!important;
+}
+.publicNavActions{display:flex;align-items:center;gap:8px}
+.publicNavActions .themeSwitch.compact,
+.publicNavActions .navLogin,
+.publicNavActions .navDashboard{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height:42px;
+  min-height:42px;
+  border-radius:11px!important;
+  background:var(--control-bg)!important;
+  color:var(--text)!important;
+}
+.publicNavActions .themeSwitch.compact{width:42px;min-width:42px;padding:0!important}
+.publicNavActions .navLogin,.publicNavActions .navDashboard{padding:0 15px!important;white-space:nowrap}
 .publicNavActions .themeSwitch:hover,.publicNavActions .navLogin:hover,.publicNavActions .navDashboard:hover{background:var(--control-hover)!important}
-.themeSetting,.languageSetting{display:inline-flex;flex-wrap:nowrap!important;align-items:center;padding:4px;border-radius:12px;background:var(--control-bg)}
-.themeSetting button,.languageSetting button{min-width:76px;min-height:38px;border-radius:9px!important;white-space:nowrap}
+.themeSetting,.languageSetting{
+  display:inline-flex;
+  flex-wrap:nowrap!important;
+  align-items:center;
+  gap:3px;
+  padding:4px;
+  border:1px solid var(--neutral-line);
+  border-radius:12px;
+  background:var(--control-bg)!important;
+}
+.themeSetting button,.languageSetting button{
+  min-width:76px;
+  min-height:38px;
+  padding:0 13px!important;
+  border-radius:9px!important;
+  background:transparent!important;
+  color:var(--muted)!important;
+  white-space:nowrap;
+}
+.themeSetting button:hover,.languageSetting button:hover{background:var(--control-hover)!important;color:var(--text)!important}
+.themeSetting button.active,.languageSetting button.active{background:var(--sky)!important;color:#03111c!important}
 .toolPermissions{margin-top:16px;padding:14px;border-radius:14px;background:rgba(2,8,23,.34)}
 :root[data-theme="light"] .toolPermissions{background:#f4f8fc}
 .toolPermissionsHeader{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:11px}
 .toolPermissionsHeader strong{font-size:13px;color:var(--text)}
 .toolPermissionsHeader span,.offlineTools{font-size:12px;color:var(--muted)}
+.offlineTools{display:block;margin-top:10px;line-height:1.45}
 .toolToggleGrid{display:flex;flex-wrap:wrap;gap:8px}
 .toolToggle{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border-radius:10px;background:var(--control-bg);color:var(--muted);font:600 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;cursor:pointer;user-select:none}
 .toolToggle:has(input:checked){background:var(--sky-soft);color:var(--sky-light)}
 :root[data-theme="light"] .toolToggle:has(input:checked){color:var(--sky-deep)}
+.toolToggle.unavailable{opacity:.48;cursor:not-allowed}
 .toolToggle input{accent-color:var(--sky)}
-@media(max-width:720px){.pageHeader .addButton{flex:0 0 auto}.themeSetting button,.languageSetting button{min-width:68px}.toolPermissionsHeader{align-items:flex-start;flex-direction:column}}
+@media(max-width:720px){.pageHeader{align-items:flex-start}.pageHeader .addButton{flex:0 0 auto!important}.themeSetting button,.languageSetting button{min-width:68px}.toolPermissionsHeader{align-items:flex-start;flex-direction:column}.publicNavActions{gap:6px}}
+@media(max-width:460px){.pageHeader{flex-wrap:wrap}.pageHeader .addButton{width:auto!important}.themeSetting,.languageSetting{max-width:100%;overflow-x:auto}.themeSetting button,.languageSetting button{min-width:64px;padding:0 10px!important}}

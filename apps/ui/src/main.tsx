@@ -63,6 +63,16 @@ type ProductStatus = {
 
 type DashboardTab = "overview" | "devices" | "connect" | "security" | "settings";
 
+const DEVICE_TOOL_CATALOG = [
+  "read_file",
+  "write_file",
+  "list_directory",
+  "get_file_info",
+  "edit_block",
+  "start_process",
+  "list_processes",
+] as const;
+
 const platformLabel = (platform?: string | null) => {
   if (platform === "win32") return "Windows";
   if (platform === "darwin") return "macOS";
@@ -785,8 +795,11 @@ function Dashboard({
   }
 
   async function updateDeviceTools(device: Device, tool: string, enabled: boolean) {
-    const available = device.available_tools || device.tools;
-    const current = device.allowed_tools == null ? available : device.allowed_tools;
+    const advertised = device.available_tools || device.tools;
+    const baseline = device.status === "online"
+      ? advertised
+      : Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertised]));
+    const current = device.allowed_tools == null ? baseline : device.allowed_tools;
     const next = enabled ? Array.from(new Set([...current, tool])) : current.filter((item) => item !== tool);
     const response = await fetch("/api/devices/" + encodeURIComponent(device.id) + "/tools", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ allowed_tools: next }),
@@ -899,7 +912,7 @@ function Dashboard({
                 <article className="deviceCard" key={device.id}>
                   <div className="deviceTop"><div className="deviceIdentity"><div className="deviceIcon large">{platformGlyph(device.platform)}</div><div><h3>{device.name}</h3><span>{platformLabel(device.platform)} · {device.arch || "unknown"}</span></div></div><span className={"badge " + device.status}><i/>{device.status}</span></div>
                   <div className="deviceMetaGrid"><div><span>Hostname</span><strong>{device.hostname || "—"}</strong></div><div><span>Tools</span><strong>{device.tools.length}</strong></div><div><span>{tr("Last seen", "最后在线")}</span><strong>{timeAgo(device.last_seen)}</strong></div><div><span>Device ID</span><strong>{device.id.slice(0,8)}</strong></div></div>
-                  <div className="toolPermissions"><div className="toolPermissionsHeader"><strong>{tr("MCP tool access", "MCP 工具权限")}</strong><span>{tr("Disabled tools are blocked by the relay.", "关闭后 Relay 会直接阻止该工具。")}</span></div><div className="toolToggleGrid">{(device.available_tools || device.tools).map((tool) => { const enabled = device.allowed_tools == null ? true : device.allowed_tools.includes(tool); return <label className="toolToggle" key={tool}><input type="checkbox" checked={enabled} onChange={(event) => void updateDeviceTools(device, tool, event.target.checked)} /><span>{tool}</span></label>; })}{!(device.available_tools || device.tools).length && <span className="offlineTools">{tr("Device is offline — reconnect it to edit advertised tools.", "设备离线，重新连接后才能编辑其上报的工具。")}</span>}</div></div>
+                  <div className="toolPermissions"><div className="toolPermissionsHeader"><strong>{tr("MCP tool access", "MCP 工具权限")}</strong><span>{tr("Disabled tools are blocked by the relay before they reach this computer.", "关闭后 Relay 会在请求到达电脑前直接拦截该工具。")}</span></div><div className="toolToggleGrid">{Array.from(new Set([...DEVICE_TOOL_CATALOG, ...(device.available_tools || []), ...(device.allowed_tools || [])])).map((tool) => { const enabled = device.allowed_tools == null ? (device.status === "online" ? (device.available_tools || device.tools).includes(tool) : true) : device.allowed_tools.includes(tool); const advertised = device.status === "online" ? (device.available_tools || device.tools).includes(tool) : true; return <label className={"toolToggle" + (!advertised ? " unavailable" : "")} key={tool}><input type="checkbox" checked={enabled} disabled={!advertised} onChange={(event) => void updateDeviceTools(device, tool, event.target.checked)} /><span>{tool}</span></label>; })}</div>{device.status === "offline" && <span className="offlineTools">{tr("Offline: changes are saved now and enforced the next time this device connects.", "设备离线：修改会立即保存，并在设备下次连接时生效。")}</span>}</div>
                   <div className="deviceActions"><button className="ghostButton" onClick={() => void rename(device)}>{tr("Rename", "重命名")}</button><CopyButton value={device.id} label={tr("Copy ID", "复制 ID")}/><button className="dangerButton" onClick={() => void revoke(device.id)}>{tr("Revoke", "撤销")}</button></div>
                 </article>
               ))}
