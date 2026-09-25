@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
+import { I18nProvider, useI18n } from "./i18n.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import "./styles.css";
 
@@ -88,13 +88,13 @@ function LogoMark({ className = "" }: { className?: string }) {
     <svg className={className} viewBox="0 0 64 64" role="img" aria-label="Remote Arc">
       <defs>
         <linearGradient id="remote-arc-gradient" x1="8" y1="48" x2="56" y2="16" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#22d3ee" />
+          <stop stopColor="#60a5fa" />
           <stop offset="1" stopColor="#2563eb" />
         </linearGradient>
       </defs>
       <path d="M10 42C15 20 27 12 44 17C50 19 54 24 56 30" fill="none" stroke="url(#remote-arc-gradient)" strokeWidth="7" strokeLinecap="round" />
       <path d="M54 42C49 29 42 24 32 24C22 24 15 31 10 42" fill="none" stroke="url(#remote-arc-gradient)" strokeWidth="7" strokeLinecap="round" opacity=".78" />
-      <circle cx="10" cy="42" r="5" fill="#22d3ee" />
+      <circle cx="10" cy="42" r="5" fill="#60a5fa" />
       <circle cx="54" cy="42" r="5" fill="#2563eb" />
       <circle cx="32" cy="24" r="3.5" fill="var(--logo-spark, #e6fbff)" />
     </svg>
@@ -152,7 +152,6 @@ function PublicHeader({ user }: { user?: User | null }) {
         <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
       </nav>
       <div className="publicNavActions">
-        <LanguageSwitcher compact />
         <ThemeSwitcher compact />
         {user ? (
           <a className="navDashboard" href="/dashboard">{tr("Dashboard", "控制台")} <span>↗</span></a>
@@ -810,7 +809,7 @@ function Dashboard({
             </button>
           ))}
         </nav>
-        <div className="sidebarControls"><ThemeSwitcher /><LanguageSwitcher compact /></div>
+        <div className="sidebarControls"><ThemeSwitcher /></div>
         <div className="sidebarStatus"><div className="livePulse"/><div><strong>{tr("Relay online", "Relay 在线")}</strong><span>remote.samyao.me</span></div></div>
         <div className="sidebarAccount">
           {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email).charAt(0).toUpperCase()}</div>}

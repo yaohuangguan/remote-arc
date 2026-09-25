@@ -31,7 +31,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.style.colorScheme = resolved;
       document.querySelector('meta[name="theme-color"]')?.setAttribute(
         "content",
-        resolved === "light" ? "#f4fbfd" : "#03070b",
+        resolved === "light" ? "#f6f8fc" : "#030712",
       );
     };
     apply();
