@@ -27,6 +27,6 @@
   ],
   "homepage": "https://remotearc.app",
   "repository": "https://github.com/yaohuangguan/remote-arc",
-  "license": "MIT",
+  "license": "Proprietary",
   "mcpServers": "../.mcp.json"
 }
