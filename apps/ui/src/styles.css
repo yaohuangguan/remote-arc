@@ -1890,3 +1890,16 @@ body{font-size:18px;line-height:1.6}
   .metricTop{font-size:13px}
   .metricCard>small{font-size:13px}
 }
+
+/* Product demo walkthroughs */
+.demoSection{padding:88px 0;border-top:1px solid var(--border)}
+.demoGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin-top:30px}
+.demoCard{overflow:hidden;border:1px solid var(--neutral-line);border-radius:26px;background:var(--panel);box-shadow:0 24px 70px rgba(0,0,0,.22)}
+.demoMedia{position:relative;overflow:hidden;aspect-ratio:1200/760;background:#030712;border-bottom:1px solid var(--neutral-line)}
+.demoMedia img{display:block;width:100%;height:100%;object-fit:cover}
+.demoBadge{position:absolute;top:16px;right:16px;padding:7px 10px;border:1px solid rgba(125,211,252,.25);border-radius:999px;background:rgba(3,7,18,.82);backdrop-filter:blur(10px);color:var(--sky-light);font-size:12px;font-weight:800;letter-spacing:.09em}
+.demoCopy{padding:24px 24px 26px}
+.demoCopy h3{margin:10px 0 10px;color:var(--text);font-size:25px;line-height:1.2;letter-spacing:-.03em}
+.demoCopy p{margin:0;color:var(--muted);font-size:16px;line-height:1.72}
+.demoEndpoint{display:block;width:fit-content;max-width:100%;margin-top:18px;padding:9px 11px;overflow:auto;border:1px solid var(--neutral-line);border-radius:9px;background:#030b11;color:var(--sky-light);font-size:14px;white-space:nowrap}
+@media(max-width:900px){.idemoSection{padding:58px 0}.demoGrid{grid-template-columns:1fr}.demoCopy h3{font-size:22px}}

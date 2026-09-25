@@ -560,6 +560,50 @@ function Landing({ user }: { user?: User | null }) {
         </div>
       </section>
 
+      <section className="demoSection" id="demos">
+        <div className="sectionIntro splitIntro">
+          <div>
+            <span className="eyebrow">{tr("SEE IT IN ACTION", "看看实际效果")}</span>
+            <h2>{tr("From a prompt to a real machine.", "从一句话，到真实电脑执行。")}</h2>
+          </div>
+          <p>{tr(
+            "Two short walkthroughs show the whole Remote Arc experience: ask from your phone, or add the Remote MCP endpoint to an AI client and authorize once.",
+            "两段短演示展示完整 Remote Arc 体验：在手机上直接自然语言操作，或者把 Remote MCP 地址添加到 AI 客户端并完成一次 OAuth 授权。"
+          )}</p>
+        </div>
+        <div className="demoGrid">
+          <article className="demoCard">
+            <div className="demoMedia">
+              <img src="/demos/mobile-typing.webp" alt={tr("Remote Arc mobile natural language command demo", "Remote Arc 手机自然语言操作演示")} loading="lazy" />
+              <span className="demoBadge">{tr("MOBILE", "手机")}</span>
+            </div>
+            <div className="demoCopy">
+              <span className="eyebrow">{tr("NATURAL LANGUAGE", "自然语言")}</span>
+              <h3>{tr("Ask from your phone. Route to the right machine.", "手机直接输入，自动路由到正确设备。")}</h3>
+              <p>{tr(
+                "Name the machine in plain language. Remote Arc resolves the device, checks its exposed tools and routes the request without opening inbound ports.",
+                "用自然语言说出设备名称。Remote Arc 会识别设备、检查可用工具并完成路由，全程无需开放入站端口。"
+              )}</p>
+            </div>
+          </article>
+          <article className="demoCard">
+            <div className="demoMedia">
+              <img src="/demos/add-mcp-app.webp" alt={tr("Adding Remote Arc as an MCP app demo", "把 Remote Arc 添加为 MCP 应用的演示")} loading="lazy" />
+              <span className="demoBadge">MCP</span>
+            </div>
+            <div className="demoCopy">
+              <span className="eyebrow">{tr("ONE ENDPOINT", "一个端点")}</span>
+              <h3>{tr("Add the MCP app once. OAuth does the rest.", "MCP 应用添加一次，后续交给 OAuth。")}</h3>
+              <p>{tr(
+                "Paste the Remote MCP endpoint, approve OAuth, and the client can securely discover the tools exposed by your paired computers.",
+                "粘贴 Remote MCP 地址并完成 OAuth 授权，AI 客户端即可安全发现你已配对电脑开放的工具。"
+              )}</p>
+              <code className="demoEndpoint">{MCP_ENDPOINT}</code>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section className="valueSection">
         <div className="sectionIntro">
           <span className="eyebrow">{tr("WHY REMOTE ARC", "为什么选择 REMOTE ARC")}</span>
