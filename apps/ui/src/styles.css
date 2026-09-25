@@ -1758,3 +1758,23 @@ a:focus-visible {
 .landingHero::before {
   border-color:rgba(56,189,248,.06) !important;
 }
+
+
+/* Settings + device permission fixes */
+.addButton{white-space:nowrap!important;flex-wrap:nowrap!important;width:max-content}
+.publicNavActions{align-items:center}
+.publicNavActions .themeSwitch,.publicNavActions .navLogin,.publicNavActions .navDashboard{min-height:42px;background:var(--control-bg)!important;color:var(--text)!important}
+.publicNavActions .themeSwitch:hover,.publicNavActions .navLogin:hover,.publicNavActions .navDashboard:hover{background:var(--control-hover)!important}
+.themeSetting,.languageSetting{display:inline-flex;flex-wrap:nowrap!important;align-items:center;padding:4px;border-radius:12px;background:var(--control-bg)}
+.themeSetting button,.languageSetting button{min-width:76px;min-height:38px;border-radius:9px!important;white-space:nowrap}
+.toolPermissions{margin-top:16px;padding:14px;border-radius:14px;background:rgba(2,8,23,.34)}
+:root[data-theme="light"] .toolPermissions{background:#f4f8fc}
+.toolPermissionsHeader{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:11px}
+.toolPermissionsHeader strong{font-size:13px;color:var(--text)}
+.toolPermissionsHeader span,.offlineTools{font-size:12px;color:var(--muted)}
+.toolToggleGrid{display:flex;flex-wrap:wrap;gap:8px}
+.toolToggle{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border-radius:10px;background:var(--control-bg);color:var(--muted);font:600 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;cursor:pointer;user-select:none}
+.toolToggle:has(input:checked){background:var(--sky-soft);color:var(--sky-light)}
+:root[data-theme="light"] .toolToggle:has(input:checked){color:var(--sky-deep)}
+.toolToggle input{accent-color:var(--sky)}
+@media(max-width:720px){.pageHeader .addButton{flex:0 0 auto}.themeSetting button,.languageSetting button{min-width:68px}.toolPermissionsHeader{align-items:flex-start;flex-direction:column}}

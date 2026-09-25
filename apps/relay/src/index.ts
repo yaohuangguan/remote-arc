@@ -15,6 +15,7 @@ import {
   handleDeviceRename,
   handleDeviceStart,
   handleDeviceToken,
+  handleDeviceToolsUpdate,
   handlePairingApprove,
   handlePairingLookup,
 } from "./device.js";
@@ -172,6 +173,13 @@ export default {
       request.method === "POST"
     ) {
       return handleDeviceRevoke(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/tools$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDeviceToolsUpdate(request, env);
     }
 
     if (url.pathname === "/agent") {

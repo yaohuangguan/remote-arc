@@ -59,13 +59,26 @@ async function callDevice(
   args: Record<string, unknown>,
 ) {
   const ownedDevice = await env.DB.prepare(
-    "SELECT id FROM devices WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL",
+    "SELECT id, allowed_tools FROM devices WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL",
   )
     .bind(deviceId, identity.userId)
-    .first();
+    .first<{ id: string; allowed_tools: string | null }>();
 
   if (!ownedDevice) {
     throw new Error("device not found or revoked");
+  }
+
+  if (ownedDevice.allowed_tools) {
+    let allowedTools: string[] = [];
+    try {
+      const parsed = JSON.parse(ownedDevice.allowed_tools);
+      if (Array.isArray(parsed)) allowedTools = parsed.filter((item): item is string => typeof item === "string");
+    } catch {
+      allowedTools = [];
+    }
+    if (!allowedTools.includes(tool)) {
+      throw new Error("tool \"" + tool + "\" is disabled for this device");
+    }
   }
 
   const response = await registry(env).fetch(

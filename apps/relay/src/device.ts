@@ -257,7 +257,7 @@ export async function getDevicesForUser(
   userId: string,
 ) {
   const rows = await env.DB.prepare(
-    `SELECT id, name, platform, arch, hostname, created_at, last_seen
+    `SELECT id, name, platform, arch, hostname, created_at, last_seen, allowed_tools
      FROM devices
      WHERE user_id = ?1 AND revoked_at IS NULL
      ORDER BY created_at DESC`,
@@ -271,6 +271,7 @@ export async function getDevicesForUser(
       hostname: string | null;
       created_at: string;
       last_seen: string | null;
+      allowed_tools: string | null;
     }>();
 
   const onlineResponse = await env.REGISTRY.getByName("global").fetch(
@@ -290,10 +291,26 @@ export async function getDevicesForUser(
 
   return (rows.results || []).map((device) => {
     const live = onlineById.get(device.id);
+    const availableTools = live?.tools || [];
+    let allowedTools: string[] | null = null;
+    if (device.allowed_tools) {
+      try {
+        const parsed = JSON.parse(device.allowed_tools);
+        if (Array.isArray(parsed)) allowedTools = parsed.filter((tool): tool is string => typeof tool === "string");
+      } catch {
+        allowedTools = null;
+      }
+    }
+    const tools = allowedTools === null
+      ? availableTools
+      : availableTools.filter((tool) => allowedTools!.includes(tool));
+
     return {
       ...device,
+      allowed_tools: allowedTools,
+      available_tools: availableTools,
       status: live ? "online" : "offline",
-      tools: live?.tools || [],
+      tools,
     };
   });
 }
@@ -368,4 +385,41 @@ export async function handleDeviceRename(request: Request, env: DeviceEnv) {
   });
 
   return Response.json({ ok: true, name });
+}
+
+export async function handleDeviceToolsUpdate(request: Request, env: DeviceEnv) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const match = url.pathname.match(/^\/api\/devices\/([^/]+)\/tools$/);
+  const deviceId = match?.[1];
+  if (!deviceId) return new Response("Not found", { status: 404 });
+
+  const body = (await request.json().catch(() => ({}))) as { allowed_tools?: unknown };
+  if (!Array.isArray(body.allowed_tools) || body.allowed_tools.length > 64) {
+    return Response.json({ error: "allowed_tools must be an array" }, { status: 400 });
+  }
+
+  const allowedTools = [...new Set(body.allowed_tools)]
+    .filter((tool): tool is string => typeof tool === "string" && /^[a-zA-Z0-9_.:-]{1,80}$/.test(tool));
+
+  const result = await env.DB.prepare(
+    `UPDATE devices SET allowed_tools = ?1
+     WHERE id = ?2 AND user_id = ?3 AND revoked_at IS NULL`,
+  )
+    .bind(JSON.stringify(allowedTools), deviceId, user.id)
+    .run();
+
+  if (!result.meta.changes) {
+    return Response.json({ error: "device not found" }, { status: 404 });
+  }
+
+  await writeAudit(env, {
+    userId: user.id,
+    deviceId,
+    eventType: "device.tools_updated",
+  });
+
+  return Response.json({ ok: true, allowed_tools: allowedTools });
 }

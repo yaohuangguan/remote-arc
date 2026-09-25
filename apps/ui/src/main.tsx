@@ -21,6 +21,8 @@ type Device = {
   last_seen: string | null;
   status: "online" | "offline";
   tools: string[];
+  available_tools?: string[];
+  allowed_tools?: string[] | null;
 };
 
 type Pairing = {
@@ -756,7 +758,7 @@ function Dashboard({
 }) {
   const { tr, locale, setLocale } = useI18n();
   const [showAdd, setShowAdd] = useState(false);
-  const [active, setActive] = useState<DashboardTab>("overview");
+  const [active, setActive] = useState<DashboardTab>(location.pathname === "/settings" ? "settings" : "overview");
   const command = "npx remotelink";
   const safeCommand = command + " --safe";
   const mcpEndpoint = location.origin + "/mcp";
@@ -782,6 +784,23 @@ function Dashboard({
     await refreshAll();
   }
 
+  async function updateDeviceTools(device: Device, tool: string, enabled: boolean) {
+    const available = device.available_tools || device.tools;
+    const current = device.allowed_tools == null ? available : device.allowed_tools;
+    const next = enabled ? Array.from(new Set([...current, tool])) : current.filter((item) => item !== tool);
+    const response = await fetch("/api/devices/" + encodeURIComponent(device.id) + "/tools", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ allowed_tools: next }),
+    });
+    if (!response.ok) return alert(tr("Could not update tool access.", "无法更新工具权限。"));
+    await refreshAll();
+  }
+
+  function navigateTab(tab: DashboardTab) {
+    const path = tab === "settings" ? "/settings" : "/dashboard";
+    if (location.pathname !== path) history.pushState({}, "", path);
+    setActive(tab);
+  }
+
   const eventLabel = (event: AuditEvent) => {
     if (event.event_type === "device.paired") return tr("Device paired", "设备已配对");
     if (event.event_type === "device.revoked") return tr("Device revoked", "设备已撤销");
@@ -804,7 +823,7 @@ function Dashboard({
         <Brand />
         <nav className="sideNav">
           {navItems.map(([id, icon, label]) => (
-            <button key={id} className={active === id ? "active" : ""} onClick={() => setActive(id)}>
+            <button key={id} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
               <span>{icon}</span>{label}
             </button>
           ))}
@@ -841,10 +860,10 @@ function Dashboard({
 
             <section className="contentGrid">
               <div className="panelBlock">
-                <div className="blockHeader"><div><span className="eyebrow">{tr("DEVICES", "设备")}</span><h2>{tr("Connected computers", "已连接电脑")}</h2></div><button className="ghostButton" onClick={() => setActive("devices")}>{tr("View all", "查看全部")}</button></div>
+                <div className="blockHeader"><div><span className="eyebrow">{tr("DEVICES", "设备")}</span><h2>{tr("Connected computers", "已连接电脑")}</h2></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("View all", "查看全部")}</button></div>
                 <div className="compactDeviceList">
                   {devices.slice(0,4).map((device) => (
-                    <button className="compactDevice" key={device.id} onClick={() => setActive("devices")}>
+                    <button className="compactDevice" key={device.id} onClick={() => navigateTab("devices")}>
                       <div className="deviceIcon">{platformGlyph(device.platform)}</div>
                       <div className="compactDeviceText"><strong>{device.name}</strong><span>{platformLabel(device.platform)} · {device.tools.length} tools</span></div>
                       <span className={"badge " + device.status}><i/>{device.status}</span>
@@ -867,7 +886,7 @@ function Dashboard({
 
             <section className="connectBanner">
               <div className="connectIcon">↗</div><div><span className="eyebrow">CHATGPT · CLAUDE · REMOTE MCP</span><h2>{tr("Connect once. Then just talk.", "连接一次，之后直接对话。")}</h2><p>{tr("Use one OAuth-protected endpoint across compatible AI clients.", "同一个受 OAuth 保护的端点，连接所有兼容 AI 客户端。")}</p></div>
-              <div className="connectBannerActions"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/><button className="ghostButton" onClick={() => setActive("connect")}>{tr("Setup", "设置")}</button></div>
+              <div className="connectBannerActions"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Setup", "设置")}</button></div>
             </section>
           </>
         )}
@@ -880,7 +899,7 @@ function Dashboard({
                 <article className="deviceCard" key={device.id}>
                   <div className="deviceTop"><div className="deviceIdentity"><div className="deviceIcon large">{platformGlyph(device.platform)}</div><div><h3>{device.name}</h3><span>{platformLabel(device.platform)} · {device.arch || "unknown"}</span></div></div><span className={"badge " + device.status}><i/>{device.status}</span></div>
                   <div className="deviceMetaGrid"><div><span>Hostname</span><strong>{device.hostname || "—"}</strong></div><div><span>Tools</span><strong>{device.tools.length}</strong></div><div><span>{tr("Last seen", "最后在线")}</span><strong>{timeAgo(device.last_seen)}</strong></div><div><span>Device ID</span><strong>{device.id.slice(0,8)}</strong></div></div>
-                  <div className="toolPills">{device.tools.slice(0,5).map((tool) => <span key={tool}>{tool}</span>)}{device.tools.length > 5 && <span>+{device.tools.length - 5}</span>}{!device.tools.length && <span>{tr("Offline — capabilities hidden", "离线 — 能力暂不可见")}</span>}</div>
+                  <div className="toolPermissions"><div className="toolPermissionsHeader"><strong>{tr("MCP tool access", "MCP 工具权限")}</strong><span>{tr("Disabled tools are blocked by the relay.", "关闭后 Relay 会直接阻止该工具。")}</span></div><div className="toolToggleGrid">{(device.available_tools || device.tools).map((tool) => { const enabled = device.allowed_tools == null ? true : device.allowed_tools.includes(tool); return <label className="toolToggle" key={tool}><input type="checkbox" checked={enabled} onChange={(event) => void updateDeviceTools(device, tool, event.target.checked)} /><span>{tool}</span></label>; })}{!(device.available_tools || device.tools).length && <span className="offlineTools">{tr("Device is offline — reconnect it to edit advertised tools.", "设备离线，重新连接后才能编辑其上报的工具。")}</span>}</div></div>
                   <div className="deviceActions"><button className="ghostButton" onClick={() => void rename(device)}>{tr("Rename", "重命名")}</button><CopyButton value={device.id} label={tr("Copy ID", "复制 ID")}/><button className="dangerButton" onClick={() => void revoke(device.id)}>{tr("Revoke", "撤销")}</button></div>
                 </article>
               ))}
@@ -922,7 +941,7 @@ function Dashboard({
             <section className="settingsGrid">
               <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Choose Light, Dark or System. Your preference is saved in this browser.", "选择浅色、深色或跟随系统；偏好会保存在当前浏览器。")}</p></div><ThemeSwitcher /></article>
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
-              <article className="settingsCard"><div><h2>{tr("Hosted plan", "托管方案")}</h2><p>{tr("Free includes 10,000 Remote MCP tool calls each UTC month.", "免费版每个 UTC 月包含 10,000 次 Remote MCP 工具调用。")}</p></div><div className="planValue">{usage?.unlimited ? "∞" : `${usage?.used ?? 0} / ${usage?.limit ?? 10000}`}</div></article>
+              <article className="settingsCard"><div><h2>{tr("Account & profile", "账号与个人信息")}</h2><p>{user.name || tr("Remote Arc user", "Remote Arc 用户")} · {user.email}</p></div><button className="ghostButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button></article><article className="settingsCard"><div><h2>{tr("MCP connection", "MCP 连接")}</h2><p>{tr("Manage per-device tool access from Devices. Disabled tools are enforced by the relay.", "在设备页管理每台电脑的工具权限；关闭的工具会由 Relay 强制拦截。")}</p><code>{mcpEndpoint}</code></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button></article><article className="settingsCard"><div><h2>{tr("Billing & payments", "账单与支付")}</h2><p>{tr("Free hosted plan. No payment method is required; paid billing is not enabled yet.", "当前为托管免费版，无需支付方式；付费账单尚未启用。")}</p></div><div className="planValue">{usage?.unlimited ? "∞" : `${usage?.used ?? 0} / ${usage?.limit ?? 10000}`}</div></article>
               <article className="settingsCard"><div><h2>{tr("Self-hosting", "自托管")}</h2><p>{tr("Set MONTHLY_TOOL_CALL_LIMIT=0 on your own deployment for unlimited calls.", "在自己的部署中设置 MONTHLY_TOOL_CALL_LIMIT=0 即可取消调用额度限制。")}</p></div><a className="ghostButton" href="https://github.com/yaohuangguan/remote-arc">{tr("Open GitHub", "打开 GitHub")}</a></article>
             </section>
           </>
@@ -1097,7 +1116,7 @@ function App() {
   if (location.pathname === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
   if (location.pathname === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
 
-  if (location.pathname === "/dashboard") {
+  if (location.pathname === "/dashboard" || location.pathname === "/settings") {
     if (user === undefined) {
       return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
     }
