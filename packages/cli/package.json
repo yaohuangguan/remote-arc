@@ -1,6 +1,6 @@
 {
   "name": "remotelink",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Connect a computer to Remote Arc with one command.",
   "type": "module",
   "bin": {
