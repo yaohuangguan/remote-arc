@@ -21,8 +21,8 @@
   ],
   "routes": [
     {
-      "pattern": "remotearc.app",
-      "custom_domain": true
+      "pattern": "remotearc.app/*",
+      "zone_name": "remotearc.app"
     },
     {
       "pattern": "remote.samyao.me",
