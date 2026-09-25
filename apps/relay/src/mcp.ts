@@ -12,13 +12,44 @@ type Env = {
   MONTHLY_TOOL_CALL_LIMIT?: string;
 };
 
+type Scope = "devices:read" | "computer:read" | "computer:write";
+
 const registry = (env: Env) => env.REGISTRY.getByName("global");
 
-const hasScope = (identity: OAuthIdentity, scope: string) =>
+const hasScope = (identity: OAuthIdentity, scope: Scope) =>
   identity.scope.split(/\s+/).includes(scope);
 
 const consume = async (env: Env, identity: OAuthIdentity) =>
   consumeToolCall(env, identity.userId);
+
+const oauthSchemes = (scope: Scope) => [
+  {
+    type: "oauth2",
+    scopes: [scope],
+  },
+];
+
+const oauthToolMeta = (scope: Scope) => ({
+  securitySchemes: oauthSchemes(scope),
+});
+
+const authRequired = (env: Env, scope: Scope) => {
+  const challenge =
+    `Bearer resource_metadata="${env.PUBLIC_ORIGIN}/.well-known/oauth-protected-resource", error="insufficient_scope", error_description="Sign in to Remote Arc to continue", scope="${scope}"`;
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: `Authentication required. Remote Arc needs the ${scope} scope.`,
+      },
+    ],
+    _meta: {
+      "mcp/www_authenticate": [challenge],
+    },
+    isError: true,
+  };
+};
 
 async function callDevice(
   env: Env,
@@ -81,16 +112,65 @@ const textResult = (value: unknown) => ({
   ],
 });
 
-const requireScope = (identity: OAuthIdentity, scope: string) => {
-  if (!hasScope(identity, scope)) {
-    throw new Error(`OAuth scope required: ${scope}`);
-  }
-};
+/**
+ * OpenAI's plugin auth contract currently expects securitySchemes at the
+ * root of each tool returned by tools/list. The MCP SDK version used by this
+ * project only preserves arbitrary auth metadata in _meta, so promote it into
+ * the root response while retaining the SDK's normal tool registration and
+ * call dispatch.
+ */
+function installOpenAiToolListAuthMetadata(server: McpServer) {
+  const internal = server as unknown as {
+    _registeredTools: Record<string, any>;
+    toolInputSchemaJson(name: string): Record<string, unknown> | undefined;
+    server: {
+      setRequestHandler(
+        method: string,
+        handler: () => unknown,
+      ): void;
+    };
+  };
 
-export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
+  internal.server.setRequestHandler("tools/list", () => ({
+    tools: Object.entries(internal._registeredTools)
+      .filter(([, tool]) => tool.enabled)
+      .map(([name, tool]) => {
+        const definition: Record<string, unknown> = {
+          name,
+          title: tool.title,
+          description: tool.description,
+          inputSchema:
+            internal.toolInputSchemaJson(name) ?? {
+              type: "object",
+              properties: {},
+            },
+          annotations: tool.annotations,
+          icons: tool.icons,
+          execution: tool.execution,
+          _meta: tool._meta,
+        };
+
+        if (tool.outputSchemaJson) {
+          definition.outputSchema = tool.outputSchemaJson;
+        }
+
+        const schemes = tool._meta?.securitySchemes;
+        if (schemes) {
+          definition.securitySchemes = schemes;
+        }
+
+        return definition;
+      }),
+  }));
+}
+
+export function createRemoteLinkMcp(
+  env: Env,
+  identity: OAuthIdentity | null,
+) {
   return createMcpHandler(() => {
     const server = new McpServer(
-      { name: "remotearc", version: "0.3.0" },
+      { name: "remotearc", version: "0.3.1" },
       { capabilities: { tools: {} } },
     );
 
@@ -101,9 +181,12 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
         description:
           "List computers linked to this Remote Arc account and show whether each device is online.",
         annotations: { readOnlyHint: true },
+        _meta: oauthToolMeta("devices:read"),
       },
       async () => {
-        requireScope(identity, "devices:read");
+        if (!identity || !hasScope(identity, "devices:read")) {
+          return authRequired(env, "devices:read");
+        }
         await consume(env, identity);
         return textResult(await getDevicesForUser(env, identity.userId));
       },
@@ -119,9 +202,12 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
           device_id: z.string(),
         }),
         annotations: { readOnlyHint: true },
+        _meta: oauthToolMeta("devices:read"),
       },
       async ({ device_id }) => {
-        requireScope(identity, "devices:read");
+        if (!identity || !hasScope(identity, "devices:read")) {
+          return authRequired(env, "devices:read");
+        }
         await consume(env, identity);
         const devices = await getDevicesForUser(env, identity.userId);
         const device = devices.find((item) => item.id === device_id);
@@ -141,9 +227,12 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
           depth: z.number().int().min(1).max(10).default(2),
         }),
         annotations: { readOnlyHint: true },
+        _meta: oauthToolMeta("computer:read"),
       },
       async ({ device_id, path, depth }) => {
-        requireScope(identity, "computer:read");
+        if (!identity || !hasScope(identity, "computer:read")) {
+          return authRequired(env, "computer:read");
+        }
         await consume(env, identity);
         return textResult(
           await callDevice(env, identity, device_id, "list_directory", {
@@ -166,9 +255,12 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
           length: z.number().int().positive().optional(),
         }),
         annotations: { readOnlyHint: true },
+        _meta: oauthToolMeta("computer:read"),
       },
       async ({ device_id, path, offset, length }) => {
-        requireScope(identity, "computer:read");
+        if (!identity || !hasScope(identity, "computer:read")) {
+          return authRequired(env, "computer:read");
+        }
         await consume(env, identity);
         return textResult(
           await callDevice(env, identity, device_id, "read_file", {
@@ -190,9 +282,12 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
           path: z.string(),
         }),
         annotations: { readOnlyHint: true },
+        _meta: oauthToolMeta("computer:read"),
       },
       async ({ device_id, path }) => {
-        requireScope(identity, "computer:read");
+        if (!identity || !hasScope(identity, "computer:read")) {
+          return authRequired(env, "computer:read");
+        }
         await consume(env, identity);
         return textResult(
           await callDevice(env, identity, device_id, "get_file_info", { path }),
@@ -209,9 +304,12 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
           device_id: z.string(),
         }),
         annotations: { readOnlyHint: true },
+        _meta: oauthToolMeta("computer:read"),
       },
       async ({ device_id }) => {
-        requireScope(identity, "computer:read");
+        if (!identity || !hasScope(identity, "computer:read")) {
+          return authRequired(env, "computer:read");
+        }
         await consume(env, identity);
         return textResult(
           await callDevice(env, identity, device_id, "list_processes", {}),
@@ -219,95 +317,103 @@ export function createRemoteLinkMcp(env: Env, identity: OAuthIdentity) {
       },
     );
 
-    if (hasScope(identity, "computer:write")) {
-      server.registerTool(
-        "start_process",
-        {
-          title: "Run a command on a remote computer",
-          description:
-            "Run a terminal command on a linked computer. The device itself must also be running in developer or full mode.",
-          inputSchema: z.object({
-            device_id: z.string(),
-            command: z.string(),
-            timeout_ms: z.number().int().positive().default(5000),
+    server.registerTool(
+      "start_process",
+      {
+        title: "Run a command on a remote computer",
+        description:
+          "Run a terminal command on a linked computer. The device itself must also be running in developer or full mode.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          command: z.string(),
+          timeout_ms: z.number().int().positive().default(5000),
+        }),
+        annotations: { destructiveHint: true },
+        _meta: oauthToolMeta("computer:write"),
+      },
+      async ({ device_id, command, timeout_ms }) => {
+        if (!identity || !hasScope(identity, "computer:write")) {
+          return authRequired(env, "computer:write");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "start_process", {
+            command,
+            timeout_ms,
           }),
-          annotations: { destructiveHint: true },
-        },
-        async ({ device_id, command, timeout_ms }) => {
-          requireScope(identity, "computer:write");
-          await consume(env, identity);
-          return textResult(
-            await callDevice(env, identity, device_id, "start_process", {
-              command,
-              timeout_ms,
-            }),
-          );
-        },
-      );
+        );
+      },
+    );
 
-      server.registerTool(
-        "write_file",
-        {
-          title: "Write a file on a remote computer",
-          description:
-            "Write or append text on a linked computer. The device itself must be in developer or full mode.",
-          inputSchema: z.object({
-            device_id: z.string(),
-            path: z.string(),
-            content: z.string(),
-            mode: z.enum(["rewrite", "append"]).default("rewrite"),
+    server.registerTool(
+      "write_file",
+      {
+        title: "Write a file on a remote computer",
+        description:
+          "Write or append text on a linked computer. The device itself must be in developer or full mode.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          path: z.string(),
+          content: z.string(),
+          mode: z.enum(["rewrite", "append"]).default("rewrite"),
+        }),
+        annotations: { destructiveHint: true },
+        _meta: oauthToolMeta("computer:write"),
+      },
+      async ({ device_id, path, content, mode }) => {
+        if (!identity || !hasScope(identity, "computer:write")) {
+          return authRequired(env, "computer:write");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "write_file", {
+            path,
+            content,
+            mode,
           }),
-          annotations: { destructiveHint: true },
-        },
-        async ({ device_id, path, content, mode }) => {
-          requireScope(identity, "computer:write");
-          await consume(env, identity);
-          return textResult(
-            await callDevice(env, identity, device_id, "write_file", {
-              path,
-              content,
-              mode,
-            }),
-          );
-        },
-      );
+        );
+      },
+    );
 
-      server.registerTool(
-        "edit_block",
-        {
-          title: "Edit text on a remote computer",
-          description:
-            "Apply a targeted search-and-replace edit to a file on a linked computer.",
-          inputSchema: z.object({
-            device_id: z.string(),
-            file_path: z.string(),
-            old_string: z.string(),
-            new_string: z.string(),
-            expected_replacements: z.number().int().positive().default(1),
+    server.registerTool(
+      "edit_block",
+      {
+        title: "Edit text on a remote computer",
+        description:
+          "Apply a targeted search-and-replace edit to a file on a linked computer.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          file_path: z.string(),
+          old_string: z.string(),
+          new_string: z.string(),
+          expected_replacements: z.number().int().positive().default(1),
+        }),
+        annotations: { destructiveHint: true },
+        _meta: oauthToolMeta("computer:write"),
+      },
+      async ({
+        device_id,
+        file_path,
+        old_string,
+        new_string,
+        expected_replacements,
+      }) => {
+        if (!identity || !hasScope(identity, "computer:write")) {
+          return authRequired(env, "computer:write");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "edit_block", {
+            file_path,
+            old_string,
+            new_string,
+            expected_replacements,
           }),
-          annotations: { destructiveHint: true },
-        },
-        async ({
-          device_id,
-          file_path,
-          old_string,
-          new_string,
-          expected_replacements,
-        }) => {
-          requireScope(identity, "computer:write");
-          await consume(env, identity);
-          return textResult(
-            await callDevice(env, identity, device_id, "edit_block", {
-              file_path,
-              old_string,
-              new_string,
-              expected_replacements,
-            }),
-          );
-        },
-      );
-    }
+        );
+      },
+    );
 
+    installOpenAiToolListAuthMetadata(server);
     return server;
   });
 }

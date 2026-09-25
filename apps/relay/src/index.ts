@@ -187,12 +187,22 @@ export default {
 
     if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
       const identity = await authenticateMcp(request, env);
-      if (!identity || identity.resource !== env.PUBLIC_ORIGIN + "/mcp") {
+      const validIdentity =
+        identity && identity.resource === env.PUBLIC_ORIGIN + "/mcp"
+          ? identity
+          : null;
+
+      const handler = createRemoteLinkMcp(env, validIdentity);
+      const response = await handler.fetch(request);
+
+      // Keep the standard HTTP auth challenge on unauthenticated MCP failures
+      // while allowing initialize/tools/list to succeed anonymously so
+      // ChatGPT can discover per-tool securitySchemes and trigger linking.
+      if (!validIdentity && response.status === 401) {
         return mcpUnauthorized(env);
       }
 
-      const handler = createRemoteLinkMcp(env, identity);
-      return handler.fetch(request);
+      return response;
     }
 
     if (url.pathname === "/api/debug/devices" && request.method === "GET") {
