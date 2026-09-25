@@ -1,0 +1,32 @@
+{
+  "interface": {
+    "displayName": "Remote Arc",
+    "shortDescription": "Secure remote MCP for your computers.",
+    "longDescription": "Connect ChatGPT to computers you authorize through Remote Arc. Pair devices with the remotelink CLI, then inspect files, run development commands, and work across Windows, macOS, and Linux through a secure Remote MCP control plane.",
+    "websiteURL": "https://remote.samyao.me",
+    "brandColor": "#D7A742",
+    "logo": "../assets/plugin-logo.svg",
+    "composerIcon": "../assets/plugin-logo.svg",
+    "defaultPrompt": "List my connected Remote Arc devices and tell me which ones are online.",
+    "developerName": "Remote Arc",
+    "category": "Other",
+    "capabilities": []
+  },
+  "name": "remote-arc",
+  "version": "0.3.4",
+  "description": "Securely connect ChatGPT to your Windows, macOS, and Linux computers through Remote Arc.",
+  "author": {
+    "name": "Remote Arc"
+  },
+  "keywords": [
+    "remote",
+    "mcp",
+    "computer",
+    "developer-tools",
+    "self-hosted"
+  ],
+  "homepage": "https://remote.samyao.me",
+  "repository": "https://github.com/yaohuangguan/remote-arc",
+  "license": "MIT",
+  "mcpServers": "../.mcp.json"
+}
