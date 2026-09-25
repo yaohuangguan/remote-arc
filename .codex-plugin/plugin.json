@@ -4,7 +4,7 @@
     "shortDescription": "Secure remote MCP for your computers.",
     "longDescription": "Connect ChatGPT to computers you authorize through Remote Arc. Pair devices with the remotelink CLI, then inspect files, run development commands, and work across Windows, macOS, and Linux through a secure Remote MCP control plane.",
     "websiteURL": "https://remotearc.app",
-    "brandColor": "#D7A742",
+    "brandColor": "#38BDF8",
     "logo": "../assets/plugin-logo.svg",
     "composerIcon": "../assets/plugin-logo.svg",
     "defaultPrompt": "List my connected Remote Arc devices and tell me which ones are online.",
