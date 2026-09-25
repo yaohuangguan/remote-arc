@@ -1,12 +1,18 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "remote-arc",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Securely connect ChatGPT to your Windows, macOS, and Linux computers through Remote Arc.",
   "homepage": "https://remotearc.app",
   "repository": "https://github.com/yaohuangguan/remote-arc",
   "license": "MIT",
-  "keywords": ["remote", "mcp", "computer", "developer-tools", "self-hosted"],
+  "keywords": [
+    "remote",
+    "mcp",
+    "computer",
+    "developer-tools",
+    "self-hosted"
+  ],
   "extensions": {
     "com.openai": {
       "interface": {
