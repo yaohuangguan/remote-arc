@@ -32,4 +32,4 @@ export type AgentResultMessage = {
 export type RelayToAgentMessage = AgentCallMessage;
 export type AgentToRelayMessage = AgentHelloMessage | AgentResultMessage;
 
-export const DEFAULT_RELAY_URL = "wss://remote.samyao.me";
+export const DEFAULT_RELAY_URL = "wss://remotearc.app";
