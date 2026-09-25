@@ -1475,3 +1475,236 @@ html[data-theme="dark"] .terminalPreview code em { color:#7f899d; }
     border-color:#20283a;
   }
 }
+
+
+/* Button polish — borderless, soft blue hierarchy */
+button,
+.primaryButton,
+.addButton,
+.approveButton,
+.goldButton,
+.ghostButton,
+.textButton,
+.dangerButton,
+.emptyCard > button,
+.pairLookup button,
+.languageSwitch button,
+.languageSetting button,
+.sideNav button,
+.sidebarAccount button,
+.modalClose {
+  border: 0 !important;
+}
+
+button,
+.primaryButton,
+.addButton,
+.approveButton,
+.goldButton,
+.ghostButton,
+.emptyCard > button,
+.pairLookup button {
+  -webkit-appearance: none;
+  appearance: none;
+  transition:
+    transform .16s ease,
+    background-color .16s ease,
+    color .16s ease,
+    box-shadow .16s ease,
+    opacity .16s ease;
+}
+
+.primaryButton,
+.addButton,
+.approveButton,
+.goldButton,
+.emptyCard > button,
+.pairLookup button {
+  background: linear-gradient(135deg, #8191ff 0%, #6678ff 55%, #5367ef 100%) !important;
+  color: #fff !important;
+  box-shadow:
+    0 8px 20px rgba(79, 97, 225, .18),
+    0 1px 2px rgba(26, 36, 80, .10) !important;
+  border-radius: 11px;
+}
+
+.primaryButton:hover,
+.addButton:hover,
+.approveButton:hover,
+.goldButton:hover,
+.emptyCard > button:hover,
+.pairLookup button:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #8d9cff 0%, #7182ff 56%, #5b6ff4 100%) !important;
+  box-shadow:
+    0 11px 24px rgba(79, 97, 225, .22),
+    0 2px 4px rgba(26, 36, 80, .10) !important;
+}
+
+.primaryButton:active,
+.addButton:active,
+.approveButton:active,
+.goldButton:active,
+.ghostButton:active,
+.emptyCard > button:active,
+.pairLookup button:active {
+  transform: translateY(0) scale(.985);
+}
+
+.ghostButton {
+  background: #f0f3ff !important;
+  color: #4d5fd5 !important;
+  box-shadow: none !important;
+  border-radius: 10px;
+}
+
+.ghostButton:hover {
+  background: #e7ebff !important;
+  color: #4053cf !important;
+  transform: translateY(-1px);
+}
+
+.textButton {
+  color: #687287 !important;
+  background: transparent !important;
+}
+
+.textButton:hover {
+  color: #43506b !important;
+}
+
+.dangerButton {
+  color: #bb5656 !important;
+  background: transparent !important;
+  border-radius: 9px;
+  padding: 7px 9px;
+}
+
+.dangerButton:hover {
+  color: #a44343 !important;
+  background: #fff0f0 !important;
+}
+
+.languageSetting {
+  gap: 3px !important;
+  padding: 4px;
+  border-radius: 12px;
+  background: #eef1fa;
+}
+
+.languageSetting button {
+  min-height: 36px;
+  padding: 8px 12px !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  color: #727c91 !important;
+  box-shadow: none !important;
+  font-weight: 650;
+}
+
+.languageSetting button:hover {
+  background: rgba(255,255,255,.58) !important;
+  color: #44506d !important;
+}
+
+.languageSetting button.active {
+  background: #ffffff !important;
+  color: #5267ef !important;
+  box-shadow:
+    0 2px 8px rgba(44, 57, 111, .09),
+    0 1px 2px rgba(44, 57, 111, .06) !important;
+}
+
+.sideNav button {
+  box-shadow: none !important;
+}
+
+.sidebarAccount button,
+.modalClose {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+button:focus-visible,
+.primaryButton:focus-visible,
+.addButton:focus-visible,
+.approveButton:focus-visible,
+.goldButton:focus-visible,
+.ghostButton:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 4px rgba(102, 120, 255, .15),
+    0 8px 20px rgba(79, 97, 225, .15) !important;
+}
+
+button:disabled,
+.primaryButton:disabled,
+.addButton:disabled,
+.approveButton:disabled {
+  transform: none !important;
+  box-shadow: none !important;
+  opacity: .46;
+}
+
+/* Dark mode button polish */
+html[data-theme="dark"] .primaryButton,
+html[data-theme="dark"] .addButton,
+html[data-theme="dark"] .approveButton,
+html[data-theme="dark"] .goldButton,
+html[data-theme="dark"] .emptyCard > button,
+html[data-theme="dark"] .pairLookup button {
+  background: linear-gradient(135deg, #8e9cff 0%, #6678ff 58%, #5064e8 100%) !important;
+  color: #fff !important;
+  box-shadow:
+    0 9px 22px rgba(63, 80, 200, .28),
+    0 1px 2px rgba(0, 0, 0, .20) !important;
+}
+
+html[data-theme="dark"] .primaryButton:hover,
+html[data-theme="dark"] .addButton:hover,
+html[data-theme="dark"] .approveButton:hover,
+html[data-theme="dark"] .goldButton:hover,
+html[data-theme="dark"] .emptyCard > button:hover,
+html[data-theme="dark"] .pairLookup button:hover {
+  background: linear-gradient(135deg, #9ba8ff 0%, #7384ff 58%, #5b70ef 100%) !important;
+  box-shadow:
+    0 12px 28px rgba(63, 80, 200, .34),
+    0 2px 4px rgba(0, 0, 0, .22) !important;
+}
+
+html[data-theme="dark"] .ghostButton {
+  background: #151d31 !important;
+  color: #aeb9ff !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .ghostButton:hover {
+  background: #1c2540 !important;
+  color: #c3cbff !important;
+}
+
+html[data-theme="dark"] .dangerButton:hover {
+  background: rgba(205, 87, 87, .11) !important;
+}
+
+html[data-theme="dark"] .languageSetting {
+  background: #111827;
+}
+
+html[data-theme="dark"] .languageSetting button {
+  background: transparent !important;
+  color: #838da4 !important;
+}
+
+html[data-theme="dark"] .languageSetting button:hover {
+  background: #182137 !important;
+  color: #b4bdd0 !important;
+}
+
+html[data-theme="dark"] .languageSetting button.active {
+  background: #222c46 !important;
+  color: #aeb9ff !important;
+  box-shadow:
+    0 2px 9px rgba(0, 0, 0, .22),
+    inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
