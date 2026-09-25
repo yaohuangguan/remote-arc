@@ -31,10 +31,6 @@
     {
       "pattern": "mcp.remotearc.app",
       "custom_domain": true
-    },
-    {
-      "pattern": "remote.samyao.me",
-      "custom_domain": true
     }
   ],
   "assets": {
