@@ -8,7 +8,7 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import WebSocket from "ws";
 
-const VERSION = "0.3.1";
+const VERSION = "0.3.2";
 const DEFAULT_ORIGIN = "https://remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -56,6 +56,44 @@ const DEVELOPER_TOOLS = new Set([
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const supportsColor = process.stdout.isTTY && !process.env.NO_COLOR;
+const paint = (code: string, value: string) =>
+  supportsColor ? `\x1b[${code}m${value}\x1b[0m` : value;
+const dim = (value: string) => paint("2", value);
+const cyan = (value: string) => paint("36", value);
+const green = (value: string) => paint("32", value);
+const yellow = (value: string) => paint("33", value);
+const red = (value: string) => paint("31", value);
+const bold = (value: string) => paint("1", value);
+
+function nowTime() {
+  return new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+function logLine(
+  level: "info" | "success" | "warn" | "error" | "event",
+  message: string,
+) {
+  const icon =
+    level === "success" ? green("✓") :
+    level === "warn" ? yellow("!") :
+    level === "error" ? red("×") :
+    level === "event" ? cyan("→") :
+    cyan("•");
+  process.stdout.write(`${dim(nowTime())}  ${icon}  ${message}\n`);
+}
+
+function banner() {
+  process.stdout.write("\n");
+  process.stdout.write(bold("Remote Arc") + "  " + dim(`v${VERSION}`) + "\n");
+  process.stdout.write(dim("Secure remote MCP bridge") + "\n\n");
+}
+
 function argFlag(name: string) {
   return process.argv.includes(name);
 }
@@ -74,9 +112,7 @@ async function readConfig(): Promise<SavedConfig | null> {
         await fs.readFile(LEGACY_CONFIG_PATH, "utf8"),
       ) as SavedConfig;
       await writeConfig(legacy);
-      process.stdout.write(
-        "Migrated existing Remote Link pairing to Remote Arc.\n",
-      );
+      logLine("success", "Migrated existing Remote Link pairing to Remote Arc.");
       return legacy;
     } catch {
       return null;
@@ -96,7 +132,7 @@ async function resetConfig() {
     fs.rm(CONFIG_PATH, { force: true }),
     fs.rm(LEGACY_CONFIG_PATH, { force: true }),
   ]);
-  process.stdout.write("Remote Arc device credentials removed.\n");
+  logLine("success", "Removed saved device credentials.");
 }
 
 function openBrowser(url: string) {
@@ -137,12 +173,13 @@ async function pair(origin: string, mode: Mode): Promise<SavedConfig> {
 
   const pairing = (await response.json()) as PairingStart;
 
-  process.stdout.write("\nRemote Arc\n\n");
-  process.stdout.write("Pair this computer in your browser.\n\n");
-  process.stdout.write("  " + pairing.user_code + "\n\n");
-  process.stdout.write(pairing.verification_uri_complete + "\n\n");
-  process.stdout.write("Opening browser...\n");
+  banner();
+  logLine("info", `Device: ${bold(deviceName)} · ${process.platform}/${process.arch} · ${mode} mode`);
+  logLine("event", "Pairing required — opening secure browser approval.");
+  process.stdout.write("\n  Pairing code  " + bold(cyan(pairing.user_code)) + "\n");
+  process.stdout.write("  " + dim(pairing.verification_uri_complete) + "\n\n");
   openBrowser(pairing.verification_uri_complete);
+  logLine("info", "Waiting for authorization…");
 
   const startedAt = Date.now();
   while (Date.now() - startedAt < pairing.expires_in * 1000) {
@@ -158,7 +195,7 @@ async function pair(origin: string, mode: Mode): Promise<SavedConfig> {
     });
 
     if (tokenResponse.status === 428) {
-      process.stdout.write(".");
+      if (process.stdout.isTTY) process.stdout.write(dim("·"));
       continue;
     }
 
@@ -168,7 +205,7 @@ async function pair(origin: string, mode: Mode): Promise<SavedConfig> {
     }
 
     const result = (await tokenResponse.json()) as PairingToken;
-    process.stdout.write("\n\n✓ Device authorized\n");
+    process.stdout.write("\n");\n    logLine("success", "Device authorized.");
 
     const config: SavedConfig = {
       deviceId: result.device_id,
@@ -204,8 +241,10 @@ class ExecutionCore {
       stderr: "inherit",
     });
 
+    logLine("info", "Starting local execution core…");
     await client.connect(transport);
     this.client = client;
+    logLine("success", "Local execution core ready.");
     return client;
   }
 
@@ -236,7 +275,13 @@ class ExecutionCore {
 
 async function connectAgent(config: SavedConfig) {
   const core = new ExecutionCore(config.mode);
+  banner();
+  logLine("info", `Device: ${bold(config.deviceName)} · ${process.platform}/${process.arch}`);
+  logLine("info", `Permission profile: ${config.mode === "developer" ? yellow("developer") : green("safe")}`);
+
   const tools = await core.tools();
+  logLine("success", `Local tools ready: ${tools.length} exposed`);
+  process.stdout.write("       " + dim(tools.map((tool) => tool.name).join(" · ")) + "\n");
   const wsUrl = new URL("/agent", config.origin.replace(/^http/, "ws"));
 
   let stopped = false;
@@ -251,6 +296,7 @@ async function connectAgent(config: SavedConfig) {
   process.on("SIGTERM", shutdown);
 
   while (!stopped) {
+    logLine("event", `Connecting relay ${dim(wsUrl.host)}…`);
     const ws = new WebSocket(wsUrl, {
       headers: {
         Authorization: "Bearer " + config.deviceToken,
@@ -279,15 +325,10 @@ async function connectAgent(config: SavedConfig) {
         }),
       );
 
-      process.stdout.write(
-        "✓ Connected as " +
-          config.deviceName +
-          " (" +
-          config.mode +
-          " mode)\n",
-      );
-      process.stdout.write("  " + config.origin + "\n");
-      process.stdout.write("Press Ctrl+C to disconnect.\n");
+      logLine("success", `Relay connected · ${bold(config.deviceName)} · ${config.mode} mode`);
+      logLine("success", "Device presence published.");
+      process.stdout.write("       " + dim(config.origin) + "\n");
+      process.stdout.write("       " + dim("Ctrl+C to disconnect") + "\n\n");
 
       await new Promise<void>((resolve) => {
         ws.on("message", async (raw) => {
@@ -312,11 +353,14 @@ async function connectAgent(config: SavedConfig) {
             return;
           }
 
+          const callStarted = Date.now();
+          logLine("event", `tool.call ${bold(message.tool)} · ${dim(message.id.slice(0, 8))}`);
           try {
             const result = await core.call(
               message.tool,
               message.arguments || {},
             );
+            logLine("success", `tool.done ${message.tool} · ${Date.now() - callStarted}ms`);
             ws.send(
               JSON.stringify({
                 type: "result",
@@ -325,6 +369,7 @@ async function connectAgent(config: SavedConfig) {
               }),
             );
           } catch (error) {
+            logLine("error", `tool.fail ${message.tool} · ${error instanceof Error ? error.message : String(error)}`);
             ws.send(
               JSON.stringify({
                 type: "result",
@@ -339,10 +384,10 @@ async function connectAgent(config: SavedConfig) {
         ws.once("error", resolve);
       });
     } catch (error) {
-      process.stderr.write(
-        "Remote Arc connection failed: " +
-          (error instanceof Error ? error.message : String(error)) +
-          "\n",
+      logLine(
+        "error",
+        "Relay connection failed: " +
+          (error instanceof Error ? error.message : String(error)),
       );
     } finally {
       ws.removeAllListeners();
@@ -350,8 +395,9 @@ async function connectAgent(config: SavedConfig) {
     }
 
     if (!stopped) {
-      process.stdout.write(
-        "Disconnected. Reconnecting in " + Math.round(backoff / 1000) + "s...\n",
+      logLine(
+        "warn",
+        "Relay disconnected · retrying in " + Math.round(backoff / 1000) + "s",
       );
       await sleep(backoff);
       backoff = Math.min(backoff * 2, 30_000);
@@ -406,14 +452,16 @@ async function main() {
     await writeConfig(config);
   }
 
+  if (config) {
+    logLine("info", `Using paired device identity ${dim(config.deviceId.slice(0, 8))}…`);
+  }
   await connectAgent(config);
 }
 
 main().catch((error) => {
-  process.stderr.write(
-    "\nRemote Arc error: " +
-      (error instanceof Error ? error.message : String(error)) +
-      "\n",
+  logLine(
+    "error",
+    "Fatal: " + (error instanceof Error ? error.message : String(error)),
   );
   process.exit(1);
 });
