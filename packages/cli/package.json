@@ -1,9 +1,11 @@
 {
-  "name": "remote-arc",
+  "name": "remotelink",
   "version": "0.3.0",
-  "description": "Remote MCP client and device agent for Remote Arc.",
+  "description": "Connect a computer to Remote Arc with one command.",
   "type": "module",
   "bin": {
+    "remotelink": "dist/index.js",
+    "remote-link": "dist/index.js",
     "remote-arc": "dist/index.js"
   },
   "files": [

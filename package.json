@@ -17,11 +17,12 @@
     "ci": "pnpm typecheck && pnpm test",
     "build:ui": "pnpm --filter @remotearc/ui build",
     "deploy:relay": "pnpm build:ui && pnpm --filter @remotearc/relay run deploy",
-    "build:cli": "pnpm --filter remote-arc build"
+    "build:cli": "pnpm --filter remotelink build"
   },
   "bin": {
-    "remote-arc": "bin/remotearc.js",
-    "remotearc": "bin/remotearc.js"
+    "remotelink": "bin/remotearc.js",
+    "remote-link": "bin/remotearc.js",
+    "remote-arc": "bin/remotearc.js"
   },
   "dependencies": {
     "@modelcontextprotocol/client": "^2.1.0",

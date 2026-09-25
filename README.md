@@ -11,7 +11,7 @@ Continue with Google
    �?
 Add device
    �?
-npx --yes --package=github:yaohuangguan/remote-arc remote-arc
+npx remotelink
    �?
 matching pairing code opens in browser
    �?
@@ -166,7 +166,7 @@ computer:write
 The release UX is designed around one command:
 
 ```bash
-npx --yes --package=github:yaohuangguan/remote-arc remote-arc
+npx remotelink
 ```
 
 First run:
@@ -266,23 +266,18 @@ pnpm exec wrangler d1 migrations apply remote-link-auth --remote
 
 ## CLI distribution
 
-Current working one-line command:
+Install and connect a computer to Remote Arc with one command:
 
 ```bash
-npx --yes --package=github:yaohuangguan/remote-arc remote-arc
+npx remotelink
 ```
 
-The CLI package and binary are prepared for the final npm command:
+The npm package is named `remotelink` while the product brand remains **Remote Arc**.
 
-```bash
-npx remote-arc
-```
-
-The npm registry currently rejects the unscoped `remote-arc` package name as too similar to a reserved/existing `remotearc` name, so the GitHub-backed command remains the public fallback until the npm namespace is released.
-
-The CLI binary itself is named:
+For compatibility, the package also exposes these binary aliases:
 
 ```text
+remote-link
 remote-arc
 ```
 
