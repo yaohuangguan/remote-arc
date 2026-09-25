@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "remote-arc": {
+      "type": "streamable-http",
+      "url": "https://remote.samyao.me/mcp",
+      "headers": {}
+    }
+  }
+}
