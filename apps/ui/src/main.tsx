@@ -113,7 +113,7 @@ function PublicHeader({ user }: { user?: User | null }) {
             {tr("Dashboard", "\u63a7\u5236\u53f0")} <span>{"\u2197"}</span>
           </a>
         ) : (
-          <a className="navLogin" href="/auth/google?return_to=/dashboarddashboard">
+          <a className="navLogin" href="/auth/google?return_to=/dashboard">
             {tr("Sign in", "\u767b\u5f55")}
           </a>
         )}
@@ -398,7 +398,7 @@ function DashboardAccess() {
             "Sign in to pair computers, inspect online state, review usage and connect your AI clients. The public website always remains available at the root domain.",
             "\u767b\u5f55\u540e\u53ef\u914d\u5bf9\u7535\u8111\u3001\u67e5\u770b\u5728\u7ebf\u72b6\u6001\u3001\u7528\u91cf\u4e0e AI \u5ba2\u6237\u7aef\u8fde\u63a5\u3002\u6839\u57df\u540d\u59cb\u7ec8\u4fdd\u7559\u4e3a\u516c\u5f00\u5b98\u7f51\u3002"
           )}</p>
-          <a className="primaryButton" href="/auth/google?return_to=/dashboarddashboard">
+          <a className="primaryButton" href="/auth/google?return_to=/dashboard">
             {tr("Continue with Google", "\u4f7f\u7528 Google \u7ee7\u7eed")} <span>{"\u2192"}</span>
           </a>
         </div>
@@ -438,7 +438,7 @@ function Landing({ user }: { user?: User | null }) {
             "Remote Arc \u662f\u9762\u5411 Windows\u3001macOS \u548c Linux \u7684\u5f00\u6e90 Remote MCP \u63a7\u5236\u9762\u3002\u4e00\u6761\u547d\u4ee4\u914d\u5bf9\u8bbe\u5907\uff0c\u4e00\u6b21\u8fde\u63a5 MCP \u5ba2\u6237\u7aef\uff0c\u6700\u7ec8\u6743\u9650\u8fb9\u754c\u59cb\u7ec8\u7559\u5728\u672c\u673a\u3002"
           )}</p>
           <div className="landingActions">
-            <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboarddashboard"}>
+            <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboard"}>
               {user ? tr("Open dashboard", "\u6253\u5f00\u63a7\u5236\u53f0") : tr("Start free", "\u514d\u8d39\u5f00\u59cb")} <span>{"\u2192"}</span>
             </a>
             <a className="ghostLink" href="#architecture">{tr("View architecture", "\u67e5\u770b\u67b6\u6784")} {"\u2193"}</a>
@@ -626,7 +626,7 @@ function Landing({ user }: { user?: User | null }) {
             "The dashboard is intentionally separate from the public website. Return to the root domain any time and the product site remains the product site.",
             "\u63a7\u5236\u53f0\u4e0e\u516c\u5f00\u5b98\u7f51\u660e\u786e\u5206\u79bb\u3002\u4efb\u4f55\u65f6\u5019\u56de\u5230\u6839\u57df\u540d\uff0c\u770b\u5230\u7684\u90fd\u4ecd\u7136\u662f\u4ea7\u54c1\u5b98\u7f51\u3002"
           )}</p>
-          <a className="ghostLink" href={user ? "/dashboard" : "/auth/google?return_to=/dashboarddashboard"}>
+          <a className="ghostLink" href={user ? "/dashboard" : "/auth/google?return_to=/dashboard"}>
             {user ? tr("Open dashboard", "\u6253\u5f00\u63a7\u5236\u53f0") : tr("Sign in to dashboard", "\u767b\u5f55\u63a7\u5236\u53f0")} {"\u2192"}
           </a>
         </div>
@@ -654,7 +654,7 @@ function Landing({ user }: { user?: User | null }) {
           )}</p>
         </div>
         <div className="ctaActions">
-          <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboarddashboard"}>
+          <a className="primaryButton goldButton" href={user ? "/dashboard" : "/auth/google?return_to=/dashboard"}>
             {user ? tr("Open dashboard", "\u6253\u5f00\u63a7\u5236\u53f0") : tr("Start free", "\u514d\u8d39\u5f00\u59cb")}
           </a>
           <a className="ghostLink" href="/pricing">{tr("View pricing", "\u67e5\u770b\u4ef7\u683c")}</a>
