@@ -97,22 +97,15 @@ const timeAgo = (value?: string | null) => {
 
 function LogoMark({ className = "" }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 64 64" role="img" aria-label="Remote Arc">
-      <defs>
-        <linearGradient id="remote-arc-gradient" x1="8" y1="48" x2="56" y2="16" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#7dd3fc" />
-          <stop offset="1" stopColor="#38bdf8" />
-        </linearGradient>
-      </defs>
-      <path d="M10 42C15 20 27 12 44 17C50 19 54 24 56 30" fill="none" stroke="url(#remote-arc-gradient)" strokeWidth="7" strokeLinecap="round" />
-      <path d="M54 42C49 29 42 24 32 24C22 24 15 31 10 42" fill="none" stroke="url(#remote-arc-gradient)" strokeWidth="7" strokeLinecap="round" opacity=".78" />
-      <circle cx="10" cy="42" r="5" fill="#7dd3fc" />
-      <circle cx="54" cy="42" r="5" fill="#38bdf8" />
-      <circle cx="32" cy="24" r="3.5" fill="var(--logo-spark, #f0f9ff)" />
-    </svg>
+    <img
+      className={className}
+      src="/remote-arc.svg"
+      alt="Remote Arc"
+      width="64"
+      height="64"
+    />
   );
 }
-
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <a href="/" className={"brand" + (compact ? " compactBrand" : "")}>
@@ -545,7 +538,7 @@ function Landing({ user }: { user?: User | null }) {
         </div>
         <div className="journeyGrid">
           <article><span className="stepNumber">01</span><div className="journeyIcon">›_</div><h3>{tr("Run one command", "运行一条命令")}</h3><p>{tr("The CLI opens a pairing page automatically. No clone, token copy, VPN or router setup.", "CLI 自动打开配对页面，无需 clone、复制 Token、VPN 或路由器配置。")}</p><code>{command}</code></article>
-          <article><span className="stepNumber">02</span><div className="journeyLogos">{aiClients.map((client) => <img key={client.name} src={client.icon} alt="" />)}</div><h3>{tr("Add your AI client", "添加到你的 AI")}</h3><p>{tr("Use the same Remote MCP URL in ChatGPT or Claude. OAuth discovers and handles sign-in automatically.", "在 ChatGPT 或 Claude 中使用同一个 Remote MCP URL，OAuth 会自动发现并完成登录。")}</p><code>remote.samyao.me/mcp</code></article>
+          <article><span className="stepNumber">02</span><div className="journeyLogos">{aiClients.map((client) => <img key={client.name} src={client.icon} alt="" />)}</div><h3>{tr("Add your AI client", "添加到你的 AI")}</h3><p>{tr("Use the same Remote MCP URL in ChatGPT or Claude. OAuth discovers and handles sign-in automatically.", "在 ChatGPT 或 Claude 中使用同一个 Remote MCP URL，OAuth 会自动发现并完成登录。")}</p><code>remotearc.app/mcp</code></article>
           <article><span className="stepNumber">03</span><div className="journeyIcon">✦</div><h3>{tr("Ask in natural language", "直接自然语言操作")}</h3><p>{tr("Say which computer you mean. Remote Arc finds it, checks its local capability policy and routes the tool call.", "只需说出设备名称。Remote Arc 会找到它、检查本机权限，再把工具调用路由过去。")}</p><blockquote>{tr("“Run the tests on SamPC.”", "“在 SamPC 上跑一下测试。”")}</blockquote></article>
         </div>
         <div className="clientSetupNote">
@@ -686,7 +679,7 @@ function ResourcesPage({ user }: { user?: User | null }) {
 
 function McpPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const endpoint = "https://remote.samyao.me/mcp";
+  const endpoint = "https://remotearc.app/mcp";
   return (
     <PublicLayout user={user}>
       <section className="publicHero compactHero mcpHero">
@@ -841,7 +834,7 @@ function Dashboard({
             </button>
           ))}
         </nav>
-        <div className="sidebarStatus"><div className="livePulse"/><div><strong>{tr("Relay online", "Relay 在线")}</strong><span>remote.samyao.me</span></div></div>
+        <div className="sidebarStatus"><div className="livePulse"/><div><strong>{tr("Relay online", "Relay 在线")}</strong><span>remotearc.app</span></div></div>
         <div className="sidebarAccount">
           {user.avatarUrl ? <img src={user.avatarUrl} alt=""/> : <div className="avatarFallback">{(user.name || user.email).charAt(0).toUpperCase()}</div>}
           <div><strong>{user.name || "Owner"}</strong><span>{user.email}</span></div>
@@ -959,7 +952,7 @@ function Dashboard({
           </>
         )}
 
-        <footer className="dashboardFooter"><span>Remote Arc · remote.samyao.me</span><div><a href="/pricing">{tr("Pricing", "价格")}</a><a href="/resources">{tr("Resources", "资源")}</a><a href="/docs/mcp">MCP</a><a href="/privacy">{tr("Privacy", "隐私")}</a><a href="/terms">{tr("Terms", "条款")}</a><a href="/support">{tr("Support", "支持")}</a></div></footer>
+        <footer className="dashboardFooter"><span>Remote Arc · remotearc.app</span><div><a href="/pricing">{tr("Pricing", "价格")}</a><a href="/resources">{tr("Resources", "资源")}</a><a href="/docs/mcp">MCP</a><a href="/privacy">{tr("Privacy", "隐私")}</a><a href="/terms">{tr("Terms", "条款")}</a><a href="/support">{tr("Support", "支持")}</a></div></footer>
       </main>
 
       {showAdd && (
