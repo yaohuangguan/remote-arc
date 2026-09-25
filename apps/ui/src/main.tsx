@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
-import { ThemeProvider, useTheme } from "./theme.js";
 import "./styles.css";
 
 type User = {
@@ -574,7 +573,6 @@ function Dashboard({
   signOut: () => Promise<void>;
 }) {
   const { tr, locale, setLocale } = useI18n();
-  const { theme, setTheme } = useTheme();
   const [showAdd, setShowAdd] = useState(false);
   const [active, setActive] = useState<DashboardTab>("overview");
   const command = "npx remote-arc-mcp@latest";
@@ -740,7 +738,6 @@ function Dashboard({
             <section className="pageHeader"><div><span className="eyebrow">{tr("SETTINGS", "设置")}</span><h1>{tr("Make Remote Arc yours.", "把 Remote Arc 调成你喜欢的样子。")}</h1><p>{tr("Language, plan information and account preferences.", "语言、套餐信息与账户偏好。")}</p></div></section>
             <section className="settingsGrid">
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
-              <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Light is the default. Dark keeps the original black-and-gold look.", "默认使用白色主题；深色模式保留原来的黑金风格。")}</p></div><div className="languageSetting"><button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")}>{tr("Light", "浅色")}</button><button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}>{tr("Dark", "深色")}</button><button className={theme === "system" ? "active" : ""} onClick={() => setTheme("system")}>{tr("System", "跟随系统")}</button></div></article>
               <article className="settingsCard"><div><h2>{tr("Hosted plan", "托管方案")}</h2><p>{tr("Free includes 10,000 Remote MCP tool calls each UTC month.", "免费版每个 UTC 月包含 10,000 次 Remote MCP 工具调用。")}</p></div><div className="planValue">{usage?.unlimited ? "∞" : `${usage?.used ?? 0} / ${usage?.limit ?? 10000}`}</div></article>
               <article className="settingsCard"><div><h2>{tr("Self-hosting", "自托管")}</h2><p>{tr("Set MONTHLY_TOOL_CALL_LIMIT=0 on your own deployment for unlimited calls.", "在自己的部署中设置 MONTHLY_TOOL_CALL_LIMIT=0 即可取消调用额度限制。")}</p></div><a className="ghostButton" href="https://github.com/yaohuangguan/remote-link">{tr("Open GitHub", "打开 GitHub")}</a></article>
             </section>
@@ -828,8 +825,6 @@ function App() {
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <I18nProvider><App /></I18nProvider>
-    </ThemeProvider>
+    <I18nProvider><App /></I18nProvider>
   </React.StrictMode>,
 );
