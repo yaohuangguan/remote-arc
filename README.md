@@ -359,3 +359,18 @@ Still planned before broader public use:
 - audit history
 - installer signing/notarization
 - public Plugin submission
+
+
+## License
+
+Remote Arc is **source-available, not open source** for current releases.
+
+The hosted service implementation and current Remote Arc source are licensed
+under the [Remote Arc Proprietary Source License](./LICENSE). Viewing and
+security review are permitted, but modification, redistribution, white-labeling,
+and commercial exploitation require written permission.
+
+Historical revisions that were previously released under MIT remain governed
+by the MIT terms that applied to those specific revisions.
+
+Third-party components continue to use their own licenses.
