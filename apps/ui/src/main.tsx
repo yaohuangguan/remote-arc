@@ -929,7 +929,7 @@ function Dashboard({
           </>
         )}
 
-        <footer className="dashboardFooter"><span>Remote Arc · remote.samyao.me</span><div><a href="/pricing">{tr("Pricing", "价格")}</a><a href="/resources">{tr("Resources", "资源")}</a><a href="/docs/mcp">MCP</a></div></footer>
+        <footer className="dashboardFooter"><span>Remote Arc · remote.samyao.me</span><div><a href="/pricing">{tr("Pricing", "价格")}</a><a href="/resources">{tr("Resources", "资源")}</a><a href="/docs/mcp">MCP</a><a href="/privacy">{tr("Privacy", "隐私")}</a><a href="/terms">{tr("Terms", "条款")}</a><a href="/support">{tr("Support", "支持")}</a></div></footer>
       </main>
 
       {showAdd && (
@@ -951,6 +951,88 @@ function Dashboard({
           </section>
         </div>
       )}
+    </div>
+  );
+}
+
+
+function LegalPage({
+  kind,
+  user,
+}: {
+  kind: "privacy" | "terms" | "support";
+  user?: User | null;
+}) {
+  const { tr } = useI18n();
+  const content = {
+    privacy: {
+      eyebrow: "PRIVACY",
+      title: tr("Privacy Policy", "隐私政策"),
+      intro: tr(
+        "Remote Arc is designed to route authorized requests to computers you explicitly connect. This page explains the data used to operate the hosted service.",
+        "Remote Arc 只把已授权请求路由到你明确连接的电脑。这里说明托管服务运行过程中会处理哪些数据。",
+      ),
+      sections: [
+        [tr("Account data", "账户数据"), tr("We use your Google account identity to create and secure your Remote Arc account. We store identifiers, display name, email address, session records and authorization metadata needed to operate the service.", "我们使用你的 Google 账户身份来创建并保护 Remote Arc 账户，并保存服务运行所需的标识符、显示名称、邮箱、会话记录和授权元数据。")],
+        [tr("Device data", "设备数据"), tr("For paired computers we store device identifiers, device names, platform metadata, credential hashes and connection timestamps. Raw device credentials are not stored in the hosted database.", "对于已配对电脑，我们保存设备标识、设备名称、平台信息、凭证哈希和连接时间。托管数据库不会保存原始设备凭证。")],
+        [tr("Remote actions", "远程操作"), tr("Remote Arc relays tool requests between ChatGPT and your connected device. Audit records may include the tool name, device, success state and time. File contents and command arguments are not intentionally stored in audit records.", "Remote Arc 在 ChatGPT 与已连接设备之间转发工具请求。审计记录可能包含工具名称、设备、成功状态和时间；不会有意在审计记录中保存文件内容或命令参数。")],
+        [tr("Infrastructure", "基础设施"), tr("The hosted service uses Cloudflare infrastructure and Google OAuth. Their processing is governed by their respective terms and privacy policies.", "托管服务使用 Cloudflare 基础设施和 Google OAuth；相关处理同时受这些服务各自的条款和隐私政策约束。")],
+        [tr("Control and deletion", "控制与删除"), tr("You can revoke individual devices from the Remote Arc dashboard. For account or hosted-data deletion requests, use the support contact below.", "你可以在 Remote Arc 控制台撤销单台设备。如需删除账户或托管数据，请通过下方支持渠道联系。")],
+      ],
+    },
+    terms: {
+      eyebrow: "TERMS",
+      title: tr("Terms of Service", "服务条款"),
+      intro: tr(
+        "Remote Arc provides remote computer access tooling. By using the hosted service, you agree to use it only with computers and accounts you are authorized to control.",
+        "Remote Arc 提供远程电脑访问工具。使用托管服务即表示你同意只操作你有权控制的电脑和账户。",
+      ),
+      sections: [
+        [tr("Authorized use", "授权使用"), tr("You must have permission to access every computer, file, account and service you control through Remote Arc. Do not use Remote Arc to bypass access controls or interfere with systems you do not own or administer.", "你必须有权访问通过 Remote Arc 控制的每台电脑、文件、账户和服务。不得使用 Remote Arc 绕过访问控制或干扰你无权管理的系统。")],
+        [tr("Your responsibility", "你的责任"), tr("Remote computer control can modify files, execute commands and affect running software. You are responsible for reviewing permissions, prompts and commands before allowing high-impact actions.", "远程电脑控制可能修改文件、执行命令并影响运行中的软件。你有责任在允许高影响操作前检查权限、提示和命令。")],
+        [tr("Service availability", "服务可用性"), tr("The hosted service is provided without a guarantee of uninterrupted availability. Features, quotas and supported integrations may change as Remote Arc develops.", "托管服务不保证持续无中断可用。随着 Remote Arc 的发展，功能、额度和支持的集成可能发生变化。")],
+        [tr("Open-source software", "开源软件"), tr("Open-source portions of Remote Arc are also governed by the licenses included with the source code. Self-hosted deployments are operated by their deployer, not by the hosted Remote Arc service.", "Remote Arc 的开源部分同时受源码中附带的许可证约束。自托管部署由其部署者负责运行，不属于 Remote Arc 托管服务。")],
+        [tr("Suspension", "暂停服务"), tr("Access may be limited or suspended for abuse, security risks, legal requirements or material violations of these terms.", "如存在滥用、安全风险、法律要求或重大违反本条款的情况，访问可能会被限制或暂停。")],
+      ],
+    },
+    support: {
+      eyebrow: "SUPPORT",
+      title: tr("Remote Arc Support", "Remote Arc 支持"),
+      intro: tr(
+        "For setup help, bug reports, security issues or account and data requests, use the channels below.",
+        "如需安装帮助、Bug 反馈、安全问题或账户与数据请求，可使用以下渠道。",
+      ),
+      sections: [
+        [tr("Documentation", "文档"), tr("Start with the MCP setup guide and the open-source README for pairing, permissions and self-hosting instructions.", "可先查看 MCP 接入指南和开源 README，了解配对、权限与自托管说明。")],
+        [tr("Bug reports", "Bug 反馈"), tr("Use the GitHub repository for reproducible product and developer issues. Do not include device credentials, OAuth tokens or private file contents.", "可通过 GitHub 仓库提交可复现的产品与开发问题。请勿附带设备凭证、OAuth Token 或私人文件内容。")],
+        [tr("Security", "安全问题"), tr("Review SECURITY.md before reporting a vulnerability and avoid publishing sensitive exploit details in a public issue.", "报告漏洞前请阅读 SECURITY.md，不要在公开 Issue 中发布敏感漏洞利用细节。")],
+        [tr("Account and data requests", "账户与数据请求"), tr("For account deletion or hosted-data requests, contact the project maintainer through the support channel published on the Remote Arc website or repository.", "如需删除账户或请求托管数据，请通过 Remote Arc 官网或仓库公开的支持渠道联系项目维护者。")],
+      ],
+    },
+  }[kind];
+
+  return (
+    <div className="publicPageShell">
+      <PublicHeader user={user} />
+      <main className="legalPage">
+        <span className="eyebrow">{content.eyebrow}</span>
+        <h1>{content.title}</h1>
+        <p className="legalIntro">{content.intro}</p>
+        <div className="legalGrid">
+          {content.sections.map(([title, body]) => (
+            <section className="legalCard" key={title}>
+              <h2>{title}</h2>
+              <p>{body}</p>
+            </section>
+          ))}
+        </div>
+        <div className="legalLinks">
+          <a href="/privacy">{tr("Privacy", "隐私")}</a>
+          <a href="/terms">{tr("Terms", "条款")}</a>
+          <a href="/support">{tr("Support", "支持")}</a>
+          <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
+        </div>
+      </main>
     </div>
   );
 }
@@ -1012,6 +1094,9 @@ function App() {
   if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
   if (location.pathname === "/resources") return <ResourcesPage user={user === undefined ? null : user} />;
   if (location.pathname === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
+  if (location.pathname === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
+  if (location.pathname === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
 
   if (location.pathname === "/dashboard") {
     if (user === undefined) {
