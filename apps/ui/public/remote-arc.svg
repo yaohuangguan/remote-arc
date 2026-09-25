@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="Remote Arc">
+  <defs>
+    <linearGradient id="remote-arc-gradient" x1="8" y1="48" x2="56" y2="16" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7DD3FC"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+  <path d="M10 42C15 20 27 12 44 17C50 19 54 24 56 30" fill="none" stroke="url(#remote-arc-gradient)" stroke-width="7" stroke-linecap="round"/>
+  <path d="M54 42C49 29 42 24 32 24C22 24 15 31 10 42" fill="none" stroke="url(#remote-arc-gradient)" stroke-width="7" stroke-linecap="round" opacity=".78"/>
+  <circle cx="10" cy="42" r="5" fill="#7DD3FC"/>
+  <circle cx="54" cy="42" r="5" fill="#38BDF8"/>
+  <circle cx="32" cy="24" r="3.5" fill="#F0F9FF"/>
+</svg>
