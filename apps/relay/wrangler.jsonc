@@ -21,6 +21,10 @@
   ],
   "routes": [
     {
+      "pattern": "remotearc.app",
+      "custom_domain": true
+    },
+    {
       "pattern": "remote.samyao.me",
       "custom_domain": true
     }
@@ -49,7 +53,7 @@
     }
   ],
   "vars": {
-    "PUBLIC_ORIGIN": "https://remote.samyao.me",
+    "PUBLIC_ORIGIN": "https://remotearc.app",
     "ALLOW_SIGNUPS": "1",
     "MONTHLY_TOOL_CALL_LIMIT": "10000"
   }
