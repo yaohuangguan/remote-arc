@@ -5,7 +5,7 @@ Remote Arc is a self-hosted Remote MCP system that connects AI clients to your c
 The intended user experience is:
 
 ```text
-remote.samyao.me
+remotearc.app
    �?
 Continue with Google
    �?
@@ -19,7 +19,7 @@ Authorize device
    �?
 computer appears in dashboard
    �?
-connect https://remote.samyao.me/mcp once in ChatGPT
+connect https://remotearc.app/mcp once in ChatGPT
    �?
 just talk to your computer
 ```
@@ -47,7 +47,7 @@ ChatGPT / Claude / Codex
           |
           | OAuth 2.1 + Remote MCP
           v
-https://remote.samyao.me/mcp
+https://remotearc.app/mcp
           |
           v
 Cloudflare Worker
@@ -78,7 +78,7 @@ A device always initiates the connection to the relay. Remote Arc does not requi
 Current production endpoint:
 
 ```text
-https://remote.samyao.me
+https://remotearc.app
 ```
 
 The Cloudflare deployment currently includes:
@@ -87,7 +87,7 @@ The Cloudflare deployment currently includes:
 - one Worker for UI/API/OAuth/MCP routing
 - one Durable Object class for live device connections
 - D1 database `remote-link-auth`
-- custom domain `remote.samyao.me`
+- custom domain `remotearc.app`
 
 ## Authentication
 
@@ -113,7 +113,7 @@ ALLOWED_EMAILS=user@example.com,second@example.com
 Google OAuth redirect URI:
 
 ```text
-https://remote.samyao.me/auth/google/callback
+https://remotearc.app/auth/google/callback
 ```
 
 ### Device identity
@@ -133,7 +133,7 @@ The credential is:
 Remote MCP is available at:
 
 ```text
-https://remote.samyao.me/mcp
+https://remotearc.app/mcp
 ```
 
 It uses OAuth 2.1 authorization code + PKCE with dynamic client registration.
@@ -173,7 +173,7 @@ First run:
 
 1. CLI requests a short-lived device pairing.
 2. Terminal shows a code such as `J7KD-P2QF`.
-3. CLI opens `remote.samyao.me/device?code=J7KD-P2QF`.
+3. CLI opens `remotearc.app/device?code=J7KD-P2QF`.
 4. User signs in with Google if necessary.
 5. Browser shows the same code and computer details.
 6. User selects **Authorize device**.
@@ -286,7 +286,7 @@ remote-arc
 Until Remote Arc is a reviewed public Plugin, connect it once through ChatGPT Developer Mode using:
 
 ```text
-https://remote.samyao.me/mcp
+https://remotearc.app/mcp
 ```
 
 ChatGPT discovers the OAuth configuration from Remote Arc, opens the Remote Arc authorization flow, and the user signs in with Google.
@@ -335,7 +335,7 @@ Still planned before broader public use:
 - [x] OAuth 2.1 + PKCE Remote MCP implementation
 - [x] one-command CLI implementation
 - [x] device dashboard implementation
-- [x] production deployment to `remote.samyao.me`
+- [x] production deployment to `remotearc.app`
 - [ ] configure Google OAuth client credentials
 - [ ] publish `remotelink` to npm
 - [ ] pair SamPC through the public CLI flow
