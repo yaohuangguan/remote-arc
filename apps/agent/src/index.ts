@@ -9,7 +9,7 @@ import type {
 } from "@remotearc/protocol";
 import { LocalMcpClient } from "./local-mcp.js";
 
-const relayUrl = process.env.REMOTE_LINK_RELAY_URL || "wss://remote.samyao.me";
+const relayUrl = process.env.REMOTE_LINK_RELAY_URL || "wss://remotearc.app";
 const token = process.env.REMOTE_LINK_DEVICE_TOKEN;
 const deviceId =
   process.env.REMOTE_LINK_DEVICE_ID ||
