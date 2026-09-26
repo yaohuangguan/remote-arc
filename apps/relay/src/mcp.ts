@@ -382,7 +382,7 @@ export function createRemoteLinkMcp(
       {
         title: "Run a command on a remote computer",
         description:
-          "Run a terminal command on a linked computer. The device itself must also be running in developer or full mode.",
+          "Run a terminal command on a linked computer when the start_process skill is enabled for that device. The local Remote Arc Safety Guard blocks a narrow set of catastrophic system commands.",
         inputSchema: z.object({
           device_id: z.string(),
           command: z.string(),
@@ -410,7 +410,7 @@ export function createRemoteLinkMcp(
       {
         title: "Write a file on a remote computer",
         description:
-          "Write or append text on a linked computer. The device itself must be in developer or full mode.",
+          "Write or append text on a linked computer when the write_file skill is enabled. Supported CLI versions create a local-only undo snapshot before the change.",
         inputSchema: z.object({
           device_id: z.string(),
           path: z.string(),
@@ -440,7 +440,7 @@ export function createRemoteLinkMcp(
       {
         title: "Edit text on a remote computer",
         description:
-          "Apply a targeted search-and-replace edit to a file on a linked computer.",
+          "Apply a targeted search-and-replace edit to a file on a linked computer. Supported CLI versions create a local-only undo snapshot before the change.",
         inputSchema: z.object({
           device_id: z.string(),
           file_path: z.string(),
@@ -469,6 +469,29 @@ export function createRemoteLinkMcp(
             new_string,
             expected_replacements,
           }),
+        );
+      },
+    );
+
+    server.registerTool(
+      "undo_last_change",
+      {
+        title: "Undo the last Remote Arc file change",
+        description:
+          "Restore the most recent reversible write_file or edit_block change on a linked computer. The snapshot is stored only on that device, not in Remote Arc Cloud.",
+        inputSchema: z.object({
+          device_id: z.string(),
+        }),
+        annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("computer:write"),
+      },
+      async ({ device_id }) => {
+        if (!identity || !hasScope(identity, "computer:write")) {
+          return authRequired(env, "computer:write");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "undo_last_change", {}),
         );
       },
     );

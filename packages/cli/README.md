@@ -63,6 +63,28 @@ while the relay enforces the saved per-device policy before forwarding a call.
 Use `--safe` when you want an additional local hard cap that prevents write
 skills from running even if they are enabled in the dashboard.
 
+## Local Undo
+
+Remote Arc snapshots the previous local file state before supported
+`write_file` and `edit_block` operations. These snapshots stay under
+`~/.remotearc/undo` on the device and are never uploaded to Remote Arc Cloud.
+
+The `undo_last_change` skill restores the newest reversible Remote Arc file
+change. Snapshots expire after 7 days, use at most 200 MB in total, and files
+larger than 20 MB are not snapshotted.
+
+Local Undo covers Remote Arc file writes only. It cannot reverse external side
+effects such as publishing a package, deploying cloud infrastructure, sending a
+request to another service, or mutating a remote database.
+
+## Safety Guard
+
+Terminal access stays useful for normal development workflows. The local CLI
+only blocks a narrow set of catastrophic commands such as root/home recursive
+deletion, disk formatting or raw-disk overwrite, fork bombs, and machine
+shutdown/reboot. These checks happen on the device before the command reaches
+the local execution core.
+
 ## Security
 
 - Each computer receives its own revocable credential.
@@ -71,6 +93,7 @@ skills from running even if they are enabled in the dashboard.
 - MCP access uses OAuth 2.1 + PKCE.
 - Device access is scoped to the authenticated Remote Arc account.
 - You can revoke paired devices from the Remote Arc dashboard.
+- Supported file changes can be rolled back from local-only snapshots.
 
 Remote computer control can modify files and execute commands. Remote Arc
 starts new devices read-only; enable additional skills only when you want the

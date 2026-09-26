@@ -22,25 +22,44 @@ Remote Arc gives AI clients access to real computers. Treat the relay, OAuth ser
 
 ## Local permissions
 
-Safe mode advertises read-oriented tools only.
+Newly paired devices start with read-oriented skills only.
 
-Developer mode additionally permits file mutation and command execution.
+The **Developer** preset adds file mutation plus conflict-safe Local Undo. The
+**Full** preset additionally enables terminal execution. Presets are shortcuts;
+the underlying policy remains a per-device list of individually controllable
+skills.
 
-Neither mode is a full operating-system sandbox. Once command execution is enabled, shell commands can access resources with the permissions of the local OS user.
+The CLI also enforces a narrow local Safety Guard before terminal commands reach
+the execution core. It blocks clearly catastrophic operations such as root/home
+recursive deletion, disk formatting or raw-disk overwrite, fork bombs, and
+machine shutdown/reboot. It intentionally does not turn normal development
+commands into an approval workflow.
+
+Neither preset is a full operating-system sandbox. Once terminal execution is
+enabled, commands can access resources with the permissions of the local OS user.
+
+## Local Undo
+
+Before supported `write_file` and `edit_block` operations, Remote Arc stores
+the previous file state under `~/.remotearc/undo` on the device. Snapshots are
+not uploaded to Remote Arc Cloud.
+
+Undo verifies that the file still matches the state produced by the Remote Arc
+edit before restoring it. If the file changed again afterward, automatic undo is
+refused rather than overwriting newer work.
+
+Local Undo does not cover external side effects such as deployments, package
+publishes, network calls, or remote database mutations.
 
 ## Before public multi-user release
 
 The project still needs:
 
-- login and pairing rate limits
 - CSRF tokens for state-changing browser actions
 - explicit sensitive-path deny rules
-- command-level approval policies
-- audit history with secret redaction
-- device/session revocation propagation
 - signed and notarized installers
 - automatic security updates
-- abuse monitoring for public OAuth/DCR endpoints
+- continued abuse monitoring and security review of public OAuth/DCR endpoints
 
 ## Vulnerability reports
 

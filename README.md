@@ -186,29 +186,41 @@ Later runs reuse the saved device credential and connect immediately.
 CLI options:
 
 ```text
---safe        read-only capability mode
---developer   read/write/shell capability mode (default)
+--safe        hard local read-only cap
+--developer   legacy alias for dashboard-managed capabilities
 --reset       remove local pairing credentials
 --version
 --help
 ```
 
-## Local capability boundary
+## Device skill boundary
 
-Remote Arc does not expose the entire Desktop Commander tool catalog by default.
-
-Safe mode:
+Remote Arc does not grant the entire local execution catalog by default. Newly
+paired devices start with the **Safe** preset:
 
 - `list_directory`
 - `read_file`
 - `get_file_info`
 - `list_processes`
 
-Developer mode additionally exposes:
+The **Developer** preset additionally enables:
 
-- `start_process`
 - `write_file`
 - `edit_block`
+- `undo_last_change`
+
+The **Full** preset additionally enables:
+
+- `start_process`
+
+Presets are shortcuts over an individually editable per-device skill list.
+`npx remotelink --safe` adds an extra local hard cap so the dashboard cannot
+expand that device beyond read-only access.
+
+Supported file writes create conflict-safe snapshots under
+`~/.remotearc/undo`. The snapshots stay on the computer and are not uploaded
+to Remote Arc Cloud. Terminal execution also passes through a narrow local
+Safety Guard for catastrophic system commands.
 
 The device advertises its actual available tools when it connects. The relay refuses to forward tools the device did not advertise.
 
@@ -225,6 +237,7 @@ Current remote tools:
 - `start_process`
 - `write_file`
 - `edit_block`
+- `undo_last_change`
 
 Every device call is checked against the authenticated user's D1 device ownership before it reaches the live WebSocket.
 

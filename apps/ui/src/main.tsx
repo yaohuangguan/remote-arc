@@ -96,6 +96,7 @@ const DEVICE_TOOL_CATALOG = [
   "list_directory",
   "get_file_info",
   "edit_block",
+  "undo_last_change",
   "start_process",
   "list_processes",
 ] as const;
@@ -111,6 +112,7 @@ const DEVELOPER_DEVICE_TOOLS = [
   ...SAFE_DEVICE_TOOLS,
   "write_file",
   "edit_block",
+  "undo_last_change",
 ] as const;
 
 type DeviceAccessPreset = "safe" | "developer" | "full" | "custom";
@@ -118,10 +120,15 @@ type DeviceAccessPreset = "safe" | "developer" | "full" | "custom";
 const sameToolSet = (left: readonly string[], right: readonly string[]) =>
   left.length === right.length && left.every((tool) => right.includes(tool));
 
-const deviceAccessPreset = (tools: readonly string[]): DeviceAccessPreset => {
-  if (sameToolSet(tools, SAFE_DEVICE_TOOLS)) return "safe";
-  if (sameToolSet(tools, DEVELOPER_DEVICE_TOOLS)) return "developer";
-  if (sameToolSet(tools, DEVICE_TOOL_CATALOG)) return "full";
+const deviceAccessPreset = (
+  tools: readonly string[],
+  availableTools: readonly string[],
+): DeviceAccessPreset => {
+  const supported = (preset: readonly string[]) =>
+    preset.filter((tool) => availableTools.includes(tool));
+  if (sameToolSet(tools, supported(SAFE_DEVICE_TOOLS))) return "safe";
+  if (sameToolSet(tools, supported(DEVELOPER_DEVICE_TOOLS))) return "developer";
+  if (sameToolSet(tools, supported(DEVICE_TOOL_CATALOG))) return "full";
   return "custom";
 };
 
@@ -659,9 +666,9 @@ function Landing({ user }: { user?: User | null }) {
           <article><span>01</span><h2>{tr("Read-only by default", "默认只读")}</h2><p>{tr("Every newly paired computer starts with only read-oriented skills enabled. Writing files and terminal execution stay off until you choose otherwise.", "每台新配对电脑默认只开启读取类技能；写文件和终端执行只有在你主动开启后才可用。")}</p></article>
           <article><span>02</span><h2>{tr("Skills, not blanket access", "管理技能，而不是整机放权")}</h2><p>{tr("Use Safe, Developer or Full as quick presets, then enable or disable individual tools per device whenever you want.", "可以用 Safe、Developer、Full 快捷预设，也可以随时逐项开启或关闭每台设备的工具。")}</p></article>
           <article><span>03</span><h2>{tr("Zero content retention", "不留存操作内容")}</h2><p>{tr("The hosted relay processes tool payloads transiently to deliver requests, while audit storage keeps operational metadata rather than file contents, command arguments or tool results.", "托管 Relay 仅在完成请求所需期间短暂处理工具数据；审计存储只保留运行元数据，不保存文件内容、命令参数或工具结果。")}</p></article>
-          <article><span>04</span><h2>{tr("No inbound attack surface", "无需暴露入站端口")}</h2><p>{tr("Each machine creates an outbound encrypted connection. No public IP, port forwarding or always-on VPN.", "每台设备主动建立加密出站连接，无需公网 IP、端口映射或常驻 VPN。")}</p></article>
-          <article><span>05</span><h2>{tr("Real OAuth, not copied secrets", "标准 OAuth，不复制密钥")}</h2><p>{tr("OAuth 2.1, PKCE, short-lived codes and rotating refresh tokens replace shared URLs and pasted credentials.", "OAuth 2.1、PKCE、短期授权码与轮换 Refresh Token，替代共享链接和手动粘贴凭证。")}</p></article>
-          <article><span>06</span><h2>{tr("Private, useful audit", "隐私友好的可用审计")}</h2><p>{tr("See the device, tool, result and time without storing file contents or command arguments.", "记录设备、工具、结果与时间，但不保存文件内容或命令参数。")}</p></article>
+          <article><span>04</span><h2>{tr("Local Undo", "本机可撤销")}</h2><p>{tr("Before supported file edits, Remote Arc keeps the previous state on your own device. Ask your AI to undo the last change without uploading the snapshot to our cloud.", "对支持的文件修改，Remote Arc 会先在你的电脑本地保存旧状态。你可以直接让 AI 撤销上一次修改，快照不会上传到我们的云端。")}</p></article>
+          <article><span>05</span><h2>{tr("Safety Guard", "高风险操作防护")}</h2><p>{tr("Normal development commands run without repeated prompts. A narrow local guard blocks catastrophic actions such as root deletion, disk formatting and machine shutdown.", "正常开发命令不会反复弹确认；只有删除根目录、格式化磁盘、关机等灾难级操作会被本机 Safety Guard 拦截。")}</p></article>
+          <article><span>06</span><h2>{tr("No inbound ports", "无需暴露入站端口")}</h2><p>{tr("Each machine creates an outbound encrypted connection. No public IP, port forwarding or always-on VPN.", "每台设备主动建立加密出站连接，无需公网 IP、端口映射或常驻 VPN。")}</p></article>
         </div>
       </section>
 
@@ -893,8 +900,8 @@ function ResourcesPage({ user }: { user?: User | null }) {
         <article id="per-device-permissions">
           <span className="resourceArticleTag">POLICY / 06</span>
           <h2>{tr("Per-device permissions", "每设备权限")}</h2>
-          <p>{tr("A laptop used for development does not need the same exposure as a home server. Remote Arc stores per-device tool policy in the control plane, blocks disabled tools before routing, and still respects the local agent's advertised capability set.", "开发用笔记本与家庭服务器不应暴露同样的能力。Remote Arc 在控制面保存每设备工具策略，在路由前拦截被关闭的工具，同时仍严格受本地 Agent 实际声明的能力集合约束。")}</p>
-          <div className="resourceCodeRail"><code>read_file</code><span>✓</span><code>start_process</code><span>?</span><code>write_file</code><span>×</span></div>
+          <p>{tr("A laptop used for development does not need the same exposure as a home server. Remote Arc stores per-device tool policy in the control plane, blocks disabled tools before routing, and still respects the local agent's advertised capability set. Supported file edits can also be reversed from local-only snapshots.", "开发用笔记本与家庭服务器不应暴露同样的能力。Remote Arc 在控制面保存每设备工具策略，在路由前拦截被关闭的工具，同时仍严格受本地 Agent 实际声明的能力集合约束。支持的文件修改还可以通过仅保存在本机的快照撤销。")}</p>
+          <div className="resourceCodeRail"><code>read_file</code><span>✓</span><code>edit_block</code><span>↶</span><code>start_process</code><span>?</span></div>
         </article>
 
         <article id="privacy-audit">
@@ -1282,7 +1289,7 @@ function Dashboard({
                 const advertisedTools = device.available_tools || device.tools;
                 const enabledTools = device.allowed_tools == null ? advertisedTools : device.allowed_tools;
                 const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools]));
-                const accessPreset = deviceAccessPreset(enabledTools);
+                const accessPreset = deviceAccessPreset(enabledTools, advertisedTools);
                 return (
                   <article className={"deviceCard managed " + device.status} key={device.id}>
                     <div className="deviceTop">
