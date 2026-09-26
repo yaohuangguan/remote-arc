@@ -5,7 +5,10 @@ import fs from "node:fs/promises";
 import { spawn } from "node:child_process";
 import process from "node:process";
 import { Client } from "@modelcontextprotocol/client";
-import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
+import {
+  StdioClientTransport,
+  getDefaultEnvironment,
+} from "@modelcontextprotocol/client/stdio";
 import WebSocket from "ws";
 import {
   assertCommandAllowed,
@@ -15,7 +18,7 @@ import {
   undoLastChange,
 } from "./local-safety.js";
 
-const VERSION = "0.3.6";
+const VERSION = "0.3.7";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -254,7 +257,15 @@ class ExecutionCore {
     const command = process.platform === "win32" ? "npx.cmd" : "npx";
     const transport = new StdioClientTransport({
       command,
-      args: ["-y", "@wonderwhy-er/desktop-commander@latest"],
+      args: [
+        "--yes",
+        "--ignore-scripts",
+        "@wonderwhy-er/desktop-commander@0.2.51",
+      ],
+      env: {
+        ...getDefaultEnvironment(),
+        npm_config_ignore_scripts: "true",
+      },
       stderr: "inherit",
     });
 
@@ -417,7 +428,10 @@ async function connectAgent(config: SavedConfig) {
         }
       };
       void sendHeartbeat();
-      const heartbeatTimer = setInterval(() => void sendHeartbeat(), 60_000);
+      const heartbeatTimer = setInterval(
+        () => void sendHeartbeat(),
+        15 * 60_000,
+      );
 
       await new Promise<void>((resolve) => {
         ws.on("message", async (raw) => {

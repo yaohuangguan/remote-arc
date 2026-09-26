@@ -55,6 +55,7 @@ type MonthlyUsage = {
 type ProductStatus = {
   googleConfigured: boolean;
   mcpEndpoint: string;
+  devices: Device[];
   totalDevices: number;
   onlineDevices: number;
   recentActivity: AuditEvent[];
@@ -1751,9 +1752,11 @@ function App() {
 
   async function loadAll() {
     try {
-      const [devicesResponse, statusResponse] = await Promise.all([fetch("/api/devices"), fetch("/api/status")]);
-      if (devicesResponse.ok) setDevices((await devicesResponse.json()) as Device[]);
-      if (statusResponse.ok) setStatus((await statusResponse.json()) as ProductStatus);
+      const response = await fetch("/api/status");
+      if (!response.ok) return;
+      const payload = (await response.json()) as ProductStatus;
+      setDevices(payload.devices);
+      setStatus(payload);
     } catch {
       // Keep the last known dashboard state during a temporary network interruption.
     }
@@ -1771,7 +1774,7 @@ function App() {
       if (document.visibilityState === "visible") void loadAll();
     };
     void loadAll();
-    const timer = window.setInterval(refreshIfVisible, 30_000);
+    const timer = window.setInterval(refreshIfVisible, 60_000);
     window.addEventListener("focus", refreshIfVisible);
     document.addEventListener("visibilitychange", refreshIfVisible);
     return () => {

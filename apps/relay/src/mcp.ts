@@ -15,7 +15,8 @@ type Env = {
 
 type Scope = "devices:read" | "computer:read" | "computer:write";
 
-const registry = (env: Env) => env.REGISTRY.getByName("global");
+const registry = (env: Env, userId: string) =>
+  env.REGISTRY.getByName("user:" + userId);
 
 const hasScope = (identity: OAuthIdentity, scope: Scope) =>
   identity.scope.split(/\s+/).includes(scope);
@@ -86,7 +87,7 @@ async function callDevice(
     return reviewerDemoResult(tool, args);
   }
 
-  const response = await registry(env).fetch(
+  const registryRequest = () =>
     new Request("https://registry/call", {
       method: "POST",
       headers: {
@@ -94,8 +95,14 @@ async function callDevice(
         "x-remote-link-user-id": identity.userId,
       },
       body: JSON.stringify({ deviceId, tool, arguments: args }),
-    }),
-  );
+    });
+
+  let response = await registry(env, identity.userId).fetch(registryRequest());
+  if (response.status === 404) {
+    // Temporary migration fallback for devices whose long-lived WebSocket
+    // was established before per-user Durable Object sharding.
+    response = await env.REGISTRY.getByName("global").fetch(registryRequest());
+  }
 
   const payload = (await response.json()) as {
     result?: unknown;

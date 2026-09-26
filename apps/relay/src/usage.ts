@@ -20,6 +20,16 @@ export function monthlyLimit(env: UsageEnv) {
   return Math.floor(parsed);
 }
 
+function usageSnapshot(month: string, used: number, limit: number | null): MonthlyUsage {
+  return {
+    month,
+    used,
+    limit,
+    remaining: limit === null ? null : Math.max(0, limit - used),
+    unlimited: limit === null,
+  };
+}
+
 export async function getMonthlyUsage(
   env: UsageEnv,
   userId: string,
@@ -32,14 +42,7 @@ export async function getMonthlyUsage(
     .bind(userId, month)
     .first<{ tool_calls: number }>();
 
-  const used = row?.tool_calls || 0;
-  return {
-    month,
-    used,
-    limit,
-    remaining: limit === null ? null : Math.max(0, limit - used),
-    unlimited: limit === null,
-  };
+  return usageSnapshot(month, row?.tool_calls || 0, limit);
 }
 
 export async function consumeToolCall(env: UsageEnv, userId: string) {
@@ -48,28 +51,31 @@ export async function consumeToolCall(env: UsageEnv, userId: string) {
   const now = new Date().toISOString();
 
   if (limit === null) {
-    await env.DB.prepare(
+    const row = await env.DB.prepare(
       `INSERT INTO user_monthly_usage (user_id, month_key, tool_calls, updated_at)
        VALUES (?1, ?2, 1, ?3)
        ON CONFLICT(user_id, month_key)
-       DO UPDATE SET tool_calls = tool_calls + 1, updated_at = excluded.updated_at`,
+       DO UPDATE SET tool_calls = tool_calls + 1, updated_at = excluded.updated_at
+       RETURNING tool_calls`,
     )
       .bind(userId, month, now)
-      .run();
-    return getMonthlyUsage(env, userId);
+      .first<{ tool_calls: number }>();
+
+    return usageSnapshot(month, row?.tool_calls || 1, null);
   }
 
-  const result = await env.DB.prepare(
+  const row = await env.DB.prepare(
     `INSERT INTO user_monthly_usage (user_id, month_key, tool_calls, updated_at)
      VALUES (?1, ?2, 1, ?3)
      ON CONFLICT(user_id, month_key)
      DO UPDATE SET tool_calls = tool_calls + 1, updated_at = excluded.updated_at
-     WHERE tool_calls < ?4`,
+     WHERE tool_calls < ?4
+     RETURNING tool_calls`,
   )
     .bind(userId, month, now, limit)
-    .run();
+    .first<{ tool_calls: number }>();
 
-  if (!result.meta.changes) {
+  if (!row) {
     const usage = await getMonthlyUsage(env, userId);
     const error = new Error(
       `Monthly Remote Arc tool-call limit reached (${usage.used}/${usage.limit}).`,
@@ -78,5 +84,5 @@ export async function consumeToolCall(env: UsageEnv, userId: string) {
     throw error;
   }
 
-  return getMonthlyUsage(env, userId);
+  return usageSnapshot(month, row.tool_calls, limit);
 }

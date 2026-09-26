@@ -168,7 +168,7 @@ export default {
       return Response.json({
         ok: true,
         service: "remotearc-relay",
-        version: "0.3.6",
+        version: "0.3.7",
         auth: "oauth2-pkce",
       });
     }
@@ -238,6 +238,7 @@ export default {
       return Response.json({
         googleConfigured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
         mcpEndpoint: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp",
+        devices,
         totalDevices: devices.length,
         onlineDevices: devices.filter((device) => device.status === "online").length,
         recentActivity: recent,
@@ -324,7 +325,7 @@ export default {
       }
 
       return env.REGISTRY
-        .getByName("global")
+        .getByName("user:" + identity.user_id)
         .fetch(withTrustedDeviceHeaders(request, identity));
     }
 

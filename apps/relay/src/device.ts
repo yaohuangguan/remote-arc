@@ -283,22 +283,43 @@ export async function getDevicesForUser(
       allowed_tools: string | null;
     }>();
 
-  const onlineResponse = await env.REGISTRY.getByName("global").fetch(
+  type OnlineDevice = {
+    id: string;
+    tools?: string[];
+    status?: string;
+  };
+
+  const registryRequest = () =>
     new Request("https://registry/devices", {
       headers: { "x-remote-link-user-id": userId },
-    }),
-  );
+    });
+
+  const onlineResponse = await env.REGISTRY
+    .getByName("user:" + userId)
+    .fetch(registryRequest());
   const online = onlineResponse.ok
-    ? ((await onlineResponse.json()) as Array<{
-        id: string;
-        tools?: string[];
-        status?: string;
-      }>)
+    ? ((await onlineResponse.json()) as OnlineDevice[])
     : [];
+
+  const storedDevices = rows.results || [];
+  if (online.length < storedDevices.length) {
+    // Temporary migration fallback while pre-sharding WebSockets may still
+    // be attached to the legacy singleton Durable Object.
+    const legacyResponse = await env.REGISTRY
+      .getByName("global")
+      .fetch(registryRequest());
+    if (legacyResponse.ok) {
+      const legacy = (await legacyResponse.json()) as OnlineDevice[];
+      const seen = new Set(online.map((device) => device.id));
+      for (const device of legacy) {
+        if (!seen.has(device.id)) online.push(device);
+      }
+    }
+  }
 
   const onlineById = new Map(online.map((device) => [device.id, device]));
 
-  return (rows.results || []).map((device) => {
+  return storedDevices.map((device) => {
     const reviewerFixture =
       env.REVIEWER_DEMO_DEVICE_ID && device.id === env.REVIEWER_DEMO_DEVICE_ID
         ? {
