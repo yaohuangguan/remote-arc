@@ -490,7 +490,7 @@ function Landing({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const command = "npx remotelink";
   return (
-    <PublicLayout>
+    <PublicLayout user={user}>
       <section className="landingHero">
         <div className="heroCopy">
           <span className="eyebrow">{tr("THE REMOTE CONTROL PLANE FOR AI", "面向 AI 的远程控制层")}</span>

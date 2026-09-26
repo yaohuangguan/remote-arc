@@ -2705,3 +2705,24 @@ body{font-size:18px;line-height:1.6}
   }
 }
 
+
+
+/* Homepage approval-ready hero proportions */
+@media(min-width:1028px){
+  .publicPage.landing{
+    width:min(1280px,calc(100% - 48px));
+  }
+  .landingHero{
+    grid-template-columns:minmax(0,1fr) minmax(560px,1.08fr) !important;
+    gap:56px !important;
+  }
+  .heroArchitecture{
+    width:100% !important;
+    height:474px !important;
+    margin-top:47px !important;
+    padding:28px 30px 24px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:space-between !important;
+  }
+}
