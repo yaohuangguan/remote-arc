@@ -21,6 +21,13 @@ type DeviceStartBody = {
   hostname?: string;
 };
 
+const DEFAULT_ALLOWED_TOOLS = [
+  "list_directory",
+  "read_file",
+  "get_file_info",
+  "list_processes",
+] as const;
+
 export async function handleDeviceStart(request: Request, env: DeviceEnv) {
   const body = (await request.json().catch(() => ({}))) as DeviceStartBody;
   const deviceName = (body.device_name || "").trim();
@@ -206,8 +213,8 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
     env.DB.prepare(
       `INSERT INTO devices (
         id, user_id, name, platform, arch, hostname,
-        credential_hash, created_at, last_seen, revoked_at
-      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL)`,
+        credential_hash, created_at, last_seen, revoked_at, allowed_tools
+      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL, ?9)`,
     ).bind(
       deviceId,
       user.id,
@@ -217,6 +224,7 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
       pairing.hostname,
       pairing.device_secret_hash,
       createdAt,
+      JSON.stringify(DEFAULT_ALLOWED_TOOLS),
     ),
     env.DB.prepare(
       `UPDATE device_pairings

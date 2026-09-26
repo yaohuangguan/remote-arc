@@ -8,13 +8,13 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import WebSocket from "ws";
 
-const VERSION = "0.3.4";
+const VERSION = "0.3.5";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
 const LEGACY_CONFIG_PATH = path.join(os.homedir(), ".remote-link", "config.json");
 
-type Mode = "safe" | "developer";
+type Mode = "managed" | "safe" | "developer";
 
 type SavedConfig = {
   deviceId: string;
@@ -100,7 +100,15 @@ function argFlag(name: string) {
 
 function selectedMode(): Mode {
   if (argFlag("--safe")) return "safe";
-  return "developer";
+  return "managed";
+}
+
+function isLocalSafeMode(mode: Mode) {
+  return mode === "safe";
+}
+
+function modeLabel(mode: Mode) {
+  return isLocalSafeMode(mode) ? "safe local cap" : "dashboard-managed";
 }
 
 async function readConfig(): Promise<SavedConfig | null> {
@@ -174,7 +182,7 @@ async function pair(origin: string, mode: Mode): Promise<SavedConfig> {
   const pairing = (await response.json()) as PairingStart;
 
   banner();
-  logLine("info", `Device: ${bold(deviceName)} · ${process.platform}/${process.arch} · ${mode} mode`);
+  logLine("info", `Device: ${bold(deviceName)} · ${process.platform}/${process.arch} · ${modeLabel(mode)}`);
   logLine("event", "Pairing required — opening secure browser approval.");
   process.stdout.write("\n  Pairing code  " + bold(cyan(pairing.user_code)) + "\n");
   process.stdout.write("  " + dim(pairing.verification_uri_complete) + "\n\n");
@@ -251,14 +259,14 @@ class ExecutionCore {
 
   async tools() {
     const list = await (await this.connect()).listTools();
-    const allowed = this.mode === "developer" ? DEVELOPER_TOOLS : SAFE_TOOLS;
-    return list.tools.filter((tool) => allowed.has(tool.name));
+    const locallyAvailable = isLocalSafeMode(this.mode) ? SAFE_TOOLS : DEVELOPER_TOOLS;
+    return list.tools.filter((tool) => locallyAvailable.has(tool.name));
   }
 
   async call(name: string, args: Record<string, unknown>) {
-    const allowed = this.mode === "developer" ? DEVELOPER_TOOLS : SAFE_TOOLS;
-    if (!allowed.has(name)) {
-      throw new Error("Tool blocked by local permission mode: " + name);
+    const locallyAvailable = isLocalSafeMode(this.mode) ? SAFE_TOOLS : DEVELOPER_TOOLS;
+    if (!locallyAvailable.has(name)) {
+      throw new Error("Tool blocked by local safety cap: " + name);
     }
 
     return (await this.connect()).callTool({
@@ -278,7 +286,10 @@ async function connectAgent(config: SavedConfig) {
   const core = new ExecutionCore(config.mode);
   banner();
   logLine("info", `Device: ${bold(config.deviceName)} · ${process.platform}/${process.arch}`);
-  logLine("info", `Permission profile: ${config.mode === "developer" ? yellow("developer") : green("safe")}`);
+  logLine(
+    "info",
+    `Permission profile: ${isLocalSafeMode(config.mode) ? green("safe local cap") : cyan("dashboard-managed")}`,
+  );
 
   const tools = await core.tools();
   logLine("success", `Local tools ready: ${tools.length} exposed`);
@@ -433,8 +444,8 @@ async function main() {
         "  npx remotelink",
         "",
         "Options:",
-        "  --safe        Read-only local capability mode",
-        "  --developer   Read/write/shell mode (default)",
+        "  --safe        Hard local read-only cap; dashboard cannot enable write tools",
+        "  --developer   Legacy alias for dashboard-managed capabilities",
         "  --reset       Remove this computer's saved pairing",
         "  --version     Print CLI version",
         "  --help        Show this help",
@@ -468,7 +479,7 @@ async function main() {
   if (!config) {
     config = await pair(origin, selectedMode());
   } else if (argFlag("--safe") || argFlag("--developer")) {
-    config.mode = selectedMode();
+    config.mode = argFlag("--safe") ? "safe" : "managed";
     await writeConfig(config);
   }
 

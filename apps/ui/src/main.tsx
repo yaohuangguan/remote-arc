@@ -100,6 +100,31 @@ const DEVICE_TOOL_CATALOG = [
   "list_processes",
 ] as const;
 
+const SAFE_DEVICE_TOOLS = [
+  "list_directory",
+  "read_file",
+  "get_file_info",
+  "list_processes",
+] as const;
+
+const DEVELOPER_DEVICE_TOOLS = [
+  ...SAFE_DEVICE_TOOLS,
+  "write_file",
+  "edit_block",
+] as const;
+
+type DeviceAccessPreset = "safe" | "developer" | "full" | "custom";
+
+const sameToolSet = (left: readonly string[], right: readonly string[]) =>
+  left.length === right.length && left.every((tool) => right.includes(tool));
+
+const deviceAccessPreset = (tools: readonly string[]): DeviceAccessPreset => {
+  if (sameToolSet(tools, SAFE_DEVICE_TOOLS)) return "safe";
+  if (sameToolSet(tools, DEVELOPER_DEVICE_TOOLS)) return "developer";
+  if (sameToolSet(tools, DEVICE_TOOL_CATALOG)) return "full";
+  return "custom";
+};
+
 const platformLabel = (platform?: string | null) => {
   if (platform === "win32") return "Windows";
   if (platform === "darwin") return "macOS";
@@ -507,20 +532,20 @@ function Landing({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <section className="landingHero">
         <div className="heroCopy">
-          <span className="eyebrow">{tr("THE REMOTE CONTROL PLANE FOR AI", "面向 AI 的远程控制层")}</span>
-          <h1>{tr("Your computer. Within reach of AI.", "让 AI 真正触达你的电脑。")}</h1>
+          <span className="eyebrow">{tr("CONTROLLED COMPUTER ACCESS FOR AI", "面向 AI 的可控电脑访问")}</span>
+          <h1>{tr("Give your AI access. Keep the control.", "让 AI 获得能力，把控制权留给你。")}</h1>
           <p>{tr(
-            "Give ChatGPT, Claude and compatible MCP clients secure access to your real Windows, macOS and Linux machines — without public IPs, VPNs or surrendering control.",
-            "让 ChatGPT、Claude 与兼容 MCP 的 AI 安全访问你的真实 Windows、macOS 和 Linux 设备。无需公网 IP，无需 VPN，控制权始终在你手里。"
+            "Remote Arc securely connects ChatGPT, Claude and compatible MCP clients to your real computers. New devices start read-only, every skill is controllable, and sensitive content is not intentionally retained by Remote Arc.",
+            "Remote Arc 安全连接 ChatGPT、Claude 与兼容 MCP 的 AI 到你的真实电脑。新设备默认只读，每项技能都可独立控制，Remote Arc 不会有意留存敏感操作内容。"
           )}</p>
           <div className="landingActions">
             <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : "#install"}>{user ? tr("Open dashboard", "打开控制台") : tr("Install Remote Arc", "安装 Remote Arc")}</a>
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
-            <span>{tr("10,000 hosted calls / month", "每月 10,000 次托管调用")}</span>
-            <span>{tr("Free hosted tier + paid usage", "免费托管额度 + 付费扩容")}</span>
-            <span>{tr("Outbound connection only", "仅需出站连接")}</span>
+            <span>{tr("Read-only by default", "默认只读")}</span>
+            <span>{tr("Zero content retention", "不留存操作内容")}</span>
+            <span>{tr("Per-device skill controls", "逐设备技能控制")}</span>
           </div>
         </div>
         <div className="heroArchitecture" aria-label={tr("How Remote Arc connects AI clients to your devices", "Remote Arc 如何连接 AI 客户端与设备")}>
@@ -628,12 +653,12 @@ function Landing({ user }: { user?: User | null }) {
       <section className="valueSection">
         <div className="sectionIntro">
           <span className="eyebrow">{tr("WHY REMOTE ARC", "为什么选择 REMOTE ARC")}</span>
-          <h2>{tr("The convenience of a service. The leverage of open infrastructure.", "托管服务的省心，开放基础设施的掌控力。")}</h2>
+          <h2>{tr("Powerful remote access without handing over the machine.", "给 AI 强大的远程能力，但不是把整台电脑交出去。")}</h2>
         </div>
         <div className="landingFeatures">
-          <article><span>01</span><h2>{tr("One endpoint, every machine", "一个端点，所有设备")}</h2><p>{tr("Name the computer in your prompt. Remote Arc handles identity, presence and routing behind the scenes.", "在提示词里说出电脑名称，身份、在线状态与路由都由 Remote Arc 处理。")}</p></article>
-          <article><span>02</span><h2>{tr("Local-first permissions", "权限最终由本机决定")}</h2><p>{tr("Safe mode is read-only. Developer mode adds write and shell tools. The relay cannot expand what a device exposes.", "Safe 模式只读；Developer 模式开放写入与命令。Relay 无法扩大设备本机声明的权限。")}</p></article>
-          <article><span>03</span><h2>{tr("Hosted, ready to scale", "托管运行，按需扩容")}</h2><p>{tr("Start on the free hosted tier, then add paid usage when you need more capacity — without changing your endpoint or devices.", "从免费托管额度开始，需要更多容量时直接充值扩容，无需更换端点或重新配置设备。")}</p></article>
+          <article><span>01</span><h2>{tr("Read-only by default", "默认只读")}</h2><p>{tr("Every newly paired computer starts with only read-oriented skills enabled. Writing files and terminal execution stay off until you choose otherwise.", "每台新配对电脑默认只开启读取类技能；写文件和终端执行只有在你主动开启后才可用。")}</p></article>
+          <article><span>02</span><h2>{tr("Skills, not blanket access", "管理技能，而不是整机放权")}</h2><p>{tr("Use Safe, Developer or Full as quick presets, then enable or disable individual tools per device whenever you want.", "可以用 Safe、Developer、Full 快捷预设，也可以随时逐项开启或关闭每台设备的工具。")}</p></article>
+          <article><span>03</span><h2>{tr("Zero content retention", "不留存操作内容")}</h2><p>{tr("The hosted relay processes tool payloads transiently to deliver requests, while audit storage keeps operational metadata rather than file contents, command arguments or tool results.", "托管 Relay 仅在完成请求所需期间短暂处理工具数据；审计存储只保留运行元数据，不保存文件内容、命令参数或工具结果。")}</p></article>
           <article><span>04</span><h2>{tr("No inbound attack surface", "无需暴露入站端口")}</h2><p>{tr("Each machine creates an outbound encrypted connection. No public IP, port forwarding or always-on VPN.", "每台设备主动建立加密出站连接，无需公网 IP、端口映射或常驻 VPN。")}</p></article>
           <article><span>05</span><h2>{tr("Real OAuth, not copied secrets", "标准 OAuth，不复制密钥")}</h2><p>{tr("OAuth 2.1, PKCE, short-lived codes and rotating refresh tokens replace shared URLs and pasted credentials.", "OAuth 2.1、PKCE、短期授权码与轮换 Refresh Token，替代共享链接和手动粘贴凭证。")}</p></article>
           <article><span>06</span><h2>{tr("Private, useful audit", "隐私友好的可用审计")}</h2><p>{tr("See the device, tool, result and time without storing file contents or command arguments.", "记录设备、工具、结果与时间，但不保存文件内容或命令参数。")}</p></article>
@@ -933,7 +958,7 @@ function McpPage({ user }: { user?: User | null }) {
       <section className="mcpSystemGrid">
         <article><span className="eyebrow">{tr("1 · PAIR THE DEVICE", "1 · 配对设备")}</span><h3>{tr("Install the device agent", "安装设备 Agent")}</h3><code>npx remotelink</code><p>{tr("The browser confirms the pairing code and stores a unique revocable credential on that machine.", "浏览器确认配对码，并在这台设备上保存一份独立、可撤销的凭证。")}</p></article>
         <article><span className="eyebrow">{tr("2 · GRANT SCOPES", "2 · 授予权限")}</span><h3>{tr("OAuth stays explicit", "OAuth 权限清晰可见")}</h3><div className="scopeChips"><code>devices:read</code><code>computer:read</code><code>computer:write</code></div><p>{tr("AI access can be revoked without re-pairing the computer.", "可以单独撤销 AI 的访问权限，而不需要重新配对电脑。")}</p></article>
-        <article><span className="eyebrow">{tr("3 · CHOOSE LOCAL POWER", "3 · 选择本机能力")}</span><h3>{tr("Safe or Developer device mode", "Safe 或 Developer 设备模式")}</h3><div className="modeRows"><span><b>Safe</b>{tr("Read files and inspect processes", "读取文件与查看进程")}</span><span><b>Developer</b>{tr("Write files and run commands", "写入文件与运行命令")}</span></div><p>{tr("This local Developer mode is separate from ChatGPT Developer Mode. The device always has the final say.", "这里的本机 Developer 模式与 ChatGPT Developer Mode 是两回事；最终权限始终由设备决定。")}</p></article>
+        <article><span className="eyebrow">{tr("3 · CHOOSE DEVICE SKILLS", "3 · 选择设备技能")}</span><h3>{tr("Start Safe. Add only what you need.", "默认 Safe，只增加真正需要的能力。")}</h3><div className="modeRows"><span><b>Safe</b>{tr("Read files and inspect processes", "读取文件与查看进程")}</span><span><b>Developer</b>{tr("Read and edit files", "读取并编辑文件")}</span><span><b>Full</b>{tr("Adds terminal execution", "额外开启终端执行")}</span></div><p>{tr("Presets are shortcuts. The real policy is a per-device skill list that you can customize at any time.", "预设只是快捷方式；真正生效的是每台设备独立的技能列表，你可以随时逐项修改。")}</p></article>
       </section>
 
       <section className="pluginPath">
@@ -1059,18 +1084,50 @@ function Dashboard({
     await refreshAll();
   }
 
+  async function saveDeviceTools(device: Device, next: readonly string[]) {
+    const available = device.status === "online"
+      ? (device.available_tools || device.tools)
+      : Array.from(new Set([...DEVICE_TOOL_CATALOG, ...(device.available_tools || device.tools)]));
+    const allowedTools = Array.from(new Set(next)).filter((tool) => available.includes(tool));
+    const response = await fetch("/api/devices/" + encodeURIComponent(device.id) + "/tools", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ allowed_tools: allowedTools }),
+    });
+    if (!response.ok) {
+      alert(tr("Could not update tool access.", "无法更新工具权限。"));
+      return false;
+    }
+    await refreshAll();
+    return true;
+  }
+
   async function updateDeviceTools(device: Device, tool: string, enabled: boolean) {
+    if (enabled && tool === "start_process" && !confirm(tr(
+      "Enable terminal execution on " + device.name + "? This allows the connected AI to run commands that can modify files, software and external services.",
+      "在 " + device.name + " 上开启终端执行？这会允许已连接的 AI 运行可能修改文件、软件及外部服务的命令。",
+    ))) return;
     const advertised = device.available_tools || device.tools;
     const baseline = device.status === "online"
       ? advertised
       : Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertised]));
     const current = device.allowed_tools == null ? baseline : device.allowed_tools;
     const next = enabled ? Array.from(new Set([...current, tool])) : current.filter((item) => item !== tool);
-    const response = await fetch("/api/devices/" + encodeURIComponent(device.id) + "/tools", {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ allowed_tools: next }),
-    });
-    if (!response.ok) return alert(tr("Could not update tool access.", "无法更新工具权限。"));
-    await refreshAll();
+    await saveDeviceTools(device, next);
+  }
+
+  async function applyDevicePreset(device: Device, preset: Exclude<DeviceAccessPreset, "custom">) {
+    if (preset === "full" && !confirm(tr(
+      "Switch " + device.name + " to Full Access? Full includes terminal execution and can perform destructive or irreversible operations.",
+      "将 " + device.name + " 切换为 Full Access？Full 包含终端执行能力，可能执行破坏性或不可逆操作。",
+    ))) return;
+    const next =
+      preset === "safe"
+        ? SAFE_DEVICE_TOOLS
+        : preset === "developer"
+          ? DEVELOPER_DEVICE_TOOLS
+          : DEVICE_TOOL_CATALOG;
+    await saveDeviceTools(device, next);
   }
 
   function navigateTab(tab: DashboardTab) {
@@ -1225,6 +1282,7 @@ function Dashboard({
                 const advertisedTools = device.available_tools || device.tools;
                 const enabledTools = device.allowed_tools == null ? advertisedTools : device.allowed_tools;
                 const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools]));
+                const accessPreset = deviceAccessPreset(enabledTools);
                 return (
                   <article className={"deviceCard managed " + device.status} key={device.id}>
                     <div className="deviceTop">
@@ -1244,8 +1302,16 @@ function Dashboard({
                     <div className="deviceAccessSummary">
                       <div>
                         <span className="eyebrow">{tr("MCP ACCESS", "MCP 权限")}</span>
-                        <strong>{device.status === "online" ? tr("Policy enforced now", "权限策略已实时生效") : tr("Policy saved for reconnect", "权限策略将在重连后生效")}</strong>
-                        <p>{tr("Remote Arc blocks disabled tools at the relay before a request reaches this computer.", "关闭的工具会在 Relay 层被拦截，不会到达这台电脑。")}</p>
+                        <strong>
+                          {accessPreset === "safe"
+                            ? tr("Safe · read-only", "Safe · 只读")
+                            : accessPreset === "developer"
+                              ? tr("Developer · files can be edited", "Developer · 可编辑文件")
+                              : accessPreset === "full"
+                                ? tr("Full access · terminal enabled", "Full Access · 已启用终端")
+                                : tr("Custom tool policy", "自定义工具权限")}
+                        </strong>
+                        <p>{tr("New devices start in Safe. Enable only the skills you want this AI to use.", "新设备默认使用 Safe，只开启你愿意交给 AI 的技能。")}</p>
                       </div>
                       <div className="deviceToolChips">
                         {enabledTools.slice(0,4).map((tool) => <span key={tool}>{tool}</span>)}
@@ -1253,8 +1319,23 @@ function Dashboard({
                       </div>
                     </div>
 
+                    <div className="devicePresetRow">
+                      <span>{tr("Quick presets", "快捷预设")}</span>
+                      <div>
+                        <button className={accessPreset === "safe" ? "active" : ""} onClick={() => void applyDevicePreset(device, "safe")}>
+                          <strong>Safe</strong><small>{tr("Read only", "只读")}</small>
+                        </button>
+                        <button className={accessPreset === "developer" ? "active" : ""} onClick={() => void applyDevicePreset(device, "developer")}>
+                          <strong>Developer</strong><small>{tr("Read + edit", "读写文件")}</small>
+                        </button>
+                        <button className={accessPreset === "full" ? "active danger" : "danger"} onClick={() => void applyDevicePreset(device, "full")}>
+                          <strong>Full</strong><small>{tr("Terminal", "含终端")}</small>
+                        </button>
+                      </div>
+                    </div>
+
                     <details className="deviceToolDetails">
-                      <summary>{tr("Manage tool access", "管理工具权限")}<span>{allTools.length} tools</span></summary>
+                      <summary>{tr("Manage individual skills", "逐项管理技能")}<span>{enabledTools.length} / {allTools.length}</span></summary>
                       <div className="toolToggleGrid">
                         {allTools.map((tool) => {
                           const enabled = device.allowed_tools == null ? (device.status === "online" ? advertisedTools.includes(tool) : true) : device.allowed_tools.includes(tool);
@@ -1541,10 +1622,10 @@ function Dashboard({
             <button className="modalClose" onClick={() => setShowAdd(false)}>×</button>
             <span className="eyebrow">{tr("ADD A DEVICE", "添加设备")}</span>
             <h2>{tr("Connect a computer in one command.", "一条命令连接电脑。")}</h2>
-            <p>{tr("No repository clone, environment file, token copy, public IP or router configuration.", "无需 clone 仓库、环境文件、复制 Token、公网 IP 或路由器配置。")}</p>
-            <div className="commandLabel">{tr("Developer mode · recommended", "Developer 模式 · 推荐")}</div>
+            <p>{tr("No repository clone, environment file, token copy, public IP or router configuration. New devices start with read-only skills enabled.", "无需 clone 仓库、环境文件、复制 Token、公网 IP 或路由器配置。新设备默认只开启只读技能。")}</p>
+            <div className="commandLabel">{tr("Recommended · Safe by default", "推荐 · 默认 Safe")}</div>
             <div className="commandBox"><code>{command}</code><CopyButton value={command}/></div>
-            <div className="commandLabel secondary">{tr("Read-oriented safe mode", "偏只读的 Safe 模式")}</div>
+            <div className="commandLabel secondary">{tr("Optional local hard lock · always read-only", "可选本机硬限制 · 始终只读")}</div>
             <div className="commandBox muted"><code>{safeCommand}</code><CopyButton value={safeCommand}/></div>
             <div className="onboardingSteps">
               <div><b>1</b><span><strong>{tr("Run the command", "运行命令")}</strong><small>Terminal / PowerShell · Node.js 20+</small></span></div>

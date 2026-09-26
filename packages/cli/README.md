@@ -27,7 +27,7 @@ copy is required.
 Remote MCP endpoint:
 
 ```text
-https://remotearc.app/mcp
+https://mcp.remotearc.app/mcp
 ```
 
 Website and device dashboard:
@@ -39,9 +39,9 @@ https://remotearc.app
 ## Commands
 
 ```text
-npx remotelink             Connect using developer mode
-npx remotelink --safe      Read-only capability mode
-npx remotelink --developer Read/write/shell capability mode
+npx remotelink             Connect with dashboard-managed skills
+npx remotelink --safe      Hard local read-only cap
+npx remotelink --developer Legacy alias for dashboard-managed capabilities
 npx remotelink --reset     Remove local pairing credentials
 npx remotelink --version   Show the CLI version
 npx remotelink --help      Show help
@@ -49,16 +49,19 @@ npx remotelink --help      Show help
 
 The package also exposes the aliases `remote-link` and `remote-arc`.
 
-## Local capability model
+## Capability model
 
-Safe mode exposes read-oriented capabilities such as directory listing,
-file reading, file metadata, and process listing.
+Newly paired devices start with only read-oriented skills enabled:
+directory listing, file reading, file metadata, and process listing.
 
-Developer mode additionally allows process execution and selected file
-modification capabilities.
+Use the Remote Arc dashboard to enable or disable individual skills per device.
+The Safe preset keeps access read-only, Developer adds file editing, and Full
+adds terminal execution.
 
-The connected device advertises its actual tool set to Remote Arc. The relay
-will not forward a tool the device did not advertise.
+By default the local CLI exposes the capabilities that the dashboard may grant,
+while the relay enforces the saved per-device policy before forwarding a call.
+Use `--safe` when you want an additional local hard cap that prevents write
+skills from running even if they are enabled in the dashboard.
 
 ## Security
 
@@ -69,8 +72,10 @@ will not forward a tool the device did not advertise.
 - Device access is scoped to the authenticated Remote Arc account.
 - You can revoke paired devices from the Remote Arc dashboard.
 
-Remote computer control can modify files and execute commands. Review the
-permissions you grant and use developer mode only on computers you control.
+Remote computer control can modify files and execute commands. Remote Arc
+starts new devices read-only; enable additional skills only when you want the
+connected AI to use them. Full terminal access should be used only on computers
+you control.
 
 ## Requirements
 

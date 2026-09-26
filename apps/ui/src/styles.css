@@ -3385,6 +3385,51 @@ body{font-size:18px;line-height:1.6}
   font-size:10px;
 }
 
+.devicePresetRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:0 2px 15px;
+}
+.devicePresetRow>span{
+  color:#607983;
+  font-size:11px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.devicePresetRow>div{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.devicePresetRow button{
+  display:grid;
+  gap:2px;
+  min-width:92px;
+  padding:8px 11px;
+  border:1px solid #1b3440;
+  border-radius:10px;
+  background:#07161d;
+  color:#8faab3;
+  cursor:pointer;
+  text-align:left;
+}
+.devicePresetRow button strong{font-size:12px;color:#c9dce1}
+.devicePresetRow button small{font-size:10px;color:#607983}
+.devicePresetRow button.active{
+  border-color:#2998b3;
+  background:#08232c;
+  box-shadow:inset 0 0 0 1px rgba(56,189,248,.12);
+}
+.devicePresetRow button.active strong{color:#dff8ff}
+.devicePresetRow button.danger:not(.active){border-color:rgba(239,68,68,.18)}
+.devicePresetRow button.danger.active{
+  border-color:#b45309;
+  background:#28180a;
+}
 .deviceToolDetails{
   border-top:1px solid rgba(148,163,184,.10);
   border-bottom:1px solid rgba(148,163,184,.10);
@@ -3435,6 +3480,21 @@ body{font-size:18px;line-height:1.6}
 :root[data-theme="light"] .deviceStatusStrip strong,
 :root[data-theme="light"] .deviceAccessSummary strong{color:#10333d}
 :root[data-theme="light"] .deviceFilters button.active{background:#dff4f8;color:#0b5267}
+:root[data-theme="light"] .devicePresetRow button{
+  border-color:#d6e5ea;
+  background:#f8fcfd;
+}
+:root[data-theme="light"] .devicePresetRow button strong{color:#264851}
+:root[data-theme="light"] .devicePresetRow button small{color:#6b858d}
+:root[data-theme="light"] .devicePresetRow button.active{
+  border-color:#58aabd;
+  background:#e7f7fa;
+}
+:root[data-theme="light"] .devicePresetRow button.active strong{color:#0b5267}
+:root[data-theme="light"] .devicePresetRow button.danger.active{
+  border-color:#d97706;
+  background:#fff7ed;
+}
 
 @media(max-width:1100px){
   .deviceManagementGrid{grid-template-columns:1fr!important}
@@ -3457,6 +3517,9 @@ body{font-size:18px;line-height:1.6}
   .deviceStatusStrip>div+div{border-left:0;border-top:1px solid rgba(148,163,184,.10)}
   .deviceAccessSummary{grid-template-columns:1fr}
   .deviceToolChips{justify-content:flex-start;max-width:none}
+  .devicePresetRow{align-items:flex-start;flex-direction:column}
+  .devicePresetRow>div{justify-content:flex-start;width:100%}
+  .devicePresetRow button{flex:1;min-width:0}
   .managedActions{flex-wrap:wrap}
   .managedActions .dangerButton{margin-left:0}
 }
