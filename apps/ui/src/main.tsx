@@ -509,43 +509,53 @@ function Landing({ user }: { user?: User | null }) {
             <span>{tr("Outbound connection only", "仅需出站连接")}</span>
           </div>
         </div>
-        <div className="heroFlowCompact" aria-label={tr("Remote Arc connection flow", "Remote Arc 连接链路")}>
-          <div className="flowAgentsRow">
-            {aiClients.map((client, index) => (
-              <div className={"flowAgentNode agent" + index} key={client.name}>
-                <img src={client.icon} alt="" />
-                <strong>{client.name}</strong>
-                <span>MCP</span>
-                <i className="agentPacket" aria-hidden="true" />
-              </div>
-            ))}
-            <div className="flowAgentNode agent2">
-              <span className="protocolMark">M</span>
-              <strong>{tr("Any MCP client", "任意 MCP 客户端")}</strong>
-              <span>MCP</span>
-              <i className="agentPacket" aria-hidden="true" />
-            </div>
+        <div className="heroTopology" aria-label={tr("Remote Arc connection flow", "Remote Arc 连接链路")}>
+          <svg className="topologyLines" viewBox="0 0 600 280" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="flowStroke" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#234c63" />
+                <stop offset="52%" stopColor="#38bdf8" />
+                <stop offset="100%" stopColor="#234c63" />
+              </linearGradient>
+            </defs>
+            <path d="M100 66 C100 84 210 84 300 100" />
+            <path d="M300 66 L300 100" />
+            <path d="M500 66 C500 84 390 84 300 100" />
+            <path d="M300 204 C300 214 190 214 100 227" />
+            <path d="M300 204 L300 227" />
+            <path d="M300 204 C300 214 410 214 500 227" />
+
+          </svg>
+
+          <div className="topologyNode topologyAgent nodeAgentLeft">
+            <img src={aiClients[0].icon} alt="" />
+            <div><strong>{aiClients[0].name}</strong><small>MCP</small></div>
           </div>
 
-          <div className="flowMerge" aria-hidden="true">
-            <span className="mergeLeft" />
-            <span className="mergeCenter" />
-            <span className="mergeRight" />
-            <span className="mergeStem" />
+          <div className="topologyNode topologyAgent nodeAgentCenter">
+            <img src={aiClients[1].icon} alt="" />
+            <div><strong>{aiClients[1].name}</strong><small>MCP</small></div>
           </div>
 
-          <div className="flowHubCompact">
+          <div className="topologyNode topologyAgent nodeAgentRight">
+            <span className="protocolMark">M</span>
+            <div><strong>{tr("Any MCP client", "任意 MCP 客户端")}</strong><small>MCP</small></div>
+          </div>
+
+          <div className="topologyHub">
             <LogoMark />
-            <div><strong>Remote Arc</strong><span>OAuth · Routing · Presence</span></div>
+            <div><strong>Remote Arc</strong><small>OAuth · Routing · Presence</small></div>
             <b>{tr("Connected", "已连接")}</b>
           </div>
 
-          <div className="flowDown" aria-hidden="true"><i /></div>
-
-          <div className="flowDevicesBare">
-            <div><i className="onlineDot" /><span>⊞</span><strong>{tr("Desktop", "桌面电脑")}</strong><small>Windows</small></div>
-            <div><i className="onlineDot" /><span>⌘</span><strong>Mac</strong><small>macOS</small></div>
-            <div><i className="onlineDot" /><span>›_</span><strong>{tr("Linux host", "Linux 主机")}</strong><small>Linux</small></div>
+          <div className="topologyDevice nodeDeviceLeft">
+            <span>⊞</span><div><strong>{tr("Desktop", "桌面电脑")}</strong><small>Windows</small></div><i className="onlineDot" />
+          </div>
+          <div className="topologyDevice nodeDeviceCenter">
+            <span>⌘</span><div><strong>Mac</strong><small>macOS</small></div><i className="onlineDot" />
+          </div>
+          <div className="topologyDevice nodeDeviceRight">
+            <span>›_</span><div><strong>{tr("Linux host", "Linux 主机")}</strong><small>Linux</small></div><i className="onlineDot" />
           </div>
         </div>
       </section>
