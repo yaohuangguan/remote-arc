@@ -45,7 +45,7 @@
     {
       "binding": "DB",
       "database_name": "remote-link-auth",
-      "database_id": "3cf318cb-99e4-4bc8-af20-55d634e354fd",
+      "database_id": "5ceaf634-11ea-47e4-9834-12a133e3adcb",
       "migrations_dir": "migrations"
     }
   ],
