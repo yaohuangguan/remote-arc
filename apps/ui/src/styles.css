@@ -4703,3 +4703,120 @@ body{font-size:18px;line-height:1.6}
     border-top:1px solid rgba(148,163,184,.10)!important;
   }
 }
+
+
+/* Resources unified docs layout */
+.resourceDocsLayout{
+  display:grid;
+  grid-template-columns:250px minmax(0,1fr);
+  gap:56px;
+  align-items:start;
+  padding-bottom:44px;
+}
+.resourceToc{
+  position:relative;
+}
+.resourceTocInner{
+  position:sticky;
+  top:92px;
+  display:grid;
+  gap:18px;
+  padding-top:4px;
+}
+.resourceToc nav{
+  display:grid;
+  border-top:1px solid rgba(148,163,184,.14);
+}
+.resourceToc nav a{
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  padding:11px 0;
+  border-bottom:1px solid rgba(148,163,184,.10);
+  color:inherit;
+  text-decoration:none;
+}
+.resourceToc nav a span{
+  color:#496875;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:9px;
+}
+.resourceToc nav a strong{
+  color:#a9c0c8;
+  font-size:12px;
+  font-weight:650;
+}
+.resourceToc nav a small{
+  color:#466875;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:8px;
+  letter-spacing:.08em;
+}
+.resourceToc nav a:hover strong{
+  color:#e5f7fb;
+}
+.resourceTocLinks{
+  display:grid;
+  gap:8px;
+  padding-top:8px;
+}
+.resourceTocLinks>span{
+  color:#45606a;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:9px;
+  letter-spacing:.12em;
+}
+.resourceTocLinks a{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:#76909a;
+  font-size:11px;
+  text-decoration:none;
+}
+.resourceTocLinks a:hover{
+  color:#bfefff;
+}
+.resourceTocLinks em{
+  color:#38bdf8;
+  font-style:normal;
+}
+.resourceDocsLayout .resourceArticles{
+  max-width:none!important;
+  width:100%;
+  margin:0!important;
+  padding:0!important;
+}
+.resourceDocsLayout .resourceArticles article{
+  padding:42px 0 50px!important;
+}
+.resourceDocsLayout .resourceArticles article:first-child{
+  padding-top:2px!important;
+}
+.resourceDocsLayout .resourceArticles h2{
+  max-width:720px;
+}
+.resourceDocsLayout .resourceArticles p{
+  max-width:760px;
+}
+
+@media(max-width:900px){
+  .resourceDocsLayout{
+    grid-template-columns:1fr;
+    gap:34px;
+  }
+  .resourceTocInner{
+    position:static;
+  }
+  .resourceToc nav{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    column-gap:28px;
+  }
+}
+@media(max-width:620px){
+  .resourceToc nav{
+    grid-template-columns:1fr;
+  }
+}

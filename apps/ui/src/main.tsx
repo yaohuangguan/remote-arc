@@ -794,7 +794,7 @@ function PricingPage({ user }: { user?: User | null }) {
 
 function ResourcesPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const items = [
+  const items: Array<[string, string, string, string]> = [
     [tr("Quick start", "快速开始"), tr("Pair a computer with one command and connect it to the hosted relay.", "一条命令配对电脑并连接到托管 Relay。"), "/docs/mcp", "START"],
     [tr("Control-plane architecture", "控制面架构"), tr("How Worker, D1, Durable Objects and the device agent cooperate to route Remote MCP calls.", "了解 Worker、D1、Durable Objects 与设备 Agent 如何协同路由 Remote MCP 调用。"), "#control-plane-architecture", "ARCH"],
     [tr("Security control plane", "安全控制面"), tr("Emergency pause, revocable OAuth grants, per-device policy and layered enforcement.", "紧急暂停、可撤销 OAuth 授权、每设备策略与多层权限执行。"), "#security-control-plane", "SEC"],
@@ -813,16 +813,23 @@ function ResourcesPage({ user }: { user?: User | null }) {
         <h1>{tr("Understand the system behind Remote Arc.", "了解 Remote Arc 背后的系统。")}</h1>
         <p>{tr("Explore the architecture, MCP protocol and product documentation behind the managed Remote Arc service.", "了解 Remote Arc 托管服务背后的架构、MCP 协议与产品文档。")}</p>
       </section>
-      <section className="resourceGrid techResourceGrid">
-        {items.map(([title, body, href, tag]) => (
-          <a className="resourceCard techResourceCard" href={href} key={title}>
-            <div className="resourceMeta"><span>{tag}</span><em>↗</em></div>
-            <h2>{title}</h2><p>{body}</p>
-          </a>
-        ))}
-      </section>
+      <section className="resourceDocsLayout">
+        <aside className="resourceToc">
+          <div className="resourceTocInner">
+            <span className="eyebrow">{tr("TECHNICAL INDEX", "技术目录")}</span>
+            <nav>
+              {items.filter(([, , href]) => href.startsWith("#")).map(([title, , href, tag], index) => (
+                <a href={href} key={title}><span>{String(index + 1).padStart(2, "0")}</span><strong>{title}</strong><small>{tag}</small></a>
+              ))}
+            </nav>
+            <div className="resourceTocLinks">
+              <span>{tr("REFERENCE", "参考")}</span>
+              {items.filter(([, , href]) => !href.startsWith("#")).map(([title, , href]) => <a href={href} key={title}>{title}<em>↗</em></a>)}
+            </div>
+          </div>
+        </aside>
 
-      <section className="resourceArticles">
+        <div className="resourceArticles">
         <article id="control-plane-architecture">
           <span className="resourceArticleTag">ARCHITECTURE / 01</span>
           <h2>{tr("Control-plane architecture", "控制面架构")}</h2>
@@ -871,6 +878,7 @@ function ResourcesPage({ user }: { user?: User | null }) {
           <p>{tr("The activity feed is designed for operational visibility rather than content retention. Remote Arc records metadata such as tool name, device, result and time, while file contents, command arguments, OAuth tokens and raw device credentials are not intentionally stored in audit records.", "活动记录用于运行可观测性，而不是内容留存。Remote Arc 记录工具名称、设备、结果与时间等元数据，而不会有意在审计记录中保存文件内容、命令参数、OAuth Token 或原始设备凭证。")}</p>
           <div className="resourceAuditMatrix"><span>✓ tool</span><span>✓ device</span><span>✓ result</span><span>✓ time</span><span>× file contents</span><span>× command args</span><span>× credentials</span></div>
         </article>
+        </div>
       </section>
     </PublicLayout>
   );
