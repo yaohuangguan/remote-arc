@@ -10,11 +10,12 @@
     "test:smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/client": "^2.1.0",
     "@modelcontextprotocol/server": "^2.1.0",
+    "@remotearc/execution-core": "workspace:*",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.1.0",
     "@types/node": "^24.13.6",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"

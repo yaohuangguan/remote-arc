@@ -9,7 +9,7 @@ Remote Arc gives AI clients access to real computers. Treat the relay, OAuth ser
 3. **Per-device credential** authenticates one paired computer.
 4. **Cloudflare Worker + D1** verifies account/device ownership.
 5. **Durable Object** routes only within the authenticated user boundary.
-6. **Local capability mode** controls which Desktop Commander tools are actually advertised by a device.
+6. **Local capability mode** controls which native Remote Arc tools are advertised by a device.
 
 ## Credential handling
 

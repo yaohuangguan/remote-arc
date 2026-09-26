@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@modelcontextprotocol/client": "^2.1.0",
+    "@remotearc/execution-core": "workspace:*",
     "@remotearc/protocol": "workspace:*",
     "ws": "^8.18.3",
     "dotenv": "^17.2.3"

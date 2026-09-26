@@ -13,12 +13,12 @@
     "dev:relay": "pnpm --filter @remotearc/relay dev",
     "dev:ui": "pnpm --filter @remotearc/ui dev",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm --filter @remotearc/mcp test:smoke",
+    "test": "pnpm --filter @remotearc/execution-core test:integration && pnpm --filter @remotearc/mcp test:smoke",
     "ci": "pnpm typecheck && pnpm test",
     "build:ui": "pnpm --filter @remotearc/ui build",
     "deploy:relay": "pnpm build:ui && pnpm --filter @remotearc/relay run deploy",
     "build:cli": "pnpm --filter remotelink build",
-    "publish:cli": "pnpm build:cli && grep -q '0.3.7' packages/cli/dist/index.js && grep -q 'https://mcp.remotearc.app' packages/cli/dist/index.js && grep -q '/api/device/heartbeat' packages/cli/dist/index.js && cd packages/cli && npm publish"
+    "publish:cli": "pnpm build:cli && grep -q '0.3.8' packages/cli/dist/index.js && grep -q 'https://mcp.remotearc.app' packages/cli/dist/index.js && grep -q '/api/device/heartbeat' packages/cli/dist/index.js && cd packages/cli && npm publish"
   },
   "bin": {
     "remotelink": "bin/remotearc.js",

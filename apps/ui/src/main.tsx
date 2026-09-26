@@ -971,7 +971,7 @@ function McpPage({ user }: { user?: User | null }) {
 
       <section className="pluginPath">
         <div><span className="eyebrow">{tr("THE SILKY-SMOOTH PATH", "真正丝滑的路径")}</span><h2>{tr("MCP works now. A published app makes it one click.", "MCP 现在就能用；发布 App 后，安装可以只点一下。")}</h2></div>
-        <p>{tr("The current universal path is a standards-based Remote MCP URL plus OAuth. For the same discoverability as Remote Desktop Commander, publish a branded Remote Arc app/plugin that preconfigures the endpoint and explains its permissions. Keep the MCP server as the shared backend so ChatGPT, Claude and future clients all use the same secure core.", "当前最通用的路径是标准 Remote MCP URL + OAuth。要做到像 Remote Desktop Commander 一样容易发现和安装，建议再发布一个带品牌的 Remote Arc App/Plugin，预置端点并解释权限；底层仍共用同一套 MCP 服务，这样 ChatGPT、Claude 与未来客户端都会使用同一个安全核心。")}</p>
+        <p>{tr("The universal path is a standards-based Remote MCP URL plus OAuth. A branded Remote Arc app/plugin can preconfigure the endpoint and explain its permissions, while ChatGPT, Claude and future MCP clients all share the same native Remote Arc execution core.", "当前最通用的路径是标准 Remote MCP URL + OAuth。品牌化的 Remote Arc App/Plugin 可以预置端点并解释权限，同时让 ChatGPT、Claude 与未来兼容 MCP 的客户端共用同一套 Remote Arc 原生执行核心。")}</p>
       </section>
     </PublicLayout>
   );

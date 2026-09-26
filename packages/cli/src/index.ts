@@ -4,21 +4,10 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { spawn } from "node:child_process";
 import process from "node:process";
-import { Client } from "@modelcontextprotocol/client";
-import {
-  StdioClientTransport,
-  getDefaultEnvironment,
-} from "@modelcontextprotocol/client/stdio";
 import WebSocket from "ws";
-import {
-  assertCommandAllowed,
-  createUndoSnapshot,
-  discardUndoSnapshot,
-  finalizeUndoSnapshot,
-  undoLastChange,
-} from "./local-safety.js";
+import { RemoteArcExecutionCore } from "@remotearc/execution-core";
 
-const VERSION = "0.3.7";
+const VERSION = "0.3.8";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -49,21 +38,6 @@ type PairingToken = {
   device_token: string;
   relay_url: string;
 };
-
-const SAFE_TOOLS = new Set([
-  "list_directory",
-  "read_file",
-  "get_file_info",
-  "list_processes",
-]);
-
-const DEVELOPER_TOOLS = new Set([
-  ...SAFE_TOOLS,
-  "start_process",
-  "write_file",
-  "edit_block",
-  "undo_last_change",
-]);
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -242,118 +216,24 @@ async function pair(origin: string, mode: Mode): Promise<SavedConfig> {
 }
 
 class ExecutionCore {
-  private client: Client | null = null;
+  private readonly core: RemoteArcExecutionCore;
 
-  constructor(private readonly mode: Mode) {}
-
-  async connect() {
-    if (this.client) return this.client;
-
-    const client = new Client({
-      name: "remotearc-cli-core",
-      version: VERSION,
-    });
-
-    const command = process.platform === "win32" ? "npx.cmd" : "npx";
-    const transport = new StdioClientTransport({
-      command,
-      args: [
-        "--yes",
-        "--ignore-scripts",
-        "@wonderwhy-er/desktop-commander@0.2.51",
-      ],
-      env: {
-        ...getDefaultEnvironment(),
-        npm_config_ignore_scripts: "true",
-      },
-      stderr: "inherit",
-    });
-
-    logLine("info", "Starting local execution core…");
-    await client.connect(transport);
-    this.client = client;
-    logLine("success", "Local execution core ready.");
-    return client;
+  constructor(mode: Mode) {
+    this.core = new RemoteArcExecutionCore(
+      isLocalSafeMode(mode) ? "safe" : "managed",
+    );
   }
 
   async tools() {
-    const list = await (await this.connect()).listTools();
-    const locallyAvailable = isLocalSafeMode(this.mode) ? SAFE_TOOLS : DEVELOPER_TOOLS;
-    const tools = list.tools.filter((tool) => locallyAvailable.has(tool.name));
-
-    if (!isLocalSafeMode(this.mode)) {
-      tools.push({
-        name: "undo_last_change",
-        description:
-          "Undo the most recent reversible file change made through Remote Arc on this device. Snapshots stay on the device and expire automatically.",
-        inputSchema: {
-          type: "object",
-          properties: {},
-          additionalProperties: false,
-        },
-      });
-    }
-
-    return tools;
+    return this.core.listTools();
   }
 
   async call(name: string, args: Record<string, unknown>) {
-    const locallyAvailable = isLocalSafeMode(this.mode) ? SAFE_TOOLS : DEVELOPER_TOOLS;
-    if (!locallyAvailable.has(name)) {
-      throw new Error("Tool blocked by local safety cap: " + name);
-    }
-
-    if (name === "undo_last_change") {
-      const result = await undoLastChange();
-      logLine("success", "Local Undo restored the latest reversible file change.");
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
-      };
-    }
-
-    if (name === "start_process") {
-      assertCommandAllowed(String(args.command || ""));
-    }
-
-    const reversibleTool =
-      name === "write_file" || name === "edit_block"
-        ? (name as "write_file" | "edit_block")
-        : null;
-    const snapshot = reversibleTool
-      ? await createUndoSnapshot(reversibleTool, args)
-      : null;
-
-    if (reversibleTool && !snapshot) {
-      logLine("warn", "Local Undo is unavailable for this file change.");
-    }
-
-    try {
-      const result = await (await this.connect()).callTool({
-        name,
-        arguments: args,
-      });
-      if (snapshot) {
-        const finalized = await finalizeUndoSnapshot(snapshot);
-        if (finalized) {
-          logLine(
-            "info",
-            `Local Undo ready · ${dim(snapshot.id)} · kept on this device only`,
-          );
-        } else {
-          logLine("warn", "Local Undo snapshot could not be finalized.");
-        }
-      }
-      return result;
-    } catch (error) {
-      await discardUndoSnapshot(snapshot);
-      throw error;
-    }
+    return this.core.callTool(name, args);
   }
 
   async close() {
-    if (!this.client) return;
-    await this.client.close();
-    this.client = null;
+    await this.core.close();
   }
 }
 

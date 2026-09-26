@@ -4,7 +4,6 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-const UNDO_ROOT = path.join(os.homedir(), ".remotearc", "undo");
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_SNAPSHOT_BYTES = 20 * 1024 * 1024;
 const MAX_UNDO_BYTES = 200 * 1024 * 1024;
@@ -26,8 +25,12 @@ export type UndoSnapshot = {
   manifest: UndoManifest;
 };
 
+const undoRoot = () =>
+  process.env.REMOTEARC_UNDO_ROOT ||
+  path.join(os.homedir(), ".remotearc", "undo");
+
 async function ensureUndoRoot() {
-  await fs.mkdir(UNDO_ROOT, { recursive: true, mode: 0o700 });
+  await fs.mkdir(undoRoot(), { recursive: true, mode: 0o700 });
 }
 
 async function readManifest(directory: string): Promise<UndoManifest | null> {
@@ -42,10 +45,10 @@ async function readManifest(directory: string): Promise<UndoManifest | null> {
 
 async function snapshotDirectories() {
   await ensureUndoRoot();
-  const entries = await fs.readdir(UNDO_ROOT, { withFileTypes: true });
+  const entries = await fs.readdir(undoRoot(), { withFileTypes: true });
   return entries
     .filter((entry) => entry.isDirectory())
-    .map((entry) => path.join(UNDO_ROOT, entry.name));
+    .map((entry) => path.join(undoRoot(), entry.name));
 }
 
 async function cleanupUndoStore() {
@@ -119,7 +122,7 @@ export async function createUndoSnapshot(
   }
 
   const id = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-  const directory = path.join(UNDO_ROOT, id);
+  const directory = path.join(undoRoot(), id);
   await fs.mkdir(directory, { recursive: true, mode: 0o700 });
 
   if (original) {
@@ -148,17 +151,14 @@ export async function createUndoSnapshot(
 
 async function hashFile(filePath: string) {
   const hash = crypto.createHash("sha256");
-  for await (const chunk of createReadStream(filePath)) {
-    hash.update(chunk);
-  }
+  for await (const chunk of createReadStream(filePath)) hash.update(chunk);
   return hash.digest("hex");
 }
 
 export async function finalizeUndoSnapshot(snapshot: UndoSnapshot | null) {
   if (!snapshot) return false;
   try {
-    const postChangeHash = await hashFile(snapshot.manifest.targetPath);
-    snapshot.manifest.postChangeHash = postChangeHash;
+    snapshot.manifest.postChangeHash = await hashFile(snapshot.manifest.targetPath);
     await fs.writeFile(
       path.join(snapshot.directory, "manifest.json"),
       JSON.stringify(snapshot.manifest, null, 2) + "\n",
@@ -234,10 +234,7 @@ export async function undoLastChange() {
   };
 }
 
-type GuardRule = {
-  pattern: RegExp;
-  reason: string;
-};
+type GuardRule = { pattern: RegExp; reason: string };
 
 const DESTRUCTIVE_COMMAND_RULES: GuardRule[] = [
   {

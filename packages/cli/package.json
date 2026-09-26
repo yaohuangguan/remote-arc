@@ -1,6 +1,6 @@
 {
   "name": "remotelink",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Connect a computer to Remote Arc with one command.",
   "type": "module",
   "bin": {
@@ -17,15 +17,15 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --platform node --target node20 --sourcemap",
+    "build": "tsup",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "@modelcontextprotocol/client": "^2.1.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@remotearc/execution-core": "workspace:*",
     "@types/node": "^24.13.6",
     "@types/ws": "^8.18.1",
     "tsup": "^8.5.0",

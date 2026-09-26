@@ -1,0 +1,16 @@
+{
+  "name": "@remotearc/execution-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:integration": "tsx scripts/integration.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.6",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3"
+  }
+}

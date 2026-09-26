@@ -63,9 +63,12 @@ DeviceRegistry Durable Object
           v
 Remote Arc CLI / Agent
           |
-          | local MCP client
           v
-Desktop Commander OSS
+@remotearc/execution-core
+  ├─ Node filesystem APIs
+  ├─ native process execution
+  ├─ Local Undo
+  └─ Safety Guard
           |
           v
 Windows / macOS / Linux

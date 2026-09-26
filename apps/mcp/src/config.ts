@@ -1,22 +1,12 @@
-export type RemoteArcMode = "safe" | "developer" | "full";
+import type { ExecutionMode } from "@remotearc/execution-core";
 
-const parseMode = (value: string | undefined): RemoteArcMode => {
-  if (value === "developer" || value === "full") return value;
+const parseMode = (value: string | undefined): ExecutionMode => {
+  if (value === "developer" || value === "full" || value === "managed") {
+    return value;
+  }
   return "safe";
 };
 
 export const config = {
-  mode: parseMode(process.env.REMOTE_LINK_MODE),
-  desktopCommanderCommand:
-    process.env.REMOTE_LINK_DESKTOP_COMMANDER_COMMAND || "npx",
-  desktopCommanderPackage:
-    process.env.REMOTE_LINK_DESKTOP_COMMANDER_PACKAGE ||
-    "@wonderwhy-er/desktop-commander@latest",
-  allowGenericCoreCall:
-    process.env.REMOTE_LINK_ALLOW_CORE_CALL === "1",
+  mode: parseMode(process.env.REMOTEARC_MODE || process.env.REMOTE_LINK_MODE),
 } as const;
-
-export const isDeveloperMode = () =>
-  config.mode === "developer" || config.mode === "full";
-
-export const isFullMode = () => config.mode === "full";

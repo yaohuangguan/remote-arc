@@ -7,7 +7,10 @@ import type {
   AgentResultMessage,
   AgentToRelayMessage,
 } from "@remotearc/protocol";
-import { LocalMcpClient } from "./local-mcp.js";
+import {
+  RemoteArcExecutionCore,
+  type ExecutionMode,
+} from "@remotearc/execution-core";
 
 const relayUrl = process.env.REMOTE_LINK_RELAY_URL || "wss://remotearc.app";
 const token = process.env.REMOTE_LINK_DEVICE_TOKEN;
@@ -16,18 +19,27 @@ const deviceId =
   os.hostname().toLowerCase().replace(/[^a-z0-9-]+/g, "-");
 const deviceName = process.env.REMOTE_LINK_DEVICE_NAME || os.hostname();
 
+const parseMode = (value: string | undefined): ExecutionMode => {
+  if (value === "developer" || value === "full" || value === "managed") {
+    return value;
+  }
+  return "safe";
+};
+
 if (!token) {
   throw new Error("REMOTE_LINK_DEVICE_TOKEN is required");
 }
 
-const mcp = new LocalMcpClient();
+const core = new RemoteArcExecutionCore(
+  parseMode(process.env.REMOTEARC_MODE || process.env.REMOTE_LINK_MODE),
+);
 let stopped = false;
 let reconnectMs = 1000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function connectForever() {
-  const tools = (await mcp.listTools()).tools.map((tool) => tool.name);
+  const tools = core.listTools().map((tool) => tool.name);
 
   while (!stopped) {
     const url = new URL("/agent", relayUrl);
@@ -53,7 +65,7 @@ async function connectForever() {
           platform: process.platform,
           arch: process.arch,
           hostname: os.hostname(),
-          agentVersion: "0.1.0",
+          agentVersion: "0.2.0",
         },
         tools,
       };
@@ -75,7 +87,7 @@ async function connectForever() {
           if (message.type !== "call") return;
 
           try {
-            const result = await mcp.callTool(message.tool, message.arguments);
+            const result = await core.callTool(message.tool, message.arguments);
             const response: AgentResultMessage = {
               type: "result",
               id: message.id,
@@ -113,7 +125,7 @@ async function connectForever() {
 
 const shutdown = async () => {
   stopped = true;
-  await mcp.close().catch(() => undefined);
+  await core.close().catch(() => undefined);
   process.exit(0);
 };
 

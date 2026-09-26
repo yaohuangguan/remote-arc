@@ -49,6 +49,15 @@ npx remotelink --help      Show help
 
 The package also exposes the aliases `remote-link` and `remote-arc`.
 
+## Native execution core
+
+Remote Arc no longer shells out to a third-party computer-control MCP server.
+The CLI bundles Remote Arc's own cross-platform execution core for filesystem,
+process, terminal, Local Undo, and Safety Guard behavior.
+
+MCP remains the interoperability protocol between AI clients and Remote Arc;
+local OS execution is implemented and versioned by Remote Arc itself.
+
 ## Capability model
 
 Newly paired devices start with only read-oriented skills enabled:

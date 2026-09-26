@@ -17,9 +17,9 @@ importers:
 
   apps/agent:
     dependencies:
-      '@modelcontextprotocol/client':
-        specifier: ^2.1.0
-        version: 2.1.0
+      '@remotearc/execution-core':
+        specifier: workspace:*
+        version: link:../../packages/execution-core
       '@remotearc/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
@@ -45,16 +45,19 @@ importers:
 
   apps/mcp:
     dependencies:
-      '@modelcontextprotocol/client':
-        specifier: ^2.1.0
-        version: 2.1.0
       '@modelcontextprotocol/server':
         specifier: ^2.1.0
         version: 2.1.0
+      '@remotearc/execution-core':
+        specifier: workspace:*
+        version: link:../../packages/execution-core
       zod:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
+      '@modelcontextprotocol/client':
+        specifier: ^2.1.0
+        version: 2.1.0
       '@types/node':
         specifier: ^24.13.6
         version: 24.13.6
@@ -114,13 +117,13 @@ importers:
 
   packages/cli:
     dependencies:
-      '@modelcontextprotocol/client':
-        specifier: ^2.1.0
-        version: 2.1.0
       ws:
         specifier: ^8.18.3
         version: 8.21.3
     devDependencies:
+      '@remotearc/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
       '@types/node':
         specifier: ^24.13.6
         version: 24.13.6
@@ -130,6 +133,18 @@ importers:
       tsup:
         specifier: ^8.5.0
         version: 8.5.1(postcss@8.5.28)(tsx@4.23.15)(typescript@6.0.3)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/execution-core:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.13.6
+        version: 24.13.6
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
