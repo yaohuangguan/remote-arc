@@ -3752,3 +3752,367 @@ body{font-size:18px;line-height:1.6}
   .overviewDeviceRow{grid-template-columns:34px minmax(0,1fr) auto}
   .overviewDeviceMeta{display:none}
 }
+
+
+/* Security center */
+.securityTopbar{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  padding:30px 0 18px;
+}
+.securityTopbar h1{
+  margin:6px 0 5px;
+  font-size:32px;
+  line-height:1;
+  letter-spacing:-.04em;
+}
+.securityTopbar p{
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+}
+.securityTopActions{
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+
+.securityStatusGrid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+}
+.securityStatusCard{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  min-height:145px;
+  padding:17px 18px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--panel);
+}
+.securityStatusCard.primary{
+  border-color:rgba(74,222,128,.22);
+  background:linear-gradient(180deg,rgba(6,37,26,.22),var(--panel));
+}
+.securityStatusCard>div{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  color:#78919a;
+  font-size:11px;
+  font-weight:750;
+  letter-spacing:.045em;
+  text-transform:uppercase;
+}
+.securityStatusCard>strong{
+  margin-top:17px;
+  color:#edf9fb;
+  font-size:21px;
+  line-height:1.1;
+  letter-spacing:-.025em;
+}
+.securityStatusCard>small{
+  margin-top:auto;
+  color:#657d87;
+  font-size:11px;
+  line-height:1.45;
+}
+.securityMiniState{
+  padding:4px 7px;
+  border-radius:999px;
+  background:#0b2231;
+  color:#7dd3fc;
+  font-size:9px;
+}
+
+.securityMainGrid{
+  display:grid;
+  grid-template-columns:1.25fr .75fr;
+  gap:14px;
+  margin-top:14px;
+}
+.securityLowerGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-top:14px;
+}
+.securityPanel{
+  min-width:0;
+  padding:20px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:var(--panel);
+}
+.securityPanelHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:14px;
+}
+.securityPanelHeader h2{
+  margin:5px 0 0;
+  font-size:19px;
+  letter-spacing:-.025em;
+}
+
+.securityDeviceList{
+  display:grid;
+  gap:7px;
+}
+.securityDeviceRow{
+  display:grid;
+  grid-template-columns:36px minmax(0,1fr) auto auto;
+  gap:10px;
+  align-items:center;
+  width:100%;
+  padding:10px 11px;
+  border:1px solid transparent;
+  border-radius:11px;
+  background:#061018;
+  color:inherit;
+  text-align:left;
+}
+.securityDeviceRow:hover{
+  border-color:#1d3c4d;
+}
+.securityDeviceRow>div:nth-child(2){
+  display:grid;
+  min-width:0;
+  gap:2px;
+}
+.securityDeviceRow strong{
+  color:#e8f5f7;
+  font-size:13px;
+}
+.securityDeviceRow span{
+  overflow:hidden;
+  color:#718b94;
+  font-size:10px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.securityExposureMeta{
+  display:grid;
+  justify-items:end;
+  gap:1px;
+  min-width:70px;
+}
+.securityExposureMeta strong{
+  font-size:18px;
+  color:#7dd3fc;
+}
+.securityExposureMeta span{
+  font-size:9px;
+}
+
+.securityFlow{
+  display:grid;
+  gap:5px;
+}
+.securityFlow>div{
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr);
+  gap:10px;
+  align-items:center;
+  padding:10px 11px;
+  border:1px solid rgba(148,163,184,.09);
+  border-radius:11px;
+  background:#061018;
+}
+.securityFlow>div>span{
+  display:grid;
+  place-items:center;
+  width:28px;height:28px;
+  border-radius:9px;
+  background:#0b2231;
+  color:#7dd3fc;
+  font-size:11px;
+  font-weight:900;
+}
+.securityFlow p{
+  display:grid;
+  gap:2px;
+  margin:0;
+}
+.securityFlow strong{
+  color:#e6f4f7;
+  font-size:13px;
+}
+.securityFlow small{
+  color:#6f8993;
+  font-size:10px;
+  line-height:1.35;
+}
+.securityFlow>i{
+  justify-self:center;
+  color:#38bdf8;
+  font-style:normal;
+  font-size:14px;
+  line-height:1;
+}
+
+.securityAuditList{
+  display:grid;
+  gap:7px;
+}
+.securityAuditRow{
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  padding:9px 0;
+  border-bottom:1px solid rgba(148,163,184,.08);
+}
+.securityAuditRow:last-child{border-bottom:0}
+.securityAuditRow>div{
+  display:grid;
+  gap:2px;
+}
+.securityAuditRow strong{
+  color:#e6f3f6;
+  font-size:12px;
+}
+.securityAuditRow span{
+  color:#6f8993;
+  font-size:10px;
+}
+.securityAuditRow>b{
+  color:#74d7a5;
+  font-size:10px;
+  font-weight:800;
+}
+
+.privacyBoundaryGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+}
+.privacyBoundaryGrid>div{
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr);
+  gap:9px;
+  align-items:start;
+  padding:11px;
+  border:1px solid rgba(148,163,184,.09);
+  border-radius:11px;
+  background:#061018;
+}
+.privacyBoundaryGrid>div>span{
+  display:grid;
+  place-items:center;
+  width:26px;height:26px;
+  border-radius:50%;
+  font-weight:900;
+}
+.privacyBoundaryGrid .kept>span{
+  background:rgba(74,222,128,.10);
+  color:#4ade80;
+}
+.privacyBoundaryGrid .notKept>span{
+  background:rgba(148,163,184,.08);
+  color:#94a3b8;
+}
+.privacyBoundaryGrid p{
+  display:grid;
+  gap:3px;
+  margin:0;
+}
+.privacyBoundaryGrid strong{
+  color:#e6f3f6;
+  font-size:12px;
+}
+.privacyBoundaryGrid small{
+  color:#6f8993;
+  font-size:10px;
+  line-height:1.4;
+}
+
+.securityActionsPanel{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  margin-top:14px;
+  padding:20px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:var(--panel);
+}
+.securityActionsPanel h2{
+  margin:5px 0 6px;
+  font-size:19px;
+}
+.securityActionsPanel p{
+  margin:0;
+  max-width:680px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.55;
+}
+.securityActionButtons{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:0 0 auto;
+}
+.securityEmptyState{
+  display:grid;
+  justify-items:start;
+  gap:7px;
+  padding:18px;
+  border:1px dashed #263846;
+  border-radius:12px;
+  color:#78919a;
+}
+.securityEmptyState strong{
+  color:#d8e8ec;
+  font-size:13px;
+}
+.securityEmptyState span{
+  font-size:11px;
+}
+.securityEmptyState.compact{
+  padding:14px;
+}
+
+:root[data-theme="light"] .securityStatusCard,
+:root[data-theme="light"] .securityPanel,
+:root[data-theme="light"] .securityActionsPanel{
+  background:#fff;
+  border-color:#dcebef;
+}
+:root[data-theme="light"] .securityDeviceRow,
+:root[data-theme="light"] .securityFlow>div,
+:root[data-theme="light"] .privacyBoundaryGrid>div{
+  background:#f7fbfd;
+}
+:root[data-theme="light"] .securityStatusCard>strong,
+:root[data-theme="light"] .securityDeviceRow strong,
+:root[data-theme="light"] .securityFlow strong,
+:root[data-theme="light"] .securityAuditRow strong,
+:root[data-theme="light"] .privacyBoundaryGrid strong,
+:root[data-theme="light"] .securityEmptyState strong{
+  color:#123640;
+}
+
+@media(max-width:1100px){
+  .securityStatusGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .securityMainGrid,.securityLowerGrid{grid-template-columns:1fr}
+}
+@media(max-width:720px){
+  .securityTopbar{align-items:flex-start;flex-direction:column;padding-top:22px}
+  .securityTopActions{width:100%;flex-wrap:wrap}
+  .securityStatusGrid{grid-template-columns:1fr}
+  .securityDeviceRow{grid-template-columns:34px minmax(0,1fr) auto}
+  .securityExposureMeta{display:none}
+  .privacyBoundaryGrid{grid-template-columns:1fr}
+  .securityActionsPanel{align-items:flex-start;flex-direction:column}
+  .securityActionButtons{width:100%;flex-wrap:wrap}
+}

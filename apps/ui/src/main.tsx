@@ -1203,16 +1203,111 @@ function Dashboard({
 
         {active === "security" && (
           <>
-            <section className="pageHeader"><div><span className="eyebrow">{tr("SECURITY", "安全")}</span><h1>{tr("Control stays local.", "控制权留在本机。")}</h1><p>{tr("The relay routes requests. Your device remains the final execution and permission boundary.", "Relay 负责路由，请求最终是否执行仍由你的设备和本机权限决定。")}</p></div></section>
-            <section className="securityGrid">
-              {[
-                [tr("Per-device credentials", "每设备独立凭证"), tr("Every computer has a unique revocable credential. Only hashes are stored in D1.", "每台电脑拥有独立可撤销凭证，D1 只保存哈希。")],
-                [tr("Outbound-only", "仅出站连接"), tr("No inbound port, VPN or public IP is required.", "无需入站端口、VPN 或公网 IP。")],
-                ["OAuth 2.1 + PKCE", tr("Short-lived access tokens and explicit scopes protect Remote MCP.", "短期 Access Token 与明确 Scope 保护 Remote MCP。")],
-                [tr("Privacy-preserving audit", "隐私审计"), tr("Tool name, device, success and time are logged — never file contents or command arguments.", "仅记录工具名、设备、结果与时间，不记录文件内容或命令参数。")],
-                [tr("Local permission modes", "本机权限模式"), tr("Safe and Developer modes define the tools the device actually exposes.", "Safe 与 Developer 模式定义设备实际开放的工具。")],
-                [tr("Managed hosted service", "托管服务"), tr("Remote Arc operates the relay, identity layer and routing so you do not need to maintain infrastructure.", "Relay、身份系统与路由均由 Remote Arc 托管，无需自行维护基础设施。")],
-              ].map(([title, body]) => <article className="securityCard" key={title}><span className="securityIcon">◇</span><h2>{title}</h2><p>{body}</p><span className="securityState good">{tr("Enabled", "已启用")}</span></article>)}
+            <section className="securityTopbar">
+              <div>
+                <span className="eyebrow">{tr("SECURITY", "安全")}</span>
+                <h1>{tr("Security center", "安全中心")}</h1>
+                <p>{tr("Review authentication, device exposure and recent Remote Arc activity.", "查看身份验证、设备暴露范围与 Remote Arc 最近活动。")}</p>
+              </div>
+              <div className="securityTopActions">
+                <button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Device permissions", "设备权限")}</button>
+                <a className="ghostButton" href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md" target="_blank" rel="noreferrer">SECURITY.md</a>
+              </div>
+            </section>
+
+            <section className="securityStatusGrid">
+              <article className="securityStatusCard primary">
+                <div><span>{tr("Protection status", "保护状态")}</span><i className="healthDot good" /></div>
+                <strong>{tr("Protected", "已保护")}</strong>
+                <small>{tr("OAuth, per-device credentials and relay enforcement are active.", "OAuth、每设备凭证与 Relay 权限拦截均已启用。")}</small>
+              </article>
+              <article className="securityStatusCard">
+                <div><span>{tr("Authentication", "身份验证")}</span><span className="securityMiniState">OAuth</span></div>
+                <strong>OAuth 2.1 + PKCE</strong>
+                <small>{tr("Scoped access to the account you approve.", "仅授予你批准账户范围内的权限。")}</small>
+              </article>
+              <article className="securityStatusCard">
+                <div><span>{tr("Device credentials", "设备凭证")}</span><span className="securityMiniState">{devices.length}</span></div>
+                <strong>{tr("Unique per device", "每设备独立")}</strong>
+                <small>{tr("Credentials are independently revocable; only hashes are stored.", "凭证可单独撤销，服务端仅保存哈希。")}</small>
+              </article>
+              <article className="securityStatusCard">
+                <div><span>{tr("Network exposure", "网络暴露")}</span><span className="securityMiniState">{tr("None", "无")}</span></div>
+                <strong>{tr("Outbound-only", "仅出站连接")}</strong>
+                <small>{tr("No inbound port, VPN or public IP is required.", "无需入站端口、VPN 或公网 IP。")}</small>
+              </article>
+            </section>
+
+            <section className="securityMainGrid">
+              <article className="securityPanel securityExposurePanel">
+                <div className="securityPanelHeader">
+                  <div><span className="eyebrow">{tr("DEVICE EXPOSURE", "设备暴露范围")}</span><h2>{tr("What each computer exposes", "每台电脑开放了什么")}</h2></div>
+                  <button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage", "管理")}</button>
+                </div>
+                <div className="securityDeviceList">
+                  {devices.slice().sort((a,b) => Number(b.status === "online") - Number(a.status === "online")).map((device) => {
+                    const enabledCount = device.allowed_tools?.length ?? device.tools.length;
+                    return <button className="securityDeviceRow" key={device.id} onClick={() => navigateTab("devices")}>
+                      <div className="deviceIcon">{platformGlyph(device.platform)}</div>
+                      <div><strong>{device.name}</strong><span>{platformLabel(device.platform)} · {device.hostname || tr("No hostname", "无 Hostname")}</span></div>
+                      <div className="securityExposureMeta"><strong>{enabledCount}</strong><span>{tr("tools enabled", "个工具已启用")}</span></div>
+                      <span className={"badge " + device.status}><i />{device.status}</span>
+                    </button>;
+                  })}
+                  {!devices.length && <div className="securityEmptyState"><strong>{tr("No paired devices", "暂无配对设备")}</strong><span>{tr("Pair a computer before granting any tool access.", "先配对电脑，再开放任何工具权限。")}</span><button className="ghostButton" onClick={() => setShowAdd(true)}>{tr("Add device", "添加设备")}</button></div>}
+                </div>
+              </article>
+
+              <article className="securityPanel securityModelPanel">
+                <div className="securityPanelHeader"><div><span className="eyebrow">{tr("ACCESS MODEL", "访问模型")}</span><h2>{tr("Requests pass four boundaries", "请求需要通过四层边界")}</h2></div></div>
+                <div className="securityFlow">
+                  <div><span>1</span><p><strong>{tr("AI client", "AI 客户端")}</strong><small>{tr("Starts an MCP request.", "发起 MCP 请求。")}</small></p></div>
+                  <i>↓</i>
+                  <div><span>2</span><p><strong>OAuth 2.1 + PKCE</strong><small>{tr("Validates user identity and scopes.", "验证用户身份与 Scope。")}</small></p></div>
+                  <i>↓</i>
+                  <div><span>3</span><p><strong>{tr("Relay policy", "Relay 权限策略")}</strong><small>{tr("Blocks disabled tools before reaching the computer.", "关闭的工具会在到达电脑前被拦截。")}</small></p></div>
+                  <i>↓</i>
+                  <div><span>4</span><p><strong>{tr("Local device agent", "本机 Device Agent")}</strong><small>{tr("Executes only tools the device actually exposes.", "只执行设备实际开放的工具。")}</small></p></div>
+                </div>
+              </article>
+            </section>
+
+            <section className="securityLowerGrid">
+              <article className="securityPanel">
+                <div className="securityPanelHeader">
+                  <div><span className="eyebrow">{tr("AUDIT ACTIVITY", "审计活动")}</span><h2>{tr("Recent access", "最近访问")}</h2></div>
+                  <span className="privacyPill">{tr("Arguments not logged", "不记录参数")}</span>
+                </div>
+                <div className="securityAuditList">
+                  {(status?.recentActivity || []).slice(0,6).map((event) => (
+                    <div className="securityAuditRow" key={event.id}>
+                      <i className={event.success ? "eventIcon success" : "eventIcon failed"}>{event.success ? "✓" : "!"}</i>
+                      <div><strong>{eventLabel(event)}</strong><span>{event.device_id ? deviceNameById.get(event.device_id) || event.device_id.slice(0,8) : tr("Account", "账户")} · {timeAgo(event.created_at)}</span></div>
+                      <b>{event.success ? tr("Allowed", "已允许") : tr("Failed", "失败")}</b>
+                    </div>
+                  ))}
+                  {!status?.recentActivity?.length && <div className="securityEmptyState compact"><strong>{tr("No audit events yet", "暂无审计事件")}</strong><span>{tr("Tool calls and security events will appear here.", "工具调用和安全事件会显示在这里。")}</span></div>}
+                </div>
+              </article>
+
+              <article className="securityPanel securityPrivacyPanel">
+                <div className="securityPanelHeader"><div><span className="eyebrow">{tr("PRIVACY BOUNDARY", "隐私边界")}</span><h2>{tr("What the audit log keeps", "审计日志记录什么")}</h2></div></div>
+                <div className="privacyBoundaryGrid">
+                  <div className="kept"><span>✓</span><p><strong>{tr("Operational metadata", "运行元数据")}</strong><small>{tr("Tool name, device, success state and time.", "工具名称、设备、结果状态与时间。")}</small></p></div>
+                  <div className="notKept"><span>×</span><p><strong>{tr("File contents", "文件内容")}</strong><small>{tr("Not intentionally stored in audit records.", "不会有意保存在审计记录中。")}</small></p></div>
+                  <div className="notKept"><span>×</span><p><strong>{tr("Command arguments", "命令参数")}</strong><small>{tr("Not intentionally stored in audit records.", "不会有意保存在审计记录中。")}</small></p></div>
+                  <div className="notKept"><span>×</span><p><strong>{tr("OAuth tokens & device credentials", "OAuth Token 与设备凭证")}</strong><small>{tr("Never exposed in the activity feed.", "不会暴露在活动记录中。")}</small></p></div>
+                </div>
+              </article>
+            </section>
+
+            <section className="securityActionsPanel">
+              <div><span className="eyebrow">{tr("SECURITY ACTIONS", "安全操作")}</span><h2>{tr("Keep access intentional.", "确保每一次访问都是有意授权。")}</h2><p>{tr("Review device permissions regularly, revoke computers you no longer use, and sign out of shared browsers.", "定期检查设备权限、撤销不再使用的电脑，并在共享浏览器中及时退出登录。")}</p></div>
+              <div className="securityActionButtons">
+                <button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Review device tools", "检查设备工具")}</button>
+                <button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Review MCP connection", "检查 MCP 连接")}</button>
+                <button className="dangerButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button>
+              </div>
             </section>
           </>
         )}
