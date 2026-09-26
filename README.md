@@ -1,6 +1,6 @@
 # Remote Arc
 
-Remote Arc is a self-hosted Remote MCP system that connects AI clients to your computers with a Desktop Commander Remote-style onboarding flow.
+Remote Arc is a managed Remote MCP service with a lightweight local agent that securely connects AI clients to your Windows, macOS, and Linux computers.
 
 The intended user experience is:
 

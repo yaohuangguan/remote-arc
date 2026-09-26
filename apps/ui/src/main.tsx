@@ -493,7 +493,7 @@ function Landing({ user }: { user?: User | null }) {
     <PublicLayout>
       <section className="landingHero">
         <div className="heroCopy">
-          <span className="eyebrow">{tr("THE OPEN CONTROL PLANE FOR AI", "面向 AI 的开源远程控制层")}</span>
+          <span className="eyebrow">{tr("THE REMOTE CONTROL PLANE FOR AI", "面向 AI 的远程控制层")}</span>
           <h1>{tr("Your computer. Within reach of AI.", "让 AI 真正触达你的电脑。")}</h1>
           <p>{tr(
             "Give ChatGPT, Claude and compatible MCP clients secure access to your real Windows, macOS and Linux machines — without public IPs, VPNs or surrendering control.",
@@ -505,52 +505,48 @@ function Landing({ user }: { user?: User | null }) {
           </div>
           <div className="heroBadges">
             <span>{tr("10,000 hosted calls / month", "每月 10,000 次托管调用")}</span>
-            <span>{tr("Source-available + self-hostable", "源码可见且可自托管")}</span>
+            <span>{tr("Free hosted tier + paid usage", "免费托管额度 + 付费扩容")}</span>
             <span>{tr("Outbound connection only", "仅需出站连接")}</span>
           </div>
         </div>
-        <div className="heroFlow" aria-label={tr("Remote Arc connection flow", "Remote Arc 连接链路")}>
-          <div className="flowAgentCard flowStageCard">
-            <span className="flowKicker">{tr("AI AGENTS", "AI AGENTS")}</span>
-            <div className="flowAiClients">
-              {aiClients.map((client) => (
-                <div className="flowAiClient" key={client.name}>
-                  <img src={client.icon} alt="" />
-                  <span><strong>{client.name}</strong><small>MCP</small></span>
-                </div>
-              ))}
-              <div className="flowAiClient">
-                <span className="protocolMark">M</span>
-                <span><strong>{tr("Any MCP client", "任意 MCP 客户端")}</strong><small>{tr("Standards-based", "标准协议")}</small></span>
+        <div className="heroFlowCompact" aria-label={tr("Remote Arc connection flow", "Remote Arc 连接链路")}>
+          <div className="flowAgentsRow">
+            {aiClients.map((client, index) => (
+              <div className={"flowAgentNode agent" + index} key={client.name}>
+                <img src={client.icon} alt="" />
+                <strong>{client.name}</strong>
+                <span>MCP</span>
+                <i className="agentPacket" aria-hidden="true" />
               </div>
-            </div>
-            <div className="flowAgentLog">
-              <span><i />{tr("Plugin / MCP connected", "Plugin / MCP 已连接")}</span>
-              <span><i />OAuth 2.1 + PKCE</span>
+            ))}
+            <div className="flowAgentNode agent2">
+              <span className="protocolMark">M</span>
+              <strong>{tr("Any MCP client", "任意 MCP 客户端")}</strong>
+              <span>MCP</span>
+              <i className="agentPacket" aria-hidden="true" />
             </div>
           </div>
 
-          <div className="flowTrack flowTrackIn" aria-hidden="true">
-            <i className="flowPacket p1" /><i className="flowPacket p2" /><i className="flowPacket p3" />
+          <div className="flowMerge" aria-hidden="true">
+            <span className="mergeLeft" />
+            <span className="mergeCenter" />
+            <span className="mergeRight" />
+            <span className="mergeStem" />
           </div>
 
-          <div className="flowHubCard flowStageCard">
+          <div className="flowHubCompact">
             <LogoMark />
-            <strong>Remote Arc</strong>
-            <span>{tr("OAuth · routing · presence", "OAuth · 路由 · 在线状态")}</span>
-            <b>{tr("SECURE CONTROL PLANE", "安全控制层")}</b>
+            <div><strong>Remote Arc</strong><span>OAuth · Routing · Presence</span></div>
+            <b>{tr("Connected", "已连接")}</b>
           </div>
 
-          <div className="flowTrack flowTrackOut" aria-hidden="true">
-            <i className="flowPacket p1" /><i className="flowPacket p2" /><i className="flowPacket p3" />
-          </div>
+          <div className="flowDown" aria-hidden="true"><i /></div>
 
-          <div className="flowDeviceStack">
-            <div className="flowDevice"><i>⊞</i><span><strong>{tr("Personal desktop", "个人桌面电脑")}</strong><small>Windows</small></span><b>{tr("Online", "在线")}</b></div>
-            <div className="flowDevice"><i>⌘</i><span><strong>{tr("Personal Mac", "个人 Mac")}</strong><small>macOS</small></span><b>{tr("Online", "在线")}</b></div>
-            <div className="flowDevice"><i>›_</i><span><strong>{tr("Linux host", "Linux 主机")}</strong><small>Linux</small></span><b>{tr("Online", "在线")}</b></div>
+          <div className="flowDevicesBare">
+            <div><i className="onlineDot" /><span>⊞</span><strong>{tr("Desktop", "桌面电脑")}</strong><small>Windows</small></div>
+            <div><i className="onlineDot" /><span>⌘</span><strong>Mac</strong><small>macOS</small></div>
+            <div><i className="onlineDot" /><span>›_</span><strong>{tr("Linux host", "Linux 主机")}</strong><small>Linux</small></div>
           </div>
-          <span className="flowCaption">{tr("Agent → Remote Arc → your devices", "Agent → Remote Arc → 你的设备")}</span>
         </div>
       </section>
 
@@ -629,7 +625,7 @@ function Landing({ user }: { user?: User | null }) {
         <div className="landingFeatures">
           <article><span>01</span><h2>{tr("One endpoint, every machine", "一个端点，所有设备")}</h2><p>{tr("Name the computer in your prompt. Remote Arc handles identity, presence and routing behind the scenes.", "在提示词里说出电脑名称，身份、在线状态与路由都由 Remote Arc 处理。")}</p></article>
           <article><span>02</span><h2>{tr("Local-first permissions", "权限最终由本机决定")}</h2><p>{tr("Safe mode is read-only. Developer mode adds write and shell tools. The relay cannot expand what a device exposes.", "Safe 模式只读；Developer 模式开放写入与命令。Relay 无法扩大设备本机声明的权限。")}</p></article>
-          <article><span>03</span><h2>{tr("Open, not trapped", "开源，不被锁定")}</h2><p>{tr("Use the hosted relay for zero ops or run the same control plane in your own Cloudflare account.", "想省心就用托管 Relay，想完全掌控就部署到自己的 Cloudflare 账户。")}</p></article>
+          <article><span>03</span><h2>{tr("Hosted, ready to scale", "托管运行，按需扩容")}</h2><p>{tr("Start on the free hosted tier, then add paid usage when you need more capacity — without changing your endpoint or devices.", "从免费托管额度开始，需要更多容量时直接充值扩容，无需更换端点或重新配置设备。")}</p></article>
           <article><span>04</span><h2>{tr("No inbound attack surface", "无需暴露入站端口")}</h2><p>{tr("Each machine creates an outbound encrypted connection. No public IP, port forwarding or always-on VPN.", "每台设备主动建立加密出站连接，无需公网 IP、端口映射或常驻 VPN。")}</p></article>
           <article><span>05</span><h2>{tr("Real OAuth, not copied secrets", "标准 OAuth，不复制密钥")}</h2><p>{tr("OAuth 2.1, PKCE, short-lived codes and rotating refresh tokens replace shared URLs and pasted credentials.", "OAuth 2.1、PKCE、短期授权码与轮换 Refresh Token，替代共享链接和手动粘贴凭证。")}</p></article>
           <article><span>06</span><h2>{tr("Private, useful audit", "隐私友好的可用审计")}</h2><p>{tr("See the device, tool, result and time without storing file contents or command arguments.", "记录设备、工具、结果与时间，但不保存文件内容或命令参数。")}</p></article>
@@ -648,12 +644,12 @@ function Landing({ user }: { user?: User | null }) {
         <div className="comparisonGrid">
           <div className="comparisonHead"><span></span><strong>Remote Arc</strong><strong>{tr("Hosted-only connector", "纯托管连接器")}</strong></div>
           {[
-            [tr("Control plane", "控制面"), tr("Hosted or self-hosted", "托管或自托管"), tr("Provider-owned", "平台持有")],
+            [tr("Control plane", "控制面"), tr("Managed Remote Arc service", "Remote Arc 托管服务"), tr("Provider-owned", "平台持有")],
             [tr("AI clients", "AI 客户端"), tr("ChatGPT, Claude + Remote MCP", "ChatGPT、Claude + Remote MCP"), tr("Often product-specific", "通常绑定单一产品")],
             [tr("Onboarding", "上手方式"), tr("One command + browser approval", "一条命令 + 浏览器授权"), tr("Tokens and manual config", "Token 与手动配置")],
             [tr("Device permissions", "设备权限"), tr("Final boundary stays local", "最终边界留在本机"), tr("Cloud policy first", "云端策略优先")],
             [tr("Network exposure", "网络暴露"), tr("Outbound connection only", "仅需出站连接"), tr("VPN, tunnel or open port", "VPN、隧道或开放端口")],
-            [tr("Exit path", "退出路径"), tr("Fork, deploy, keep running", "Fork、部署、继续运行"), tr("Migration required", "需要迁移")],
+            [tr("Scaling", "扩容方式"), tr("Free tier + paid usage", "免费额度 + 付费扩容"), tr("Depends on provider", "取决于平台")],
             [tr("Hosted usage", "托管额度"), tr("10,000 free calls / month", "每月 10,000 次免费调用"), tr("Depends on provider", "取决于平台")],
           ].map(([label, ours, other]) => (
             <div className="comparisonRow" key={label}>
@@ -692,7 +688,7 @@ function Landing({ user }: { user?: User | null }) {
         <div>
           <span className="eyebrow">{tr("FREE HOSTED PLAN", "免费托管方案")}</span>
           <h2>{tr("Connect one machine in minutes.", "几分钟内，让第一台电脑上线。")}</h2>
-          <p>{tr("Start with 10,000 hosted tool calls each month. Move to your own infrastructure whenever you want.", "每月先用 10,000 次免费托管调用；任何时候都可以迁移到你自己的基础设施。")}</p>
+          <p>{tr("Start with 10,000 hosted tool calls each month, then add paid usage when you need more.", "每月先用 10,000 次免费托管调用，需要更多时直接充值扩容。")}</p>
         </div>
         <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : APP_ORIGIN + "/auth/google?return_to=/overview"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start with Remote Arc", "开始使用 Remote Arc")}</a>
       </section>
@@ -706,8 +702,8 @@ function PricingPage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <section className="publicHero compactHero">
         <span className="eyebrow">{tr("PRICING", "价格")}</span>
-        <h1>{tr("Start free. Keep an exit door.", "免费开始，也永远保留退出与自托管的自由。")}</h1>
-        <p>{tr("Hosted Remote Arc gives every account 10,000 tool calls per month. The source-available self-hosted edition can run without a Remote Arc usage cap.", "Remote Arc 托管版每个账户每月包含 10,000 次工具调用；源码可见的自托管版本可以不受 Remote Arc 调用额度限制。")}</p>
+        <h1>{tr("Start free. Add usage when you need it.", "免费开始，需要更多时再扩容。")}</h1>
+        <p>{tr("Remote Arc includes 10,000 hosted tool calls each month. When you need more, add paid usage without changing your setup.", "Remote Arc 每月包含 10,000 次托管工具调用；需要更多时可直接付费扩容，无需修改现有配置。")}</p>
       </section>
       <section className="pricingGrid">
         <article className="priceCard featured">
@@ -723,27 +719,16 @@ function PricingPage({ user }: { user?: User | null }) {
           <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : APP_ORIGIN + "/auth/google?return_to=/overview"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start free", "免费开始")}</a>
         </article>
         <article className="priceCard">
-          <span className="planTag">{tr("SELF-HOSTED", "自托管")}</span>
-          <h2>$0 <small>{tr("software", "软件")}</small></h2>
-          <p>{tr("Run the control plane on your own Cloudflare account and domain.", "把控制面部署到你自己的 Cloudflare 账户与域名。")}</p>
+          <span className="planTag">{tr("PAID USAGE", "付费额度")}</span>
+          <h2>{tr("Top up", "按需充值")}</h2>
+          <p>{tr("Keep the same account, devices and MCP endpoint. Add hosted usage only when the free allowance is not enough.", "账户、设备和 MCP 地址都不用变；免费额度不够时，只需按需充值托管调用额度。")}</p>
           <ul>
-            <li>{tr("No Remote Arc usage cap", "不受 Remote Arc 调用额度限制")}</li>
-            <li>{tr("Source-available codebase", "源码可见代码")}</li>
-            <li>{tr("Own relay, D1 and device routing", "掌握 Relay、D1 与设备路由")}</li>
-            <li>{tr("Bring your own infrastructure", "使用你自己的基础设施")}</li>
+            <li>{tr("Usage added to your hosted account", "额度直接加入当前托管账户")}</li>
+            <li>{tr("No infrastructure to operate", "无需维护任何基础设施")}</li>
+            <li>{tr("Same OAuth and device permissions", "继续使用同一套 OAuth 与设备权限")}</li>
+            <li>{tr("Designed for heavier personal usage", "适合更高频的个人使用")}</li>
           </ul>
-          <a className="ghostButton priceLink" href="https://github.com/yaohuangguan/remote-arc">{tr("View source", "查看源码")}</a>
-        </article>
-        <article className="priceCard">
-          <span className="planTag">{tr("PRO", "PRO")}</span>
-          <h2>{tr("Coming soon", "即将推出")}</h2>
-          <p>{tr("For heavier hosted usage and convenience features.", "适合高频托管使用与更多便利功能。")}</p>
-          <ul>
-            <li>{tr("Higher or unlimited hosted usage", "更高或无限托管额度")}</li>
-            <li>{tr("Priority relay and support", "优先 Relay 与支持")}</li>
-            <li>{tr("Advanced device policies", "高级设备权限策略")}</li>
-            <li>{tr("Team features", "团队功能")}</li>
-          </ul>
+          <a className="ghostButton priceLink" href={user ? APP_ORIGIN + "/settings" : APP_ORIGIN + "/auth/google?return_to=/settings"}>{tr("Manage usage", "管理额度")}</a>
         </article>
       </section>
     </PublicLayout>
@@ -762,8 +747,8 @@ function ResourcesPage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <section className="publicHero compactHero">
         <span className="eyebrow">{tr("RESOURCES", "资源")}</span>
-        <h1>{tr("Build, inspect and self-host.", "搭建、理解，并自托管。")}</h1>
-        <p>{tr("Remote Arc is designed to be understandable infrastructure, not a black box.", "Remote Arc 希望成为你能理解、能修改、能掌控的基础设施，而不是黑盒。")}</p>
+        <h1>{tr("Understand the system behind Remote Arc.", "了解 Remote Arc 背后的系统。")}</h1>
+        <p>{tr("Explore the architecture, MCP protocol and product documentation behind the managed Remote Arc service.", "了解 Remote Arc 托管服务背后的架构、MCP 协议与产品文档。")}</p>
       </section>
       <section className="resourceGrid">
         {items.map(([title, body, href]) => (
@@ -958,7 +943,7 @@ function Dashboard({
             <section className="metricsGrid">
               <Metric label={tr("Online now", "当前在线")} value={status?.onlineDevices ?? 0} detail={tr("Ready for MCP calls", "可接受 MCP 调用")} good />
               <Metric label={tr("Linked devices", "已连接设备")} value={status?.totalDevices ?? devices.length} detail="Windows · macOS · Linux" />
-              <Metric label={tr("This month", "本月调用")} value={usage?.unlimited ? "∞" : (usage?.used ?? 0).toLocaleString()} detail={usage?.unlimited ? tr("Self-hosted unlimited", "自托管无限制") : tr("of 10,000 hosted calls", "共 10,000 次托管额度")} good />
+              <Metric label={tr("This month", "本月调用")} value={(usage?.used ?? 0).toLocaleString()} detail={tr("of your hosted allowance", "当前托管额度内")} good />
               <Metric label="Remote MCP" value={tr("Ready", "就绪")} detail="OAuth 2.1 + PKCE" good />
             </section>
 
@@ -1038,7 +1023,7 @@ function Dashboard({
                 ["OAuth 2.1 + PKCE", tr("Short-lived access tokens and explicit scopes protect Remote MCP.", "短期 Access Token 与明确 Scope 保护 Remote MCP。")],
                 [tr("Privacy-preserving audit", "隐私审计"), tr("Tool name, device, success and time are logged — never file contents or command arguments.", "仅记录工具名、设备、结果与时间，不记录文件内容或命令参数。")],
                 [tr("Local permission modes", "本机权限模式"), tr("Safe and Developer modes define the tools the device actually exposes.", "Safe 与 Developer 模式定义设备实际开放的工具。")],
-                [tr("Self-hostable", "可自托管"), tr("Run the relay and identity database in your own Cloudflare account.", "Relay 与身份数据库可以部署在你自己的 Cloudflare 账户。")],
+                [tr("Managed hosted service", "托管服务"), tr("Remote Arc operates the relay, identity layer and routing so you do not need to maintain infrastructure.", "Relay、身份系统与路由均由 Remote Arc 托管，无需自行维护基础设施。")],
               ].map(([title, body]) => <article className="securityCard" key={title}><span className="securityIcon">◇</span><h2>{title}</h2><p>{body}</p><span className="securityState good">{tr("Enabled", "已启用")}</span></article>)}
             </section>
           </>
@@ -1050,8 +1035,8 @@ function Dashboard({
             <section className="settingsGrid">
               <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Choose Light, Dark or System. Your preference is saved in this browser.", "选择浅色、深色或跟随系统；偏好会保存在当前浏览器。")}</p></div><ThemeSwitcher /></article>
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
-              <article className="settingsCard"><div><h2>{tr("Account & profile", "账号与个人信息")}</h2><p>{user.name || tr("Remote Arc user", "Remote Arc 用户")} · {user.email}</p></div><button className="ghostButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button></article><article className="settingsCard"><div><h2>{tr("MCP connection", "MCP 连接")}</h2><p>{tr("Manage per-device tool access from Devices. Disabled tools are enforced by the relay.", "在设备页管理每台电脑的工具权限；关闭的工具会由 Relay 强制拦截。")}</p><code>{mcpEndpoint}</code></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button></article><article className="settingsCard"><div><h2>{tr("Billing & payments", "账单与支付")}</h2><p>{tr("Free hosted plan. No payment method is required; paid billing is not enabled yet.", "当前为托管免费版，无需支付方式；付费账单尚未启用。")}</p></div><div className="planValue">{usage?.unlimited ? "∞" : `${usage?.used ?? 0} / ${usage?.limit ?? 10000}`}</div></article>
-              <article className="settingsCard"><div><h2>{tr("Self-hosting", "自托管")}</h2><p>{tr("Set MONTHLY_TOOL_CALL_LIMIT=0 on your own deployment for unlimited calls.", "在自己的部署中设置 MONTHLY_TOOL_CALL_LIMIT=0 即可取消调用额度限制。")}</p></div><a className="ghostButton" href="https://github.com/yaohuangguan/remote-arc">{tr("Open GitHub", "打开 GitHub")}</a></article>
+              <article className="settingsCard"><div><h2>{tr("Account & profile", "账号与个人信息")}</h2><p>{user.name || tr("Remote Arc user", "Remote Arc 用户")} · {user.email}</p></div><button className="ghostButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button></article><article className="settingsCard"><div><h2>{tr("MCP connection", "MCP 连接")}</h2><p>{tr("Manage per-device tool access from Devices. Disabled tools are enforced by the relay.", "在设备页管理每台电脑的工具权限；关闭的工具会由 Relay 强制拦截。")}</p><code>{mcpEndpoint}</code></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button></article><article className="settingsCard"><div><h2>{tr("Billing & payments", "账单与支付")}</h2><p>{tr("Your account starts on the free hosted tier. Paid usage is added through top-ups when you need more capacity.", "账户默认使用免费托管额度；需要更多容量时通过充值增加付费调用额度。")}</p></div><div className="planValue">{`${usage?.used ?? 0} / ${usage?.limit ?? 10000}`}</div></article>
+              <article className="settingsCard"><div><h2>{tr("Usage & top-ups", "额度与充值")}</h2><p>{tr("Your hosted account includes a free monthly allowance. Add paid usage when you need more capacity.", "托管账户每月包含免费额度；需要更多容量时可按需充值。")}</p></div><a className="ghostButton" href={MARKETING_ORIGIN + "/pricing"}>{tr("View pricing", "查看价格")}</a></article>
             </section>
           </>
         )}
@@ -1119,7 +1104,7 @@ function LegalPage({
         [tr("Authorized use", "授权使用"), tr("You must have permission to access every computer, file, account and service you control through Remote Arc. Do not use Remote Arc to bypass access controls or interfere with systems you do not own or administer.", "你必须有权访问通过 Remote Arc 控制的每台电脑、文件、账户和服务。不得使用 Remote Arc 绕过访问控制或干扰你无权管理的系统。")],
         [tr("Your responsibility", "你的责任"), tr("Remote computer control can read or modify files, execute commands, affect running software and, when commands access network services, cause changes outside the local computer. You are responsible for reviewing device permissions, AI prompts and consequential actions before approving or enabling high-impact access.", "远程电脑控制可能读取或修改文件、执行命令、影响运行中的软件；当命令访问网络服务时，也可能对本机之外的系统产生影响。你有责任在批准或启用高影响访问前检查设备权限、AI 提示与相关操作。")],
         [tr("Service availability", "服务可用性"), tr("The hosted service is provided without a guarantee of uninterrupted availability. Features, quotas and supported integrations may change as Remote Arc develops.", "托管服务不保证持续无中断可用。随着 Remote Arc 的发展，功能、额度和支持的集成可能发生变化。")],
-        [tr("Third-party open-source software", "第三方开源软件"), tr("Third-party open-source components are governed by the licenses included with those components. Self-hosted deployments are operated by their deployer, not by the hosted Remote Arc service.", "Remote Arc 使用的第三方开源组件受各自随附许可证约束。自托管部署由其部署者负责运行，不属于 Remote Arc 托管服务。")],
+        [tr("Third-party software", "第三方软件"), tr("Third-party components used by Remote Arc are governed by their respective licenses and terms. The Remote Arc product is provided as a managed hosted service.", "Remote Arc 使用的第三方组件受各自许可证与条款约束；Remote Arc 产品以托管服务方式提供。")],
         [tr("Suspension", "暂停服务"), tr("Access may be limited or suspended for abuse, security risks, legal requirements or material violations of these terms.", "如存在滥用、安全风险、法律要求或重大违反本条款的情况，访问可能会被限制或暂停。")],
       ],
     },
@@ -1131,7 +1116,7 @@ function LegalPage({
         "如需安装帮助、Bug 反馈、安全问题或账户与数据请求，可使用以下渠道。",
       ),
       sections: [
-        [tr("Documentation", "文档"), tr("Start with the MCP setup guide and repository README for pairing, permissions and self-hosting instructions.", "可先查看 MCP 接入指南和仓库 README，了解配对、权限与自托管说明。")],
+        [tr("Documentation", "文档"), tr("Start with the MCP setup guide and product documentation for pairing, permissions and AI-client connection instructions.", "可先查看 MCP 接入指南和产品文档，了解配对、权限与 AI 客户端连接说明。")],
         [tr("Bug reports", "Bug 反馈"), tr("Use the GitHub repository for reproducible product and developer issues. Do not include device credentials, OAuth tokens or private file contents.", "可通过 GitHub 仓库提交可复现的产品与开发问题。请勿附带设备凭证、OAuth Token 或私人文件内容。")],
         [tr("Security", "安全问题"), tr("Review SECURITY.md before reporting a vulnerability and avoid publishing sensitive exploit details in a public issue.", "报告漏洞前请阅读 SECURITY.md，不要在公开 Issue 中发布敏感漏洞利用细节。")],
         [tr("Account and data requests", "账户与数据请求"), tr("For account deletion or hosted-data requests, contact the project maintainer through the support channel published on the Remote Arc website or repository.", "如需删除账户或请求托管数据，请通过 Remote Arc 官网或仓库公开的支持渠道联系项目维护者。")],
