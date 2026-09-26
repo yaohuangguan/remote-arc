@@ -3165,3 +3165,298 @@ body{font-size:18px;line-height:1.6}
   .connectTryPanel{grid-template-columns:1fr}
   .connectPromptGrid{grid-template-columns:1fr}
 }
+
+
+/* Dashboard shell: fixed desktop sidebar */
+@media(min-width:821px){
+  .appFrame{display:block;min-height:100vh}
+  .sidebar{
+    position:fixed!important;
+    inset:0 auto 0 0;
+    width:238px;
+    height:100vh!important;
+    z-index:50;
+    overflow-y:auto;
+  }
+  .dashboardMain{
+    width:min(1260px,calc(100vw - 290px))!important;
+    margin-left:calc(238px + max(26px,(100vw - 1498px)/2))!important;
+    margin-right:26px!important;
+  }
+}
+
+/* Devices management center */
+.devicesPageHeader{padding-bottom:22px}
+.deviceStatsGrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+  margin-bottom:16px;
+}
+.deviceStatsGrid article{
+  display:grid;
+  gap:4px;
+  padding:18px 20px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:var(--panel);
+}
+.deviceStatsGrid span{
+  color:#78919a;
+  font-size:12px;
+  font-weight:750;
+  letter-spacing:.04em;
+}
+.deviceStatsGrid strong{
+  color:#ecf9fc;
+  font-size:29px;
+  line-height:1;
+  letter-spacing:-.035em;
+}
+.deviceStatsGrid small{
+  color:#657d87;
+  font-size:11px;
+}
+
+.deviceToolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin:18px 0;
+}
+.deviceSearch{
+  flex:1;
+  max-width:520px;
+  display:grid;
+  grid-template-columns:22px minmax(0,1fr);
+  align-items:center;
+  gap:7px;
+  padding:0 13px;
+  height:44px;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:#061018;
+}
+.deviceSearch>span{color:#6f8993;font-size:17px}
+.deviceSearch input{
+  width:100%;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:#eaf8fb;
+  font:inherit;
+  font-size:14px;
+}
+.deviceSearch input::placeholder{color:#59717b}
+.deviceFilters{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:4px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#061018;
+}
+.deviceFilters button{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  height:34px;
+  padding:0 11px;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:#78919a;
+  font-size:12px;
+  font-weight:750;
+}
+.deviceFilters button span{
+  display:grid;
+  place-items:center;
+  min-width:20px;
+  height:20px;
+  padding:0 5px;
+  border-radius:999px;
+  background:#0d1b26;
+  color:#78919a;
+  font-size:10px;
+}
+.deviceFilters button.active{
+  background:#0b2231;
+  color:#dff8ff;
+}
+.deviceFilters button.active span{
+  background:#12364b;
+  color:#7dd3fc;
+}
+
+.deviceManagementGrid{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:16px!important;
+}
+.deviceCard.managed{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  padding:20px;
+  overflow:hidden;
+}
+.deviceCard.managed::before{
+  content:"";
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:3px;
+  background:#334155;
+}
+.deviceCard.managed.online::before{background:#4ade80}
+.deviceCard.managed.offline::before{background:#64748b}
+.deviceCard.managed .deviceTop{margin-bottom:16px}
+.deviceCard.managed .deviceIdentity h3{
+  margin:0 0 4px;
+  font-size:20px;
+  letter-spacing:-.025em;
+}
+.deviceCard.managed .deviceIdentity span{
+  color:#78919a;
+  font-size:12px;
+  line-height:1.4;
+}
+
+.deviceStatusStrip{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  border:1px solid rgba(148,163,184,.10);
+  border-radius:13px;
+  overflow:hidden;
+  background:#061018;
+}
+.deviceStatusStrip>div{
+  min-width:0;
+  display:grid;
+  gap:4px;
+  padding:12px 13px;
+}
+.deviceStatusStrip>div+div{border-left:1px solid rgba(148,163,184,.10)}
+.deviceStatusStrip span{
+  color:#627a84;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.deviceStatusStrip strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#d9eef3;
+  font-size:13px;
+}
+
+.deviceAccessSummary{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:16px;
+  align-items:center;
+  padding:18px 2px 16px;
+}
+.deviceAccessSummary>div:first-child{display:grid;gap:4px}
+.deviceAccessSummary strong{color:#e5f5f8;font-size:14px}
+.deviceAccessSummary p{
+  margin:0;
+  max-width:500px;
+  color:#6f8993;
+  font-size:12px;
+  line-height:1.55;
+}
+.deviceToolChips{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:5px;
+  max-width:220px;
+}
+.deviceToolChips span{
+  padding:5px 7px;
+  border:1px solid #1c3545;
+  border-radius:8px;
+  background:#071821;
+  color:#8fb9c4;
+  font-size:10px;
+}
+
+.deviceToolDetails{
+  border-top:1px solid rgba(148,163,184,.10);
+  border-bottom:1px solid rgba(148,163,184,.10);
+}
+.deviceToolDetails summary{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:13px 2px;
+  cursor:pointer;
+  list-style:none;
+  color:#b7cbd1;
+  font-size:13px;
+  font-weight:750;
+}
+.deviceToolDetails summary::-webkit-details-marker{display:none}
+.deviceToolDetails summary::before{
+  content:"›";
+  margin-right:7px;
+  color:#38bdf8;
+  transition:transform .18s ease;
+}
+.deviceToolDetails[open] summary::before{transform:rotate(90deg)}
+.deviceToolDetails summary span{
+  margin-left:auto;
+  color:#607983;
+  font-size:11px;
+  font-weight:600;
+}
+.deviceToolDetails .toolToggleGrid{padding:2px 0 15px}
+.managedActions{
+  margin-top:15px!important;
+  padding-top:0!important;
+  border-top:0!important;
+}
+.managedActions .dangerButton{margin-left:auto}
+
+:root[data-theme="light"] .deviceStatsGrid article,
+:root[data-theme="light"] .deviceSearch,
+:root[data-theme="light"] .deviceFilters,
+:root[data-theme="light"] .deviceStatusStrip{
+  background:#fff;
+  border-color:#dbe9ee;
+}
+:root[data-theme="light"] .deviceSearch input{color:#0a2932}
+:root[data-theme="light"] .deviceStatsGrid strong,
+:root[data-theme="light"] .deviceStatusStrip strong,
+:root[data-theme="light"] .deviceAccessSummary strong{color:#10333d}
+:root[data-theme="light"] .deviceFilters button.active{background:#dff4f8;color:#0b5267}
+
+@media(max-width:1100px){
+  .deviceManagementGrid{grid-template-columns:1fr!important}
+}
+@media(max-width:820px){
+  .dashboardMain{
+    width:min(100% - 22px,1240px)!important;
+    margin:0 auto!important;
+  }
+  .deviceStatsGrid{grid-template-columns:1fr 1fr}
+  .deviceStatsGrid article:last-child{grid-column:1/-1}
+  .deviceToolbar{align-items:stretch;flex-direction:column}
+  .deviceSearch{max-width:none}
+  .deviceFilters{width:max-content;max-width:100%;overflow:auto}
+}
+@media(max-width:560px){
+  .deviceStatsGrid{grid-template-columns:1fr}
+  .deviceStatsGrid article:last-child{grid-column:auto}
+  .deviceStatusStrip{grid-template-columns:1fr}
+  .deviceStatusStrip>div+div{border-left:0;border-top:1px solid rgba(148,163,184,.10)}
+  .deviceAccessSummary{grid-template-columns:1fr}
+  .deviceToolChips{justify-content:flex-start;max-width:none}
+  .managedActions{flex-wrap:wrap}
+  .managedActions .dangerButton{margin-left:0}
+}

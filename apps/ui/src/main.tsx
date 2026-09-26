@@ -839,6 +839,8 @@ function Dashboard({
 }) {
   const { tr, locale, setLocale } = useI18n();
   const [showAdd, setShowAdd] = useState(false);
+  const [deviceQuery, setDeviceQuery] = useState("");
+  const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
   const [active, setActive] = useState<DashboardTab>(dashboardTabFromPath(location.pathname));
   useEffect(() => {
     const syncRoute = () => setActive(dashboardTabFromPath(location.pathname));
@@ -849,6 +851,13 @@ function Dashboard({
   const safeCommand = command + " --safe";
   const mcpEndpoint = MCP_ENDPOINT;
   const deviceNameById = useMemo(() => new Map(devices.map((device) => [device.id, device.name])), [devices]);
+  const filteredDevices = useMemo(() => {
+    const query = deviceQuery.trim().toLowerCase();
+    return devices
+      .filter((device) => deviceFilter === "all" || device.status === deviceFilter)
+      .filter((device) => !query || [device.name, device.hostname, device.platform, device.arch, device.id].some((value) => String(value || "").toLowerCase().includes(query)))
+      .sort((a, b) => Number(b.status === "online") - Number(a.status === "online"));
+  }, [devices, deviceFilter, deviceQuery]);
 
   const usage = status?.usage;
   const usagePct = usage?.limit ? Math.min(100, (usage.used / usage.limit) * 100) : 0;
@@ -981,17 +990,88 @@ function Dashboard({
 
         {active === "devices" && (
           <>
-            <section className="pageHeader"><div><span className="eyebrow">{tr("DEVICES", "设备")}</span><h1>{tr("Your computers.", "你的电脑。")}</h1><p>{tr("Each device has its own revocable credential and local permission policy.", "每台设备都有独立可撤销凭证与本机权限策略。")}</p></div><button className="addButton goldButton" onClick={() => setShowAdd(true)}>+ {tr("Add device", "添加设备")}</button></section>
-            <div className="deviceGrid rich">
-              {devices.map((device) => (
-                <article className="deviceCard" key={device.id}>
-                  <div className="deviceTop"><div className="deviceIdentity"><div className="deviceIcon large">{platformGlyph(device.platform)}</div><div><h3>{device.name}</h3><span>{platformLabel(device.platform)} · {device.arch || "unknown"}</span></div></div><span className={"badge " + device.status}><i/>{device.status}</span></div>
-                  <div className="deviceMetaGrid"><div><span>Hostname</span><strong>{device.hostname || "—"}</strong></div><div><span>Tools</span><strong>{device.tools.length}</strong></div><div><span>{tr("Last seen", "最后在线")}</span><strong>{timeAgo(device.last_seen)}</strong></div><div><span>Device ID</span><strong>{device.id.slice(0,8)}</strong></div></div>
-                  <div className="toolPermissions"><div className="toolPermissionsHeader"><strong>{tr("MCP tool access", "MCP 工具权限")}</strong><span>{tr("Disabled tools are blocked by the relay before they reach this computer.", "关闭后 Relay 会在请求到达电脑前直接拦截该工具。")}</span></div><div className="toolToggleGrid">{Array.from(new Set([...DEVICE_TOOL_CATALOG, ...(device.available_tools || []), ...(device.allowed_tools || [])])).map((tool) => { const enabled = device.allowed_tools == null ? (device.status === "online" ? (device.available_tools || device.tools).includes(tool) : true) : device.allowed_tools.includes(tool); const advertised = device.status === "online" ? (device.available_tools || device.tools).includes(tool) : true; return <label className={"toolToggle" + (!advertised ? " unavailable" : "")} key={tool}><input type="checkbox" checked={enabled} disabled={!advertised} onChange={(event) => void updateDeviceTools(device, tool, event.target.checked)} /><span>{tool}</span></label>; })}</div>{device.status === "offline" && <span className="offlineTools">{tr("Offline: changes are saved now and enforced the next time this device connects.", "设备离线：修改会立即保存，并在设备下次连接时生效。")}</span>}</div>
-                  <div className="deviceActions"><button className="ghostButton" onClick={() => void rename(device)}>{tr("Rename", "重命名")}</button><CopyButton value={device.id} label={tr("Copy ID", "复制 ID")}/><button className="dangerButton" onClick={() => void revoke(device.id)}>{tr("Revoke", "撤销")}</button></div>
-                </article>
-              ))}
+            <section className="pageHeader devicesPageHeader">
+              <div><span className="eyebrow">{tr("DEVICES", "设备")}</span><h1>{tr("Your computers.", "你的电脑。")}</h1><p>{tr("Pair, monitor and control exactly what each computer exposes to your AI.", "配对、监控并精确控制每台电脑向 AI 开放的能力。")}</p></div>
+              <button className="addButton goldButton" onClick={() => setShowAdd(true)}>+ {tr("Add device", "添加设备")}</button>
+            </section>
+
+            <section className="deviceStatsGrid">
+              <article><span>{tr("Total devices", "设备总数")}</span><strong>{devices.length}</strong><small>Windows · macOS · Linux</small></article>
+              <article><span>{tr("Online now", "当前在线")}</span><strong>{devices.filter((device) => device.status === "online").length}</strong><small>{tr("Ready for MCP calls", "可接受 MCP 调用")}</small></article>
+              <article><span>{tr("Tool access", "工具权限")}</span><strong>{devices.reduce((sum, device) => sum + (device.allowed_tools?.length ?? device.tools.length), 0)}</strong><small>{tr("Enabled across all devices", "全部设备已启用工具数")}</small></article>
+            </section>
+
+            <section className="deviceToolbar">
+              <div className="deviceSearch">
+                <span>⌕</span>
+                <input value={deviceQuery} onChange={(event) => setDeviceQuery(event.target.value)} placeholder={tr("Search devices, hostname or ID", "搜索设备、Hostname 或 ID")} />
+              </div>
+              <div className="deviceFilters" role="tablist" aria-label={tr("Device status filter", "设备状态筛选")}>
+                {(["all", "online", "offline"] as const).map((filter) => (
+                  <button key={filter} className={deviceFilter === filter ? "active" : ""} onClick={() => setDeviceFilter(filter)}>
+                    {filter === "all" ? tr("All", "全部") : filter === "online" ? tr("Online", "在线") : tr("Offline", "离线")}
+                    <span>{filter === "all" ? devices.length : devices.filter((device) => device.status === filter).length}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <div className="deviceGrid rich deviceManagementGrid">
+              {filteredDevices.map((device) => {
+                const advertisedTools = device.available_tools || device.tools;
+                const enabledTools = device.allowed_tools == null ? advertisedTools : device.allowed_tools;
+                const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools]));
+                return (
+                  <article className={"deviceCard managed " + device.status} key={device.id}>
+                    <div className="deviceTop">
+                      <div className="deviceIdentity">
+                        <div className="deviceIcon large">{platformGlyph(device.platform)}</div>
+                        <div><h3>{device.name}</h3><span>{platformLabel(device.platform)} · {device.arch || "unknown"} · {device.hostname || tr("No hostname", "无 Hostname")}</span></div>
+                      </div>
+                      <span className={"badge " + device.status}><i/>{device.status}</span>
+                    </div>
+
+                    <div className="deviceStatusStrip">
+                      <div><span>{tr("Last seen", "最后在线")}</span><strong>{timeAgo(device.last_seen)}</strong></div>
+                      <div><span>{tr("Enabled tools", "已启用工具")}</span><strong>{enabledTools.length} / {allTools.length}</strong></div>
+                      <div><span>Device ID</span><strong>{device.id.slice(0,8)}</strong></div>
+                    </div>
+
+                    <div className="deviceAccessSummary">
+                      <div>
+                        <span className="eyebrow">{tr("MCP ACCESS", "MCP 权限")}</span>
+                        <strong>{device.status === "online" ? tr("Policy enforced now", "权限策略已实时生效") : tr("Policy saved for reconnect", "权限策略将在重连后生效")}</strong>
+                        <p>{tr("Remote Arc blocks disabled tools at the relay before a request reaches this computer.", "关闭的工具会在 Relay 层被拦截，不会到达这台电脑。")}</p>
+                      </div>
+                      <div className="deviceToolChips">
+                        {enabledTools.slice(0,4).map((tool) => <span key={tool}>{tool}</span>)}
+                        {enabledTools.length > 4 && <span>+{enabledTools.length - 4}</span>}
+                      </div>
+                    </div>
+
+                    <details className="deviceToolDetails">
+                      <summary>{tr("Manage tool access", "管理工具权限")}<span>{allTools.length} tools</span></summary>
+                      <div className="toolToggleGrid">
+                        {allTools.map((tool) => {
+                          const enabled = device.allowed_tools == null ? (device.status === "online" ? advertisedTools.includes(tool) : true) : device.allowed_tools.includes(tool);
+                          const advertised = device.status === "online" ? advertisedTools.includes(tool) : true;
+                          return <label className={"toolToggle" + (!advertised ? " unavailable" : "")} key={tool}><input type="checkbox" checked={enabled} disabled={!advertised} onChange={(event) => void updateDeviceTools(device, tool, event.target.checked)} /><span>{tool}</span></label>;
+                        })}
+                      </div>
+                      {device.status === "offline" && <span className="offlineTools">{tr("Offline: changes are saved now and enforced the next time this device connects.", "设备离线：修改会立即保存，并在设备下次连接时生效。")}</span>}
+                    </details>
+
+                    <div className="deviceActions managedActions">
+                      <button className="ghostButton" onClick={() => void rename(device)}>{tr("Rename", "重命名")}</button>
+                      <CopyButton value={device.id} label={tr("Copy ID", "复制 ID")}/>
+                      <button className="dangerButton" onClick={() => void revoke(device.id)}>{tr("Revoke", "撤销")}</button>
+                    </div>
+                  </article>
+                );
+              })}
+
               {!devices.length && <article className="emptyCard wide"><div className="emptyIcon">⌁</div><h3>{tr("No paired computers", "暂无已配对电脑")}</h3><p>{tr("Windows, macOS and Linux are supported. No public IP or port forwarding required.", "支持 Windows、macOS 与 Linux，无需公网 IP 或端口映射。")}</p><button onClick={() => setShowAdd(true)}>{tr("Add your first device", "添加第一台设备")}</button></article>}
+              {!!devices.length && !filteredDevices.length && <article className="emptyCard wide"><div className="emptyIcon">⌕</div><h3>{tr("No matching devices", "没有匹配设备")}</h3><p>{tr("Try another search or clear the status filter.", "尝试其他搜索词，或清除状态筛选。")}</p><button onClick={() => { setDeviceQuery(""); setDeviceFilter("all"); }}>{tr("Clear filters", "清除筛选")}</button></article>}
             </div>
           </>
         )}
