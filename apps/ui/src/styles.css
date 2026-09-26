@@ -2593,3 +2593,115 @@ body{font-size:18px;line-height:1.6}
   .architectureCore>img{width:32px!important;height:32px!important}
   .architectureArrow small{font-size:9px}
 }
+
+
+/* Hero architecture scale-up: fill the right-side visual area */
+.heroArchitecture{
+  width:min(100%,680px) !important;
+  margin-top:8px !important;
+  padding:28px 28px 24px !important;
+  border-radius:24px !important;
+  background:linear-gradient(180deg,rgba(7,17,29,.78),rgba(4,10,18,.62)) !important;
+}
+.architectureClients,
+.architectureDevices{
+  gap:16px !important;
+}
+.architectureClients>div,
+.architectureDevices>div{
+  padding:14px 14px !important;
+  border-radius:14px !important;
+}
+.architectureClients img,
+.architectureClients .protocolMark{
+  width:34px !important;
+  height:34px !important;
+}
+.architectureClients strong,
+.architectureDevices strong{
+  font-size:15px !important;
+}
+.architectureCore{
+  width:min(100%,420px) !important;
+  gap:14px !important;
+  padding:18px 20px !important;
+  border-radius:18px !important;
+}
+.architectureCore>img{
+  width:48px !important;
+  height:48px !important;
+}
+.architectureCore strong{
+  font-size:20px !important;
+}
+.architectureCore small{
+  font-size:13px !important;
+  line-height:1.35 !important;
+}
+.architectureArrow{
+  padding:12px 0 10px !important;
+}
+.architectureArrow span{
+  font-size:30px !important;
+}
+.architectureArrow small{
+  font-size:12px !important;
+}
+.architectureDevices>div{
+  padding:10px 8px 4px !important;
+}
+.architectureDevices span{
+  font-size:20px !important;
+}
+.architectureLabel{
+  font-size:12px !important;
+  margin-bottom:10px !important;
+}
+@media(max-width:720px){
+  .heroArchitecture{
+    width:100% !important;
+    margin-top:24px !important;
+    padding:18px 12px 16px !important;
+  }
+  .architectureClients,
+  .architectureDevices{
+    gap:6px !important;
+  }
+  .architectureClients>div,
+  .architectureDevices>div{
+    padding:9px 6px !important;
+  }
+  .architectureClients img,
+  .architectureClients .protocolMark{
+    width:26px !important;
+    height:26px !important;
+  }
+  .architectureClients strong,
+  .architectureDevices strong{
+    font-size:11px !important;
+  }
+  .architectureCore{
+    width:280px !important;
+    padding:12px 14px !important;
+  }
+  .architectureCore>img{
+    width:36px !important;
+    height:36px !important;
+  }
+  .architectureCore strong{
+    font-size:15px !important;
+  }
+  .architectureCore small{
+    font-size:10px !important;
+  }
+  .architectureArrow{
+    padding:8px 0 7px !important;
+  }
+  .architectureArrow span{
+    font-size:24px !important;
+  }
+  .architectureArrow small{
+    font-size:10px !important;
+  }
+}
+
