@@ -640,6 +640,55 @@ function Landing({ user }: { user?: User | null }) {
         </div>
       </section>
 
+      <section className="platformSection">
+        <div className="sectionIntro splitIntro">
+          <div>
+            <span className="eyebrow">{tr("PLATFORM SECURITY & RELIABILITY", "平台安全与可靠性")}</span>
+            <h2>{tr("Built to stay controllable when AI gets powerful.", "AI 越强，控制边界越要清楚。")}</h2>
+          </div>
+          <p>{tr(
+            "Remote Arc now combines account-level emergency controls, revocable OAuth grants, Cloudflare edge protection and persistent device heartbeat into the hosted control plane.",
+            "Remote Arc 现在把账户级紧急控制、可撤销 OAuth 授权、Cloudflare 边缘保护与持续设备心跳整合进托管控制面。"
+          )}</p>
+        </div>
+        <div className="platformCapabilityGrid">
+          <article>
+            <span className="platformCapabilityIcon">Ⅱ</span>
+            <div><strong>{tr("Emergency MCP pause", "紧急暂停 MCP")}</strong><p>{tr("Pause every authenticated Remote MCP call for your account with one control, then resume when you are ready.", "一个开关即可暂停账户下所有已认证 Remote MCP 调用，需要时再恢复。")}</p></div>
+            <small>{tr("Server enforced", "服务端强制执行")}</small>
+          </article>
+          <article>
+            <span className="platformCapabilityIcon">↺</span>
+            <div><strong>{tr("Revocable AI access", "可撤销 AI 授权")}</strong><p>{tr("See active OAuth clients and scopes, then revoke access and refresh tokens per AI client.", "查看活跃 OAuth 客户端与 Scope，并可按 AI 客户端撤销访问权限和 Refresh Token。")}</p></div>
+            <small>OAuth 2.1 + PKCE</small>
+          </article>
+          <article>
+            <span className="platformCapabilityIcon">⌁</span>
+            <div><strong>{tr("Cloudflare edge rate limits", "Cloudflare 边缘限流")}</strong><p>{tr("Authenticated MCP traffic and sensitive auth/pairing endpoints are protected by separate edge limits before application execution.", "已认证 MCP 流量与敏感认证/配对入口使用独立边缘限流，在应用执行前先拦截异常流量。")}</p></div>
+            <small>120/min MCP · 30/min auth</small>
+          </article>
+          <article>
+            <span className="platformCapabilityIcon">♥</span>
+            <div><strong>{tr("Persistent device heartbeat", "持续设备心跳")}</strong><p>{tr("The local agent periodically refreshes last-seen state so presence and device history stay useful after disconnects.", "本地 Agent 会周期性刷新 last-seen，让设备断开后仍能准确看到最近在线时间。")}</p></div>
+            <small>60s heartbeat</small>
+          </article>
+          <article>
+            <span className="platformCapabilityIcon">◇</span>
+            <div><strong>{tr("Per-device policy", "每设备权限策略")}</strong><p>{tr("Tool access is enforced by the relay and constrained again by what each local agent actually exposes.", "工具权限先由 Relay 强制执行，再受每台本机 Agent 实际开放能力约束。")}</p></div>
+            <small>{tr("Defense in depth", "纵深防御")}</small>
+          </article>
+          <article>
+            <span className="platformCapabilityIcon">≡</span>
+            <div><strong>{tr("Privacy-preserving audit", "隐私友好审计")}</strong><p>{tr("Track device, tool, result and time without intentionally storing file contents, command arguments or credentials in the audit feed.", "记录设备、工具、结果与时间，同时不会有意在审计记录中保存文件内容、命令参数或凭证。")}</p></div>
+            <small>{tr("Operational metadata only", "仅运行元数据")}</small>
+          </article>
+        </div>
+        <div className="platformFootnote">
+          <code>edge → oauth → relay policy → local agent</code>
+          <a href="/resources#security-control-plane">{tr("Read the security architecture →", "阅读安全架构 →")}</a>
+        </div>
+      </section>
+
       <section className="differenceSection">
         <div className="sectionIntro">
           <span className="eyebrow">{tr("THE DIFFERENCE", "我们的差异")}</span>
@@ -746,10 +795,16 @@ function PricingPage({ user }: { user?: User | null }) {
 function ResourcesPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const items = [
-    [tr("Quick start", "快速开始"), tr("Pair a computer with one command and connect it to the hosted relay.", "一条命令配对电脑并连接到托管 Relay。"), "/docs/mcp"],
-    [tr("Architecture", "架构"), tr("Understand Worker, D1, Durable Objects, device agents and the local execution core.", "了解 Worker、D1、Durable Objects、设备 Agent 与本地执行核心。"), "https://github.com/yaohuangguan/remote-arc"],
-    [tr("Security model", "安全模型"), tr("Per-device credentials, local permissions, OAuth scopes and privacy-preserving audit.", "每设备凭证、本机权限、OAuth Scope 与隐私审计。"), "https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md"],
-    [tr("Source code", "源代码"), tr("Remote Arc is source-available under the Remote Arc Proprietary Source License.", "Remote Arc 当前版本采用 Remote Arc Proprietary Source License，源码公开可审查但并非第三方开源软件。"), "https://github.com/yaohuangguan/remote-arc"],
+    [tr("Quick start", "快速开始"), tr("Pair a computer with one command and connect it to the hosted relay.", "一条命令配对电脑并连接到托管 Relay。"), "/docs/mcp", "START"],
+    [tr("Control-plane architecture", "控制面架构"), tr("How Worker, D1, Durable Objects and the device agent cooperate to route Remote MCP calls.", "了解 Worker、D1、Durable Objects 与设备 Agent 如何协同路由 Remote MCP 调用。"), "#control-plane-architecture", "ARCH"],
+    [tr("Security control plane", "安全控制面"), tr("Emergency pause, revocable OAuth grants, per-device policy and layered enforcement.", "紧急暂停、可撤销 OAuth 授权、每设备策略与多层权限执行。"), "#security-control-plane", "SEC"],
+    [tr("Cloudflare edge protection", "Cloudflare 边缘保护"), tr("Why Remote Arc rate-limits MCP traffic separately from auth and pairing endpoints.", "为什么 Remote Arc 会分别对 MCP 流量与认证、配对入口做独立限流。"), "#edge-protection", "EDGE"],
+    [tr("Presence & heartbeat", "在线状态与心跳"), tr("How WebSocket presence and persistent heartbeat combine to produce useful online and last-seen state.", "WebSocket 在线状态与持久心跳如何共同提供可靠的在线与最近在线信息。"), "#presence-heartbeat", "LIVE"],
+    [tr("OAuth 2.1 for Remote MCP", "Remote MCP 的 OAuth 2.1"), tr("PKCE, scopes, access tokens, refresh tokens and per-client revocation in a remote-control product.", "PKCE、Scope、Access Token、Refresh Token 与按客户端撤销如何应用到远程控制产品。"), "#oauth-remote-mcp", "AUTH"],
+    [tr("Per-device permissions", "每设备权限"), tr("Why tool access is enforced twice: once at the relay and again by the local agent.", "为什么工具权限要执行两次：Relay 一次，本地 Agent 再一次。"), "#per-device-permissions", "POLICY"],
+    [tr("Privacy-preserving audit", "隐私友好审计"), tr("Operational visibility without intentionally persisting file contents, command arguments or credentials.", "在不主动持久化文件内容、命令参数与凭证的前提下获得运行可观测性。"), "#privacy-audit", "AUDIT"],
+    [tr("Security policy", "安全策略"), tr("Read the public security policy and vulnerability-reporting guidance.", "查看公开安全策略与漏洞报告指引。"), "https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md", "POLICY"],
+    [tr("Source code", "源代码"), tr("Inspect the implementation and follow Remote Arc development on GitHub.", "在 GitHub 查看实现并跟踪 Remote Arc 开发。"), "https://github.com/yaohuangguan/remote-arc", "CODE"],
   ];
   return (
     <PublicLayout user={user}>
@@ -758,12 +813,64 @@ function ResourcesPage({ user }: { user?: User | null }) {
         <h1>{tr("Understand the system behind Remote Arc.", "了解 Remote Arc 背后的系统。")}</h1>
         <p>{tr("Explore the architecture, MCP protocol and product documentation behind the managed Remote Arc service.", "了解 Remote Arc 托管服务背后的架构、MCP 协议与产品文档。")}</p>
       </section>
-      <section className="resourceGrid">
-        {items.map(([title, body, href]) => (
-          <a className="resourceCard" href={href} key={title}>
-            <span>↗</span><h2>{title}</h2><p>{body}</p>
+      <section className="resourceGrid techResourceGrid">
+        {items.map(([title, body, href, tag]) => (
+          <a className="resourceCard techResourceCard" href={href} key={title}>
+            <div className="resourceMeta"><span>{tag}</span><em>↗</em></div>
+            <h2>{title}</h2><p>{body}</p>
           </a>
         ))}
+      </section>
+
+      <section className="resourceArticles">
+        <article id="control-plane-architecture">
+          <span className="resourceArticleTag">ARCHITECTURE / 01</span>
+          <h2>{tr("Control-plane architecture", "控制面架构")}</h2>
+          <p>{tr("Remote Arc splits responsibility across the hosted control plane and the local device agent. Cloudflare Workers handle HTTP, OAuth and API entry points; D1 stores durable identity, device and audit metadata; Durable Objects maintain live device presence and WebSocket routing; the local agent is the final execution boundary.", "Remote Arc 将职责拆分到托管控制面与本地设备 Agent。Cloudflare Workers 负责 HTTP、OAuth 与 API 入口；D1 保存持久身份、设备与审计元数据；Durable Objects 维护实时在线状态与 WebSocket 路由；本地 Agent 则是最终执行边界。")}</p>
+          <div className="resourceCodeRail"><code>AI client</code><span>→</span><code>Worker</code><span>→</span><code>Durable Object</code><span>→</span><code>Device Agent</code></div>
+        </article>
+
+        <article id="security-control-plane">
+          <span className="resourceArticleTag">SECURITY / 02</span>
+          <h2>{tr("Security control plane", "安全控制面")}</h2>
+          <p>{tr("Security is enforced at multiple layers instead of relying on one permission check. OAuth scopes constrain the AI client, the hosted relay applies account and per-device policy, and the local agent only executes tools it actually exposes. The account-level MCP pause can stop all authenticated calls immediately.", "安全不是依赖单一权限判断，而是多层执行。OAuth Scope 限制 AI 客户端，托管 Relay 执行账户级与设备级策略，本地 Agent 只执行自己实际开放的工具。账户级 MCP Pause 可以立即停止全部已认证调用。")}</p>
+          <div className="resourceCodeRail"><code>OAuth scope</code><span>→</span><code>Relay policy</code><span>→</span><code>Device policy</code><span>→</span><code>Execution</code></div>
+        </article>
+
+        <article id="edge-protection">
+          <span className="resourceArticleTag">CLOUDFLARE / 03</span>
+          <h2>{tr("Edge protection", "边缘保护")}</h2>
+          <p>{tr("Remote Arc uses Cloudflare Workers Rate Limiting before application execution. Authenticated MCP traffic is keyed by user and OAuth client, while OAuth, pairing and token endpoints use a separate, tighter limiter. This reduces runaway-agent loops, credential abuse and accidental quota burn.", "Remote Arc 使用 Cloudflare Workers Rate Limiting 在应用执行前进行拦截。已认证 MCP 流量按用户与 OAuth 客户端组合限流，而 OAuth、配对与 Token 入口使用独立、更严格的限制，从而降低 Agent 死循环、凭证滥用和意外耗尽额度的风险。")}</p>
+          <div className="resourceMetricRow"><div><strong>120/min</strong><span>MCP traffic</span></div><div><strong>30/min</strong><span>Auth & pairing</span></div><div><strong>429</strong><span>Retry-After</span></div></div>
+        </article>
+
+        <article id="presence-heartbeat">
+          <span className="resourceArticleTag">PRESENCE / 04</span>
+          <h2>{tr("Presence and heartbeat", "在线状态与心跳")}</h2>
+          <p>{tr("Live presence and durable history solve different problems. WebSocket presence answers whether a device is reachable right now. The local agent also sends a periodic authenticated heartbeat so D1 keeps an accurate last-seen timestamp after the socket disconnects.", "实时在线状态与持久历史解决的是不同问题。WebSocket Presence 用来判断设备此刻是否可达；本地 Agent 还会周期性发送经过认证的 heartbeat，让 D1 在连接断开后仍保留准确的 last-seen 时间。")}</p>
+          <div className="resourceMetricRow"><div><strong>WebSocket</strong><span>{tr("live presence", "实时在线")}</span></div><div><strong>60s</strong><span>{tr("heartbeat", "心跳间隔")}</span></div><div><strong>D1</strong><span>last_seen</span></div></div>
+        </article>
+
+        <article id="oauth-remote-mcp">
+          <span className="resourceArticleTag">AUTH / 05</span>
+          <h2>{tr("OAuth 2.1 for Remote MCP", "Remote MCP 的 OAuth 2.1")}</h2>
+          <p>{tr("Remote Arc avoids copied long-lived secrets between AI clients and the control plane. OAuth 2.1 with PKCE provides explicit scopes, short-lived access tokens and refresh tokens. Active grants are visible in the Security Center and can be revoked per client.", "Remote Arc 避免在 AI 客户端与控制面之间复制长期密钥。OAuth 2.1 + PKCE 提供明确 Scope、短期 Access Token 与 Refresh Token。活跃授权可在 Security Center 中查看，并可按客户端单独撤销。")}</p>
+          <div className="resourceCodeRail"><code>authorize</code><span>→</span><code>PKCE</code><span>→</span><code>access token</code><span>→</span><code>refresh / revoke</code></div>
+        </article>
+
+        <article id="per-device-permissions">
+          <span className="resourceArticleTag">POLICY / 06</span>
+          <h2>{tr("Per-device permissions", "每设备权限")}</h2>
+          <p>{tr("A laptop used for development does not need the same exposure as a home server. Remote Arc stores per-device tool policy in the control plane, blocks disabled tools before routing, and still respects the local agent's advertised capability set.", "开发用笔记本与家庭服务器不应暴露同样的能力。Remote Arc 在控制面保存每设备工具策略，在路由前拦截被关闭的工具，同时仍严格受本地 Agent 实际声明的能力集合约束。")}</p>
+          <div className="resourceCodeRail"><code>read_file</code><span>✓</span><code>start_process</code><span>?</span><code>write_file</code><span>×</span></div>
+        </article>
+
+        <article id="privacy-audit">
+          <span className="resourceArticleTag">AUDIT / 07</span>
+          <h2>{tr("Privacy-preserving audit", "隐私友好审计")}</h2>
+          <p>{tr("The activity feed is designed for operational visibility rather than content retention. Remote Arc records metadata such as tool name, device, result and time, while file contents, command arguments, OAuth tokens and raw device credentials are not intentionally stored in audit records.", "活动记录用于运行可观测性，而不是内容留存。Remote Arc 记录工具名称、设备、结果与时间等元数据，而不会有意在审计记录中保存文件内容、命令参数、OAuth Token 或原始设备凭证。")}</p>
+          <div className="resourceAuditMatrix"><span>✓ tool</span><span>✓ device</span><span>✓ result</span><span>✓ time</span><span>× file contents</span><span>× command args</span><span>× credentials</span></div>
+        </article>
       </section>
     </PublicLayout>
   );
