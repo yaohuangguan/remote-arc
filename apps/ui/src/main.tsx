@@ -998,11 +998,104 @@ function Dashboard({
 
         {active === "connect" && (
           <>
-            <section className="pageHeader"><div><span className="eyebrow">{tr("CONNECT AI", "连接 AI")}</span><h1>{tr("One endpoint for every machine.", "一个端点，连接所有设备。")}</h1><p>{tr("Remote Arc exposes a standards-based Remote MCP protected by OAuth 2.1 + PKCE.", "Remote Arc 提供由 OAuth 2.1 + PKCE 保护的标准 Remote MCP。")}</p></div></section>
-            <section className="setupGrid aiSetupGrid">
-              <article className="setupCard featured clientSetupCard"><span className="stepNumber"><img src={aiClients[0].icon} alt="" /></span><div><span className="eyebrow">CHATGPT</span><h2>{tr("Create a custom MCP app", "创建自定义 MCP 应用")}</h2><p>{tr("Enable ChatGPT Developer Mode, create an app, paste this endpoint and complete OAuth.", "开启 ChatGPT Developer Mode，创建 App，粘贴此端点并完成 OAuth。")}</p><div className="endpointRow large"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/></div></div></article>
-              <article className="setupCard featured clientSetupCard"><span className="stepNumber"><img src={aiClients[1].icon} alt="" /></span><div><span className="eyebrow">CLAUDE</span><h2>{tr("Add a custom connector", "添加自定义连接器")}</h2><p>{tr("Open Settings → Connectors, add the same endpoint and click Connect. No Developer Mode required.", "打开 Settings → Connectors，添加同一个端点并点击 Connect，无需 Developer Mode。")}</p><div className="endpointRow large"><code>{mcpEndpoint}</code><CopyButton value={mcpEndpoint}/></div></div></article>
-              <article className="setupCard fullSetupCard"><span className="stepNumber">03</span><div><h2>{tr("Authorize once, then talk naturally", "授权一次，之后直接自然语言操作")}</h2><p>{tr("Address a device by name. Remote Arc checks its local Safe or Developer policy and handles routing.", "直接说设备名称；Remote Arc 会检查它的本机 Safe 或 Developer 权限并完成路由。")}</p><div className="promptExamples"><code>{tr("“List the projects on my Mac.”", "“看看我 Mac 上有哪些项目。”")}</code><code>{tr("“Run the tests on my desktop.”", "“在我的桌面电脑上跑测试。”")}</code></div></div></article>
+            <section className="pageHeader connectPageHeader">
+              <div>
+                <span className="eyebrow">{tr("CONNECT AI", "连接 AI")}</span>
+                <h1>{tr("Bring your AI to your computers.", "让你的 AI 连接到你的电脑。")}</h1>
+                <p>{tr("Use one Remote Arc account and one OAuth-protected MCP endpoint across supported AI clients.", "一个 Remote Arc 账户、一个受 OAuth 保护的 MCP 地址，就能连接支持 Remote MCP 的 AI 客户端。")}</p>
+              </div>
+              <div className="connectReadyPill"><i />{tr("Remote MCP ready", "Remote MCP 已就绪")}</div>
+            </section>
+
+            <section className="connectOverview">
+              <article className="connectEndpointPanel">
+                <div className="connectPanelHeader">
+                  <div>
+                    <span className="eyebrow">{tr("YOUR REMOTE MCP ENDPOINT", "你的 REMOTE MCP 地址")}</span>
+                    <h2>{tr("One endpoint. Every paired device.", "一个端点，连接全部已配对设备。")}</h2>
+                    <p>{tr("Your AI connects here. Remote Arc handles OAuth, device discovery and routing behind it.", "AI 只需要连接这个地址；OAuth、设备发现和请求路由都由 Remote Arc 处理。")}</p>
+                  </div>
+                  <span className="connectSecurityBadge">OAuth 2.1 + PKCE</span>
+                </div>
+                <div className="connectEndpointBox">
+                  <code>{mcpEndpoint}</code>
+                  <CopyButton value={mcpEndpoint} label={tr("Copy endpoint", "复制地址")} />
+                </div>
+              </article>
+
+              <aside className="connectHealthPanel">
+                <span className="eyebrow">{tr("CONNECTION STATUS", "连接状态")}</span>
+                <div className="connectHealthRow"><span><i className="healthDot good" />Remote MCP</span><strong>{tr("Ready", "就绪")}</strong></div>
+                <div className="connectHealthRow"><span><i className="healthDot good" />OAuth</span><strong>{tr("Enabled", "已启用")}</strong></div>
+                <div className="connectHealthRow"><span><i className={"healthDot " + (devices.length ? "good" : "idle")} />{tr("Paired devices", "已配对设备")}</span><strong>{devices.length}</strong></div>
+                <button className="ghostButton connectDevicesButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button>
+              </aside>
+            </section>
+
+            <section className="connectClientSection">
+              <div className="connectSectionHeading">
+                <div><span className="eyebrow">{tr("CHOOSE YOUR AI", "选择你的 AI")}</span><h2>{tr("Connect the client you actually use.", "连接你真正使用的客户端。")}</h2></div>
+                <p>{tr("ChatGPT is the recommended path. Other Remote MCP clients can use the same production endpoint.", "推荐优先使用 ChatGPT；其他支持 Remote MCP 的客户端也可以使用同一个生产地址。")}</p>
+              </div>
+
+              <div className="connectClientGrid">
+                <article className="connectClientCard primary">
+                  <div className="connectClientTop">
+                    <div className="connectClientIdentity"><img src={aiClients[0].icon} alt="" /><div><span className="eyebrow">CHATGPT</span><h3>ChatGPT</h3></div></div>
+                    <span className="clientState recommended">{tr("Recommended", "推荐")}</span>
+                  </div>
+                  <p>{tr("Remote Arc is prepared for the public Plugins flow. Until the public listing is live, use the manual MCP setup below for early access.", "Remote Arc 已按公开 Plugin 流程准备完成；正式上架前，可通过下方手动 MCP 流程进行 Early Access。")}</p>
+                  <div className="connectMiniSteps">
+                    <span><b>1</b>{tr("Open Settings → Apps", "打开 Settings → Apps")}</span>
+                    <span><b>2</b>{tr("Create a custom MCP app", "创建自定义 MCP App")}</span>
+                    <span><b>3</b>{tr("Paste endpoint → Scan Tools → OAuth", "粘贴地址 → Scan Tools → OAuth")}</span>
+                  </div>
+                  <div className="connectClientFooter"><span className="clientHint">{tr("Public listing pending", "公开上架准备中")}</span><CopyButton value={mcpEndpoint} label={tr("Copy MCP URL", "复制 MCP 地址")} /></div>
+                </article>
+
+                <article className="connectClientCard">
+                  <div className="connectClientTop">
+                    <div className="connectClientIdentity"><img src={aiClients[1].icon} alt="" /><div><span className="eyebrow">CLAUDE</span><h3>Claude</h3></div></div>
+                    <span className="clientState">{tr("Remote MCP", "Remote MCP")}</span>
+                  </div>
+                  <p>{tr("If your Claude client exposes a Remote MCP / custom integration flow, use the same endpoint and complete Remote Arc OAuth.", "如果你的 Claude 客户端提供 Remote MCP / 自定义集成入口，使用同一个地址并完成 Remote Arc OAuth 即可。")}</p>
+                  <div className="connectClientFooter"><span className="clientHint">{tr("Same account · same devices", "同一账户 · 同一设备")}</span><CopyButton value={mcpEndpoint} label={tr("Copy endpoint", "复制地址")} /></div>
+                </article>
+
+                <article className="connectClientCard">
+                  <div className="connectClientTop">
+                    <div className="connectClientIdentity"><span className="protocolMark large">M</span><div><span className="eyebrow">REMOTE MCP</span><h3>{tr("Any MCP client", "任意 MCP 客户端")}</h3></div></div>
+                    <span className="clientState">{tr("Standards-based", "标准协议")}</span>
+                  </div>
+                  <p>{tr("Use Remote Arc anywhere the client supports remote MCP servers and OAuth. No separate endpoint is required per device.", "只要客户端支持 Remote MCP Server 与 OAuth，就可以直接接入 Remote Arc；每台设备不需要单独配置地址。")}</p>
+                  <div className="connectClientFooter"><span className="clientHint">OAuth 2.1 + PKCE</span><CopyButton value={mcpEndpoint} label={tr("Copy endpoint", "复制地址")} /></div>
+                </article>
+              </div>
+            </section>
+
+            <section className="connectGuide">
+              <div className="connectSectionHeading compact">
+                <div><span className="eyebrow">{tr("SETUP FLOW", "连接流程")}</span><h2>{tr("Three steps from endpoint to real machine.", "三步从 MCP 地址连接到真实电脑。")}</h2></div>
+              </div>
+              <div className="connectTimeline">
+                <article><span className="timelineNumber">01</span><div><strong>{tr("Add Remote Arc", "添加 Remote Arc")}</strong><p>{tr("Install the public plugin when available, or add the Remote MCP endpoint manually during early access.", "公开插件上线后直接安装；Early Access 阶段则手动添加 Remote MCP 地址。")}</p></div></article>
+                <article><span className="timelineNumber">02</span><div><strong>{tr("Authorize your account", "授权你的账户")}</strong><p>{tr("Remote Arc opens OAuth once. Your AI receives scoped access to the account you approve.", "Remote Arc 会打开一次 OAuth 授权；AI 只获得你批准账户范围内的权限。")}</p></div></article>
+                <article><span className="timelineNumber">03</span><div><strong>{tr("Talk to a device by name", "直接说设备名称")}</strong><p>{tr("Remote Arc discovers your paired devices and enforces each device's tool policy before routing a request.", "Remote Arc 会发现已配对设备，并在路由请求前执行每台设备自己的工具权限策略。")}</p></div></article>
+              </div>
+            </section>
+
+            <section className="connectTryPanel">
+              <div className="connectTryCopy"><span className="eyebrow">{tr("TRY IT NOW", "马上试试")}</span><h2>{tr("Start with a natural request.", "直接用自然语言开始。")}</h2><p>{tr("Once connected, you do not need MCP syntax. Just refer to the device and the task.", "连接后不需要记任何 MCP 语法，只需要说设备和任务。")}</p></div>
+              <div className="connectPromptGrid">
+                {[
+                  tr("Show me my connected computers.", "看看我已连接的电脑。"),
+                  tr("Which of my devices are online?", "哪些设备现在在线？"),
+                  tr("List the projects on my Mac.", "列出我 Mac 上的项目。"),
+                  tr("Read package.json on my desktop.", "读取我桌面电脑上的 package.json。"),
+                  tr("Run the tests on my desktop.", "在我的桌面电脑上运行测试。"),
+                  tr("Show me the processes running on my computer.", "看看我电脑上正在运行哪些进程。"),
+                ].map((prompt) => <code key={prompt}>{prompt}</code>)}
+              </div>
             </section>
           </>
         )}

@@ -2791,3 +2791,377 @@ body{font-size:18px;line-height:1.6}
     padding:8px 10px !important;
   }
 }
+
+
+/* Connect AI — onboarding-focused dashboard */
+.connectPageHeader{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+}
+.connectReadyPill{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:0 0 auto;
+  padding:10px 13px;
+  border:1px solid rgba(74,222,128,.22);
+  border-radius:999px;
+  background:rgba(6,37,26,.42);
+  color:#86efac;
+  font-size:13px;
+  font-weight:800;
+}
+.connectReadyPill i{
+  width:8px;height:8px;border-radius:50%;background:#4ade80;
+  box-shadow:0 0 14px rgba(74,222,128,.65);
+}
+.connectOverview{
+  display:grid;
+  grid-template-columns:minmax(0,1.65fr) minmax(260px,.55fr);
+  gap:16px;
+  margin-bottom:20px;
+}
+.connectEndpointPanel,.connectHealthPanel,
+.connectClientCard,.connectGuide,.connectTryPanel{
+  border:1px solid var(--line);
+  background:var(--panel);
+}
+.connectEndpointPanel{
+  padding:24px;
+  border-radius:20px;
+}
+.connectPanelHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:20px;
+}
+.connectPanelHeader h2{
+  margin:7px 0 8px;
+  font-size:24px;
+  letter-spacing:-.03em;
+}
+.connectPanelHeader p{
+  margin:0;
+  max-width:720px;
+  color:var(--muted);
+  font-size:15px;
+  line-height:1.65;
+}
+.connectSecurityBadge{
+  flex:0 0 auto;
+  padding:7px 10px;
+  border-radius:999px;
+  background:#071821;
+  color:#7dd3fc;
+  font-size:12px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.connectEndpointBox{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  margin-top:20px;
+  padding:13px;
+  border:1px solid #21455e;
+  border-radius:14px;
+  background:#030b11;
+}
+.connectEndpointBox code{
+  min-width:0;
+  overflow:auto;
+  color:#bae6fd;
+  font-size:14px;
+  white-space:nowrap;
+}
+.connectHealthPanel{
+  display:flex;
+  flex-direction:column;
+  padding:22px;
+  border-radius:20px;
+}
+.connectHealthRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:13px 0;
+  border-bottom:1px solid rgba(148,163,184,.10);
+}
+.connectHealthRow span{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:#a8bac1;
+  font-size:14px;
+}
+.connectHealthRow strong{
+  color:#edf8fb;
+  font-size:14px;
+}
+.healthDot{width:8px;height:8px;border-radius:50%;background:#64748b}
+.healthDot.good{background:#4ade80;box-shadow:0 0 10px rgba(74,222,128,.45)}
+.healthDot.idle{background:#f59e0b}
+.connectDevicesButton{margin-top:auto}
+
+.connectClientSection{margin-top:28px}
+.connectSectionHeading{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(320px,.75fr);
+  gap:32px;
+  align-items:end;
+  margin-bottom:16px;
+}
+.connectSectionHeading.compact{grid-template-columns:1fr}
+.connectSectionHeading h2{
+  margin:7px 0 0;
+  font-size:26px;
+  letter-spacing:-.035em;
+}
+.connectSectionHeading>p{
+  margin:0;
+  color:var(--muted);
+  font-size:15px;
+  line-height:1.65;
+}
+.connectClientGrid{
+  display:grid;
+  grid-template-columns:1.25fr 1fr 1fr;
+  gap:16px;
+}
+.connectClientCard{
+  display:flex;
+  flex-direction:column;
+  min-height:300px;
+  padding:22px;
+  border-radius:20px;
+}
+.connectClientCard.primary{
+  border-color:rgba(56,189,248,.35);
+  background:linear-gradient(180deg,rgba(7,24,34,.95),rgba(7,16,25,.92));
+  box-shadow:0 18px 50px rgba(14,165,233,.07);
+}
+.connectClientTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.connectClientIdentity{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+.connectClientIdentity img,.connectClientIdentity .protocolMark.large{
+  width:44px;height:44px;flex:0 0 auto;
+}
+.connectClientIdentity img{filter:invert(1)}
+.connectClientIdentity .protocolMark.large{
+  display:grid;place-items:center;border-radius:12px;
+  background:#0d2535;color:#7dd3fc;font-size:18px;font-weight:900;
+}
+.connectClientIdentity h3{
+  margin:3px 0 0;
+  font-size:21px;
+}
+.clientState{
+  flex:0 0 auto;
+  padding:6px 9px;
+  border-radius:999px;
+  background:#0b1722;
+  color:#8ea6af;
+  font-size:11px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.clientState.recommended{
+  background:rgba(14,165,233,.12);
+  color:#7dd3fc;
+}
+.connectClientCard>p{
+  margin:18px 0;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.7;
+}
+.connectMiniSteps{
+  display:grid;
+  gap:9px;
+  margin:2px 0 18px;
+}
+.connectMiniSteps span{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:#b4c8cf;
+  font-size:13px;
+}
+.connectMiniSteps b{
+  display:grid;
+  place-items:center;
+  width:22px;height:22px;
+  border-radius:50%;
+  background:#0b2231;
+  color:#7dd3fc;
+  font-size:11px;
+}
+.connectClientFooter{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:auto;
+  padding-top:16px;
+  border-top:1px solid rgba(148,163,184,.10);
+}
+.clientHint{
+  color:#78919a;
+  font-size:12px;
+}
+
+.connectGuide{
+  margin-top:28px;
+  padding:24px;
+  border-radius:20px;
+}
+.connectTimeline{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0;
+  margin-top:18px;
+}
+.connectTimeline article{
+  position:relative;
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr);
+  gap:12px;
+  padding:6px 24px 6px 0;
+}
+.connectTimeline article:not(:last-child)::after{
+  content:"";
+  position:absolute;
+  top:20px;
+  right:0;
+  width:28px;
+  height:1px;
+  background:linear-gradient(90deg,#23485e,#38bdf8);
+}
+.timelineNumber{
+  display:grid;
+  place-items:center;
+  width:34px;height:34px;
+  border:1px solid #23485e;
+  border-radius:10px;
+  background:#071821;
+  color:#7dd3fc;
+  font-size:11px;
+  font-weight:900;
+}
+.connectTimeline strong{
+  color:#eaf8fb;
+  font-size:16px;
+}
+.connectTimeline p{
+  margin:5px 0 0;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.6;
+}
+
+.connectTryPanel{
+  display:grid;
+  grid-template-columns:minmax(250px,.65fr) minmax(0,1.35fr);
+  gap:28px;
+  margin-top:16px;
+  padding:24px;
+  border-radius:20px;
+}
+.connectTryCopy h2{
+  margin:7px 0 8px;
+  font-size:24px;
+}
+.connectTryCopy p{
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.65;
+}
+.connectPromptGrid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.connectPromptGrid code{
+  display:flex;
+  align-items:center;
+  min-height:48px;
+  padding:11px 12px;
+  border:1px solid rgba(56,189,248,.14);
+  border-radius:11px;
+  background:#030b11;
+  color:#bdefff;
+  font-size:12px;
+  line-height:1.45;
+  white-space:normal;
+}
+.connectPromptGrid code::before{
+  content:"›";
+  margin-right:8px;
+  color:#38bdf8;
+  font-weight:900;
+}
+
+:root[data-theme="light"] .connectEndpointPanel,
+:root[data-theme="light"] .connectHealthPanel,
+:root[data-theme="light"] .connectClientCard,
+:root[data-theme="light"] .connectGuide,
+:root[data-theme="light"] .connectTryPanel{
+  background:#fff;
+  border-color:#d8e8ee;
+}
+:root[data-theme="light"] .connectClientCard.primary{
+  background:linear-gradient(180deg,#f5fbff,#fff);
+  border-color:#bae6fd;
+}
+:root[data-theme="light"] .connectClientIdentity img{filter:none}
+:root[data-theme="light"] .connectEndpointBox,
+:root[data-theme="light"] .connectPromptGrid code{
+  background:#f7fbfd;
+  border-color:#d7e9ef;
+}
+:root[data-theme="light"] .connectEndpointBox code,
+:root[data-theme="light"] .connectPromptGrid code{color:#036b8d}
+
+@media(max-width:1050px){
+  .connectOverview{grid-template-columns:1fr}
+  .connectHealthPanel{display:grid;grid-template-columns:repeat(3,1fr) auto;gap:12px;align-items:center}
+  .connectHealthPanel>.eyebrow{grid-column:1/-1}
+  .connectHealthRow{border:0;padding:6px 0}
+  .connectDevicesButton{margin:0}
+  .connectClientGrid{grid-template-columns:1fr 1fr}
+  .connectClientCard.primary{grid-column:1/-1}
+}
+@media(max-width:760px){
+  .connectPageHeader{align-items:flex-start;flex-direction:column}
+  .connectOverview{gap:12px}
+  .connectPanelHeader{flex-direction:column}
+  .connectEndpointBox{grid-template-columns:1fr}
+  .connectEndpointBox code{width:100%}
+  .connectHealthPanel{display:flex}
+  .connectSectionHeading{grid-template-columns:1fr;gap:10px}
+  .connectClientGrid{grid-template-columns:1fr}
+  .connectClientCard.primary{grid-column:auto}
+  .connectClientCard{min-height:0}
+  .connectTimeline{grid-template-columns:1fr;gap:16px}
+  .connectTimeline article{padding:0}
+  .connectTimeline article:not(:last-child)::after{
+    top:auto;bottom:-10px;left:16px;right:auto;width:1px;height:12px;
+  }
+  .connectTryPanel{grid-template-columns:1fr}
+  .connectPromptGrid{grid-template-columns:1fr}
+}
