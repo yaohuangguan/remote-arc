@@ -61,6 +61,20 @@ type ProductStatus = {
   usage: MonthlyUsage;
 };
 
+type SecurityGrant = {
+  clientId: string;
+  clientName: string;
+  scopes: string[];
+  authorizedAt: string;
+  accessExpiresAt: string;
+  refreshExpiresAt: string | null;
+};
+
+type SecurityState = {
+  mcpPaused: boolean;
+  grants: SecurityGrant[];
+};
+
 type DashboardTab = "overview" | "devices" | "connect" | "security" | "settings";
 
 const MARKETING_ORIGIN = "https://remotearc.app";
@@ -841,6 +855,8 @@ function Dashboard({
   const [showAdd, setShowAdd] = useState(false);
   const [deviceQuery, setDeviceQuery] = useState("");
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
+  const [securityState, setSecurityState] = useState<SecurityState | null>(null);
+  const [securityBusy, setSecurityBusy] = useState(false);
   const [active, setActive] = useState<DashboardTab>(dashboardTabFromPath(location.pathname));
   useEffect(() => {
     const syncRoute = () => setActive(dashboardTabFromPath(location.pathname));
@@ -861,6 +877,55 @@ function Dashboard({
 
   const usage = status?.usage;
   const usagePct = usage?.limit ? Math.min(100, (usage.used / usage.limit) * 100) : 0;
+
+  async function refreshSecurity() {
+    const response = await fetch("/api/security");
+    if (!response.ok) return;
+    setSecurityState(await response.json() as SecurityState);
+  }
+
+  useEffect(() => {
+    if (active === "security") void refreshSecurity();
+  }, [active]);
+
+  async function setMcpPaused(paused: boolean) {
+    setSecurityBusy(true);
+    try {
+      const response = await fetch("/api/security/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ paused }),
+      });
+      if (!response.ok) {
+        alert(tr("Could not update Remote MCP access.", "无法更新 Remote MCP 访问状态。"));
+        return;
+      }
+      await refreshSecurity();
+      await refreshAll();
+    } finally {
+      setSecurityBusy(false);
+    }
+  }
+
+  async function revokeGrant(grant: SecurityGrant) {
+    if (!confirm(tr(
+      "Revoke " + grant.clientName + "? This AI client will need to authorize Remote Arc again.",
+      "撤销 " + grant.clientName + "？该 AI 客户端之后需要重新授权 Remote Arc。",
+    ))) return;
+
+    setSecurityBusy(true);
+    try {
+      const response = await fetch("/api/security/grants/" + encodeURIComponent(grant.clientId) + "/revoke", { method: "POST" });
+      if (!response.ok) {
+        alert(tr("Could not revoke this AI connection.", "无法撤销这个 AI 连接。"));
+        return;
+      }
+      await refreshSecurity();
+      await refreshAll();
+    } finally {
+      setSecurityBusy(false);
+    }
+  }
 
   async function revoke(deviceId: string) {
     if (!confirm(tr("Revoke this device? It will need to pair again.", "撤销此设备？之后需要重新配对。"))) return;
@@ -904,6 +969,9 @@ function Dashboard({
     if (event.event_type === "device.revoked") return tr("Device revoked", "设备已撤销");
     if (event.event_type === "device.renamed") return tr("Device renamed", "设备已重命名");
     if (event.event_type === "mcp.tool_call") return "MCP · " + (event.tool_name || "tool");
+    if (event.event_type === "security.mcp_paused") return tr("Remote MCP paused", "Remote MCP 已暂停");
+    if (event.event_type === "security.mcp_resumed") return tr("Remote MCP resumed", "Remote MCP 已恢复");
+    if (event.event_type === "security.oauth_grant_revoked") return tr("AI access revoked", "AI 访问已撤销");
     return event.event_type;
   };
 
@@ -1210,16 +1278,19 @@ function Dashboard({
                 <p>{tr("Review authentication, device exposure and recent Remote Arc activity.", "查看身份验证、设备暴露范围与 Remote Arc 最近活动。")}</p>
               </div>
               <div className="securityTopActions">
+                <button className={securityState?.mcpPaused ? "goldButton" : "dangerButton"} disabled={securityBusy} onClick={() => void setMcpPaused(!securityState?.mcpPaused)}>
+                  {securityState?.mcpPaused ? tr("Resume Remote MCP", "恢复 Remote MCP") : tr("Pause Remote MCP", "暂停 Remote MCP")}
+                </button>
                 <button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Device permissions", "设备权限")}</button>
                 <a className="ghostButton" href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md" target="_blank" rel="noreferrer">SECURITY.md</a>
               </div>
             </section>
 
             <section className="securityStatusGrid">
-              <article className="securityStatusCard primary">
-                <div><span>{tr("Protection status", "保护状态")}</span><i className="healthDot good" /></div>
-                <strong>{tr("Protected", "已保护")}</strong>
-                <small>{tr("OAuth, per-device credentials and relay enforcement are active.", "OAuth、每设备凭证与 Relay 权限拦截均已启用。")}</small>
+              <article className={"securityStatusCard primary" + (securityState?.mcpPaused ? " paused" : "")}>
+                <div><span>{tr("Remote MCP", "Remote MCP")}</span><i className={"healthDot " + (securityState?.mcpPaused ? "idle" : "good")} /></div>
+                <strong>{securityState?.mcpPaused ? tr("Paused", "已暂停") : tr("Protected", "已保护")}</strong>
+                <small>{securityState?.mcpPaused ? tr("All authenticated MCP calls are blocked until you resume access.", "所有已认证 MCP 调用都会被拦截，直到你恢复访问。") : tr("OAuth, per-device credentials and relay enforcement are active.", "OAuth、每设备凭证与 Relay 权限拦截均已启用。")}</small>
               </article>
               <article className="securityStatusCard">
                 <div><span>{tr("Authentication", "身份验证")}</span><span className="securityMiniState">OAuth</span></div>
@@ -1232,10 +1303,32 @@ function Dashboard({
                 <small>{tr("Credentials are independently revocable; only hashes are stored.", "凭证可单独撤销，服务端仅保存哈希。")}</small>
               </article>
               <article className="securityStatusCard">
-                <div><span>{tr("Network exposure", "网络暴露")}</span><span className="securityMiniState">{tr("None", "无")}</span></div>
-                <strong>{tr("Outbound-only", "仅出站连接")}</strong>
-                <small>{tr("No inbound port, VPN or public IP is required.", "无需入站端口、VPN 或公网 IP。")}</small>
+                <div><span>{tr("Edge protection", "边缘保护")}</span><span className="securityMiniState">Cloudflare</span></div>
+                <strong>{tr("Rate limited", "已限流")}</strong>
+                <small>{tr("Authenticated MCP traffic is capped per user/client; auth and pairing endpoints have separate limits.", "已认证 MCP 流量按用户/客户端限流；认证与配对入口使用独立限流。")}</small>
               </article>
+            </section>
+
+            <section className="securityPanel securityGrantsPanel">
+              <div className="securityPanelHeader">
+                <div><span className="eyebrow">{tr("CONNECTED AI ACCESS", "已连接 AI 访问")}</span><h2>{tr("OAuth grants", "OAuth 授权")}</h2><p>{tr("These AI clients currently hold active or refreshable access to your Remote Arc account.", "这些 AI 客户端当前仍持有可用或可刷新的 Remote Arc 访问权限。")}</p></div>
+                <button className="ghostButton" disabled={securityBusy} onClick={() => void refreshSecurity()}>{tr("Refresh", "刷新")}</button>
+              </div>
+              <div className="securityGrantList">
+                {(securityState?.grants || []).map((grant) => (
+                  <div className="securityGrantRow" key={grant.clientId}>
+                    <div className="securityGrantIdentity">
+                      <span className="securityGrantIcon">AI</span>
+                      <div><strong>{grant.clientName}</strong><small>{grant.clientId.slice(0,12)}… · {tr("authorized", "授权于")} {timeAgo(grant.authorizedAt)}</small></div>
+                    </div>
+                    <div className="securityGrantScopes">{grant.scopes.map((scope) => <code key={scope}>{scope}</code>)}</div>
+                    <div className="securityGrantExpiry"><span>{tr("Refresh access until", "刷新权限有效至")}</span><strong>{grant.refreshExpiresAt ? new Date(grant.refreshExpiresAt).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-NZ", { year: "numeric", month: "short", day: "numeric" }) : tr("No refresh token", "无 Refresh Token")}</strong></div>
+                    <button className="dangerButton" disabled={securityBusy} onClick={() => void revokeGrant(grant)}>{tr("Revoke", "撤销")}</button>
+                  </div>
+                ))}
+                {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No active AI grants", "暂无活跃 AI 授权")}</strong><span>{tr("Connect ChatGPT, Claude or another MCP client to see its OAuth access here.", "连接 ChatGPT、Claude 或其他 MCP 客户端后，其 OAuth 权限会显示在这里。")}</span><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
+                {!securityState && <div className="securityEmptyState compact"><strong>{tr("Loading access grants…", "正在加载访问授权…")}</strong></div>}
+              </div>
             </section>
 
             <section className="securityMainGrid">

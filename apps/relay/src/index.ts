@@ -23,6 +23,12 @@ import {
 import { readAudit } from "./audit.js";
 import { getMonthlyUsage } from "./usage.js";
 import {
+  handleGrantRevoke,
+  handleMcpPause,
+  handleSecurityState,
+  isMcpPaused,
+} from "./security.js";
+import {
   authorizationServerMetadata,
   handleDynamicClientRegistration,
   handleOAuthAuthorize,
@@ -49,6 +55,8 @@ type Env = {
   REVIEWER_EMAIL?: string;
   REVIEWER_PASSWORD_SHA256?: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  MCP_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
+  AUTH_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
 };
 
 function withTrustedDeviceHeaders(
@@ -70,6 +78,32 @@ export default {
 
     const marketingOrigin = env.MARKETING_ORIGIN || "https://remotearc.app";
     const appOrigin = env.APP_ORIGIN || env.PUBLIC_ORIGIN;
+
+    const authSensitive =
+      url.pathname === "/oauth/register" ||
+      url.pathname === "/oauth/authorize" ||
+      url.pathname === "/oauth/token" ||
+      url.pathname === "/auth/reviewer" ||
+      url.pathname === "/api/device/start" ||
+      url.pathname === "/api/device/token" ||
+      url.pathname === "/api/pairing/approve";
+
+    if (authSensitive) {
+      const actor =
+        url.searchParams.get("client_id") ||
+        request.headers.get("cf-connecting-ip") ||
+        request.headers.get("user-agent") ||
+        "anonymous";
+      const { success } = await env.AUTH_RATE_LIMITER.limit({
+        key: url.pathname + ":" + actor,
+      });
+      if (!success) {
+        return Response.json(
+          { error: "rate_limited", retry_after_seconds: 60 },
+          { status: 429, headers: { "retry-after": "60" } },
+        );
+      }
+    }
 
     if (url.hostname === "www.remotearc.app") {
       const canonical = new URL(url.pathname + url.search, marketingOrigin);
@@ -134,7 +168,7 @@ export default {
       return Response.json({
         ok: true,
         service: "remotearc-relay",
-        version: "0.3.3",
+        version: "0.3.4",
         auth: "oauth2-pkce",
       });
     }
@@ -218,6 +252,30 @@ export default {
       return Response.json(await readAudit(env, user.id, limit));
     }
 
+    if (url.pathname === "/api/security" && request.method === "GET") {
+      return handleSecurityState(request, env);
+    }
+
+    if (url.pathname === "/api/security/mcp" && request.method === "POST") {
+      return handleMcpPause(request, env);
+    }
+
+    if (
+      /^\/api\/security\/grants\/[^/]+\/revoke$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleGrantRevoke(request, env);
+    }
+
+    if (url.pathname === "/api/device/heartbeat" && request.method === "POST") {
+      const identity = await authenticateDevice(request, env);
+      if (!identity) return Response.json({ error: "unauthorized" }, { status: 401 });
+      await env.DB.prepare(
+        "UPDATE devices SET last_seen = ?1 WHERE id = ?2 AND user_id = ?3 AND revoked_at IS NULL",
+      ).bind(new Date().toISOString(), identity.id, identity.user_id).run();
+      return new Response(null, { status: 204 });
+    }
+
     if (url.pathname === "/api/device/start" && request.method === "POST") {
       return handleDeviceStart(request, env);
     }
@@ -276,6 +334,28 @@ export default {
         identity && identity.resource === (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp"
           ? identity
           : null;
+
+      if (validIdentity) {
+        const { success } = await env.MCP_RATE_LIMITER.limit({
+          key: validIdentity.userId + ":" + validIdentity.clientId,
+        });
+        if (!success) {
+          return Response.json(
+            { error: "rate_limited", retry_after_seconds: 60 },
+            { status: 429, headers: { "retry-after": "60" } },
+          );
+        }
+
+        if (await isMcpPaused(env, validIdentity.userId)) {
+          return Response.json(
+            {
+              error: "mcp_paused",
+              message: "Remote MCP access is paused for this account.",
+            },
+            { status: 423 },
+          );
+        }
+      }
 
       const handler = createRemoteLinkMcp(env, validIdentity);
       const response = await handler.fetch(request);

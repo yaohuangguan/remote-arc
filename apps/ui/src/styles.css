@@ -4116,3 +4116,121 @@ body{font-size:18px;line-height:1.6}
   .securityActionsPanel{align-items:flex-start;flex-direction:column}
   .securityActionButtons{width:100%;flex-wrap:wrap}
 }
+
+
+/* Security grants + real controls */
+.securityStatusCard.paused{
+  border-color:rgba(245,158,11,.28);
+  background:linear-gradient(180deg,rgba(120,53,15,.14),var(--panel));
+}
+.securityGrantsPanel{margin-top:14px}
+.securityGrantsPanel .securityPanelHeader p{
+  margin:5px 0 0;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+.securityGrantList{
+  display:grid;
+  gap:7px;
+}
+.securityGrantRow{
+  display:grid;
+  grid-template-columns:minmax(210px,1.1fr) minmax(260px,1.4fr) 130px auto;
+  gap:14px;
+  align-items:center;
+  padding:12px;
+  border:1px solid rgba(148,163,184,.09);
+  border-radius:12px;
+  background:#061018;
+}
+.securityGrantIdentity{
+  display:grid;
+  grid-template-columns:36px minmax(0,1fr);
+  gap:10px;
+  align-items:center;
+  min-width:0;
+}
+.securityGrantIcon{
+  display:grid;
+  place-items:center;
+  width:34px;height:34px;
+  border-radius:10px;
+  background:#0b2231;
+  color:#7dd3fc;
+  font-size:11px;
+  font-weight:900;
+}
+.securityGrantIdentity>div{
+  display:grid;
+  min-width:0;
+  gap:3px;
+}
+.securityGrantIdentity strong{
+  overflow:hidden;
+  color:#e8f5f7;
+  font-size:13px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.securityGrantIdentity small{
+  overflow:hidden;
+  color:#657d87;
+  font-size:10px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.securityGrantScopes{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+}
+.securityGrantScopes code{
+  padding:5px 7px;
+  border:1px solid #1b3545;
+  border-radius:8px;
+  background:#071821;
+  color:#8fbac5;
+  font-size:10px;
+}
+.securityGrantExpiry{
+  display:grid;
+  gap:3px;
+}
+.securityGrantExpiry span{
+  color:#657d87;
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.securityGrantExpiry strong{
+  color:#b9ccd2;
+  font-size:11px;
+}
+.securityTopActions .dangerButton,
+.securityActionButtons .dangerButton{
+  min-height:38px;
+  padding:0 12px;
+  border:1px solid rgba(248,113,113,.25);
+  border-radius:10px;
+  background:rgba(127,29,29,.10);
+  color:#fca5a5;
+  font-weight:750;
+}
+:root[data-theme="light"] .securityGrantRow{
+  background:#f7fbfd;
+  border-color:#dcebef;
+}
+:root[data-theme="light"] .securityGrantIdentity strong{color:#123640}
+@media(max-width:1100px){
+  .securityGrantRow{
+    grid-template-columns:1fr auto;
+  }
+  .securityGrantScopes{grid-column:1/-1}
+  .securityGrantExpiry{grid-column:1}
+}
+@media(max-width:650px){
+  .securityGrantRow{grid-template-columns:1fr}
+  .securityGrantScopes,.securityGrantExpiry{grid-column:auto}
+  .securityGrantRow>.dangerButton{width:100%}
+}

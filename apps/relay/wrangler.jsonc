@@ -57,5 +57,23 @@
     "MONTHLY_TOOL_CALL_LIMIT": "10000",
     "REVIEWER_DEMO_DEVICE_ID": "review-desktop-v1",
     "REVIEWER_EMAIL": "openai-reviewer@remotearc.app"
-  }
+  },
+  "ratelimits": [
+    {
+      "name": "MCP_RATE_LIMITER",
+      "namespace_id": "41001",
+      "simple": {
+        "limit": 120,
+        "period": 60
+      }
+    },
+    {
+      "name": "AUTH_RATE_LIMITER",
+      "namespace_id": "41002",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    }
+  ]
 }

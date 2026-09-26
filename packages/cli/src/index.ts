@@ -8,7 +8,7 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import WebSocket from "ws";
 
-const VERSION = "0.3.3";
+const VERSION = "0.3.4";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -331,6 +331,19 @@ async function connectAgent(config: SavedConfig) {
       process.stdout.write("       " + dim(config.origin) + "\n");
       process.stdout.write("       " + dim("Ctrl+C to disconnect") + "\n\n");
 
+      const sendHeartbeat = async () => {
+        try {
+          await fetch(new URL("/api/device/heartbeat", config.origin), {
+            method: "POST",
+            headers: { Authorization: "Bearer " + config.deviceToken },
+          });
+        } catch {
+          // WebSocket reconnect logic remains the source of truth for connectivity.
+        }
+      };
+      void sendHeartbeat();
+      const heartbeatTimer = setInterval(() => void sendHeartbeat(), 60_000);
+
       await new Promise<void>((resolve) => {
         ws.on("message", async (raw) => {
           let message: {
@@ -384,6 +397,7 @@ async function connectAgent(config: SavedConfig) {
         ws.once("close", resolve);
         ws.once("error", resolve);
       });
+      clearInterval(heartbeatTimer);
     } catch (error) {
       logLine(
         "error",
