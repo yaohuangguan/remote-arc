@@ -2392,3 +2392,88 @@ body{font-size:18px;line-height:1.6}
 .topologyLines path:nth-of-type(3),.topologyLines path:nth-of-type(6){animation-delay:.5s}
 @keyframes topologyDash{to{stroke-dashoffset:-34}}
 .topologyLines .packet{display:none!important}
+
+/* Hero topology v5: aligned with slogan + explicit connection ports */
+.heroTopology{
+  align-self:start !important;
+  margin-top:45px !important;
+}
+.topologyHub{
+  grid-template-columns:34px minmax(0,1fr) auto !important;
+  gap:10px !important;
+  padding:10px 12px !important;
+}
+.topologyHub>img{
+  width:34px !important;
+  height:34px !important;
+  display:block !important;
+  object-fit:contain !important;
+  flex:none !important;
+}
+.topologyHub>div{
+  display:grid !important;
+  grid-template-rows:auto auto !important;
+  align-content:center !important;
+  gap:2px !important;
+  min-width:0 !important;
+}
+.topologyHub strong{
+  display:block !important;
+  margin:0 !important;
+  font-size:14px !important;
+  line-height:1.1 !important;
+  white-space:nowrap !important;
+}
+.topologyHub small{
+  display:block !important;
+  margin:0 !important;
+  font-size:9px !important;
+  line-height:1.2 !important;
+  white-space:nowrap !important;
+}
+.topologyHub b{
+  justify-self:end !important;
+  align-self:center !important;
+  white-space:nowrap !important;
+  padding:4px 6px !important;
+  border-radius:999px !important;
+  background:rgba(74,222,128,.08) !important;
+}
+.topologyAgent::after,
+.topologyDevice::before,
+.topologyHub::before,
+.topologyHub::after{
+  content:"";
+  position:absolute;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#38bdf8;
+  box-shadow:0 0 10px rgba(56,189,248,.8);
+  z-index:4;
+  pointer-events:none;
+}
+.topologyAgent::after{
+  left:50%;
+  bottom:-4px;
+  transform:translateX(-50%);
+}
+.topologyDevice::before{
+  left:50%;
+  top:-4px;
+  transform:translateX(-50%);
+}
+.topologyHub::before{
+  left:50%;
+  top:-4px;
+  transform:translateX(-50%);
+}
+.topologyHub::after{
+  left:50%;
+  bottom:-4px;
+  transform:translateX(-50%);
+}
+@media(max-width:720px){
+  .heroTopology{margin-top:24px !important}
+  .topologyHub>img{width:30px !important;height:30px !important}
+}
