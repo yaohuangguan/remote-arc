@@ -188,7 +188,7 @@ function PublicHeader({ user }: { user?: User | null }) {
         {user ? (
           <a className="navDashboard" href={APP_ORIGIN + "/overview"}>{tr("Dashboard", "控制台")} <span>↗</span></a>
         ) : (
-          <a className="navLogin" href={APP_ORIGIN + "/auth/google?return_to=/overview"}>{tr("Sign in", "登录")}</a>
+          <a className="navLogin installNavCta" href={MARKETING_ORIGIN + "/#install"}>{tr("Install Remote Arc", "安装 Remote Arc")} <span>↓</span></a>
         )}
       </div>
     </header>
@@ -514,7 +514,7 @@ function Landing({ user }: { user?: User | null }) {
             "让 ChatGPT、Claude 与兼容 MCP 的 AI 安全访问你的真实 Windows、macOS 和 Linux 设备。无需公网 IP，无需 VPN，控制权始终在你手里。"
           )}</p>
           <div className="landingActions">
-            <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : APP_ORIGIN + "/auth/google?return_to=/overview"}>{user ? tr("Open dashboard", "打开控制台") : tr("Connect a computer", "连接一台电脑")}</a>
+            <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : "#install"}>{user ? tr("Open dashboard", "打开控制台") : tr("Install Remote Arc", "安装 Remote Arc")}</a>
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
@@ -747,7 +747,7 @@ function Landing({ user }: { user?: User | null }) {
           <h2>{tr("Connect one machine in minutes.", "几分钟内，让第一台电脑上线。")}</h2>
           <p>{tr("Start with 10,000 hosted tool calls each month, then add paid usage when you need more.", "每月先用 10,000 次免费托管调用，需要更多时直接充值扩容。")}</p>
         </div>
-        <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : APP_ORIGIN + "/auth/google?return_to=/overview"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start with Remote Arc", "开始使用 Remote Arc")}</a>
+        <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : "#install"}>{user ? tr("Open dashboard", "打开控制台") : tr("Install Remote Arc", "安装 Remote Arc")}</a>
       </section>
     </PublicLayout>
   );

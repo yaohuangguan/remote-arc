@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export type Locale = "en" | "zh";
 
@@ -12,15 +12,19 @@ const I18nContext = createContext<I18n | null>(null);
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => {
-    const saved = localStorage.getItem("remotearc-locale") ?? localStorage.getItem("remote-link-locale");
+    const saved = localStorage.getItem("remotearc-locale-v2");
     if (saved === "en" || saved === "zh") return saved;
     return "en";
   });
 
+  useEffect(() => {
+    document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+  }, [locale]);
+
   const value = useMemo<I18n>(() => ({
     locale,
     setLocale(next) {
-      localStorage.setItem("remotearc-locale", next);
+      localStorage.setItem("remotearc-locale-v2", next);
       document.documentElement.lang = next === "zh" ? "zh-CN" : "en";
       setLocaleState(next);
     },
