@@ -3460,3 +3460,295 @@ body{font-size:18px;line-height:1.6}
   .managedActions{flex-wrap:wrap}
   .managedActions .dangerButton{margin-left:0}
 }
+
+
+/* Overview — compact control-plane dashboard */
+.overviewTopbar{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  padding:30px 0 18px;
+}
+.overviewTopbar h1{
+  margin:6px 0 5px;
+  font-size:32px;
+  line-height:1;
+  letter-spacing:-.04em;
+}
+.overviewTopbar p{
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+}
+.overviewActions{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  flex:0 0 auto;
+}
+
+.overviewStatusGrid{
+  display:grid;
+  grid-template-columns:1.05fr 1fr 1fr 1.35fr;
+  gap:12px;
+}
+.overviewStatusCard{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  min-height:142px;
+  padding:17px 18px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--panel);
+}
+.overviewStatusCard.primary{
+  border-color:rgba(74,222,128,.22);
+  background:linear-gradient(180deg,rgba(6,37,26,.22),var(--panel));
+}
+.statusCardHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  color:#78919a;
+  font-size:11px;
+  font-weight:750;
+  letter-spacing:.045em;
+  text-transform:uppercase;
+}
+.overviewStatusCard>strong{
+  margin-top:16px;
+  color:#eef9fb;
+  font-size:27px;
+  line-height:1;
+  letter-spacing:-.035em;
+}
+.overviewStatusCard>small{
+  margin-top:auto;
+  color:#667f88;
+  font-size:11px;
+}
+.miniUsageBar{
+  height:5px;
+  margin:12px 0 7px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#0c1a22;
+}
+.miniUsageBar i{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#0ea5e9,#38bdf8);
+}
+.overviewStatusCard.endpoint code{
+  display:block;
+  margin:13px 0 12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#bdefff;
+  font-size:11px;
+}
+.statusCardActions{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-top:auto;
+}
+
+.overviewQuickGrid{
+  display:grid;
+  grid-template-columns:1.35fr .85fr;
+  gap:14px;
+  margin-top:14px;
+}
+.overviewQuickCard,.overviewAttentionCard{
+  padding:19px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:var(--panel);
+}
+.quickActionList{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+  margin-top:13px;
+}
+.quickActionList button,
+.attentionList button,
+.attentionClear{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr);
+  gap:10px;
+  align-items:center;
+  width:100%;
+  padding:11px;
+  border:1px solid rgba(148,163,184,.09);
+  border-radius:12px;
+  background:#061018;
+  color:inherit;
+  text-align:left;
+}
+.quickActionList button{
+  cursor:pointer;
+}
+.quickActionList button:hover{
+  border-color:#21465b;
+  background:#081722;
+}
+.quickActionList button>span{
+  display:grid;
+  place-items:center;
+  width:32px;height:32px;
+  border-radius:9px;
+  background:#0b2231;
+  color:#7dd3fc;
+  font-size:15px;
+}
+.quickActionList button>div,
+.attentionList button>div,
+.attentionClear>div{
+  display:grid;
+  gap:2px;
+}
+.quickActionList strong,
+.attentionList strong,
+.attentionClear strong{
+  color:#e7f4f7;
+  font-size:13px;
+}
+.quickActionList small,
+.attentionList small,
+.attentionClear small{
+  color:#6f8993;
+  font-size:11px;
+  line-height:1.35;
+}
+
+.attentionList{
+  display:grid;
+  gap:8px;
+  margin-top:13px;
+}
+.attentionList button{
+  cursor:pointer;
+}
+.attentionIcon,.attentionClear>i{
+  display:grid;
+  place-items:center;
+  width:30px;height:30px;
+  border-radius:50%;
+  font-style:normal;
+  font-weight:900;
+}
+.attentionIcon.warn{
+  background:rgba(245,158,11,.10);
+  color:#fbbf24;
+}
+.attentionIcon.idle{
+  background:rgba(100,116,139,.12);
+  color:#94a3b8;
+}
+.attentionClear>i{
+  background:rgba(74,222,128,.10);
+  color:#4ade80;
+}
+
+.overviewMainGrid{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:14px;
+  margin-top:14px;
+}
+.overviewDevicesPanel,.overviewActivityPanel{
+  min-width:0;
+}
+.overviewDeviceList{
+  display:grid;
+  gap:7px;
+}
+.overviewDeviceRow{
+  display:grid;
+  grid-template-columns:36px minmax(0,1fr) auto auto;
+  gap:10px;
+  align-items:center;
+  width:100%;
+  padding:10px 11px;
+  border:1px solid transparent;
+  border-radius:11px;
+  background:#061018;
+  color:inherit;
+  text-align:left;
+}
+.overviewDeviceRow:hover{
+  border-color:#1d3c4d;
+}
+.overviewDeviceRow>div:nth-child(2){
+  display:grid;
+  min-width:0;
+  gap:2px;
+}
+.overviewDeviceRow strong{
+  overflow:hidden;
+  color:#e8f5f7;
+  font-size:13px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.overviewDeviceRow span{
+  overflow:hidden;
+  color:#718b94;
+  font-size:10px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.overviewDeviceMeta{
+  display:grid;
+  justify-items:end;
+  gap:2px;
+  color:#68818a;
+}
+.overviewDeviceMeta span,.overviewDeviceMeta small{
+  font-size:10px;
+}
+.overviewActivityPanel .activityList{
+  max-height:360px;
+  overflow:auto;
+}
+
+:root[data-theme="light"] .overviewStatusCard,
+:root[data-theme="light"] .overviewQuickCard,
+:root[data-theme="light"] .overviewAttentionCard{
+  background:#fff;
+  border-color:#dcebef;
+}
+:root[data-theme="light"] .quickActionList button,
+:root[data-theme="light"] .attentionList button,
+:root[data-theme="light"] .attentionClear,
+:root[data-theme="light"] .overviewDeviceRow{
+  background:#f7fbfd;
+}
+:root[data-theme="light"] .overviewStatusCard>strong,
+:root[data-theme="light"] .quickActionList strong,
+:root[data-theme="light"] .attentionList strong,
+:root[data-theme="light"] .attentionClear strong,
+:root[data-theme="light"] .overviewDeviceRow strong{
+  color:#123640;
+}
+
+@media(max-width:1100px){
+  .overviewStatusGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .overviewQuickGrid,.overviewMainGrid{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  .overviewTopbar{align-items:flex-start;flex-direction:column;padding-top:22px}
+  .overviewActions{width:100%}
+  .overviewActions>*{flex:1}
+  .overviewStatusGrid{grid-template-columns:1fr}
+  .quickActionList{grid-template-columns:1fr}
+  .overviewDeviceRow{grid-template-columns:34px minmax(0,1fr) auto}
+  .overviewDeviceMeta{display:none}
+}
