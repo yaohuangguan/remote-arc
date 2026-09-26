@@ -1942,3 +1942,70 @@ body{font-size:18px;line-height:1.6}
 .flowCaption{position:absolute;left:50%;bottom:11px;transform:translateX(-50%);z-index:2;color:#6f8993;font-size:11px;letter-spacing:.06em;white-space:nowrap}
 @media(max-width:1120px){.heroFlow{grid-template-columns:1fr 52px .8fr;grid-template-areas:"agents track hub" "devices devices devices";gap:14px}.flowAgentCard{grid-area:agents}.flowTrackIn{grid-area:track}.flowHubCard{grid-area:hub}.flowTrackOut{display:none}.flowDeviceStack{grid-area:devices;grid-template-columns:repeat(3,1fr)}.flowCaption{display:none}}
 @media(max-width:720px){.heroFlow{display:grid;grid-template-columns:1fr;grid-template-areas:"agents" "track" "hub" "devices";min-height:0;padding:16px}.flowTrackIn{height:52px;width:2px;justify-self:center;background:linear-gradient(180deg,#164e63,#38bdf8,#164e63)}.flowTrackIn::after{right:-4px;top:auto;bottom:-1px;border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid #38bdf8;border-bottom:0}.flowPacket{left:-4px!important;animation:flowPacketVertical 2.4s linear infinite}@keyframes flowPacketVertical{0%{top:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:calc(100% - 8px);opacity:0}}.flowDeviceStack{grid-template-columns:1fr}}
+
+
+/* Hero flow v3: strict vertical stack, immune to legacy grid rules */
+.heroFlow{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  gap:0 !important;
+  min-height:0 !important;
+  padding:26px 30px 36px !important;
+}
+.heroFlow .flowAgentCard{
+  width:min(100%,520px) !important;
+  justify-self:auto !important;
+  grid-area:auto !important;
+}
+.heroFlow .flowHubCard{
+  width:min(100%,300px) !important;
+  justify-self:auto !important;
+  grid-area:auto !important;
+}
+.heroFlow .flowTrack{
+  display:block !important;
+  position:relative !important;
+  width:2px !important;
+  height:58px !important;
+  flex:0 0 58px !important;
+  margin:0 !important;
+  justify-self:auto !important;
+  grid-area:auto !important;
+  background:linear-gradient(180deg,#164e63,#38bdf8,#164e63) !important;
+}
+.heroFlow .flowTrack::after{
+  right:-4px !important;
+  top:auto !important;
+  bottom:-1px !important;
+  border-left:5px solid transparent !important;
+  border-right:5px solid transparent !important;
+  border-top:8px solid #38bdf8 !important;
+  border-bottom:0 !important;
+}
+.heroFlow .flowPacket{
+  left:-4px !important;
+  top:0;
+  animation:heroFlowPacketVertical 2.4s linear infinite !important;
+}
+@keyframes heroFlowPacketVertical{
+  0%{top:0;opacity:0;transform:scale(.6)}
+  10%{opacity:1}
+  90%{opacity:1}
+  100%{top:calc(100% - 8px);opacity:0;transform:scale(1.15)}
+}
+.heroFlow .flowDeviceStack{
+  width:100% !important;
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:10px !important;
+  grid-area:auto !important;
+  margin:0 !important;
+}
+.heroFlow .flowCaption{bottom:10px !important}
+@media(max-width:720px){
+  .heroFlow{padding:18px 16px 30px !important}
+  .heroFlow .flowDeviceStack{grid-template-columns:1fr !important}
+  .heroFlow .flowCaption{display:none !important}
+}

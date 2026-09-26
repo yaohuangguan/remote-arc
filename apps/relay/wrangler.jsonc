@@ -54,6 +54,8 @@
     "APP_ORIGIN": "https://mcp.remotearc.app",
     "MARKETING_ORIGIN": "https://remotearc.app",
     "ALLOW_SIGNUPS": "1",
-    "MONTHLY_TOOL_CALL_LIMIT": "10000"
+    "MONTHLY_TOOL_CALL_LIMIT": "10000",
+    "REVIEWER_DEMO_DEVICE_ID": "review-desktop-v1",
+    "REVIEWER_EMAIL": "openai-reviewer@remotearc.app"
   }
 }

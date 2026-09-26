@@ -7,6 +7,8 @@ type AuthEnv = {
   GOOGLE_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
   ALLOW_SIGNUPS?: string;
+  REVIEWER_EMAIL?: string;
+  REVIEWER_PASSWORD_SHA256?: string;
 };
 
 export type SessionUser = {
@@ -105,7 +107,7 @@ export async function getSessionUser(
   };
 }
 
-async function createSession(userId: string, env: AuthEnv) {
+export async function createSession(userId: string, env: AuthEnv) {
   const token = randomToken();
   await env.DB.prepare(
     "INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?1, ?2, ?3, ?4)",
@@ -121,7 +123,7 @@ async function createSession(userId: string, env: AuthEnv) {
   return token;
 }
 
-function sessionCookie(token: string) {
+export function sessionCookie(token: string) {
   return [
     "rl_session=" + encodeURIComponent(token),
     "Path=/",

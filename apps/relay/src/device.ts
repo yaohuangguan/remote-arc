@@ -11,6 +11,7 @@ import { writeAudit } from "./audit.js";
 type DeviceEnv = {
   DB: D1Database;
   PUBLIC_ORIGIN: string;
+  REVIEWER_DEMO_DEVICE_ID?: string;
 };
 
 type DeviceStartBody = {
@@ -290,7 +291,15 @@ export async function getDevicesForUser(
   const onlineById = new Map(online.map((device) => [device.id, device]));
 
   return (rows.results || []).map((device) => {
-    const live = onlineById.get(device.id);
+    const reviewerFixture =
+      env.REVIEWER_DEMO_DEVICE_ID && device.id === env.REVIEWER_DEMO_DEVICE_ID
+        ? {
+            id: device.id,
+            status: "online",
+            tools: ["list_directory", "read_file", "get_file_info", "list_processes", "start_process"],
+          }
+        : undefined;
+    const live = onlineById.get(device.id) || reviewerFixture;
     const availableTools = live?.tools || [];
     let allowedTools: string[] | null = null;
     if (device.allowed_tools) {

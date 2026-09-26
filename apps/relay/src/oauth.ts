@@ -184,7 +184,7 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
     const returnTo = url.pathname + url.search;
     return Response.redirect(
       appOrigin(env) +
-        "/auth/google?return_to=" +
+        "/auth/login?return_to=" +
         encodeURIComponent(returnTo),
       302,
     );

@@ -8,6 +8,7 @@ import {
   handleGoogleLogin,
   handleLogout,
 } from "./auth.js";
+import { handleLoginPage, handleReviewerLogin } from "./reviewer.js";
 import {
   getDevicesForUser,
   handleDeviceList,
@@ -44,6 +45,10 @@ type Env = {
   ALLOWED_EMAILS?: string;
   ALLOW_SIGNUPS?: string;
   MONTHLY_TOOL_CALL_LIMIT?: string;
+  OPENAI_APPS_CHALLENGE?: string;
+  REVIEWER_EMAIL?: string;
+  REVIEWER_PASSWORD_SHA256?: string;
+  REVIEWER_DEMO_DEVICE_ID?: string;
 };
 
 function withTrustedDeviceHeaders(
@@ -113,6 +118,18 @@ export default {
       return Response.redirect(canonical.toString(), 301);
     }
 
+    if (url.pathname === "/.well-known/openai-apps-challenge") {
+      if (!env.OPENAI_APPS_CHALLENGE) {
+        return new Response("Not configured", { status: 404 });
+      }
+      return new Response(env.OPENAI_APPS_CHALLENGE, {
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
     if (url.pathname === "/health") {
       return Response.json({
         ok: true,
@@ -146,6 +163,14 @@ export default {
 
     if (url.pathname === "/oauth/token" && request.method === "POST") {
       return handleOAuthToken(request, env);
+    }
+
+    if (url.pathname === "/auth/login" && request.method === "GET") {
+      return handleLoginPage(request, env);
+    }
+
+    if (url.pathname === "/auth/reviewer" && request.method === "POST") {
+      return handleReviewerLogin(request, env);
     }
 
     if (url.pathname === "/auth/google" && request.method === "GET") {

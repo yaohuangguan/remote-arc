@@ -10,6 +10,7 @@ type Env = {
   REGISTRY: DurableObjectNamespace;
   PUBLIC_ORIGIN: string;
   MONTHLY_TOOL_CALL_LIMIT?: string;
+  REVIEWER_DEMO_DEVICE_ID?: string;
 };
 
 type Scope = "devices:read" | "computer:read" | "computer:write";
@@ -81,6 +82,10 @@ async function callDevice(
     }
   }
 
+  if (env.REVIEWER_DEMO_DEVICE_ID && deviceId === env.REVIEWER_DEMO_DEVICE_ID) {
+    return reviewerDemoResult(tool, args);
+  }
+
   const response = await registry(env).fetch(
     new Request("https://registry/call", {
       method: "POST",
@@ -124,6 +129,48 @@ const textResult = (value: unknown) => ({
     },
   ],
 });
+
+function reviewerDemoResult(tool: string, args: Record<string, unknown>) {
+  if (tool === "list_directory") {
+    return [
+      { name: "package.json", type: "file", size: 842 },
+      { name: "src", type: "directory" },
+      { name: "README.md", type: "file", size: 2140 },
+    ];
+  }
+  if (tool === "read_file") {
+    const path = String(args.path || "");
+    if (path.endsWith("package.json")) {
+      return JSON.stringify({
+        name: "remote-arc-review-demo",
+        private: true,
+        scripts: { test: "vitest run" },
+      }, null, 2);
+    }
+    return "# Remote Arc Review Demo\n\nThis is deterministic fixture data for OpenAI plugin review.";
+  }
+  if (tool === "get_file_info") {
+    return { path: String(args.path || ""), type: "file", size: 842, modified: "2026-09-26T00:00:00Z" };
+  }
+  if (tool === "list_processes") {
+    return [
+      { pid: 4312, name: "node", cpu_percent: 1.8, memory_mb: 128 },
+      { pid: 1180, name: "code", cpu_percent: 0.7, memory_mb: 412 },
+    ];
+  }
+  if (tool === "start_process") {
+    const command = String(args.command || "").trim();
+    if (!["npm test", "pwd", "git status"].includes(command)) {
+      throw new Error("review fixture only permits safe review commands: npm test, pwd, git status");
+    }
+    if (command === "npm test") {
+      return "PASS  src/router.test.ts\nPASS  src/auth.test.ts\n\nTest Suites: 2 passed, 2 total\nTests: 8 passed, 8 total";
+    }
+    if (command === "pwd") return "/review-demo";
+    return "On branch main\nnothing to commit, working tree clean";
+  }
+  throw new Error("tool is not enabled on the OpenAI review fixture");
+}
 
 /**
  * OpenAI's plugin auth contract currently expects securitySchemes at the
@@ -193,7 +240,7 @@ export function createRemoteLinkMcp(
         title: "List Remote Arc devices",
         description:
           "List computers linked to this Remote Arc account and show whether each device is online.",
-        annotations: { readOnlyHint: true },
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("devices:read"),
       },
       async () => {
@@ -214,7 +261,7 @@ export function createRemoteLinkMcp(
         inputSchema: z.object({
           device_id: z.string(),
         }),
-        annotations: { readOnlyHint: true },
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("devices:read"),
       },
       async ({ device_id }) => {
@@ -239,7 +286,7 @@ export function createRemoteLinkMcp(
           path: z.string(),
           depth: z.number().int().min(1).max(10).default(2),
         }),
-        annotations: { readOnlyHint: true },
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("computer:read"),
       },
       async ({ device_id, path, depth }) => {
@@ -267,7 +314,7 @@ export function createRemoteLinkMcp(
           offset: z.number().int().optional(),
           length: z.number().int().positive().optional(),
         }),
-        annotations: { readOnlyHint: true },
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("computer:read"),
       },
       async ({ device_id, path, offset, length }) => {
@@ -294,7 +341,7 @@ export function createRemoteLinkMcp(
           device_id: z.string(),
           path: z.string(),
         }),
-        annotations: { readOnlyHint: true },
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("computer:read"),
       },
       async ({ device_id, path }) => {
@@ -316,7 +363,7 @@ export function createRemoteLinkMcp(
         inputSchema: z.object({
           device_id: z.string(),
         }),
-        annotations: { readOnlyHint: true },
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("computer:read"),
       },
       async ({ device_id }) => {
@@ -341,7 +388,7 @@ export function createRemoteLinkMcp(
           command: z.string(),
           timeout_ms: z.number().int().positive().default(5000),
         }),
-        annotations: { destructiveHint: true },
+        annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true },
         _meta: oauthToolMeta("computer:write"),
       },
       async ({ device_id, command, timeout_ms }) => {
@@ -370,7 +417,7 @@ export function createRemoteLinkMcp(
           content: z.string(),
           mode: z.enum(["rewrite", "append"]).default("rewrite"),
         }),
-        annotations: { destructiveHint: true },
+        annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
         _meta: oauthToolMeta("computer:write"),
       },
       async ({ device_id, path, content, mode }) => {
@@ -401,7 +448,7 @@ export function createRemoteLinkMcp(
           new_string: z.string(),
           expected_replacements: z.number().int().positive().default(1),
         }),
-        annotations: { destructiveHint: true },
+        annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
         _meta: oauthToolMeta("computer:write"),
       },
       async ({
