@@ -509,53 +509,37 @@ function Landing({ user }: { user?: User | null }) {
             <span>{tr("Outbound connection only", "仅需出站连接")}</span>
           </div>
         </div>
-        <div className="heroTopology" aria-label={tr("Remote Arc connection flow", "Remote Arc 连接链路")}>
-          <svg className="topologyLines" viewBox="0 0 600 280" preserveAspectRatio="none" aria-hidden="true">
-            <defs>
-              <linearGradient id="flowStroke" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#234c63" />
-                <stop offset="52%" stopColor="#38bdf8" />
-                <stop offset="100%" stopColor="#234c63" />
-              </linearGradient>
-            </defs>
-            <path d="M100 66 C100 90 210 98 300 119" />
-            <path d="M300 66 L300 119" />
-            <path d="M500 66 C500 90 390 98 300 119" />
-            <path d="M300 185 C300 205 190 214 100 227" />
-            <path d="M300 185 L300 227" />
-            <path d="M300 185 C300 205 410 214 500 227" />
-
-          </svg>
-
-          <div className="topologyNode topologyAgent nodeAgentLeft">
-            <img src={aiClients[0].icon} alt="" />
-            <div><strong>{aiClients[0].name}</strong><small>MCP</small></div>
+        <div className="heroArchitecture" aria-label={tr("How Remote Arc connects AI clients to your devices", "Remote Arc 如何连接 AI 客户端与设备")}>
+          <div className="architectureLabel">{tr("YOUR AI", "你的 AI")}</div>
+          <div className="architectureClients">
+            <div><img src={aiClients[0].icon} alt="" /><strong>{aiClients[0].name}</strong></div>
+            <div><img src={aiClients[1].icon} alt="" /><strong>{aiClients[1].name}</strong></div>
+            <div><span className="protocolMark">M</span><strong>{tr("Any MCP client", "任意 MCP 客户端")}</strong></div>
           </div>
 
-          <div className="topologyNode topologyAgent nodeAgentCenter">
-            <img src={aiClients[1].icon} alt="" />
-            <div><strong>{aiClients[1].name}</strong><small>MCP</small></div>
+          <div className="architectureArrow">
+            <span>↓</span>
+            <small>{tr("Plugin / Remote MCP + OAuth", "Plugin / Remote MCP + OAuth")}</small>
           </div>
 
-          <div className="topologyNode topologyAgent nodeAgentRight">
-            <span className="protocolMark">M</span>
-            <div><strong>{tr("Any MCP client", "任意 MCP 客户端")}</strong><small>MCP</small></div>
-          </div>
-
-          <div className="topologyHub">
+          <div className="architectureCore">
             <LogoMark />
-            <div><strong>Remote Arc</strong><small>OAuth · Routing · Presence</small></div>
-            <b>{tr("Connected", "已连接")}</b>
+            <div>
+              <strong>Remote Arc</strong>
+              <small>{tr("Secure routing · device presence · permissions", "安全路由 · 设备在线状态 · 权限控制")}</small>
+            </div>
           </div>
 
-          <div className="topologyDevice nodeDeviceLeft">
-            <span>⊞</span><div><strong>{tr("Desktop", "桌面电脑")}</strong><small>Windows</small></div><i className="onlineDot" />
+          <div className="architectureArrow">
+            <span>↓</span>
+            <small>{tr("Encrypted outbound device connection", "设备安全出站连接")}</small>
           </div>
-          <div className="topologyDevice nodeDeviceCenter">
-            <span>⌘</span><div><strong>Mac</strong><small>macOS</small></div><i className="onlineDot" />
-          </div>
-          <div className="topologyDevice nodeDeviceRight">
-            <span>›_</span><div><strong>{tr("Linux host", "Linux 主机")}</strong><small>Linux</small></div><i className="onlineDot" />
+
+          <div className="architectureLabel">{tr("YOUR DEVICES", "你的设备")}</div>
+          <div className="architectureDevices">
+            <div><span>⊞</span><strong>Windows</strong></div>
+            <div><span>⌘</span><strong>macOS</strong></div>
+            <div><span>›_</span><strong>Linux</strong></div>
           </div>
         </div>
       </section>

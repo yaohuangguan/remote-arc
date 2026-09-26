@@ -2477,3 +2477,119 @@ body{font-size:18px;line-height:1.6}
   .heroTopology{margin-top:24px !important}
   .topologyHub>img{width:30px !important;height:30px !important}
 }
+
+
+/* Static hero architecture: simple, stable, explanatory */
+.heroArchitecture{
+  align-self:start;
+  width:min(100%,500px);
+  margin-top:38px;
+  padding:18px 20px 16px;
+  border-radius:18px;
+  background:linear-gradient(180deg,rgba(7,17,29,.74),rgba(4,10,18,.56));
+}
+.architectureLabel{
+  margin-bottom:8px;
+  color:#6f8993;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.12em;
+}
+.architectureClients,
+.architectureDevices{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.architectureClients>div,
+.architectureDevices>div{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:9px 8px;
+  border-radius:11px;
+  background:rgba(10,20,32,.74);
+}
+.architectureClients img,
+.architectureClients .protocolMark{
+  width:26px;
+  height:26px;
+  flex:0 0 auto;
+}
+.architectureClients img{object-fit:contain;filter:invert(1)}
+.architectureClients .protocolMark{
+  display:grid;
+  place-items:center;
+  border-radius:7px;
+  background:#0d2535;
+  color:#7dd3fc;
+  font-weight:900;
+}
+.architectureClients strong,
+.architectureDevices strong{
+  min-width:0;
+  color:#eaf8fb;
+  font-size:12px;
+  line-height:1.15;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.architectureArrow{
+  display:grid;
+  justify-items:center;
+  gap:2px;
+  padding:7px 0 6px;
+}
+.architectureArrow span{
+  color:#38bdf8;
+  font-size:22px;
+  line-height:1;
+}
+.architectureArrow small{
+  color:#6f8993;
+  font-size:10px;
+  letter-spacing:.03em;
+}
+.architectureCore{
+  width:min(100%,300px);
+  margin:0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:11px;
+  padding:12px 14px;
+  border-radius:14px;
+  background:#07111d;
+  box-shadow:0 10px 28px rgba(0,0,0,.16);
+}
+.architectureCore>img{
+  width:36px!important;
+  height:36px!important;
+  object-fit:contain;
+  flex:0 0 auto;
+}
+.architectureCore>div{display:grid;gap:2px;min-width:0}
+.architectureCore strong{color:#f0fbff;font-size:15px;line-height:1.1}
+.architectureCore small{color:#7899a5;font-size:10px;line-height:1.25}
+.architectureDevices{margin-top:0}
+.architectureDevices>div{
+  background:transparent;
+  padding:7px 4px 2px;
+}
+.architectureDevices span{
+  color:#7dd3fc;
+  font-size:15px;
+}
+@media(max-width:720px){
+  .heroArchitecture{width:100%;margin-top:24px;padding:15px 10px 14px}
+  .architectureClients,.architectureDevices{gap:5px}
+  .architectureClients>div{gap:5px;padding:7px 5px}
+  .architectureClients img,.architectureClients .protocolMark{width:22px;height:22px}
+  .architectureClients strong,.architectureDevices strong{font-size:10px}
+  .architectureCore{width:250px}
+  .architectureCore>img{width:32px!important;height:32px!important}
+  .architectureArrow small{font-size:9px}
+}
