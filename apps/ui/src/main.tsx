@@ -284,7 +284,7 @@ function PublicHeader({ user }: { user?: User | null }) {
         {user ? (
           <a className="navDashboard" href={APP_ORIGIN + "/overview"}>{tr("Dashboard", "控制台")} <span>↗</span></a>
         ) : (
-          <a className="navLogin installNavCta" href={MARKETING_ORIGIN + "/install"}>{tr("Install Remote Arc", "安装 Remote Arc")} <span>→</span></a>
+          <a className="navLogin installNavCta" href={MARKETING_ORIGIN + "/install/chatgpt"}>{tr("Install Remote Arc", "安装 Remote Arc")} <span>→</span></a>
         )}
       </div>
     </header>
@@ -778,6 +778,62 @@ function InstallTypewriterDemo({ config }: { config: InstallDemoConfig }) {
   );
 }
 
+function InstallAuthModal({
+  clientName,
+  returnTo,
+  onClose,
+}: {
+  clientName: string;
+  returnTo: string;
+  onClose: () => void;
+}) {
+  const { tr } = useI18n();
+  const providers = [
+    {
+      id: "google",
+      label: tr("Continue with Google", "使用 Google 继续"),
+      href: "/auth/google?return_to=" + encodeURIComponent(returnTo),
+      mark: "G",
+    },
+  ];
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="modalBackdrop installAuthBackdrop" onMouseDown={onClose}>
+      <section className="installAuthModal" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="modalClose" type="button" onClick={onClose} aria-label={tr("Close", "关闭")}>×</button>
+        <div className="installAuthBrand"><LogoMark /></div>
+        <span className="eyebrow">{tr("REMOTE ARC ACCOUNT", "REMOTE ARC 账户")}</span>
+        <h2>{tr("Sign in before installing.", "登录后开始安装。")}</h2>
+        <p>{tr(
+          "Your Remote Arc account keeps your paired computers, device permissions and usage together. Sign in once, then continue the " + clientName + " setup.",
+          "Remote Arc 账户用于统一保存已配对电脑、设备权限和使用额度。登录一次后，即可继续 " + clientName + " 的安装流程。",
+        )}</p>
+        <div className="installAuthProviders">
+          {providers.map((provider) => (
+            <a className={"authProviderButton " + provider.id} href={provider.href} key={provider.id}>
+              <span aria-hidden="true">{provider.mark}</span>
+              <strong>{provider.label}</strong>
+              <b>→</b>
+            </a>
+          ))}
+        </div>
+        <small>{tr(
+          "Authentication is separate from your AI client connection. More sign-in methods can be added without changing your paired devices.",
+          "Remote Arc 登录与 AI 客户端连接彼此独立；以后新增其他登录方式时，不会影响你已经配对的设备。",
+        )}</small>
+      </section>
+    </div>
+  );
+}
+
 function ClientInstallPage({
   slug,
   user,
@@ -786,6 +842,16 @@ function ClientInstallPage({
   user?: User | null;
 }) {
   const { tr } = useI18n();
+  const [showAuth, setShowAuth] = useState(false);
+  const installReturnTo = "/install/" + slug + "#installation";
+
+  function beginInstallation() {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
+    document.getElementById("installation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   const config = slug === "chatgpt"
     ? {
@@ -798,8 +864,8 @@ function ClientInstallPage({
           "电脑只需配对一次，再在支持 Remote MCP App 的 ChatGPT 账户中添加 Remote Arc，之后即可直接在聊天里操作这台电脑。",
         ),
         availability: tr(
-          "Current setup: manual MCP app creation on eligible ChatGPT accounts. A public Remote Arc listing is planned.",
-          "当前方式：在支持手动创建 MCP App 的 ChatGPT 账户中接入。Remote Arc 公开上架仍在计划中。",
+          "Remote Arc is preparing its public ChatGPT Plugin listing. Until it is live, eligible accounts can use the manual Remote MCP app path.",
+          "Remote Arc 正在准备公开 ChatGPT Plugin 上架。在正式上线前，符合条件的账户仍可通过手动 Remote MCP App 方式接入。",
         ),
         externalHref: "https://chatgpt.com/",
         externalLabel: tr("Open ChatGPT", "打开 ChatGPT"),
@@ -971,8 +1037,15 @@ function ClientInstallPage({
             <p>{config.intro}</p>
             <div className="installAvailability"><i />{config.availability}</div>
             <div className="clientInstallActions">
-              <a className="primaryButton" href="#installation">{tr("Installation steps", "安装步骤")} <span>↓</span></a>
+              <button className="primaryButton" type="button" onClick={beginInstallation}>
+                {user ? tr("Continue installation", "继续安装") : tr("Start installation", "开始安装")} <span>→</span>
+              </button>
               <a className="ghostButton" href={config.externalHref} target="_blank" rel="noreferrer">{config.externalLabel} ↗</a>
+            </div>
+            <div className="installQuickFacts">
+              <span>{tr("About 5 minutes", "约 5 分钟")}</span>
+              <span>Windows · macOS · Linux</span>
+              <span>{tr("OAuth account connection", "OAuth 账户连接")}</span>
             </div>
           </div>
         </div>
@@ -989,29 +1062,66 @@ function ClientInstallPage({
           <p>{tr("The computer is paired independently from the AI client. You can later disconnect one without removing the other.", "电脑配对和 AI 客户端授权彼此独立，之后可以单独断开其中一层，而不必删除另一层。")}</p>
         </div>
 
-        <div className="clientInstallStepList">
-          {config.steps.map((step, index) => (
-            <article key={step.title}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <div>
-                <h3>{step.title}</h3>
-                <p>{step.body}</p>
-                {"code" in step && step.code && (
-                  <div className="clientInstallCode">
-                    <code>{step.code}</code>
-                    <CopyButton value={step.code} />
-                  </div>
-                )}
-              </div>
-            </article>
-          ))}
+        <div className="installSetupMap">
+          <div><b>1</b><span><strong>{tr("Remote Arc account", "Remote Arc 账户")}</strong><small>{tr("Keeps devices, permissions and usage together.", "统一保存设备、权限与用量。")}</small></span></div>
+          <div><b>2</b><span><strong>{tr("Pair your computer", "配对电脑")}</strong><small>{tr("One local command; outbound connection only.", "一条本地命令，仅建立出站连接。")}</small></span></div>
+          <div><b>3</b><span><strong>{config.name}</strong><small>{tr("Connect the same account through OAuth.", "通过 OAuth 连接同一个账户。")}</small></span></div>
         </div>
+
+        <div className={"installAccountGate" + (user ? " ready" : "")}>
+          <div>
+            <span className="eyebrow">{user ? tr("ACCOUNT READY", "账户已就绪") : tr("STEP 0 · SIGN IN", "步骤 0 · 登录")}</span>
+            <h3>{user ? tr("You're ready to pair a computer.", "现在可以开始配对电脑。") : tr("Start with your Remote Arc account.", "先登录 Remote Arc 账户。")}</h3>
+            <p>{user
+              ? tr("Signed in as " + (user.name || user.email) + ". Continue below; this account will own the paired device and its permissions.", "当前账户：" + (user.name || user.email) + "。继续下面的流程；这台设备及其权限会归属到此账户。")
+              : tr("Sign in before running the install command so the pairing flow has a clear account to attach the computer to.", "运行安装命令前先登录，这样后续配对流程会明确地把电脑绑定到你的 Remote Arc 账户。")}</p>
+          </div>
+          {user ? (
+            <span className="installAccountReady"><i />{tr("Signed in", "已登录")}</span>
+          ) : (
+            <button className="primaryButton" type="button" onClick={() => setShowAuth(true)}>
+              {tr("Sign in to continue", "登录后继续")} <span>→</span>
+            </button>
+          )}
+        </div>
+
+        {user ? (
+          <div className="clientInstallStepList">
+            {config.steps.map((step, index) => (
+              <article key={step.title}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <div>
+                  <h3>{step.title}</h3>
+                  <p>{step.body}</p>
+                  {"code" in step && step.code && (
+                    <div className="clientInstallCode">
+                      <code>{step.code}</code>
+                      <CopyButton value={step.code} />
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="installLockedSteps">
+            <strong>{tr("Installation steps unlock after sign-in.", "登录后显示完整安装步骤。")}</strong>
+            <span>{tr("You will pair the computer, connect " + config.name + ", and verify the first Remote Arc request.", "接下来会依次配对电脑、连接 " + config.name + "，并验证第一次 Remote Arc 请求。")}</span>
+          </div>
+        )}
 
         <div className="clientInstallSecurityNote">
           <strong>{tr("Your computer still controls the boundary.", "最终权限仍由你的电脑控制。")}</strong>
           <p>{tr("New devices start read-only. Workspace Scope, Sensitive Path Policy, Local Undo and per-device skills continue to apply no matter which supported AI client you connect.", "新设备默认只读。无论连接哪一个支持的 AI 客户端，Workspace Scope、Sensitive Path Policy、Local Undo 和逐设备 Skill 权限都会继续生效。")}</p>
         </div>
       </section>
+      {showAuth && (
+        <InstallAuthModal
+          clientName={config.name}
+          returnTo={installReturnTo}
+          onClose={() => setShowAuth(false)}
+        />
+      )}
     </PublicLayout>
   );
 }
@@ -1065,7 +1175,7 @@ function Landing({ user }: { user?: User | null }) {
             "让 ChatGPT、Claude 和 Cursor 不再只是聊天，而是真正连接你已有的电脑：检查文件、修改代码、执行被允许的工作流，同时由 Remote Arc 把访问范围和控制权留在你手里。"
           )}</p>
           <div className="landingActions">
-            <a className="primaryButton goldButton" href="/install">{tr("Install Remote Arc", "安装 Remote Arc")}</a>
+            <a className="primaryButton goldButton" href="/install/chatgpt">{tr("Install Remote Arc", "安装 Remote Arc")}</a>
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
@@ -3345,6 +3455,7 @@ function App() {
   if (location.pathname === "/oauth/consent") return <OAuthConsent user={user} />;
 
   if (location.pathname === "/install") {
+    history.replaceState({}, "", "/install/chatgpt");
     return <ClientInstallPage slug="chatgpt" user={user === undefined ? null : user} />;
   }
 
