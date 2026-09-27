@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "remote-link-relay",
+  "account_id": "6b1d0dd4e6f7f30df92753cd1e2ee12d",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-20",
   "cache": {
