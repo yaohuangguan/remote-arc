@@ -7632,3 +7632,16 @@ body{font-size:18px;line-height:1.6}
 .clientGuideCard header img.monoLogo{filter:invert(1)!important}
 :root[data-theme="light"] .clientGuideCard header img.colorLogo,
 :root[data-theme="light"] .clientGuideCard header img.monoLogo{filter:none!important}
+
+
+/* OpenAI plugin review demo */
+.pluginDemoPage{max-width:1180px;margin:0 auto;padding:76px 28px 96px}
+.pluginDemoIntro{max-width:840px;margin-bottom:38px}
+.pluginDemoIntro h1{margin:10px 0 14px;font-size:clamp(42px,6vw,72px);line-height:.98;letter-spacing:-.055em}
+.pluginDemoIntro p{max-width:790px;margin:0;color:var(--muted);font-size:18px;line-height:1.65}
+.pluginDemoVideoWrap{width:100%;background:#050708;border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 26px 80px rgba(0,0,0,.2)}
+.pluginDemoVideo{display:block;width:100%;aspect-ratio:16/9;background:#000;object-fit:contain}
+.pluginDemoMeta{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px;color:var(--muted);font-size:13px}
+.pluginDemoMeta a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.pluginDemoMeta a:hover{color:var(--text)}
+@media(max-width:700px){.pluginDemoPage{padding:52px 18px 72px}.pluginDemoIntro h1{font-size:42px}.pluginDemoIntro p{font-size:16px}.pluginDemoVideoWrap{border-radius:12px}}

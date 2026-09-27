@@ -93,6 +93,7 @@ const pages: Record<string, SeoPage> = {
   "/install/claude": { title: "Install Remote Arc for Claude", description: "Connect Claude to paired computers through Remote Arc using a secure Remote MCP connector and explicit device permissions.", canonical: SITE + "/install/claude" },
   "/install/cursor": { title: "Install Remote Arc for Cursor", description: "Use Remote Arc to give Cursor controlled access to paired Windows, macOS and Linux computers through MCP.", canonical: SITE + "/install/cursor" },
   "/pricing": { title: "Remote Arc Pricing — Hosted remote MCP for AI", description: "Start Remote Arc free with hosted MCP usage and add capacity when you need more.", canonical: SITE + "/pricing" },
+  "/demo": { title: "Remote Arc Plugin Demo — ChatGPT to a real computer", description: "Watch a real Remote Arc demo showing ChatGPT connecting to a paired Mac, inspecting a Node.js project and running its tests.", canonical: SITE + "/demo" },
   "/docs/mcp": { title: "Remote Arc MCP — Connect AI clients to your computers", description: "Remote Arc Remote MCP documentation for ChatGPT, Claude, Cursor and compatible AI clients.", canonical: SITE + "/docs/mcp" },
   "/resources": { title: "Remote Arc Resources — Architecture, security and MCP", description: "Technical resources for Remote Arc: architecture, OAuth, device permissions, edge protection and privacy-preserving audit.", canonical: SITE + "/resources" },
   "/blogs": { title: "Remote Arc Blog — MCP, remote AI and computer access", description: "Product thinking, engineering decisions, architecture and security lessons from building Remote Arc.", canonical: SITE + "/blogs" },
@@ -172,7 +173,7 @@ export function renderMarketingHtml(html: string, pathname: string) {
 }
 
 export function sitemapXml() {
-  const paths = ["/","/install/chatgpt","/install/claude","/install/cursor","/pricing","/docs/mcp","/resources","/blogs","/blogs/why-i-built-remote-arc","/blogs/remote-arc-vs-openclaw","/blogs/powerful-ai-access-without-exposing-your-computer","/blogs/how-remote-arc-works","/use-cases","/chatgpt-computer-access","/privacy","/terms","/support"];
+  const paths = ["/","/install/chatgpt","/install/claude","/install/cursor","/pricing","/demo","/docs/mcp","/resources","/blogs","/blogs/why-i-built-remote-arc","/blogs/remote-arc-vs-openclaw","/blogs/powerful-ai-access-without-exposing-your-computer","/blogs/how-remote-arc-works","/use-cases","/chatgpt-computer-access","/privacy","/terms","/support"];
   return '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
     paths.map(function(path) {
       return '<url><loc>' + SITE + path + '</loc><lastmod>2026-09-27</lastmod><changefreq>' + (path === "/" ? "weekly" : "monthly") + '</changefreq><priority>' + (path === "/" ? "1.0" : "0.8") + '</priority></url>';
