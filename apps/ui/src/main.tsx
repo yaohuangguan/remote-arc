@@ -1689,11 +1689,78 @@ const blogPosts = [
     readTime: "6 min read",
     author: "Sam Yao",
   },
+  {
+    slug: "remote-arc-vs-openclaw",
+    date: "27 Sep 2026",
+    readTime: "8 min read",
+    author: "Sam Yao",
+  },
+  {
+    slug: "powerful-ai-access-without-exposing-your-computer",
+    date: "27 Sep 2026",
+    readTime: "7 min read",
+    author: "Sam Yao",
+  },
+  {
+    slug: "how-remote-arc-works",
+    date: "27 Sep 2026",
+    readTime: "9 min read",
+    author: "Sam Yao",
+  },
 ] as const;
 
 function BlogsPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const post = blogPosts[0];
+  const posts = [
+    {
+      ...blogPosts[0],
+      title: tr(
+        "Why I built Remote Arc: AI should reach your computer without owning it",
+        "为什么我做了 Remote Arc：AI 应该能使用你的电脑，但不该接管它",
+      ),
+      summary: tr(
+        "Chat is useful. Agents are more useful when they can work with the files, tools and environments we already use. The hard part is making that access powerful without making it reckless.",
+        "聊天当然有用，但当 AI 能真正使用我们已经在用的文件、工具与开发环境时，它才更像一个 Agent。难点不是让它获得能力，而是让这种能力足够强、同时又足够克制。",
+      ),
+      tag: tr("WHY REMOTE ARC", "为什么做 REMOTE ARC"),
+    },
+    {
+      ...blogPosts[1],
+      title: tr(
+        "Remote Arc vs OpenClaw: two different layers of the AI stack",
+        "Remote Arc 和 OpenClaw 有什么区别：它们其实处在 AI 技术栈的不同层",
+      ),
+      summary: tr(
+        "Both can help AI do things on real computers, but OpenClaw is a self-hosted assistant and gateway platform while Remote Arc is a remote execution layer for AI clients you already use.",
+        "两者都能让 AI 在真实电脑上做事，但 OpenClaw 更像自托管 Assistant / Gateway 平台，而 Remote Arc 是给你已经在用的 AI 客户端提供远程执行能力的一层。",
+      ),
+      tag: tr("COMPARISON", "产品对比"),
+    },
+    {
+      ...blogPosts[2],
+      title: tr(
+        "How Remote Arc keeps AI access powerful without exposing your computer",
+        "Remote Arc 如何让 AI 足够强大，同时不把你的电脑暴露出去",
+      ),
+      summary: tr(
+        "Powerful remote access should not require a public port, a VPN, or one giant permission switch. The architecture is built around explicit, layered boundaries.",
+        "强大的远程访问不应该以公网端口、VPN 或一个巨大的总权限开关为代价。Remote Arc 的架构从一开始就是围绕分层、明确的安全边界设计的。",
+      ),
+      tag: tr("SECURITY", "安全"),
+    },
+    {
+      ...blogPosts[3],
+      title: tr(
+        "How Remote Arc works: Worker, Durable Objects, OAuth and the local agent",
+        "Remote Arc 是怎么工作的：Worker、Durable Objects、OAuth 与本地 Agent",
+      ),
+      summary: tr(
+        "A request begins in an AI client, crosses the hosted control plane, reaches exactly one paired computer and still ends at a local policy boundary. Here is the full path.",
+        "一次请求从 AI 客户端出发，经过托管控制面，抵达指定电脑，最终仍要经过本地权限边界。这里把整条链路完整拆开。",
+      ),
+      tag: tr("ARCHITECTURE", "架构"),
+    },
+  ];
 
   return (
     <PublicLayout user={user}>
@@ -1707,22 +1774,19 @@ function BlogsPage({ user }: { user?: User | null }) {
       </section>
 
       <section className="blogIndex">
-        <a className="blogLeadPost" href={"/blogs/" + post.slug}>
-          <div className="blogLeadMeta">
-            <span>{post.date}</span>
-            <span>{post.readTime}</span>
-            <span>{post.author}</span>
-          </div>
-          <h2>{tr(
-            "Why I built Remote Arc: AI should reach your computer without owning it",
-            "为什么我做了 Remote Arc：AI 应该能使用你的电脑，但不该接管它",
-          )}</h2>
-          <p>{tr(
-            "Chat is useful. Agents are more useful when they can work with the files, tools and environments we already use. The hard part is making that access powerful without making it reckless.",
-            "聊天当然有用，但当 AI 能真正使用我们已经在用的文件、工具与开发环境时，它才更像一个 Agent。难点不是让它获得能力，而是让这种能力足够强、同时又足够克制。",
-          )}</p>
-          <span className="blogReadLink">{tr("Read the article", "阅读文章")} →</span>
-        </a>
+        {posts.map((post, index) => (
+          <a className={index === 0 ? "blogLeadPost" : "blogPostRow"} href={"/blogs/" + post.slug} key={post.slug}>
+            <div className="blogLeadMeta">
+              <span>{post.tag}</span>
+              <span>{post.date}</span>
+              <span>{post.readTime}</span>
+              <span>{post.author}</span>
+            </div>
+            <h2>{post.title}</h2>
+            <p>{post.summary}</p>
+            <span className="blogReadLink">{tr("Read the article", "阅读文章")} →</span>
+          </a>
+        ))}
       </section>
     </PublicLayout>
   );
@@ -1828,6 +1892,286 @@ function BlogArticlePage({ user }: { user?: User | null }) {
             </div>
             <a href="/install/chatgpt">{tr("Install Remote Arc for ChatGPT", "为 ChatGPT 安装 Remote Arc")} →</a>
           </footer>
+        </div>
+      </article>
+    </PublicLayout>
+  );
+}
+
+function RemoteArcVsOpenClawArticlePage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  const post = blogPosts[1];
+
+  return (
+    <PublicLayout user={user}>
+      <article className="blogArticle">
+        <header className="blogArticleHeader">
+          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <span className="eyebrow">{tr("COMPARISON", "产品对比")}</span>
+          <h1>{tr(
+            "Remote Arc vs OpenClaw: two different layers of the AI stack",
+            "Remote Arc 和 OpenClaw 有什么区别：它们其实处在 AI 技术栈的不同层",
+          )}</h1>
+          <p className="blogDeck">{tr(
+            "They can both help AI act on real computers, but they start from very different product boundaries. One is an assistant and agent platform. The other is a controlled remote execution layer.",
+            "它们都可以让 AI 在真实电脑上做事，但产品边界完全不同：一个更像 Assistant 与 Agent 平台，另一个更像受控的远程执行层。",
+          )}</p>
+          <div className="blogByline"><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")} · {post.date} · {post.readTime}</span></div></div>
+        </header>
+
+        <div className="blogArticleBody">
+          <p>{tr(
+            "Remote Arc is sometimes compared with OpenClaw because both products can ultimately connect AI to a real computer. At a screenshot level the similarity is obvious: an AI asks for something, software on a machine receives the request, and something happens. But that is roughly where the architectural similarity ends.",
+            "Remote Arc 有时会被拿来和 OpenClaw 比，因为两者最终都可以让 AI 连接到真实电脑。从截图层面看确实很像：AI 发出请求，电脑上的软件收到请求，然后执行某些事情。但架构上的相似性大致也就到这里为止。",
+          )}</p>
+
+          <p>{tr(
+            "OpenClaw describes itself as an open-source AI assistant that runs on your own hardware. Its Gateway owns conversations, channels, agent sessions and integrations. It can connect to chat platforms, host coding or agent runtimes, expose some of its capabilities over MCP, and manage outbound MCP servers for its own runtimes.",
+            "OpenClaw 官方把自己定义为运行在用户自己硬件上的开源 AI Assistant。它的 Gateway 会承载会话、聊天渠道、Agent Session 与各种集成；它既能连接聊天平台、承载编码或 Agent Runtime，也能把部分能力通过 MCP 暴露出去，并为自己的 Runtime 管理外部 MCP Server。",
+          )}</p>
+
+          <p>{tr(
+            "Remote Arc intentionally stops earlier. It does not try to own the conversation, memory, model or agent loop. It gives an AI client you already chose — ChatGPT, Claude, Codex or another compatible MCP client — a controlled way to reach computers you explicitly paired.",
+            "Remote Arc 刻意停在更底层。它不试图拥有对话、记忆、模型或 Agent Loop，而是给你已经选择好的 AI 客户端——例如 ChatGPT、Claude、Codex 或其他兼容 MCP 的客户端——提供一种受控方式去访问你明确配对的电脑。",
+          )}</p>
+
+          <h2>{tr("OpenClaw is an AI home. Remote Arc is an AI bridge.", "OpenClaw 更像 AI 的“家”，Remote Arc 更像 AI 的“桥”。")}</h2>
+          <div className="blogCompareTable">
+            <div className="blogCompareHead"><span></span><strong>Remote Arc</strong><strong>OpenClaw</strong></div>
+            <div><span>{tr("Primary role", "核心角色")}</span><b>{tr("Remote computer execution layer", "远程电脑执行层")}</b><b>{tr("Self-hosted assistant / gateway platform", "自托管 Assistant / Gateway 平台")}</b></div>
+            <div><span>{tr("Who owns the conversation", "谁承载对话")}</span><b>{tr("Your existing AI client", "现有 AI 客户端")}</b><b>{tr("OpenClaw Gateway and its channels", "OpenClaw Gateway 与其渠道")}</b></div>
+            <div><span>{tr("Model/runtime", "模型 / Runtime")}</span><b>{tr("External to Remote Arc", "不由 Remote Arc 承载")}</b><b>{tr("Part of the OpenClaw platform", "属于 OpenClaw 平台能力")}</b></div>
+            <div><span>MCP</span><b>{tr("Primary remote interface to paired computers", "连接已配对电脑的核心远程接口")}</b><b>{tr("One interface among several; can serve and consume MCP", "多种接口之一；既能作为 MCP Server，也能消费 MCP")}</b></div>
+            <div><span>{tr("Deployment", "部署方式")}</span><b>{tr("Managed control plane + local agent", "托管控制面 + 本地 Agent")}</b><b>{tr("Self-hosted Gateway by default", "默认自托管 Gateway")}</b></div>
+            <div><span>{tr("Computer control", "电脑控制")}</span><b>{tr("Files, processes, terminal and explicit device skills", "文件、进程、终端与明确设备技能")}</b><b>{tr("Broader agent tooling, including computer-use providers", "更广泛的 Agent 工具，包括 Computer Use Provider")}</b></div>
+          </div>
+
+          <h2>{tr("The deployment philosophy is almost opposite.", "两者的部署哲学几乎相反。")}</h2>
+          <p>{tr(
+            "OpenClaw emphasizes that the assistant, state and Gateway can live on hardware you control, with no hosted service in the middle by default. Remote Arc makes a different trade-off: the control plane is hosted so that pairing, OAuth, device discovery and remote routing work without you operating a public Gateway, while actual operating-system execution stays on the paired computer.",
+            "OpenClaw 强调 Assistant、状态与 Gateway 都可以运行在你自己控制的硬件上，默认不需要中间托管服务。Remote Arc 做的是另一种取舍：控制面托管化，让配对、OAuth、设备发现与远程路由不需要用户自己维护公网 Gateway；而真正的操作系统执行依然留在已配对电脑上。",
+          )}</p>
+
+          <p>{tr(
+            "That means OpenClaw gives technically inclined users more ownership of the assistant platform itself. Remote Arc gives up some of that self-hosting purity in exchange for a simpler connection model across multiple AI clients and multiple computers.",
+            "这意味着 OpenClaw 给技术用户更多对 Assistant 平台本身的所有权；Remote Arc 则牺牲一部分纯自托管属性，换取多个 AI 客户端与多台电脑之间更简单的连接体验。",
+          )}</p>
+
+          <h2>{tr("Their relationship with MCP is different too.", "它们和 MCP 的关系也不同。")}</h2>
+          <p>{tr(
+            "For Remote Arc, MCP is the product boundary exposed to the AI side. The AI discovers a small set of computer tools, authenticates with OAuth, and Remote Arc routes those calls to the selected device.",
+            "对 Remote Arc 来说，MCP 就是面向 AI 一侧最核心的产品边界。AI 发现一组明确的电脑工具，通过 OAuth 授权，然后 Remote Arc 把工具调用路由到指定设备。",
+          )}</p>
+
+          <p>{tr(
+            "OpenClaw uses MCP in more than one direction. Its documentation describes an MCP server mode for exposing OpenClaw-backed conversations to external clients, and an MCP client-side registry for servers that OpenClaw-managed runtimes may consume. MCP is therefore one part of a wider agent platform rather than the whole product boundary.",
+            "OpenClaw 对 MCP 的使用方向更多。官方文档既描述了把 OpenClaw 会话能力暴露给外部客户端的 MCP Server 模式，也提供了让 OpenClaw 自己的 Runtime 消费外部 MCP Server 的注册管理能力。因此 MCP 是其更大 Agent 平台中的一个组成部分，而不是整个产品边界。",
+          )}</p>
+
+          <h2>{tr("They can actually complement each other.", "它们其实可以互补。")}</h2>
+          <p>{tr(
+            "This is why I do not think the most useful framing is “which one replaces the other?” If you want a self-hosted personal assistant that owns channels, memory and agent sessions, OpenClaw solves a much broader problem. If you already live in ChatGPT or Claude and mainly want those clients to reach your real computers with explicit device permissions, Remote Arc is intentionally narrower.",
+            "所以我不认为最有价值的问题是“谁取代谁”。如果你想要一个自托管个人 Assistant，自己承载渠道、记忆与 Agent Session，OpenClaw 解决的问题明显更广；如果你已经长期使用 ChatGPT 或 Claude，主要只是希望这些客户端在明确设备权限下访问你的真实电脑，那么 Remote Arc 就是刻意做得更窄。",
+          )}</p>
+
+          <p>{tr(
+            "In principle the two models can even meet: OpenClaw supports remote MCP server definitions, while Remote Arc exposes a Remote MCP endpoint. That makes Remote Arc less of an alternative runtime and more of a reusable computer-access layer that different runtimes can sit above.",
+            "从架构上看，两者甚至可以连接起来：OpenClaw 支持配置远程 MCP Server，而 Remote Arc 本身就暴露 Remote MCP Endpoint。这样看，Remote Arc 更不像另一个 Agent Runtime，而更像一层可以被不同 Runtime 复用的电脑访问能力。",
+          )}</p>
+
+          <div className="blogSourceNote">
+            <strong>{tr("Sources for the OpenClaw comparison", "OpenClaw 对比资料来源")}</strong>
+            <a href="https://docs.openclaw.ai/" target="_blank" rel="noreferrer">OpenClaw overview ↗</a>
+            <a href="https://docs.openclaw.ai/cli/mcp" target="_blank" rel="noreferrer">OpenClaw MCP docs ↗</a>
+            <a href="https://docs.openclaw.ai/nodes/computer-use" target="_blank" rel="noreferrer">OpenClaw computer-use docs ↗</a>
+          </div>
+
+          <footer className="blogArticleFooter"><div><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")}</span></div></div><a href="/install/chatgpt">{tr("Try Remote Arc with ChatGPT", "在 ChatGPT 中使用 Remote Arc")} →</a></footer>
+        </div>
+      </article>
+    </PublicLayout>
+  );
+}
+
+function PowerfulAccessArticlePage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  const post = blogPosts[2];
+
+  return (
+    <PublicLayout user={user}>
+      <article className="blogArticle">
+        <header className="blogArticleHeader">
+          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <span className="eyebrow">{tr("SECURITY", "安全")}</span>
+          <h1>{tr(
+            "How Remote Arc keeps AI access powerful without exposing your computer",
+            "Remote Arc 如何让 AI 足够强大，同时不把你的电脑暴露出去",
+          )}</h1>
+          <p className="blogDeck">{tr(
+            "Remote control becomes useful only when the AI can do consequential work. The design problem is giving it that power without turning your computer into a permanently exposed endpoint.",
+            "只有当 AI 能做真正有影响的工作时，远程控制才有意义。设计难点在于：如何给它足够能力，又不让你的电脑变成一个永久暴露的公网端点。",
+          )}</p>
+          <div className="blogByline"><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")} · {post.date} · {post.readTime}</span></div></div>
+        </header>
+
+        <div className="blogArticleBody">
+          <p>{tr(
+            "An AI that can only tell you what command to run is safe but limited. An AI that can run every command everywhere is useful but reckless. Remote Arc is built around the space between those two extremes.",
+            "一个只能告诉你应该运行什么命令的 AI 很安全，但能力有限；一个可以在任何地方运行任何命令的 AI 很有用，但也非常危险。Remote Arc 的设计目标就是在这两个极端之间找到边界。",
+          )}</p>
+
+          <h2>{tr("1. Your computer never needs a public inbound port.", "1. 你的电脑不需要开放任何公网入站端口。")}</h2>
+          <p>{tr(
+            "The local Remote Arc agent establishes an outbound connection to the hosted control plane. Your router does not need port forwarding, your laptop does not need a public IP, and the machine does not sit on the internet waiting for arbitrary inbound connections.",
+            "本地 Remote Arc Agent 主动向托管控制面建立出站连接。路由器不需要端口转发，电脑不需要公网 IP，也不会在互联网上开放一个入口等待任意外部连接。",
+          )}</p>
+          <blockquote>{tr(
+            "The connection starts from the computer you own. Remote Arc does not ask the internet to find an open door into it.",
+            "连接由你自己的电脑主动发起。Remote Arc 不需要让互联网找到一扇通往它的开放大门。",
+          )}</blockquote>
+
+          <h2>{tr("2. Pairing creates a device identity, not a shared master password.", "2. 配对建立的是设备身份，而不是共享的万能密码。")}</h2>
+          <p>{tr(
+            "Every paired computer receives its own revocable credential. The hosted database stores only the credential hash. If one machine should no longer be reachable, that device can be revoked independently without rotating access for every other computer.",
+            "每台已配对电脑都有自己独立、可撤销的凭证。托管数据库只保存凭证哈希。如果某台设备不应该继续被访问，可以单独撤销它，而不需要同时轮换所有其他电脑的访问凭证。",
+          )}</p>
+
+          <h2>{tr("3. OAuth controls the AI client separately from the device.", "3. OAuth 把 AI 客户端权限和设备身份分开。")}</h2>
+          <p>{tr(
+            "A paired computer and an authorized AI client are two different trust relationships. ChatGPT or Claude authenticates through OAuth with explicit scopes. Revoking an AI client does not require re-pairing the computer, and revoking a computer does not require changing every AI connection.",
+            "一台已配对电脑和一个获得授权的 AI 客户端，是两种完全不同的信任关系。ChatGPT 或 Claude 通过 OAuth 和明确 Scope 获得授权。撤销某个 AI 客户端不需要重新配对电脑；撤销某台电脑也不需要修改所有 AI 连接。",
+          )}</p>
+
+          <h2>{tr("4. Permission is per device, not one global agent switch.", "4. 权限按设备控制，而不是一个全局 Agent 开关。")}</h2>
+          <p>{tr(
+            "A work laptop, a gaming PC and a home server should not expose the same capabilities. Remote Arc lets each device advertise and enable its own skill set. Safe access can stay read-only. Developer access can add targeted file edits. Full access can add terminal execution where that is genuinely required.",
+            "工作笔记本、游戏 PC 和家庭服务器不应该开放完全相同的能力。Remote Arc 让每台设备独立声明和启用自己的技能集合。Safe 可以保持只读；Developer 可以加入定向文件编辑；只有确实需要时才在 Full 中加入终端执行。",
+          )}</p>
+
+          <div className="blogSecurityLayers">
+            <span><b>OAuth scope</b><small>{tr("What the AI client may request", "AI 客户端可以请求什么")}</small></span>
+            <span><b>Relay policy</b><small>{tr("What the account and device allow", "账户和设备策略允许什么")}</small></span>
+            <span><b>Local agent</b><small>{tr("What the computer actually exposes", "电脑实际暴露什么能力")}</small></span>
+            <span><b>OS user</b><small>{tr("The final operating-system boundary", "最终的操作系统权限边界")}</small></span>
+          </div>
+
+          <h2>{tr("5. Sensitive paths and workspace roots reduce accidental reach.", "5. 敏感路径和工作区根目录减少误操作范围。")}</h2>
+          <p>{tr(
+            "Remote Arc can constrain file-oriented workflows to configured workspace roots and protect sensitive paths. These controls are not a replacement for operating-system sandboxing, especially once arbitrary terminal execution is enabled, but they provide an important first boundary for normal AI file work.",
+            "Remote Arc 可以把文件类工作流限制在配置好的 Workspace Root 中，并保护敏感路径。这些控制并不能替代操作系统级沙箱——尤其当任意终端执行被开启后——但对于日常 AI 文件操作来说，它们构成了非常重要的第一层边界。",
+          )}</p>
+
+          <h2>{tr("6. Supported edits can be undone locally.", "6. 支持的修改可以在本机撤销。")}</h2>
+          <p>{tr(
+            "For supported Remote Arc file mutations, the local agent keeps a bounded undo snapshot on the device itself. The hosted service does not need to become a backup of your file contents in order to give you a recovery path.",
+            "对于 Remote Arc 支持的文件修改，本地 Agent 会在设备本机保留有限的 Undo Snapshot。这样即使提供恢复能力，托管服务也不需要变成一个保存你文件内容的云端备份。",
+          )}</p>
+
+          <h2>{tr("7. Audit metadata is useful without becoming content retention.", "7. 审计应该提供可见性，而不是变成内容留存。")}</h2>
+          <p>{tr(
+            "Remote Arc records operational metadata such as which tool ran, which device received it, whether it succeeded and when it happened. The audit design intentionally avoids persisting file contents, raw command arguments, OAuth tokens or raw device credentials.",
+            "Remote Arc 会记录运行所需的元数据，例如使用了什么工具、发送到了哪台设备、是否成功以及发生时间。审计设计会刻意避免持久化文件内容、原始命令参数、OAuth Token 或原始设备凭证。",
+          )}</p>
+
+          <h2>{tr("The important limitation: permissions are not magic.", "最重要的限制：权限控制并不是魔法。")}</h2>
+          <p>{tr(
+            "Once you explicitly enable unrestricted terminal execution, the shell inherits the permissions of the local operating-system user. Remote Arc can put strong gates around when a terminal tool is available, but it cannot honestly claim that an unrestricted shell is harmless. The right security model is therefore layered control plus explicit user choice, not pretending that powerful execution has no consequences.",
+            "一旦你明确开启不受限制的终端执行，Shell 最终继承的是本地操作系统用户本身的权限。Remote Arc 可以严格控制终端工具什么时候可用，但不能假装一个 unrestricted shell 天生无害。正确的安全模型应该是分层控制 + 明确的用户选择，而不是假装强执行能力没有后果。",
+          )}</p>
+
+          <footer className="blogArticleFooter"><div><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")}</span></div></div><a href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md">{tr("Read the security model", "查看安全模型")} →</a></footer>
+        </div>
+      </article>
+    </PublicLayout>
+  );
+}
+
+function ArchitectureArticlePage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  const post = blogPosts[3];
+
+  return (
+    <PublicLayout user={user}>
+      <article className="blogArticle">
+        <header className="blogArticleHeader">
+          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <span className="eyebrow">{tr("ARCHITECTURE", "架构")}</span>
+          <h1>{tr(
+            "How Remote Arc works: Worker, Durable Objects, OAuth and the local agent",
+            "Remote Arc 是怎么工作的：Worker、Durable Objects、OAuth 与本地 Agent",
+          )}</h1>
+          <p className="blogDeck">{tr(
+            "Remote Arc is deliberately split into a hosted control plane and a local execution plane. That separation is what makes one MCP endpoint work across many AI clients and many computers.",
+            "Remote Arc 刻意拆成托管控制面与本地执行面。正是这层分离，让一个 MCP Endpoint 可以同时服务多个 AI 客户端和多台电脑。",
+          )}</p>
+          <div className="blogByline"><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")} · {post.date} · {post.readTime}</span></div></div>
+        </header>
+
+        <div className="blogArticleBody">
+          <p>{tr(
+            "From the outside Remote Arc looks simple: connect an AI client, pair a computer, ask the AI to do something. Internally that request crosses several boundaries, and every boundary exists for a reason.",
+            "从外面看 Remote Arc 很简单：连接 AI 客户端、配对电脑、让 AI 做一件事。实际上，一次请求内部会跨越多层边界，而每一层边界都有明确存在的理由。",
+          )}</p>
+
+          <div className="blogArchitectureRail">
+            <span>ChatGPT / Claude</span><i>→</i><span>Remote MCP</span><i>→</i><span>Worker</span><i>→</i><span>Durable Object</span><i>→</i><span>Local Agent</span><i>→</i><span>OS</span>
+          </div>
+
+          <h2>{tr("Step 1: the AI client sees a Remote MCP server.", "第一步：AI 客户端看到的是一个 Remote MCP Server。")}</h2>
+          <p>{tr(
+            "ChatGPT, Claude or another compatible client connects to a single Remote Arc MCP URL. Tool discovery describes the capabilities Remote Arc can expose: device discovery, file inspection, process inspection, file editing, managed processes, terminal execution and undo.",
+            "ChatGPT、Claude 或其他兼容客户端只需要连接一个 Remote Arc MCP URL。Tool Discovery 会描述 Remote Arc 能暴露的能力：设备发现、文件读取、进程查看、文件编辑、后台进程管理、终端执行与 Undo。",
+          )}</p>
+
+          <h2>{tr("Step 2: OAuth answers who the AI is acting for.", "第二步：OAuth 解决“这个 AI 正在代表谁”。")}</h2>
+          <p>{tr(
+            "The MCP endpoint is not a shared secret pasted into every client. OAuth establishes the user identity, scopes and client grant. Access tokens can be short-lived, refresh tokens can rotate, and a grant can be revoked without changing the paired-device credential.",
+            "MCP Endpoint 不是一个复制到所有客户端里的共享密钥。OAuth 会建立用户身份、Scope 与客户端授权。Access Token 可以保持短期，Refresh Token 可以轮换，而且某个客户端授权可以单独撤销，不需要改变设备配对凭证。",
+          )}</p>
+
+          <h2>{tr("Step 3: the Cloudflare Worker is the control-plane entry point.", "第三步：Cloudflare Worker 是控制面的统一入口。")}</h2>
+          <p>{tr(
+            "The Worker handles the public HTTP surface: MCP requests, OAuth endpoints, pairing APIs, account APIs and the web application. It authenticates the request, checks account state and device policy, applies rate limits and decides whether a call is allowed to proceed.",
+            "Worker 承担公开 HTTP 表面：MCP 请求、OAuth 入口、配对 API、账户 API 与 Web App。它负责认证请求、检查账户状态和设备策略、执行限流，并决定一次调用是否可以继续。",
+          )}</p>
+
+          <h2>{tr("Step 4: D1 keeps durable identity and policy.", "第四步：D1 保存持久身份与策略。")}</h2>
+          <p>{tr(
+            "D1 stores the durable facts that should survive disconnects and deployments: users, paired-device metadata, credential hashes, sessions, OAuth grants, per-device policy, security settings, usage counters and audit metadata. It is not the live transport for tool execution.",
+            "D1 保存那些即使设备断线或 Worker 更新也必须持续存在的事实：用户、设备元数据、凭证哈希、Session、OAuth Grant、每设备策略、安全设置、用量计数和审计元数据。它并不是工具执行时的实时传输通道。",
+          )}</p>
+
+          <h2>{tr("Step 5: a per-user Durable Object owns live routing.", "第五步：每用户 Durable Object 负责实时路由。")}</h2>
+          <p>{tr(
+            "Live device connections are stateful. Durable Objects give Remote Arc a stable place to coordinate WebSockets, track which paired devices are currently reachable and forward a tool call to exactly the selected connection. This avoids trying to force real-time connection state into a stateless Worker request.",
+            "设备在线连接本质上是有状态的。Durable Objects 给 Remote Arc 提供了一个稳定位置来协调 WebSocket、维护哪些已配对设备此刻可达，并把工具调用精确转发到被选中的连接。这样就不用强行把实时连接状态塞进无状态 Worker 请求里。",
+          )}</p>
+
+          <h2>{tr("Step 6: the local agent is the final execution boundary.", "第六步：本地 Agent 是最终执行边界。")}</h2>
+          <p>{tr(
+            "The hosted control plane never directly opens a shell on your computer. The local agent receives an authenticated routed request, checks what it actually exposes and executes the operation through Remote Arc's local execution core. File operations, process inspection, terminal commands and undo all terminate at the machine itself.",
+            "托管控制面不会直接在你的电脑上打开 Shell。本地 Agent 收到经过认证和路由的请求后，会再次检查自己实际开放的能力，再通过 Remote Arc 的本地执行核心执行操作。文件、进程、终端与 Undo 最终都在电脑本机完成。",
+          )}</p>
+
+          <h2>{tr("Step 7: the result travels back, not the machine.", "第七步：返回的是结果，不是把整台电脑搬到云上。")}</h2>
+          <p>{tr(
+            "The agent returns the specific tool result through the existing outbound connection. The control plane relays it to the authenticated MCP client. This is why Remote Arc can give an AI useful access to local state without moving the entire development environment into a hosted VM.",
+            "Agent 会把具体工具结果沿现有出站连接返回，控制面再把结果转发给已认证的 MCP 客户端。也正因为这样，Remote Arc 可以让 AI 使用本地状态，而不需要把整个开发环境搬进托管虚拟机。",
+          )}</p>
+
+          <h2>{tr("Why split control plane and execution plane?", "为什么要把控制面和执行面拆开？")}</h2>
+          <p>{tr(
+            "The hosted side is good at identity, discovery, routing, policy and availability. The local side is the only place that should own operating-system execution. Keeping those responsibilities separate makes it possible to improve the hosted experience without pretending that the cloud should become the authority over the user's machine.",
+            "托管侧擅长身份、发现、路由、策略与可用性；本地侧才应该拥有操作系统执行的最终权力。把两者分开，可以持续改进托管体验，同时避免让云端变成用户电脑的最终权限主体。",
+          )}</p>
+
+          <div className="blogSourceNote">
+            <strong>{tr("Explore the implementation", "查看实现")}</strong>
+            <a href="/resources">{tr("Technical resources", "技术资源")} →</a>
+            <a href="https://github.com/yaohuangguan/remote-arc" target="_blank" rel="noreferrer">GitHub →</a>
+          </div>
+
+          <footer className="blogArticleFooter"><div><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")}</span></div></div><a href="/docs/mcp">{tr("Explore the MCP architecture", "查看 MCP 架构")} →</a></footer>
         </div>
       </article>
     </PublicLayout>
@@ -3756,6 +4100,9 @@ function App() {
   if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
+  if (location.pathname === "/blogs/remote-arc-vs-openclaw") return <RemoteArcVsOpenClawArticlePage user={user === undefined ? null : user} />;
+  if (location.pathname === "/blogs/powerful-ai-access-without-exposing-your-computer") return <PowerfulAccessArticlePage user={user === undefined ? null : user} />;
+  if (location.pathname === "/blogs/how-remote-arc-works") return <ArchitectureArticlePage user={user === undefined ? null : user} />;
   if (location.pathname === "/resources") return <ResourcesPage user={user === undefined ? null : user} />;
   if (location.pathname === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
   if (location.pathname === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
