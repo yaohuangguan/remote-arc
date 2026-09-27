@@ -1,43 +1,66 @@
 # Remote Arc
 
-Remote Arc is a managed Remote MCP service with a lightweight local agent that securely connects AI clients to your Windows, macOS, and Linux computers.
+Remote Arc securely connects AI clients such as ChatGPT, Claude, and Codex to
+computers you explicitly pair.
 
-The intended user experience is:
+It uses the open Model Context Protocol (MCP) for interoperability, Cloudflare
+for the hosted control plane, and Remote Arc's own native execution core on the
+device.
+
+Remote Arc does **not** depend on Desktop Commander or another computer-control
+MCP server.
+
+## Quick start
+
+Connect a Windows, macOS, or Linux computer:
+
+```bash
+npx remotelink
+```
+
+Then connect your MCP client to:
+
+```text
+https://mcp.remotearc.app/mcp
+```
+
+Dashboard:
+
+```text
+https://remotearc.app
+```
+
+The device connection is outbound-only. No public IP, VPN, router port
+forwarding, git clone, or manual token copy is required.
+
+## User flow
 
 ```text
 remotearc.app
-   �?
-Continue with Google
-   �?
+    |
+    v
+Sign in with Google
+    |
+    v
 Add device
-   �?
+    |
+    v
 npx remotelink
-   �?
-matching pairing code opens in browser
-   �?
+    |
+    v
+Browser opens matching pairing code
+    |
+    v
 Authorize device
-   �?
-computer appears in dashboard
-   �?
-connect https://remotearc.app/mcp once in ChatGPT
-   �?
-just talk to your computer
-```
-
-No git clone, manual token copy, public IP, or router port forwarding is required for end users.
-
-## Monorepo
-
-```text
-remote-arc/
-├─ apps/
-�? ├─ ui/       # React dashboard, Google login UX, device pairing
-�? ├─ relay/    # Cloudflare Worker, D1, Durable Object, Remote MCP + OAuth
-�? ├─ agent/    # development agent runtime
-�? └─ mcp/      # standalone local MCP server for development/testing
-└─ packages/
-   ├─ cli/      # distributable `remotelink` npm CLI
-   └─ protocol/ # shared agent/relay message types
+    |
+    v
+Device appears in dashboard
+    |
+    v
+Connect https://mcp.remotearc.app/mcp to your AI client
+    |
+    v
+Use natural language to work with the paired computer
 ```
 
 ## Architecture
@@ -45,19 +68,21 @@ remote-arc/
 ```text
 ChatGPT / Claude / Codex
           |
-          | OAuth 2.1 + Remote MCP
+          | MCP + OAuth 2.1 / PKCE
           v
-https://remotearc.app/mcp
+https://mcp.remotearc.app/mcp
           |
           v
 Cloudflare Worker
-  ├─ Google login / sessions
-  ├─ OAuth 2.1 + PKCE authorization server
-  ├─ device pairing API
-  └─ D1 identity database
+  |
+  +-- OAuth / Google sign-in
+  +-- Device pairing API
+  +-- MCP routing
+  +-- Usage / audit metadata
+  +-- D1 control-plane database
           |
           v
-DeviceRegistry Durable Object
+Per-user Durable Object
           |
           | outbound WebSocket
           v
@@ -65,83 +90,175 @@ Remote Arc CLI / Agent
           |
           v
 @remotearc/execution-core
-  ├─ Node filesystem APIs
-  ├─ native process execution
-  ├─ Local Undo
-  └─ Safety Guard
+  |
+  +-- filesystem
+  +-- process inspection
+  +-- terminal execution
+  +-- Local Undo
+  +-- Safety Guard
           |
           v
 Windows / macOS / Linux
 ```
 
-A device always initiates the connection to the relay. Remote Arc does not require inbound access to the computer.
+The cloud relay authorizes and routes requests. The local execution core
+performs OS-level work on the paired device.
 
-## Production deployment
-
-Current production endpoint:
-
-```text
-https://remotearc.app
-```
-
-The Cloudflare deployment currently includes:
-
-- Workers Static Assets for the dashboard
-- one Worker for UI/API/OAuth/MCP routing
-- one Durable Object class for live device connections
-- D1 database `remote-link-auth`
-- custom domain `remotearc.app`
-
-## Authentication
-
-Remote Arc no longer uses a shared MCP URL key or one shared agent token.
-
-### Dashboard identity
-
-Users sign in with Google. The Worker creates a private HTTP-only session cookie backed by D1.
-
-Required Wrangler secrets:
+## Monorepo
 
 ```text
-GOOGLE_CLIENT_ID
-GOOGLE_CLIENT_SECRET
+remote-arc/
+|
++-- apps/
+|   +-- ui/              React dashboard and pairing UI
+|   +-- relay/           Cloudflare Worker, OAuth, D1, Durable Objects, MCP
+|   +-- agent/           Device agent runtime using the native execution core
+|   +-- mcp/             Thin local MCP adapter for development/testing
+|
++-- packages/
+    +-- cli/             Published `remotelink` npm CLI
+    +-- execution-core/  Native Remote Arc filesystem/process/terminal core
+    +-- protocol/        Shared agent/relay message types
 ```
 
-Optional:
+There is only one local execution implementation:
+`@remotearc/execution-core`.
+
+`apps/mcp` is a protocol adapter, not a separate execution backend.
+
+## Native execution core
+
+Remote Arc implements its local computer capabilities directly with Node and OS
+APIs.
+
+Current native tools:
 
 ```text
-ALLOWED_EMAILS=user@example.com,second@example.com
+list_directory
+read_file
+get_file_info
+list_processes
+write_file
+edit_block
+undo_last_change
+start_process
 ```
 
-Google OAuth redirect URI:
+The implementation uses standard Node primitives such as:
 
 ```text
-https://remotearc.app/auth/google/callback
+node:fs
+node:path
+node:child_process
+node:os
 ```
 
-### Device identity
+This keeps Remote Arc's execution behavior, safety model, release cadence, and
+supply chain under Remote Arc's control.
 
-Every paired computer receives its own long random credential.
+## Permission model
 
-The credential is:
+New devices start with the Safe preset.
 
-- generated during the pairing flow
-- stored locally in `~/.remotearc/config.json`
-- stored only as a SHA-256 hash in D1
-- bound to one device and one Remote Arc user
-- individually revocable from the dashboard
+### Safe
 
-### ChatGPT / MCP identity
-
-Remote MCP is available at:
+Read-only local capabilities:
 
 ```text
-https://remotearc.app/mcp
+list_directory
+read_file
+get_file_info
+list_processes
 ```
 
-It uses OAuth 2.1 authorization code + PKCE with dynamic client registration.
+### Developer
 
-Discovery endpoints:
+Safe plus reversible file editing:
+
+```text
+write_file
+edit_block
+undo_last_change
+```
+
+Developer mode does **not** include arbitrary terminal execution.
+
+### Full
+
+Developer plus:
+
+```text
+start_process
+```
+
+Presets are shortcuts. The actual hosted policy is an individually editable
+per-device skill list.
+
+Running:
+
+```bash
+npx remotelink --safe
+```
+
+adds a local hard read-only cap that the dashboard cannot expand.
+
+## Local Undo
+
+Before supported `write_file` and `edit_block` operations, Remote Arc stores
+the previous file state locally under:
+
+```text
+~/.remotearc/undo
+```
+
+Properties:
+
+- snapshots stay on the device
+- snapshots are not uploaded to Remote Arc Cloud
+- snapshots expire after 7 days
+- the local store is capped at 200 MB
+- individual files larger than 20 MB are not snapshotted
+- undo verifies the post-edit file hash before restoring
+- if a file changed again afterward, automatic undo refuses to overwrite it
+
+Local Undo cannot reverse external side effects such as deployments, package
+publishing, network requests, or remote database mutations.
+
+## Safety Guard
+
+Terminal execution is available only when the device policy allows
+`start_process`.
+
+Before a terminal command runs, the native execution core blocks a narrow set
+of clearly catastrophic patterns such as:
+
+- recursive deletion of root/home paths
+- disk formatting
+- raw-disk overwrite
+- fork bombs
+- machine shutdown/reboot
+
+The Safety Guard is defense in depth, not a complete OS sandbox.
+
+## Authentication and trust boundaries
+
+Remote Arc separates four identities:
+
+1. dashboard user
+2. MCP client
+3. paired device
+4. live device connection
+
+### Dashboard
+
+Users sign in with Google. The Worker creates a secure HTTP-only session.
+
+### MCP client
+
+Remote MCP uses OAuth 2.1 authorization code flow with PKCE and dynamic client
+registration.
+
+Discovery:
 
 ```text
 /.well-known/oauth-protected-resource
@@ -156,93 +273,69 @@ OAuth endpoints:
 /oauth/token
 ```
 
-Scopes:
+### Device
+
+Every paired device receives its own revocable credential.
+
+The raw device credential is stored locally in:
 
 ```text
-devices:read
-computer:read
-computer:write
+~/.remotearc/config.json
 ```
 
-## Device onboarding
+The hosted database stores only its SHA-256 hash.
 
-The release UX is designed around one command:
+### Routing
 
-```bash
-npx remotelink
-```
+Live devices connect outbound over WebSocket to a per-user Durable Object.
+Remote Arc does not require inbound access to the computer.
 
-First run:
+## Cloudflare deployment
 
-1. CLI requests a short-lived device pairing.
-2. Terminal shows a code such as `J7KD-P2QF`.
-3. CLI opens `remotearc.app/device?code=J7KD-P2QF`.
-4. User signs in with Google if necessary.
-5. Browser shows the same code and computer details.
-6. User selects **Authorize device**.
-7. CLI receives the approved device identity and stores it locally.
-8. CLI connects the computer to the relay over an outbound WebSocket.
-9. Dashboard shows the computer as online.
-
-Later runs reuse the saved device credential and connect immediately.
-
-CLI options:
+Production:
 
 ```text
---safe        hard local read-only cap
---developer   legacy alias for dashboard-managed capabilities
---reset       remove local pairing credentials
---version
---help
+Website: https://remotearc.app
+MCP:     https://mcp.remotearc.app/mcp
+Health:  https://mcp.remotearc.app/health
 ```
 
-## Device skill boundary
+The hosted architecture currently uses:
 
-Remote Arc does not grant the entire local execution catalog by default. Newly
-paired devices start with the **Safe** preset:
+- Cloudflare Workers
+- Workers Static Assets
+- per-user Durable Objects
+- D1 for control-plane state
+- outbound device WebSockets
 
-- `list_directory`
-- `read_file`
-- `get_file_info`
-- `list_processes`
-
-The **Developer** preset additionally enables:
-
-- `write_file`
-- `edit_block`
-- `undo_last_change`
-
-The **Full** preset additionally enables:
-
-- `start_process`
-
-Presets are shortcuts over an individually editable per-device skill list.
-`npx remotelink --safe` adds an extra local hard cap so the dashboard cannot
-expand that device beyond read-only access.
-
-Supported file writes create conflict-safe snapshots under
-`~/.remotearc/undo`. The snapshots stay on the computer and are not uploaded
-to Remote Arc Cloud. Terminal execution also passes through a narrow local
-Safety Guard for catastrophic system commands.
-
-The device advertises its actual available tools when it connects. The relay refuses to forward tools the device did not advertise.
+Static JS/CSS/assets bypass the Worker runtime so normal website traffic does
+not unnecessarily consume the Workers request quota.
 
 ## Remote MCP tools
 
-Current remote tools:
+Hosted MCP currently exposes device discovery plus the permitted local
+capabilities:
 
-- `list_devices`
-- `device_tools`
-- `list_directory`
-- `read_file`
-- `get_file_info`
-- `list_processes`
-- `start_process`
-- `write_file`
-- `edit_block`
-- `undo_last_change`
+```text
+list_devices
+device_tools
+list_directory
+read_file
+get_file_info
+list_processes
+write_file
+edit_block
+undo_last_change
+start_process
+```
 
-Every device call is checked against the authenticated user's D1 device ownership before it reaches the live WebSocket.
+Before a device call is forwarded, the relay verifies:
+
+- authenticated MCP user
+- device ownership
+- device revocation state
+- saved per-device skill policy
+- currently advertised device tools
 
 ## Development
 
@@ -268,125 +361,145 @@ pnpm dev:mcp
 pnpm dev:agent
 pnpm dev:relay
 pnpm dev:ui
-pnpm build:ui
+
 pnpm build:cli
+pnpm build:ui
 pnpm deploy:relay
 ```
 
-Apply production D1 migrations:
+Run only the native execution-core integration test:
 
 ```bash
-cd apps/relay
-pnpm exec wrangler d1 migrations apply remote-link-auth --remote
+pnpm --filter @remotearc/execution-core test:integration
 ```
 
-## CLI distribution
-
-Install and connect a computer to Remote Arc with one command:
-
-```bash
-npx remotelink
-```
-
-The npm package is named `remotelink` while the product brand remains **Remote Arc**.
-
-For compatibility, the package also exposes these binary aliases:
+The GitHub CI matrix runs native-core integration and MCP adapter smoke tests
+on:
 
 ```text
+Ubuntu
+Windows
+macOS
+```
+
+## Publishing the CLI
+
+The npm package name is:
+
+```text
+remotelink
+```
+
+Product name:
+
+```text
+Remote Arc
+```
+
+The package also exposes these CLI aliases:
+
+```text
+remotelink
 remote-link
 remote-arc
 ```
 
-## ChatGPT setup
+The published CLI bundles `@remotearc/execution-core` into the distributable
+artifact. End users do not install a separate execution server.
 
-Until Remote Arc is a reviewed public Plugin, connect it once through ChatGPT Developer Mode using:
+npm publishing uses GitHub Actions OIDC Trusted Publishing with provenance.
+
+The npm Trusted Publisher configuration must match:
 
 ```text
-https://remotearc.app/mcp
+Organization or user: yaohuangguan
+Repository:           remote-arc
+Workflow filename:    publish-remotelink.yml
+Environment name:     production
+Allowed action:       npm publish
 ```
 
-ChatGPT discovers the OAuth configuration from Remote Arc, opens the Remote Arc authorization flow, and the user signs in with Google.
+## Security model
 
-OpenAI currently requires authenticated MCP servers to expose protected-resource metadata and an OAuth 2.1-compatible authorization server with PKCE. Remote Arc implements that contract using DCR for client registration.
-
-## Security notes
-
-Remote computer control is high impact.
+Remote computer access is high impact. Remote Arc therefore starts from a
+restricted capability model instead of granting unrestricted terminal access.
 
 Current protections include:
 
-- per-user Google sessions
-- per-device random credentials
+- read-only default preset
+- individually editable device skills
+- local hard Safe mode
+- per-device credentials
 - hashed device credentials in D1
-- OAuth 2.1 + PKCE for Remote MCP
-- short-lived authorization codes
-- rotating refresh tokens
-- per-user device routing
-- revoked-device checks before every MCP device call
-- local tool allowlists
+- OAuth 2.1 + PKCE
+- per-user Durable Object routing
+- revoked-device checks before MCP forwarding
 - outbound-only device connections
+- Local Undo for supported file changes
+- local Safety Guard for catastrophic terminal commands
+- no Desktop Commander dependency
 
 Still planned before broader public use:
 
-- explicit per-command approval policies
-- sensitive-path deny rules
-- audit log with secret redaction
-- rate limiting for login and pairing endpoints
-- CSRF hardening for state-changing dashboard actions
-- signed/notarized background installers
+- sensitive-path policy
+- directory/workspace scopes
+- stronger secret redaction in audit metadata
+- more granular command/network policy
+- signed/notarized installers
+- background service / auto-start
 - auto-update
-- public Plugin review
 
 ## Roadmap
 
-### Phase 1 �?personal Remote Arc
+### Phase 1 - core platform
 
-- [x] monorepo
-- [x] local MCP execution layer
 - [x] Cloudflare relay
-- [x] Durable Object device routing
-- [x] D1 identity/device/OAuth schema
-- [x] browser-approved device pairing protocol
-- [x] Google login implementation
-- [x] OAuth 2.1 + PKCE Remote MCP implementation
-- [x] one-command CLI implementation
-- [x] device dashboard implementation
-- [x] production deployment to `remotearc.app`
-- [ ] configure Google OAuth client credentials
-- [ ] publish `remotelink` to npm
-- [ ] pair SamPC through the public CLI flow
-- [ ] connect ChatGPT Developer Mode to `/mcp`
-- [ ] perform first real ChatGPT �?Remote Arc �?SamPC tool call
+- [x] D1 identity/device/OAuth model
+- [x] per-user Durable Object routing
+- [x] Google sign-in
+- [x] OAuth 2.1 + PKCE Remote MCP
+- [x] browser-approved device pairing
+- [x] one-command `remotelink` CLI
+- [x] per-device skill management
+- [x] Safe / Developer / Full presets
+- [x] Local Undo
+- [x] Safety Guard
+- [x] native Remote Arc execution core
+- [x] remove Desktop Commander dependency
+- [x] Windows/macOS/Linux CI
+- [x] production relay deployment
+- [ ] publish current native-core CLI to npm
 
-### Phase 2 �?invisible background agent
+### Phase 2 - local security and reliability
 
-- Windows service / tray app
-- macOS LaunchAgent / menu-bar app
-- Linux service
-- auto-start
+- sensitive-path policy
+- directory/workspace scopes
+- atomic writes
+- process handles and background jobs
+- streaming command output
+- richer Windows/macOS/Linux process support
+- signed/notarized installers
+- background service / tray/menu-bar agent
 - auto-update
-- device rename and permission profiles
 
-### Phase 3 �?public product
+### Phase 3 - public product
 
-- stronger approval policy
-- multi-user administration
-- OAuth consent UI
-- audit history
-- installer signing/notarization
-- public Plugin submission
-
+- broader multi-user security review
+- improved audit history
+- organization administration
+- public ChatGPT integration/discovery
+- production observability and abuse controls
 
 ## License
 
 Remote Arc is **source-available, not open source** for current releases.
 
-The hosted service implementation and current Remote Arc source are licensed
-under the [Remote Arc Proprietary Source License](./LICENSE). Viewing and
-security review are permitted, but modification, redistribution, white-labeling,
-and commercial exploitation require written permission.
+The current source is licensed under the
+[Remote Arc Proprietary Source License](./LICENSE). Viewing and security review
+are permitted, but modification, redistribution, white-labeling, and commercial
+exploitation require written permission.
 
-Historical revisions that were previously released under MIT remain governed
-by the MIT terms that applied to those specific revisions.
+Historical revisions previously released under MIT remain governed by the MIT
+terms that applied to those revisions.
 
 Third-party components continue to use their own licenses.

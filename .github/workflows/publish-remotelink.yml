@@ -13,6 +13,8 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: production
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -31,6 +33,16 @@ jobs:
 
       - name: Verify
         run: pnpm --filter remotelink typecheck
+
+      - name: Build CLI
+        run: pnpm build:cli
+
+      - name: Verify publish artifact
+        run: |
+          test -f packages/cli/dist/index.js
+          grep -q '0.3.8' packages/cli/dist/index.js
+          grep -q 'https://mcp.remotearc.app' packages/cli/dist/index.js
+          ! grep -qi 'desktop.commander\|wonderwhy' packages/cli/dist/index.js
 
       - name: Publish
         working-directory: packages/cli
