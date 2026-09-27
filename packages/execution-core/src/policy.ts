@@ -6,6 +6,7 @@ export type ExecutionPolicy = {
   workspaceRoots?: string[];
   protectSensitivePaths?: boolean;
   sensitivePaths?: string[];
+  sensitiveAllowPaths?: string[];
   undoEnabled?: boolean;
 };
 
@@ -139,13 +140,22 @@ export async function enforcePathPolicy(
     const sensitiveRoots = await Promise.all(
       sensitiveInputs.map(canonicalTarget),
     );
+    const allowedSensitiveRoots = await Promise.all(
+      (policy.sensitiveAllowPaths || [])
+        .filter((item) => typeof item === "string" && item.trim())
+        .map(canonicalTarget),
+    );
+    const explicitlyAllowed = allowedSensitiveRoots.some((root) =>
+      isInside(target, root),
+    );
 
     if (
-      looksLikeSensitiveFile(target) ||
-      sensitiveRoots.some((root) => isInside(target, root))
+      !explicitlyAllowed &&
+      (looksLikeSensitiveFile(target) ||
+        sensitiveRoots.some((root) => isInside(target, root)))
     ) {
       throw new Error(
-        "Blocked by Remote Arc Sensitive Path Policy. Change this device policy in the dashboard if you intentionally need access.",
+        "Blocked by Remote Arc Sensitive Path Policy. Add a narrow sensitive-path exception for this device if you intentionally need access.",
       );
     }
   }
@@ -161,6 +171,9 @@ export function normalizePolicy(policy?: ExecutionPolicy): ExecutionPolicy {
     protectSensitivePaths: policy?.protectSensitivePaths !== false,
     sensitivePaths: Array.from(
       new Set((policy?.sensitivePaths || []).filter((item) => typeof item === "string" && item.trim())),
+    ).slice(0, 32),
+    sensitiveAllowPaths: Array.from(
+      new Set((policy?.sensitiveAllowPaths || []).filter((item) => typeof item === "string" && item.trim())),
     ).slice(0, 32),
     undoEnabled: policy?.undoEnabled !== false,
   };

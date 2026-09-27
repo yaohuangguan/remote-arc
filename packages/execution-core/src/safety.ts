@@ -190,16 +190,38 @@ async function undoCandidates() {
 }
 
 export async function listUndoActions(limit = 20) {
-  const candidates = await undoCandidates();
-  return candidates.slice(0, Math.max(1, Math.min(100, Math.trunc(limit)))).map(({ manifest }) => ({
-    id: manifest.id,
-    created_at: manifest.createdAt,
-    tool: manifest.tool,
-    path: manifest.targetPath,
-    bytes: manifest.bytes,
-    existed_before: manifest.existed,
-    conflict_safe: Boolean(manifest.postChangeHash),
-  }));
+  const candidates = (await undoCandidates()).slice(
+    0,
+    Math.max(1, Math.min(100, Math.trunc(limit))),
+  );
+
+  return Promise.all(
+    candidates.map(async ({ manifest }) => {
+      let status: "ready" | "conflict" | "missing" | "legacy" = "legacy";
+
+      if (manifest.postChangeHash) {
+        try {
+          const currentHash = await hashFile(manifest.targetPath);
+          status =
+            currentHash === manifest.postChangeHash ? "ready" : "conflict";
+        } catch {
+          status = "missing";
+        }
+      }
+
+      return {
+        id: manifest.id,
+        created_at: manifest.createdAt,
+        tool: manifest.tool,
+        path: manifest.targetPath,
+        bytes: manifest.bytes,
+        existed_before: manifest.existed,
+        conflict_safe: Boolean(manifest.postChangeHash),
+        can_undo: status === "ready",
+        status,
+      };
+    }),
+  );
 }
 
 async function restoreUndoCandidate(candidate: { directory: string; manifest: UndoManifest }) {

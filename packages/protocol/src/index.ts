@@ -20,6 +20,7 @@ export type DeviceExecutionPolicy = {
   workspaceRoots?: string[];
   protectSensitivePaths?: boolean;
   sensitivePaths?: string[];
+  sensitiveAllowPaths?: string[];
   undoEnabled?: boolean;
 };
 

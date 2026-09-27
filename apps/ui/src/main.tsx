@@ -25,6 +25,7 @@ type Device = {
   allowed_tools?: string[] | null;
   workspace_roots?: string[];
   sensitive_paths?: string[];
+  sensitive_allow_paths?: string[];
   protect_sensitive_paths?: boolean;
   undo_enabled?: boolean;
   policy_enforcement_available?: boolean;
@@ -39,6 +40,8 @@ type UndoAction = {
   bytes: number;
   existed_before: boolean;
   conflict_safe: boolean;
+  can_undo: boolean;
+  status: "ready" | "conflict" | "missing" | "legacy";
 };
 
 type Pairing = {
@@ -115,6 +118,9 @@ const DEVICE_TOOL_CATALOG = [
   "edit_block",
   "undo_last_change",
   "start_process",
+  "process_status",
+  "process_output",
+  "stop_process",
   "list_processes",
 ] as const;
 
@@ -1159,11 +1165,12 @@ function Dashboard({
 
   async function saveDevicePolicy(
     device: Device,
-    patch: Partial<Pick<Device, "workspace_roots" | "sensitive_paths" | "protect_sensitive_paths" | "undo_enabled">>,
+    patch: Partial<Pick<Device, "workspace_roots" | "sensitive_paths" | "sensitive_allow_paths" | "protect_sensitive_paths" | "undo_enabled">>,
   ) {
     const next = {
       workspace_roots: patch.workspace_roots ?? device.workspace_roots ?? [],
       sensitive_paths: patch.sensitive_paths ?? device.sensitive_paths ?? [],
+      sensitive_allow_paths: patch.sensitive_allow_paths ?? device.sensitive_allow_paths ?? [],
       protect_sensitive_paths:
         patch.protect_sensitive_paths ?? device.protect_sensitive_paths ?? true,
       undo_enabled: patch.undo_enabled ?? device.undo_enabled ?? true,
@@ -1188,12 +1195,14 @@ function Dashboard({
 
   async function addPolicyPath(
     device: Device,
-    kind: "workspace_roots" | "sensitive_paths",
+    kind: "workspace_roots" | "sensitive_paths" | "sensitive_allow_paths",
   ) {
     const label =
       kind === "workspace_roots"
         ? tr("Add an allowed workspace path", "添加允许访问的工作区路径")
-        : tr("Add a protected sensitive path", "添加额外受保护路径");
+        : kind === "sensitive_paths"
+          ? tr("Add a protected sensitive path", "添加额外受保护路径")
+          : tr("Allow one sensitive path exception", "添加敏感路径例外");
     const example =
       device.platform === "win32"
         ? "E:\\Coding"
@@ -1208,7 +1217,7 @@ function Dashboard({
 
   async function removePolicyPath(
     device: Device,
-    kind: "workspace_roots" | "sensitive_paths",
+    kind: "workspace_roots" | "sensitive_paths" | "sensitive_allow_paths",
     value: string,
   ) {
     await saveDevicePolicy(device, {
@@ -1601,6 +1610,47 @@ function Dashboard({
                           </div>
                         </div>
 
+                        <div className="policyBlock">
+                          <div className="policyBlockHead">
+                            <div>
+                              <strong>{tr("Sensitive path exceptions", "敏感路径例外")}</strong>
+                              <p>{tr(
+                                "Keep protection enabled globally, but explicitly allow only the sensitive files or folders this device truly needs.",
+                                "保持整体敏感路径保护开启，只对确实需要访问的敏感文件或目录做窄范围例外。",
+                              )}</p>
+                            </div>
+                            <button
+                              className="ghostButton small"
+                              onClick={() => void addPolicyPath(device, "sensitive_allow_paths")}
+                            >
+                              + {tr("Allow exception", "添加例外")}
+                            </button>
+                          </div>
+                          <div className="policyPathList">
+                            {(device.sensitive_allow_paths || []).map((root) => (
+                              <span className="policyPathChip exception" key={root}>
+                                <code>{root}</code>
+                                <button
+                                  title={tr("Remove", "移除")}
+                                  onClick={() => void removePolicyPath(device, "sensitive_allow_paths", root)}
+                                >×</button>
+                              </span>
+                            ))}
+                            {!(device.sensitive_allow_paths || []).length && (
+                              <span className="policyEmpty">{tr(
+                                "No sensitive-path exceptions.",
+                                "当前没有敏感路径例外。",
+                              )}</span>
+                            )}
+                          </div>
+                          {!!(device.sensitive_allow_paths || []).length && (
+                            <p className="policyWarning">{tr(
+                              "Exceptions bypass only Sensitive Path protection. Workspace Scope still applies.",
+                              "例外只绕过敏感路径保护，Workspace Scope 仍然生效。",
+                            )}</p>
+                          )}
+                        </div>
+
                         <div className="policyToggleRow undoPolicyToggle">
                           <div>
                             <strong>{tr("Local Undo", "本机撤销")}</strong>
@@ -1667,14 +1717,31 @@ function Dashboard({
                                       {action.existed_before
                                         ? tr("restore previous content", "恢复原有内容")
                                         : tr("remove created file", "删除新建文件")}
+                                      {" · "}
+                                      {action.status === "ready"
+                                        ? tr("ready", "可撤销")
+                                        : action.status === "conflict"
+                                          ? tr("conflict: file changed again", "冲突：文件后来又被修改")
+                                          : action.status === "missing"
+                                            ? tr("target missing", "目标文件已不存在")
+                                            : tr("legacy snapshot", "旧版快照")}
                                     </small>
                                   </div>
                                   <button
                                     className="ghostButton small"
-                                    disabled={undoLoading === device.id || !(device.undo_enabled ?? true)}
+                                    disabled={
+                                      undoLoading === device.id ||
+                                      !(device.undo_enabled ?? true) ||
+                                      !action.can_undo
+                                    }
+                                    title={
+                                      action.can_undo
+                                        ? tr("Restore this local snapshot", "恢复这个本机快照")
+                                        : tr("Automatic undo is unavailable because the current file no longer matches the recorded post-edit state.", "当前文件已不再匹配当时修改后的状态，自动撤销不可用。")
+                                    }
                                     onClick={() => void restoreUndoAction(device, action)}
                                   >
-                                    {tr("Undo", "撤销")}
+                                    {action.can_undo ? tr("Undo", "撤销") : tr("Unavailable", "不可撤销")}
                                   </button>
                                 </div>
                               ))}

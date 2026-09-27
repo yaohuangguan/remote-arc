@@ -5010,6 +5010,7 @@ body{font-size:18px;line-height:1.6}
   background:#071821;
 }
 .policyPathChip.protected{border-color:rgba(245,158,11,.24)}
+.policyPathChip.exception{border-color:rgba(74,222,128,.24);background:rgba(6,37,26,.22)}
 .policyPathChip code{
   overflow:hidden;
   max-width:360px;

@@ -10,7 +10,10 @@ export type ToolName =
   | "list_undo_actions"
   | "undo_change"
   | "undo_last_change"
-  | "start_process";
+  | "start_process"
+  | "process_status"
+  | "process_output"
+  | "stop_process";
 
 export type JsonSchema = {
   type: "object";

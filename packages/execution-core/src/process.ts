@@ -1,4 +1,5 @@
-import { execFile, spawn } from "node:child_process";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
+import crypto from "node:crypto";
 import process from "node:process";
 
 const MAX_CAPTURE_BYTES = 2 * 1024 * 1024;
@@ -123,4 +124,170 @@ export async function runShellCommand(
       });
     });
   });
+}
+
+
+type ManagedProcess = {
+  id: string;
+  child: ChildProcess;
+  command: string;
+  cwd: string | null;
+  startedAt: number;
+  endedAt: number | null;
+  exitCode: number | null;
+  signal: NodeJS.Signals | null;
+  stdout: string;
+  stderr: string;
+};
+
+const managedProcesses = new Map<string, ManagedProcess>();
+const MAX_MANAGED_PROCESSES = 32;
+const FINISHED_PROCESS_RETENTION_MS = 30 * 60 * 1000;
+
+function cleanupManagedProcesses() {
+  const now = Date.now();
+  for (const [id, item] of managedProcesses) {
+    if (
+      item.endedAt !== null &&
+      now - item.endedAt > FINISHED_PROCESS_RETENTION_MS
+    ) {
+      managedProcesses.delete(id);
+    }
+  }
+
+  if (managedProcesses.size <= MAX_MANAGED_PROCESSES) return;
+  const finished = [...managedProcesses.values()]
+    .filter((item) => item.endedAt !== null)
+    .sort((a, b) => (a.endedAt || 0) - (b.endedAt || 0));
+  for (const item of finished) {
+    if (managedProcesses.size <= MAX_MANAGED_PROCESSES) break;
+    managedProcesses.delete(item.id);
+  }
+}
+
+export async function startBackgroundProcess(command: string, cwd?: string) {
+  cleanupManagedProcesses();
+  if (managedProcesses.size >= MAX_MANAGED_PROCESSES) {
+    throw new Error(
+      "Remote Arc already has the maximum number of managed background processes on this device.",
+    );
+  }
+
+  const child = spawn(command, {
+    shell: true,
+    cwd,
+    windowsHide: true,
+    detached: process.platform !== "win32",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  const id = crypto.randomUUID();
+  const item: ManagedProcess = {
+    id,
+    child,
+    command,
+    cwd: cwd || null,
+    startedAt: Date.now(),
+    endedAt: null,
+    exitCode: null,
+    signal: null,
+    stdout: "",
+    stderr: "",
+  };
+  managedProcesses.set(id, item);
+
+  child.stdout?.on("data", (chunk) => {
+    item.stdout = appendCapped(item.stdout, chunk);
+  });
+  child.stderr?.on("data", (chunk) => {
+    item.stderr = appendCapped(item.stderr, chunk);
+  });
+  child.once("error", (error) => {
+    item.stderr = appendCapped(item.stderr, "\n" + error.message);
+    item.endedAt = Date.now();
+  });
+  child.once("close", (code, signal) => {
+    item.exitCode = code;
+    item.signal = signal;
+    item.endedAt = Date.now();
+  });
+
+  return {
+    process_id: id,
+    pid: child.pid || null,
+    command,
+    cwd: cwd || null,
+    status: "running",
+    started_at: new Date(item.startedAt).toISOString(),
+  };
+}
+
+function managedProcessOrThrow(processId: string) {
+  cleanupManagedProcesses();
+  const item = managedProcesses.get(processId);
+  if (!item) {
+    throw new Error(
+      "Managed process not found or its local retention window has expired.",
+    );
+  }
+  return item;
+}
+
+export function getManagedProcessStatus(processId: string) {
+  const item = managedProcessOrThrow(processId);
+  return {
+    process_id: item.id,
+    pid: item.child.pid || null,
+    command: item.command,
+    cwd: item.cwd,
+    status: item.endedAt === null ? "running" : "exited",
+    exit_code: item.exitCode,
+    signal: item.signal,
+    started_at: new Date(item.startedAt).toISOString(),
+    ended_at: item.endedAt === null ? null : new Date(item.endedAt).toISOString(),
+    duration_ms: (item.endedAt || Date.now()) - item.startedAt,
+  };
+}
+
+export function readManagedProcessOutput(processId: string) {
+  const item = managedProcessOrThrow(processId);
+  return {
+    ...getManagedProcessStatus(processId),
+    stdout: item.stdout,
+    stderr: item.stderr,
+    truncated:
+      Buffer.byteLength(item.stdout) >= MAX_CAPTURE_BYTES ||
+      Buffer.byteLength(item.stderr) >= MAX_CAPTURE_BYTES,
+  };
+}
+
+export async function stopManagedProcess(processId: string) {
+  const item = managedProcessOrThrow(processId);
+  if (item.endedAt !== null) {
+    return {
+      ...getManagedProcessStatus(processId),
+      stopped: false,
+      already_exited: true,
+    };
+  }
+
+  await terminateTree(item.child);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  return {
+    ...getManagedProcessStatus(processId),
+    stopped: true,
+    already_exited: false,
+  };
+}
+
+
+export async function stopAllManagedProcesses() {
+  const running = [...managedProcesses.values()].filter(
+    (item) => item.endedAt === null,
+  );
+  await Promise.all(
+    running.map(async (item) => {
+      await terminateTree(item.child).catch(() => undefined);
+    }),
+  );
 }

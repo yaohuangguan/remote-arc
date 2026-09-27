@@ -73,7 +73,7 @@ async function callDevice(
   args: Record<string, unknown>,
 ) {
   const ownedDevice = await env.DB.prepare(
-    `SELECT id, allowed_tools, workspace_roots, sensitive_paths,
+    `SELECT id, allowed_tools, workspace_roots, sensitive_paths, sensitive_allow_paths,
             protect_sensitive_paths, undo_enabled
      FROM devices
      WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
@@ -84,6 +84,7 @@ async function callDevice(
       allowed_tools: string | null;
       workspace_roots: string | null;
       sensitive_paths: string | null;
+      sensitive_allow_paths: string | null;
       protect_sensitive_paths: number;
       undo_enabled: number;
     }>();
@@ -123,6 +124,7 @@ async function callDevice(
         policy: {
           workspaceRoots: parseStoredStringArray(ownedDevice.workspace_roots),
           sensitivePaths: parseStoredStringArray(ownedDevice.sensitive_paths),
+          sensitiveAllowPaths: parseStoredStringArray(ownedDevice.sensitive_allow_paths),
           protectSensitivePaths: ownedDevice.protect_sensitive_paths !== 0,
           undoEnabled: ownedDevice.undo_enabled !== 0,
         },
@@ -427,11 +429,12 @@ export function createRemoteLinkMcp(
           command: z.string(),
           timeout_ms: z.number().int().positive().default(5000),
           cwd: z.string().optional(),
+          background: z.boolean().default(false),
         }),
         annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true },
         _meta: oauthToolMeta("computer:write"),
       },
-      async ({ device_id, command, timeout_ms, cwd }) => {
+      async ({ device_id, command, timeout_ms, cwd, background }) => {
         if (!identity || !hasScope(identity, "computer:write")) {
           return authRequired(env, "computer:write");
         }
@@ -441,6 +444,85 @@ export function createRemoteLinkMcp(
             command,
             timeout_ms,
             ...(cwd ? { cwd } : {}),
+            background,
+          }),
+        );
+      },
+    );
+
+    server.registerTool(
+      "process_status",
+      {
+        title: "Get background process status",
+        description:
+          "Get the status of a Remote Arc managed background process on a linked computer.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          process_id: z.string(),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("computer:write"),
+      },
+      async ({ device_id, process_id }) => {
+        if (!identity || !hasScope(identity, "computer:write")) {
+          return authRequired(env, "computer:write");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "process_status", {
+            process_id,
+          }),
+        );
+      },
+    );
+
+    server.registerTool(
+      "process_output",
+      {
+        title: "Read background process output",
+        description:
+          "Read captured stdout and stderr from a Remote Arc managed background process.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          process_id: z.string(),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("computer:write"),
+      },
+      async ({ device_id, process_id }) => {
+        if (!identity || !hasScope(identity, "computer:write")) {
+          return authRequired(env, "computer:write");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "process_output", {
+            process_id,
+          }),
+        );
+      },
+    );
+
+    server.registerTool(
+      "stop_process",
+      {
+        title: "Stop a background process",
+        description:
+          "Stop a Remote Arc managed background process and its child process tree.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          process_id: z.string(),
+        }),
+        annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
+        _meta: oauthToolMeta("computer:write"),
+      },
+      async ({ device_id, process_id }) => {
+        if (!identity || !hasScope(identity, "computer:write")) {
+          return authRequired(env, "computer:write");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "stop_process", {
+            process_id,
           }),
         );
       },

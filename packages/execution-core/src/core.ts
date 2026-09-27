@@ -5,7 +5,15 @@ import {
   readTextFile,
   writeTextFile,
 } from "./filesystem.js";
-import { listProcesses, runShellCommand } from "./process.js";
+import {
+  getManagedProcessStatus,
+  listProcesses,
+  readManagedProcessOutput,
+  runShellCommand,
+  startBackgroundProcess,
+  stopAllManagedProcesses,
+  stopManagedProcess,
+} from "./process.js";
 import {
   assertCommandAllowed,
   createUndoSnapshot,
@@ -46,6 +54,9 @@ const DEVELOPER_TOOLS = new Set<ToolName>([
 const FULL_TOOLS = new Set<ToolName>([
   ...DEVELOPER_TOOLS,
   "start_process",
+  "process_status",
+  "process_output",
+  "stop_process",
 ]);
 
 const DEFINITIONS: ToolDefinition[] = [
@@ -157,8 +168,39 @@ const DEFINITIONS: ToolDefinition[] = [
         command: { type: "string" },
         timeout_ms: { type: "integer", minimum: 100, maximum: 120000, default: 5000 },
         cwd: { type: "string" },
+        background: { type: "boolean", default: false },
       },
       required: ["command"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "process_status",
+    description: "Get status for a Remote Arc managed background process.",
+    inputSchema: {
+      type: "object",
+      properties: { process_id: { type: "string" } },
+      required: ["process_id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "process_output",
+    description: "Read captured stdout and stderr from a Remote Arc managed background process.",
+    inputSchema: {
+      type: "object",
+      properties: { process_id: { type: "string" } },
+      required: ["process_id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "stop_process",
+    description: "Stop a Remote Arc managed background process and its child process tree.",
+    inputSchema: {
+      type: "object",
+      properties: { process_id: { type: "string" } },
+      required: ["process_id"],
       additionalProperties: false,
     },
   },
@@ -298,6 +340,9 @@ export class RemoteArcExecutionCore {
           );
         }
         const cwd = cwdInput ? await enforcePathPolicy(cwdInput, policy) : undefined;
+        if (args.background === true) {
+          return textResult(await startBackgroundProcess(command, cwd));
+        }
         return textResult(
           await runShellCommand(
             command,
@@ -306,6 +351,18 @@ export class RemoteArcExecutionCore {
           ),
         );
       }
+      case "process_status":
+        return textResult(
+          getManagedProcessStatus(requiredString(args, "process_id")),
+        );
+      case "process_output":
+        return textResult(
+          readManagedProcessOutput(requiredString(args, "process_id")),
+        );
+      case "stop_process":
+        return textResult(
+          await stopManagedProcess(requiredString(args, "process_id")),
+        );
       case "write_file":
       case "edit_block": {
         const pathKey = toolName === "write_file" ? "path" : "file_path";
@@ -347,7 +404,7 @@ export class RemoteArcExecutionCore {
   }
 
   async close() {
-    // Native execution has no persistent child process to close.
+    await stopAllManagedProcesses();
   }
 }
 

@@ -45,6 +45,16 @@ const schemas = {
     command: z.string(),
     timeout_ms: z.number().int().positive().max(120_000).default(5000),
     cwd: z.string().optional(),
+    background: z.boolean().default(false),
+  }),
+  process_status: z.object({
+    process_id: z.string(),
+  }),
+  process_output: z.object({
+    process_id: z.string(),
+  }),
+  stop_process: z.object({
+    process_id: z.string(),
   }),
 } as const;
 
@@ -54,6 +64,8 @@ const readOnlyTools = new Set([
   "get_file_info",
   "list_processes",
   "list_undo_actions",
+  "process_status",
+  "process_output",
 ]);
 
 server.registerTool(

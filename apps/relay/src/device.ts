@@ -295,7 +295,7 @@ export async function getDevicesForUser(
 ) {
   const rows = await env.DB.prepare(
     `SELECT id, name, platform, arch, hostname, created_at, last_seen, allowed_tools,
-            workspace_roots, sensitive_paths, protect_sensitive_paths, undo_enabled
+            workspace_roots, sensitive_paths, sensitive_allow_paths, protect_sensitive_paths, undo_enabled
      FROM devices
      WHERE user_id = ?1 AND revoked_at IS NULL
      ORDER BY created_at DESC`,
@@ -312,6 +312,7 @@ export async function getDevicesForUser(
       allowed_tools: string | null;
       workspace_roots: string | null;
       sensitive_paths: string | null;
+      sensitive_allow_paths: string | null;
       protect_sensitive_paths: number;
       undo_enabled: number;
     }>();
@@ -393,6 +394,7 @@ export async function getDevicesForUser(
       available_tools: availableTools,
       workspace_roots: parseJsonStringArray(device.workspace_roots),
       sensitive_paths: parseJsonStringArray(device.sensitive_paths),
+      sensitive_allow_paths: parseJsonStringArray(device.sensitive_allow_paths),
       protect_sensitive_paths: device.protect_sensitive_paths !== 0,
       undo_enabled: device.undo_enabled !== 0,
       policy_enforcement_available:
@@ -521,6 +523,7 @@ type DevicePolicyRow = {
   id: string;
   workspace_roots: string | null;
   sensitive_paths: string | null;
+  sensitive_allow_paths: string | null;
   protect_sensitive_paths: number;
   undo_enabled: number;
 };
@@ -531,7 +534,7 @@ async function loadOwnedDevicePolicy(
   deviceId: string,
 ) {
   return env.DB.prepare(
-    `SELECT id, workspace_roots, sensitive_paths,
+    `SELECT id, workspace_roots, sensitive_paths, sensitive_allow_paths,
             protect_sensitive_paths, undo_enabled
      FROM devices
      WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
@@ -543,6 +546,7 @@ async function loadOwnedDevicePolicy(
 const devicePolicyPayload = (device: DevicePolicyRow) => ({
   workspaceRoots: parseJsonStringArray(device.workspace_roots),
   sensitivePaths: parseJsonStringArray(device.sensitive_paths),
+  sensitiveAllowPaths: parseJsonStringArray(device.sensitive_allow_paths),
   protectSensitivePaths: device.protect_sensitive_paths !== 0,
   undoEnabled: device.undo_enabled !== 0,
 });
@@ -608,15 +612,17 @@ export async function handleDevicePolicyUpdate(
   const body = (await request.json().catch(() => ({}))) as {
     workspace_roots?: unknown;
     sensitive_paths?: unknown;
+    sensitive_allow_paths?: unknown;
     protect_sensitive_paths?: unknown;
     undo_enabled?: unknown;
   };
 
   const workspaceRoots = sanitizePolicyPaths(body.workspace_roots ?? []);
   const sensitivePaths = sanitizePolicyPaths(body.sensitive_paths ?? []);
-  if (!workspaceRoots || !sensitivePaths) {
+  const sensitiveAllowPaths = sanitizePolicyPaths(body.sensitive_allow_paths ?? []);
+  if (!workspaceRoots || !sensitivePaths || !sensitiveAllowPaths) {
     return Response.json(
-      { error: "workspace_roots and sensitive_paths must be arrays of valid paths" },
+      { error: "workspace_roots, sensitive_paths and sensitive_allow_paths must be arrays of valid paths" },
       { status: 400 },
     );
   }
@@ -635,13 +641,15 @@ export async function handleDevicePolicyUpdate(
     `UPDATE devices
      SET workspace_roots = ?1,
          sensitive_paths = ?2,
-         protect_sensitive_paths = ?3,
-         undo_enabled = ?4
-     WHERE id = ?5 AND user_id = ?6 AND revoked_at IS NULL`,
+         sensitive_allow_paths = ?3,
+         protect_sensitive_paths = ?4,
+         undo_enabled = ?5
+     WHERE id = ?6 AND user_id = ?7 AND revoked_at IS NULL`,
   )
     .bind(
       JSON.stringify(workspaceRoots),
       JSON.stringify(sensitivePaths),
+      JSON.stringify(sensitiveAllowPaths),
       body.protect_sensitive_paths ? 1 : 0,
       body.undo_enabled ? 1 : 0,
       deviceId,
@@ -663,6 +671,7 @@ export async function handleDevicePolicyUpdate(
     ok: true,
     workspace_roots: workspaceRoots,
     sensitive_paths: sensitivePaths,
+    sensitive_allow_paths: sensitiveAllowPaths,
     protect_sensitive_paths: body.protect_sensitive_paths,
     undo_enabled: body.undo_enabled,
   });
