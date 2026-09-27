@@ -553,12 +553,12 @@ const aiClients = [
 ] as const;
 
 const topologyAiClients = [
-  { name: "ChatGPT", icon: "/ai-openai.svg" },
-  { name: "Claude", icon: "/ai-anthropic.svg" },
-  { name: "Cursor", mark: "C" },
-  { name: "Gemini", mark: "✦" },
-  { name: "Grok", mark: "G" },
-  { name: "DeepSeek", mark: "DS" },
+  { name: "ChatGPT", icon: "/ai-openai.svg", tone: "mono" },
+  { name: "Claude", icon: "/ai-anthropic.svg", tone: "mono" },
+  { name: "Cursor", icon: "/ai-cursor.svg", tone: "color" },
+  { name: "Gemini", icon: "/ai-gemini.svg", tone: "color" },
+  { name: "Grok", icon: "/ai-grok.svg", tone: "color" },
+  { name: "DeepSeek", icon: "/ai-deepseek.svg", tone: "color" },
 ] as const;
 
 function AiClientBadge({ name, icon, note }: { name: string; icon: string; note: string }) {
@@ -659,9 +659,11 @@ function Landing({ user }: { user?: User | null }) {
           <div className="architectureClients">
             {topologyAiClients.map((client) => (
               <div key={client.name}>
-                {"icon" in client
-                  ? <img src={client.icon} alt="" />
-                  : <span className="aiTextMark">{client.mark}</span>}
+                <img
+                  className={client.tone === "mono" ? "monoLogo" : "colorLogo"}
+                  src={client.icon}
+                  alt=""
+                />
                 <strong>{client.name}</strong>
               </div>
             ))}
@@ -872,10 +874,133 @@ function Landing({ user }: { user?: User | null }) {
         <div className="sectionIntro"><span className="eyebrow">{tr("Q&A", "常见问题")}</span><h2>{tr("Before you connect.", "连接前你可能想知道。")}</h2></div>
         <div className="faqList">
           {[
-            [tr("Does Remote Arc expose my computer to the internet?", "Remote Arc 会把我的电脑暴露到公网吗？"), tr("No inbound port is required. Your computer initiates the connection outward to the relay.", "不需要开放入站端口。电脑主动向 Relay 建立出站连接。")],
+            [
+              tr("Does Remote Arc upload or keep a copy of my files?", "Remote Arc 会上传或保存我的文件副本吗？"),
+              tr(
+                "Remote Arc does not build a cloud copy of your computer. In hosted mode, file contents and tool results may pass through the relay while a request is being delivered, but they are not intentionally persisted in D1 or audit history. Device metadata, permissions, usage metadata and the workspace roots you explicitly save are stored so the service can operate.",
+                "Remote Arc 不会在云端建立你的电脑副本。托管模式下，文件内容和工具结果在执行请求时可能会经过 Relay，但不会被有意持久化到 D1 或审计历史中。为了让服务正常工作，设备元数据、权限、使用量元数据，以及你主动保存的 Workspace Root 会被保存。",
+              ),
+            ],
+            [
+              tr("Can Remote Arc see the contents that pass through the hosted relay?", "Remote Arc 能看到经过托管 Relay 的内容吗？"),
+              tr(
+                "The hosted relay is protected by HTTPS/WSS in transit, but it is not a blind end-to-end-encrypted data plane: the service technically processes the tool payload needed to route the request. Remote Arc is designed not to persist those payload bodies. Your chosen AI provider also receives the tool results required to answer your request.",
+                "托管 Relay 使用 HTTPS/WSS 保护传输，但它并不是服务端完全不可见的端到端加密数据平面：为了路由请求，服务在技术上会处理对应的 Tool Payload。Remote Arc 的设计是不持久化这些 Payload Body。与此同时，你选择的 AI 提供商也会收到完成请求所需的 Tool Result。",
+              ),
+            ],
+            [
+              tr("Does Browse folders store my directory tree in the cloud?", "Browse folders 会把我的目录树存到云端吗？"),
+              tr(
+                "No. The picker requests one directory level from the online device on demand, filters protected locations locally, and returns that temporary listing to the dashboard. The directory tree is not stored in D1. Only the folder you finally choose as a Workspace Scope root is saved as policy.",
+                "不会。目录选择器只会在需要时向在线设备读取当前这一层目录，并在本机过滤受保护位置，再把这次临时 Listing 返回 Dashboard。目录树不会写入 D1；只有你最终选择为 Workspace Scope Root 的路径字符串会作为权限策略保存。",
+              ),
+            ],
+            [
+              tr("Can AI change my computer immediately after I install Remote Arc?", "安装 Remote Arc 后，AI 会立刻拥有修改电脑的权限吗？"),
+              tr(
+                "No. New devices start with the Safe preset, which is read-only. You can move to Developer for reversible file editing, or Full when you explicitly need terminal and managed background-process access. Individual skills can also be enabled or disabled one by one.",
+                "不会。新设备默认从 Safe 预设开始，只读。需要可撤销的文件编辑时可以切到 Developer；只有你明确需要终端和后台进程能力时才切到 Full。每个 Skill 也可以单独开启或关闭。",
+              ),
+            ],
+            [
+              tr("What is the difference between Safe, Developer and Full?", "Safe、Developer 和 Full 有什么区别？"),
+              tr(
+                "Safe exposes read-only inspection tools. Developer adds supported file writes, exact edits and Local Undo without arbitrary shell execution. Full additionally enables terminal execution and Remote Arc-managed background processes, which is the highest-risk mode.",
+                "Safe 只开放只读检查能力。Developer 增加受支持的文件写入、精确编辑和 Local Undo，但不开放任意 Shell。Full 进一步开启终端执行和 Remote Arc 管理的后台进程，因此风险最高。",
+              ),
+            ],
+            [
+              tr("Is every AI action reversible?", "AI 的每个操作都能撤销吗？"),
+              tr(
+                "No. Local Undo covers supported Remote Arc file writes and exact edits by snapshotting the previous local state before the change. Terminal commands, deployments, package publishing, network requests, remote database writes and other external side effects may be irreversible.",
+                "不能。Local Undo 会在受支持的 Remote Arc 文件写入和精确编辑前保存本机旧状态，因此这些操作可以恢复；但终端命令、部署、发布软件包、网络请求、远程数据库写入等外部副作用可能无法撤销。",
+              ),
+            ],
+            [
+              tr("How are secrets such as .ssh, .aws and .env protected?", "像 .ssh、.aws、.env 这样的敏感内容怎么保护？"),
+              tr(
+                "Sensitive Path Policy blocks common credential locations and .env files before local filesystem execution. You can add extra protected paths, and if one project genuinely needs a sensitive file you can add a narrow exception without disabling the policy globally.",
+                "Sensitive Path Policy 会在本机文件操作执行前阻止常见凭证目录和 .env 文件。你还可以增加额外保护路径；如果某个项目确实需要访问某个敏感文件，也可以只对那一个路径设置窄范围例外，而不是关闭整套保护。",
+              ),
+            ],
+            [
+              tr("What does Workspace Scope actually protect?", "Workspace Scope 实际保护的是什么？"),
+              tr(
+                "When configured, Remote Arc filesystem tools can only operate inside the allowed canonical roots, including checks against symlink escapes. Full terminal access is different: Remote Arc requires an in-scope working directory, but a shell command can still reference another path, so Developer mode is safer when strict file confinement matters.",
+                "配置后，Remote Arc 的文件工具只能在允许的 Canonical Root 内工作，并会检查符号链接逃逸。Full 终端则不同：Remote Arc 会要求 Working Directory 位于 Scope 内，但 Shell 命令仍可能引用其他路径；需要严格文件隔离时，Developer 模式更安全。",
+              ),
+            ],
+            [
+              tr("Why can I see several ChatGPT authorizations in the dashboard?", "为什么 Dashboard 里会出现多个 ChatGPT 授权？"),
+              tr(
+                "Each row is a separate OAuth authorization instance. ChatGPT or another client can register or authorize Remote Arc more than once, so multiple rows do not mean multiple computers. Active means the current access token works now; Refreshable means it can still obtain a new token; Expired can no longer reconnect.",
+                "每一行都是一份独立的 OAuth 授权实例。ChatGPT 或其他客户端可能多次注册或授权 Remote Arc，所以多行并不代表多台电脑。Active 表示当前 Access Token 可用；Refreshable 表示仍能换取新 Token；Expired 表示已经无法重新连接。",
+              ),
+            ],
+            [
+              tr("What happens when I disconnect or revoke an AI authorization?", "Disconnect 或 Revoke 一条 AI 授权会发生什么？"),
+              tr(
+                "Only that OAuth authorization is invalidated. The affected AI client will need to authorize Remote Arc again before it can reconnect. Your paired computers, their local credentials and your other AI authorizations remain unchanged.",
+                "只会使那一份 OAuth 授权失效。对应 AI 客户端之后需要重新授权 Remote Arc 才能再次连接；已配对电脑、本机设备凭证以及其他 AI 授权都不会受到影响。",
+              ),
+            ],
+            [
+              tr("Can I stop all AI access immediately?", "我可以立即停止所有 AI 访问吗？"),
+              tr(
+                "Yes. You can pause MCP access at the account level, disconnect a specific OAuth authorization, revoke a paired device, or remove individual device skills. These controls are independent so you can stop exactly the layer you want.",
+                "可以。你可以在账户层暂停 MCP、断开某一份 OAuth 授权、撤销某台已配对设备，或者关闭单独的设备 Skill。这些控制彼此独立，因此可以精确停掉你想停的那一层。",
+              ),
+            ],
+            [
+              tr("Does my computer need a public IP, VPN or open port?", "我的电脑需要公网 IP、VPN 或开放端口吗？"),
+              tr(
+                "No inbound access is required. The device agent initiates an outbound encrypted WebSocket to Remote Arc, so normal NAT and home-router setups work without port forwarding.",
+                "不需要任何入站访问。设备 Agent 会主动向 Remote Arc 建立加密的出站 WebSocket，因此普通 NAT 和家庭路由器环境无需端口映射即可使用。",
+              ),
+            ],
+            [
+              tr("Do I need to paste API keys or device tokens into my AI client?", "需要把 API Key 或设备 Token 粘贴到 AI 客户端里吗？"),
+              tr(
+                "No for the normal hosted flow. Device pairing is approved in the browser, each computer receives its own revocable local credential, and compatible AI clients authorize Remote Arc through OAuth instead of sharing the device token.",
+                "正常托管流程不需要。设备通过浏览器确认配对，每台电脑会获得自己独立、可撤销的本机凭证；兼容的 AI 客户端通过 OAuth 授权 Remote Arc，而不是共享设备 Token。",
+              ),
+            ],
+            [
+              tr("Which AI clients can use Remote Arc?", "哪些 AI 客户端可以使用 Remote Arc？"),
+              tr(
+                "Remote Arc is built on the open Remote MCP protocol rather than a single model vendor. It can work with clients and runtimes that support compatible Remote MCP and OAuth flows. Product support changes over time, so the logos on this page represent AI ecosystems and do not imply an official partnership or that every consumer app exposes the same MCP capability.",
+                "Remote Arc 基于开放的 Remote MCP 协议，而不是绑定某一家模型厂商。只要客户端或运行时支持兼容的 Remote MCP 与 OAuth 流程，就可以接入。不同产品的支持会随版本变化，因此首页 Logo 表示相关 AI 生态，并不代表官方合作，也不表示每个消费级 App 当前都开放完全相同的 MCP 能力。",
+              ),
+            ],
+            [
+              tr("What happens if my computer goes offline?", "电脑离线以后会怎样？"),
+              tr(
+                "Remote requests cannot execute while the device is offline. The dashboard keeps last-seen metadata, and the local client reconnects when it becomes available again. No cloud copy of the device is created to continue executing while it is offline.",
+                "设备离线时，远程请求无法执行。Dashboard 会保留最近在线时间，本地客户端重新可用后会再次连接；Remote Arc 不会在云端复制一份设备环境来代替离线电脑继续执行。",
+              ),
+            ],
+            [
+              tr("How does the free 10,000-call allowance work?", "每月 10,000 次免费调用是怎么计算的？"),
+              tr(
+                "The hosted plan includes 10,000 Remote Arc tool calls per month. This is an AI tool-call allowance, not a count of every static website request or every Cloudflare request used to run the service. You can review hosted usage from the dashboard.",
+                "托管免费版每月包含 10,000 次 Remote Arc Tool Call。这是 AI 工具调用额度，不是把官网静态资源请求或 Cloudflare 为运行服务产生的每一个请求都算进去。你可以在 Dashboard 查看托管使用量。",
+              ),
+            ],
+            [
+              tr("Does Remote Arc train an AI model on my computer data?", "Remote Arc 会拿我的电脑数据训练 AI 吗？"),
+              tr(
+                "Remote Arc is not an AI-model training service and does not train a model on your tool payloads. When you ask an AI client to use Remote Arc, the tool results needed for that request are shared with the AI provider you chose, so that provider's own data-handling terms still apply.",
+                "Remote Arc 不是 AI 模型训练服务，也不会用你的 Tool Payload 训练模型。当你让某个 AI 客户端调用 Remote Arc 时，完成请求所需的 Tool Result 会发送给你选择的 AI 提供商，因此该提供商自己的数据处理条款仍然适用。",
+              ),
+            ],
+            [
+              tr("Which operating systems are supported?", "支持哪些操作系统？"),
+              tr(
+                "The current CLI supports Windows, macOS and Linux with Node.js 20 or newer. Pairing is browser-approved and the same Remote MCP endpoint can reach any of your paired computers.",
+                "当前 CLI 支持 Windows、macOS 和 Linux，需要 Node.js 20 或更高版本。设备通过浏览器确认配对，同一个 Remote MCP Endpoint 可以访问你账户下已配对的电脑。",
+              ),
+            ],
             [tr("What is the MCP URL?", "MCP 地址是什么？"), MCP_ENDPOINT],
-            [tr("Do I need to copy API keys or device tokens?", "需要复制 API Key 或设备 Token 吗？"), tr("No. Device pairing is browser-approved, and compatible AI clients use OAuth.", "不需要。设备通过浏览器配对，兼容的 AI 客户端通过 OAuth 授权。")],
-            [tr("Can I control which tools a computer exposes?", "可以限制每台电脑开放哪些工具吗？"), tr("Yes. Tool access can be managed per device from the dashboard, while the local agent remains the final permission boundary.", "可以。看板里可以按设备管理工具权限，同时本地 Agent 仍是最终权限边界。")],
             [tr("Where is the dashboard?", "控制台在哪里？"), APP_ORIGIN],
           ].map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}
         </div>

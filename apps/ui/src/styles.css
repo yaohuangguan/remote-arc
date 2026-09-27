@@ -5864,3 +5864,55 @@ body{font-size:18px;line-height:1.6}
     max-width:min(280px,78vw);
   }
 }
+
+
+/* Brand logos in the homepage topology */
+.architectureClients img.monoLogo{
+  filter:invert(1)!important;
+}
+.architectureClients img.colorLogo{
+  filter:none!important;
+}
+:root[data-theme="light"] .architectureClients img.monoLogo,
+:root[data-theme="light"] .architectureClients img.colorLogo{
+  filter:none!important;
+}
+
+/* Rich FAQ stays compact until the user opens a question */
+.faqList{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:start;
+  column-gap:18px;
+}
+.faqList details{
+  min-width:0;
+}
+.faqList summary{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  line-height:1.45;
+}
+.faqList summary::after{
+  content:"+";
+  flex:0 0 auto;
+  color:var(--muted);
+  font-size:20px;
+  font-weight:500;
+  line-height:1;
+}
+.faqList details[open] summary::after{
+  content:"–";
+}
+.faqList p{
+  max-width:72ch;
+}
+@media(max-width:860px){
+  .faqList{
+    grid-template-columns:1fr;
+  }
+}
+
+.faqList summary{list-style:none}
+.faqList summary::-webkit-details-marker{display:none}
