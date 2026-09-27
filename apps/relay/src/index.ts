@@ -139,6 +139,18 @@ export default {
     // Serve the OpenAI domain-verification challenge directly on both the
     // MCP hostname and the parent marketing hostname. OpenAI allows either
     // origin and the verifier should not need to follow redirects.
+    if (url.pathname === "/.well-known/openai-apps-challenge") {
+      if (!env.OPENAI_APPS_CHALLENGE) {
+        return new Response("Not configured", { status: 404 });
+      }
+      return new Response(env.OPENAI_APPS_CHALLENGE, {
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
     if (url.hostname === "remotearc.app" && (
       url.pathname === "/mcp" ||
       url.pathname.startsWith("/oauth/") ||
@@ -161,18 +173,6 @@ export default {
     ) {
       const canonical = new URL(url.pathname + url.search, env.PUBLIC_ORIGIN);
       return Response.redirect(canonical.toString(), 301);
-    }
-
-    if (url.pathname === "/.well-known/openai-apps-challenge") {
-      if (!env.OPENAI_APPS_CHALLENGE) {
-        return new Response("Not configured", { status: 404 });
-      }
-      return new Response(env.OPENAI_APPS_CHALLENGE, {
-        headers: {
-          "content-type": "text/plain; charset=utf-8",
-          "cache-control": "no-store",
-        },
-      });
     }
 
     if (url.pathname === "/health") {
