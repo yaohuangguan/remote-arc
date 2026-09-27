@@ -552,6 +552,15 @@ const aiClients = [
   { name: "Claude", icon: "/ai-anthropic.svg" },
 ] as const;
 
+const topologyAiClients = [
+  { name: "ChatGPT", icon: "/ai-openai.svg" },
+  { name: "Claude", icon: "/ai-anthropic.svg" },
+  { name: "Cursor", mark: "C" },
+  { name: "Gemini", mark: "✦" },
+  { name: "Grok", mark: "G" },
+  { name: "DeepSeek", mark: "DS" },
+] as const;
+
 function AiClientBadge({ name, icon, note }: { name: string; icon: string; note: string }) {
   return (
     <div className="aiClientBadge">
@@ -622,9 +631,18 @@ function Landing({ user }: { user?: User | null }) {
         <div className="heroArchitecture" aria-label={tr("How Remote Arc connects AI clients to your devices", "Remote Arc 如何连接 AI 客户端与设备")}>
           <div className="architectureLabel">{tr("YOUR AI", "你的 AI")}</div>
           <div className="architectureClients">
-            <div><img src={aiClients[0].icon} alt="" /><strong>{aiClients[0].name}</strong></div>
-            <div><img src={aiClients[1].icon} alt="" /><strong>{aiClients[1].name}</strong></div>
-            <div><span className="protocolMark">M</span><strong>{tr("Any MCP client", "任意 MCP 客户端")}</strong></div>
+            {topologyAiClients.map((client) => (
+              <div key={client.name}>
+                {"icon" in client
+                  ? <img src={client.icon} alt="" />
+                  : <span className="aiTextMark">{client.mark}</span>}
+                <strong>{client.name}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="architectureCompatibility">
+            <span className="protocolMark">M</span>
+            <strong>{tr("Any compatible Remote MCP client", "任意兼容 Remote MCP 的客户端")}</strong>
           </div>
 
           <div className="architectureArrow">

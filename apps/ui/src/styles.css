@@ -5394,3 +5394,353 @@ body{font-size:18px;line-height:1.6}
   background:#e7f5fa;
   color:#075985;
 }
+
+
+/* 0.3.13 visual pass: stronger public hierarchy + complete light-theme contrast */
+
+/* Homepage hierarchy */
+.landingFeatures article > span{
+  font-size:20px!important;
+  font-weight:800;
+  letter-spacing:.08em;
+  line-height:1;
+}
+.platformCapabilityIcon{
+  width:52px!important;
+  height:52px!important;
+  font-size:28px!important;
+  line-height:1!important;
+}
+.platformCapabilityGrid article{
+  grid-template-columns:60px minmax(0,1fr)!important;
+  gap:18px!important;
+}
+.platformCapabilityGrid small{
+  grid-column:2!important;
+}
+
+/* Hero topology: six named AI clients plus the generic MCP path */
+.architectureClients{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+.architectureClients .aiTextMark{
+  display:grid;
+  place-items:center;
+  width:34px;
+  height:34px;
+  flex:0 0 auto;
+  border:1px solid rgba(56,189,248,.20);
+  border-radius:10px;
+  background:#0d2535;
+  color:#7dd3fc;
+  font-size:13px;
+  font-weight:900;
+  letter-spacing:-.03em;
+}
+.architectureCompatibility{
+  width:max-content;
+  max-width:100%;
+  margin:10px auto 0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  color:#87a3ad;
+  font-size:12px;
+  font-weight:700;
+}
+.architectureCompatibility .protocolMark{
+  display:grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  border-radius:7px;
+  background:#0d2535;
+  color:#7dd3fc;
+  font-size:11px;
+  font-weight:900;
+}
+@media(min-width:1028px){
+  .heroArchitecture{
+    height:560px!important;
+  }
+  .heroArchitecture{
+    grid-template-rows:auto auto auto minmax(44px,.7fr) auto minmax(44px,.7fr) auto auto!important;
+  }
+  .architectureClients>div{
+    min-height:58px!important;
+  }
+}
+@media(max-width:720px){
+  .architectureClients{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  .architectureClients .aiTextMark{
+    width:26px;
+    height:26px;
+    font-size:11px;
+  }
+  .architectureCompatibility{
+    font-size:11px;
+  }
+}
+
+/* Public homepage light mode */
+:root[data-theme="light"] .heroArchitecture{
+  border:1px solid #d8e8ee;
+  background:linear-gradient(180deg,#f7fbfd,#eef7fa)!important;
+  box-shadow:0 20px 55px rgba(29,78,92,.08);
+}
+:root[data-theme="light"] .architectureLabel{
+  color:#46646e!important;
+}
+:root[data-theme="light"] .architectureClients>div{
+  border:1px solid #d8e8ee;
+  background:#fff!important;
+}
+:root[data-theme="light"] .architectureClients img{
+  filter:none!important;
+}
+:root[data-theme="light"] .architectureClients strong,
+:root[data-theme="light"] .architectureDevices strong{
+  color:#153640!important;
+}
+:root[data-theme="light"] .architectureClients .aiTextMark,
+:root[data-theme="light"] .architectureCompatibility .protocolMark{
+  border-color:#b9dce6;
+  background:#eaf6fa;
+  color:#075985;
+}
+:root[data-theme="light"] .architectureCompatibility{
+  color:#46646e;
+}
+:root[data-theme="light"] .architectureArrow span{
+  color:#0284c7!important;
+}
+:root[data-theme="light"] .architectureArrow small{
+  color:#486873!important;
+}
+:root[data-theme="light"] .architectureCore{
+  border:1px solid #cfe4ea;
+  background:#fff!important;
+  box-shadow:0 12px 30px rgba(29,78,92,.08);
+}
+:root[data-theme="light"] .architectureCore strong{
+  color:#102f39!important;
+}
+:root[data-theme="light"] .architectureCore small{
+  color:#55737c!important;
+}
+:root[data-theme="light"] .architectureDevices span{
+  color:#036b8d!important;
+}
+:root[data-theme="light"] .trustRail{
+  border-color:#d8e8ee;
+}
+:root[data-theme="light"] .trustRail>span,
+:root[data-theme="light"] .trustRail small{
+  color:#55737c;
+}
+:root[data-theme="light"] .trustRail>div{
+  color:#173944;
+}
+:root[data-theme="light"] .landingFeatures article>span{
+  color:#036b8d!important;
+}
+:root[data-theme="light"] .platformCapabilityIcon{
+  color:#036b8d!important;
+}
+:root[data-theme="light"] .platformCapabilityGrid strong{
+  color:#173944!important;
+}
+:root[data-theme="light"] .platformCapabilityGrid p,
+:root[data-theme="light"] .platformCapabilityGrid small{
+  color:#55737c!important;
+}
+:root[data-theme="light"] .platformCapabilityGrid,
+:root[data-theme="light"] .platformCapabilityGrid article,
+:root[data-theme="light"] .platformFootnote{
+  border-color:#d8e8ee!important;
+}
+
+/* Connect AI: remove leftover dark-theme text on white surfaces */
+:root[data-theme="light"] .connectPageHeader h1,
+:root[data-theme="light"] .connectPanelHeader h2,
+:root[data-theme="light"] .connectSectionHeading h2,
+:root[data-theme="light"] .connectTryCopy h2,
+:root[data-theme="light"] .connectClientIdentity h3{
+  color:#102f39!important;
+}
+:root[data-theme="light"] .connectPageHeader p,
+:root[data-theme="light"] .connectPanelHeader p,
+:root[data-theme="light"] .connectSectionHeading>p,
+:root[data-theme="light"] .connectClientCard>p,
+:root[data-theme="light"] .connectTimeline p,
+:root[data-theme="light"] .connectTryCopy p,
+:root[data-theme="light"] .clientHint{
+  color:#4f6e78!important;
+}
+:root[data-theme="light"] .connectReadyPill{
+  border-color:#9bd4ad;
+  background:#edf9f0;
+  color:#166534;
+}
+:root[data-theme="light"] .connectSecurityBadge{
+  background:#eaf6fa;
+  color:#075985;
+}
+:root[data-theme="light"] .connectHealthRow{
+  border-color:#d8e8ee;
+}
+:root[data-theme="light"] .connectHealthRow span{
+  color:#4f6e78;
+}
+:root[data-theme="light"] .connectHealthRow strong{
+  color:#173944;
+}
+:root[data-theme="light"] .clientState{
+  background:#eef3f5;
+  color:#526f78;
+}
+:root[data-theme="light"] .clientState.recommended{
+  background:#e8f5fb;
+  color:#075985;
+}
+:root[data-theme="light"] .connectMiniSteps span{
+  color:#294f5b;
+}
+:root[data-theme="light"] .connectMiniSteps b,
+:root[data-theme="light"] .timelineNumber{
+  border-color:#b9dce6;
+  background:#eaf6fa;
+  color:#075985;
+}
+:root[data-theme="light"] .connectTimeline strong{
+  color:#173944;
+}
+:root[data-theme="light"] .connectClientFooter,
+:root[data-theme="light"] .connectHealthRow{
+  border-color:#d8e8ee;
+}
+:root[data-theme="light"] .connectPromptGrid code{
+  color:#075985!important;
+}
+
+/* Devices: complete light-theme text pass */
+:root[data-theme="light"] .devicesPageHeader h1{
+  color:#102f39!important;
+}
+:root[data-theme="light"] .devicesPageHeader p,
+:root[data-theme="light"] .deviceStatsGrid span,
+:root[data-theme="light"] .deviceStatsGrid small,
+:root[data-theme="light"] .deviceCard.managed .deviceIdentity span,
+:root[data-theme="light"] .deviceStatusStrip span,
+:root[data-theme="light"] .deviceAccessSummary p,
+:root[data-theme="light"] .devicePresetRow>span,
+:root[data-theme="light"] .deviceToolDetails summary span{
+  color:#4f6e78!important;
+}
+:root[data-theme="light"] .deviceSearch{
+  background:#fff;
+}
+:root[data-theme="light"] .deviceSearch>span{
+  color:#4d6b75;
+}
+:root[data-theme="light"] .deviceSearch input::placeholder{
+  color:#718b94;
+}
+:root[data-theme="light"] .deviceFilters{
+  background:#fff;
+}
+:root[data-theme="light"] .deviceFilters button{
+  color:#4d6b75;
+}
+:root[data-theme="light"] .deviceFilters button span{
+  background:#edf4f6;
+  color:#55737c;
+}
+:root[data-theme="light"] .deviceFilters button.active span{
+  background:#ccebf3;
+  color:#075985;
+}
+:root[data-theme="light"] .deviceStatusStrip>div+div{
+  border-color:#d8e8ee;
+}
+:root[data-theme="light"] .deviceToolChips span{
+  border-color:#d4e5ea;
+  background:#f4f9fb;
+  color:#315c67;
+}
+:root[data-theme="light"] .deviceToolDetails{
+  border-color:#d8e8ee;
+}
+:root[data-theme="light"] .deviceToolDetails summary,
+:root[data-theme="light"] .deviceSafetyDetails summary,
+:root[data-theme="light"] .deviceProcessDetails>summary{
+  color:#294f5b!important;
+}
+
+/* Overview: complete light-theme text pass */
+:root[data-theme="light"] .overviewTopbar h1{
+  color:#102f39!important;
+}
+:root[data-theme="light"] .overviewTopbar p,
+:root[data-theme="light"] .statusCardHead,
+:root[data-theme="light"] .overviewStatusCard>small,
+:root[data-theme="light"] .quickActionList small,
+:root[data-theme="light"] .attentionList small,
+:root[data-theme="light"] .attentionClear small,
+:root[data-theme="light"] .overviewDeviceRow span,
+:root[data-theme="light"] .overviewDeviceMeta,
+:root[data-theme="light"] .activityItem span{
+  color:#4f6e78!important;
+}
+:root[data-theme="light"] .overviewStatusCard.endpoint code{
+  color:#075985!important;
+}
+:root[data-theme="light"] .overviewStatusCard.primary{
+  border-color:#b9ddc4;
+  background:linear-gradient(180deg,#f0faf3,#fff);
+}
+:root[data-theme="light"] .miniUsageBar{
+  background:#e4eef1;
+}
+:root[data-theme="light"] .quickActionList button,
+:root[data-theme="light"] .attentionList button,
+:root[data-theme="light"] .attentionClear,
+:root[data-theme="light"] .overviewDeviceRow{
+  border-color:#e0ecef;
+  background:#f8fbfc;
+}
+:root[data-theme="light"] .quickActionList button:hover,
+:root[data-theme="light"] .attentionList button:hover,
+:root[data-theme="light"] .overviewDeviceRow:hover{
+  border-color:#acd3de;
+  background:#eef7fa;
+}
+:root[data-theme="light"] .quickActionList button>span{
+  background:#eaf6fa;
+  color:#075985;
+}
+:root[data-theme="light"] .overviewDeviceRow strong,
+:root[data-theme="light"] .activityItem strong,
+:root[data-theme="light"] .activityEmpty strong{
+  color:#173944!important;
+}
+:root[data-theme="light"] .privacyPill{
+  border-color:#cfe2e8;
+  background:#f1f7f9;
+  color:#315c67;
+}
+
+/* Shared dashboard light-mode labels and headings */
+:root[data-theme="light"] .appFrame .eyebrow{
+  color:#52717b;
+}
+:root[data-theme="light"] .appFrame .pageHeader h1,
+:root[data-theme="light"] .appFrame .blockHeader h2{
+  color:#102f39;
+}
+:root[data-theme="light"] .appFrame .pageHeader p{
+  color:#4f6e78;
+}
