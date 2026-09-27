@@ -1423,15 +1423,15 @@ function Landing({ user }: { user?: User | null }) {
         <div className="sectionIntro splitIntro">
           <div>
             <span className="eyebrow">{tr("SEE IT IN ACTION", "看看实际效果")}</span>
-            <h2>{tr("See setup and device management in motion.", "看看安装与设备管理的真实流程。")}</h2>
+            <h2>{tr("From a phone request to a real computer action.", "从手机上的一句话，到电脑上的真实操作。")}</h2>
           </div>
           <p>{tr(
-            "Two short walkthroughs show the current product: manage a paired device from the mobile dashboard, and use the manual MCP setup path for early access before the public plugin listing is live.",
-            "两段短演示展示当前真实产品流程：在手机端 Dashboard 管理已配对设备，以及在公开插件上架前用于 Early Access 的手动 MCP 接入流程。"
+            "See how a request from ChatGPT on mobile reaches a paired computer, then watch the current manual MCP connection flow used before the public plugin listing is live.",
+            "先看手机 ChatGPT 的请求如何到达已配对电脑，再看公开插件上架前当前使用的手动 MCP 连接流程。"
           )}</p>
         </div>
         <div className="demoGrid">
-          <article className="demoCard mobileScenarioCard">
+          <article className="mobileScenarioPanel">
             <div className="demoCopy mobileScenarioCopy">
               <div className="mobileScenarioHeader">
                 <span className="eyebrow">{tr("CHATGPT ON MOBILE", "手机上的 CHATGPT")}</span>
