@@ -1,14 +1,31 @@
+<div align="center">
+
+<img src="./assets/plugin-logo.svg" alt="Remote Arc" width="92" />
+
 # Remote Arc
 
-Remote Arc securely connects AI clients such as ChatGPT, Claude, and Codex to
-computers you explicitly pair.
+**Go beyond chat. Give your AI controlled access to the computers you already own.**
 
-It uses the open Model Context Protocol (MCP) for interoperability, Cloudflare
-for the hosted control plane, and Remote Arc's own native execution core on the
-device.
+Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients to Windows, macOS, and Linux computers you explicitly pair — without exposing a public port or requiring a VPN.
 
-Remote Arc does **not** depend on Desktop Commander or another computer-control
-MCP server.
+[Website](https://remotearc.app) · [Dashboard](https://mcp.remotearc.app) · [Remote MCP](https://mcp.remotearc.app/mcp) · [Security](./SECURITY.md)
+
+</div>
+
+<p align="center">
+  <a href="https://remotearc.app">
+    <img src="./docs/assets/homepage.png" alt="Remote Arc homepage" width="100%" />
+  </a>
+</p>
+
+## Why Remote Arc
+
+- **Read-only by default** — newly paired devices start with safe inspection capabilities.
+- **Per-device skill controls** — independently enable file edits, terminal execution, process controls, and recovery.
+- **Outbound-only connectivity** — no public IP, VPN, router port forwarding, or inbound listener on your computer.
+- **Local safety boundaries** — workspace scope, protected sensitive paths, local undo, and a terminal Safety Guard.
+- **Open MCP interoperability** — one OAuth-protected Remote MCP endpoint for supported AI clients.
+- **Native execution core** — Remote Arc owns its filesystem, process, and terminal execution path rather than proxying another computer-control MCP server.
 
 ## Quick start
 
@@ -24,85 +41,41 @@ Then connect your MCP client to:
 https://mcp.remotearc.app/mcp
 ```
 
-Dashboard:
-
-```text
-https://remotearc.app
-```
-
-The device connection is outbound-only. No public IP, VPN, router port
-forwarding, git clone, or manual token copy is required.
+The browser pairing flow binds that computer to your Remote Arc account. From there, your AI client can only use capabilities currently allowed for that specific device.
 
 ## User flow
 
-```text
-remotearc.app
-    |
-    v
-Sign in with Google
-    |
-    v
-Add device
-    |
-    v
-npx remotelink
-    |
-    v
-Browser opens matching pairing code
-    |
-    v
-Authorize device
-    |
-    v
-Device appears in dashboard
-    |
-    v
-Connect https://mcp.remotearc.app/mcp to your AI client
-    |
-    v
-Use natural language to work with the paired computer
+```mermaid
+flowchart LR
+    A["Sign in at remotearc.app"] --> B["Add device"]
+    B --> C["Run npx remotelink"]
+    C --> D["Approve matching pairing code"]
+    D --> E["Device appears in Remote Arc"]
+    E --> F["Connect your AI client via OAuth"]
+    F --> G["Use permitted tools on the paired computer"]
 ```
 
 ## Architecture
 
-```text
-ChatGPT / Claude / Codex
-          |
-          | MCP + OAuth 2.1 / PKCE
-          v
-https://mcp.remotearc.app/mcp
-          |
-          v
-Cloudflare Worker
-  |
-  +-- OAuth / Google sign-in
-  +-- Device pairing API
-  +-- MCP routing
-  +-- Usage / audit metadata
-  +-- D1 control-plane database
-          |
-          v
-Per-user Durable Object
-          |
-          | outbound WebSocket
-          v
-Remote Arc CLI / Agent
-          |
-          v
-@remotearc/execution-core
-  |
-  +-- filesystem
-  +-- process inspection
-  +-- terminal execution
-  +-- Local Undo
-  +-- Safety Guard
-          |
-          v
-Windows / macOS / Linux
+```mermaid
+flowchart TD
+    AI["ChatGPT · Claude · Codex · Cursor<br/>or another MCP client"]
+    MCP["Remote Arc MCP<br/>mcp.remotearc.app/mcp"]
+    CF["Cloudflare Worker<br/>OAuth · pairing · routing · usage"]
+    DO["Per-user Durable Object"]
+    AGENT["Remote Arc CLI / Agent"]
+    CORE["@remotearc/execution-core<br/>filesystem · processes · terminal · undo"]
+    DEVICE["Windows · macOS · Linux"]
+
+    AI -->|"MCP + OAuth 2.1 / PKCE"| MCP
+    MCP --> CF
+    CF --> DO
+    DO -->|"encrypted outbound WebSocket"| AGENT
+    AGENT --> CORE
+    CORE --> DEVICE
 ```
 
-The cloud relay authorizes and routes requests. The local execution core
-performs OS-level work on the paired device.
+The hosted relay authenticates and routes requests. OS-level operations execute on the paired device, subject to the device's saved tool policy and local safety controls.
 
 ## Monorepo
 
@@ -404,8 +377,7 @@ not unnecessarily consume the Workers request quota.
 
 ## Remote MCP tools
 
-Hosted MCP currently exposes device discovery plus the permitted local
-capabilities:
+Hosted MCP currently exposes 13 user-facing tools. Availability is still filtered by the selected device's policy and live capabilities:
 
 ```text
 list_devices
@@ -414,10 +386,13 @@ list_directory
 read_file
 get_file_info
 list_processes
+start_process
+process_status
+process_output
+stop_process
 write_file
 edit_block
 undo_last_change
-start_process
 ```
 
 Before a device call is forwarded, the relay verifies:
