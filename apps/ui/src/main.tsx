@@ -318,6 +318,10 @@ function PublicHeader({ user }: { user?: User | null }) {
                 <strong>{tr("Technical resources", "技术资源")}</strong>
                 <small>{tr("Architecture, security and implementation", "架构、安全与实现细节")}</small>
               </a>
+              <a href={MARKETING_ORIGIN + "/use-cases"}>
+                <strong>{tr("Use cases", "使用场景")}</strong>
+                <small>{tr("Real workflows with files, code and terminals", "文件、代码与终端的真实工作流")}</small>
+              </a>
               <a href={MARKETING_ORIGIN + "/docs/mcp"}>
                 <strong>{tr("Docs", "文档")}</strong>
                 <small>{tr("Remote MCP setup and reference", "Remote MCP 配置与参考")}</small>
@@ -1429,29 +1433,35 @@ function Landing({ user }: { user?: User | null }) {
         <div className="demoGrid">
           <article className="demoCard">
             <div className="demoMedia">
-              <img src="/demos/mobile-typing.webp" alt={tr("Remote Arc mobile natural language command demo", "Remote Arc 手机自然语言操作演示")} loading="lazy" />
+              <video autoPlay muted loop playsInline preload="metadata" poster="/demos/mobile-command-demo-poster.webp" aria-label={tr("Remote Arc mobile natural language command demo", "Remote Arc 手机自然语言操作演示")}>
+                <source src="/demos/mobile-command-demo.webm" type="video/webm" />
+                <source src="/demos/mobile-command-demo.mp4" type="video/mp4" />
+              </video>
               <span className="demoBadge">{tr("MOBILE", "手机")}</span>
             </div>
             <div className="demoCopy">
               <span className="eyebrow">{tr("MOBILE DASHBOARD", "移动端控制台")}</span>
-              <h3>{tr("Manage your paired devices from iPhone.", "在 iPhone 上管理已配对设备。")}</h3>
+              <h3>{tr("Ask from your phone. Let Remote Arc do the work.", "在手机上说一句，让 Remote Arc 去执行。")}</h3>
               <p>{tr(
-                "The Remote Arc dashboard is responsive on mobile, so you can review status, rename devices and manage access from Safari.",
-                "Remote Arc Dashboard 已适配手机端，可直接在 Safari 查看在线状态、重命名设备并管理访问。"
+                "Type a natural-language task from your phone and Remote Arc routes it to the paired computer you choose, then returns the result.",
+                "在手机上输入自然语言任务，Remote Arc 会把它路由到你选择的已配对电脑，再把执行结果返回给你。"
               )}</p>
             </div>
           </article>
           <article className="demoCard">
             <div className="demoMedia">
-              <img src="/demos/add-mcp-app.webp" alt={tr("Adding Remote Arc as an MCP app demo", "把 Remote Arc 添加为 MCP 应用的演示")} loading="lazy" />
+              <video autoPlay muted loop playsInline preload="metadata" poster="/demos/mcp-connect-demo-poster.webp" aria-label={tr("Connecting Remote Arc as a Remote MCP app demo", "把 Remote Arc 连接为 Remote MCP 应用的演示")}>
+                <source src="/demos/mcp-connect-demo.webm" type="video/webm" />
+                <source src="/demos/mcp-connect-demo.mp4" type="video/mp4" />
+              </video>
               <span className="demoBadge">MCP</span>
             </div>
             <div className="demoCopy">
-              <span className="eyebrow">{tr("EARLY ACCESS", "EARLY ACCESS")}</span>
-              <h3>{tr("Manual MCP setup for developers and testers.", "开发者与测试用户的手动 MCP 接入。")}</h3>
+              <span className="eyebrow">{tr("REMOTE MCP", "REMOTE MCP")}</span>
+              <h3>{tr("Connect your AI client once.", "一次连接你的 AI 客户端。")}</h3>
               <p>{tr(
-                "Before the public listing is live, use ChatGPT Settings → Apps → Create, paste the production MCP endpoint, Scan Tools, complete OAuth, then create the app.",
-                "公开插件正式上线前，可在 ChatGPT 的 Settings → Apps → Create 中填写生产 MCP 地址，Scan Tools，完成 OAuth 后创建应用。"
+                "Paste the Remote Arc MCP endpoint, complete OAuth, and the same paired computers become available through the tools you have allowed.",
+                "填写 Remote Arc MCP 地址并完成 OAuth，同一批已配对电脑就能按照你允许的工具权限提供给 AI 客户端使用。"
               )}</p>
               <code className="demoEndpoint">{MCP_ENDPOINT}</code>
             </div>
@@ -1637,7 +1647,68 @@ function Landing({ user }: { user?: User | null }) {
           <h2>{tr("Connect one machine in minutes.", "几分钟内，让第一台电脑上线。")}</h2>
           <p>{tr("Start with 10,000 hosted tool calls each month, then add paid usage when you need more.", "每月先用 10,000 次免费托管调用，需要更多时直接充值扩容。")}</p>
         </div>
-        <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : "#install"}>{user ? tr("Open dashboard", "打开控制台") : tr("Install Remote Arc", "安装 Remote Arc")}</a>
+        <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : "/install/chatgpt"}>{user ? tr("Open dashboard", "打开控制台") : tr("Install Remote Arc", "安装 Remote Arc")}</a>
+      </section>
+    </PublicLayout>
+  );
+}
+
+
+function UseCasesPage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  const cases = [
+    [tr("Fix code on the machine where it actually runs", "直接在真正运行代码的电脑上修复问题"), tr("Let your AI inspect a repository, read logs, edit a targeted block and run the checks on the paired development machine.", "让 AI 在已配对开发机上检查仓库、读取日志、定向修改代码并运行测试。"), "/chatgpt-computer-access"],
+    [tr("Turn a phone conversation into a computer action", "把手机上的一句话变成电脑上的真实操作"), tr("Ask from ChatGPT or another client on mobile, then route the task to your Mac, Windows PC or Linux host.", "在手机上的 ChatGPT 或其他客户端发出请求，再把任务路由到 Mac、Windows 或 Linux 设备。"), "/blogs/powerful-ai-access-without-exposing-your-computer"],
+    [tr("Inspect files and processes without full shell access", "不开放完整 Shell，也能检查文件与进程"), tr("Keep a device read-oriented while still letting AI inspect project files, metadata and running processes.", "保持设备以只读能力为主，同时允许 AI 查看项目文件、元数据和运行中的进程。"), "/resources"],
+    [tr("Run controlled terminal workflows remotely", "远程执行受控终端工作流"), tr("Enable terminal execution only on the machines that need it, while other paired devices keep a narrower skill set.", "只在真正需要的设备上开启终端执行，其他已配对设备继续保持更窄的技能范围。"), "/docs/mcp"],
+    [tr("Use the same computers from different AI clients", "让不同 AI 客户端复用同一批电脑"), tr("Pair the computer once, then reuse its device identity and permissions from ChatGPT, Claude, Cursor and compatible MCP clients.", "电脑只需要配对一次，之后 ChatGPT、Claude、Cursor 与兼容 MCP 客户端都可以复用设备身份和权限。"), "/install/claude"],
+  ];
+  return (
+    <PublicLayout user={user}>
+      <section className="publicHero compactHero seoLandingHero">
+        <span className="eyebrow">{tr("USE CASES", "使用场景")}</span>
+        <h1>{tr("Let AI work where your files and tools already live.", "让 AI 直接在你的文件和工具所在的电脑上工作。")}</h1>
+        <p>{tr("Remote Arc is most useful when the job depends on a real machine: its repository, filesystem, processes, terminal and local environment.", "当任务真正依赖一台现实中的电脑——它的仓库、文件系统、进程、终端和本地环境——Remote Arc 才最有价值。")}</p>
+      </section>
+      <section className="useCaseRows">
+        {cases.map(([title, body, href], index) => (
+          <a href={href} key={title}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <div><h2>{title}</h2><p>{body}</p></div>
+            <b>→</b>
+          </a>
+        ))}
+      </section>
+      <section className="ctaStrip">
+        <div><span className="eyebrow">CHATGPT</span><h2>{tr("Start with the client you already use.", "先从你已经在用的客户端开始。")}</h2><p>{tr("Pair one computer, connect Remote MCP, then expand permissions only when the workflow needs them.", "先配对一台电脑并连接 Remote MCP，只有工作流真正需要时再增加权限。")}</p></div>
+        <a className="primaryButton" href="/install/chatgpt">{tr("Install for ChatGPT", "为 ChatGPT 安装")} →</a>
+      </section>
+    </PublicLayout>
+  );
+}
+
+function ChatGptComputerAccessPage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  return (
+    <PublicLayout user={user}>
+      <section className="publicHero compactHero seoLandingHero">
+        <span className="eyebrow">CHATGPT + REMOTE ARC</span>
+        <h1>{tr("Give ChatGPT access to your computer — without exposing the computer itself.", "让 ChatGPT 使用你的电脑，但不把电脑本身暴露出去。")}</h1>
+        <p>{tr("Remote Arc connects ChatGPT to Windows, macOS and Linux through an OAuth-protected Remote MCP endpoint and an outbound-only device connection.", "Remote Arc 通过受 OAuth 保护的 Remote MCP 与仅出站的设备连接，把 ChatGPT 连接到 Windows、macOS 和 Linux。")}</p>
+        <div className="heroActions"><a className="primaryButton" href="/install/chatgpt">{tr("Install Remote Arc for ChatGPT", "为 ChatGPT 安装 Remote Arc")} →</a><a className="ghostButton" href="/docs/mcp">{tr("Read the MCP docs", "查看 MCP 文档")}</a></div>
+      </section>
+      <section className="seoSteps">
+        <article><span>01</span><h2>{tr("Pair your computer", "配对电脑")}</h2><p>{tr("Run one local command and approve the pairing in your Remote Arc account. No public IP or inbound port is required.", "运行一条本地命令并在 Remote Arc 账户中确认配对，无需公网 IP 或入站端口。")}</p></article>
+        <article><span>02</span><h2>{tr("Connect ChatGPT through MCP", "通过 MCP 连接 ChatGPT")}</h2><p>{tr("Use the Remote Arc MCP endpoint and complete OAuth. ChatGPT receives tools, not a shared machine password.", "使用 Remote Arc MCP 地址并完成 OAuth。ChatGPT 获得的是工具能力，而不是一份共享的电脑密码。")}</p></article>
+        <article><span>03</span><h2>{tr("Choose what this device can do", "选择这台设备可以做什么")}</h2><p>{tr("Start read-only, add file editing when needed, and enable terminal execution only on devices where it is appropriate.", "默认从只读开始，需要时增加文件编辑，并只在合适的设备上开启终端执行。")}</p></article>
+      </section>
+      <section className="faqSection">
+        <div className="sectionIntro"><span className="eyebrow">FAQ</span><h2>{tr("Common questions about ChatGPT computer access.", "关于 ChatGPT 访问电脑的常见问题。")}</h2></div>
+        <div className="faqList">
+          <details><summary>{tr("Does Remote Arc expose a port on my computer?", "Remote Arc 会在我的电脑上暴露端口吗？")}</summary><p>{tr("No. The local agent creates an outbound connection to the hosted control plane.", "不会。本地 Agent 主动向托管控制面建立出站连接。")}</p></details>
+          <details><summary>{tr("Can I keep a computer read-only?", "可以让某台电脑保持只读吗？")}</summary><p>{tr("Yes. Tool availability is configured per device, so terminal and write tools can remain disabled.", "可以。工具能力按设备配置，因此可以一直关闭终端和写入类工具。")}</p></details>
+          <details><summary>{tr("Do I have to use only ChatGPT?", "只能使用 ChatGPT 吗？")}</summary><p>{tr("No. The same Remote Arc endpoint can also be used by Claude, Cursor and compatible Remote MCP clients.", "不是。同一个 Remote Arc Endpoint 也可以被 Claude、Cursor 与兼容 Remote MCP 的客户端使用。")}</p></details>
+        </div>
       </section>
     </PublicLayout>
   );
@@ -4097,6 +4168,8 @@ function App() {
     );
   }
 
+  if (location.pathname === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
   if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
