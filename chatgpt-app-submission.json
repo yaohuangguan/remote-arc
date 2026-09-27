@@ -1,0 +1,236 @@
+{
+  "$schema": "https://developers.openai.com/plugins/schemas/chatgpt-app-submission.v1.json",
+  "schema_version": 1,
+  "app_info": {
+    "display_name": "Remote Arc",
+    "subtitle": "Secure access to your devices",
+    "description": "Remote Arc securely connects ChatGPT and Codex to Windows, macOS, and Linux computers that the user explicitly pairs. It can list paired devices, inspect directories and files, read process information, run terminal commands when enabled, modify files, manage Remote Arc background processes, and restore supported local file edits. Each device has an independent revocable credential and per-device tool policy. Remote Arc uses an OAuth-protected Universal Remote MCP endpoint and an outbound-only device connection. Use it only with computers, files, accounts, and services you own or are authorized to administer.",
+    "category": "DEVELOPER_TOOLS"
+  },
+  "tools": {
+    "list_devices": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads account-scoped paired-device metadata and online state without changing any device or account state.",
+        "open_world_justification": "Only reads Remote Arc control-plane metadata for devices owned by the authenticated user; it does not access public internet services.",
+        "destructive_justification": "Does not modify, delete, overwrite, stop, execute, or otherwise change user or external state."
+      }
+    },
+    "device_tools": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads the enabled and currently available Remote Arc tool list for one device owned by the authenticated user.",
+        "open_world_justification": "The result is derived from Remote Arc device policy and capability metadata rather than external public services.",
+        "destructive_justification": "Does not change the device policy or invoke any device capability."
+      }
+    },
+    "list_directory": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Retrieves a directory listing from a paired computer without changing filesystem contents.",
+        "open_world_justification": "Operates on the user's private paired computer and does not itself contact or alter public internet services.",
+        "destructive_justification": "Only enumerates files and directories and does not write, move, or delete them."
+      }
+    },
+    "read_file": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads file contents from a paired computer without modifying the file.",
+        "open_world_justification": "Reads data from the user's private paired computer rather than from a public or third-party internet service.",
+        "destructive_justification": "Does not write, overwrite, delete, or otherwise mutate the requested file."
+      }
+    },
+    "get_file_info": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads metadata for a file or directory without altering the filesystem.",
+        "open_world_justification": "The metadata comes from the user's private paired computer and no public internet side effect is performed.",
+        "destructive_justification": "Only inspects metadata and does not modify file or directory state."
+      }
+    },
+    "list_processes": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads the running-process list from a paired computer without starting, stopping, or modifying processes.",
+        "open_world_justification": "Process information is obtained from the user's private device and the tool does not access external services.",
+        "destructive_justification": "Does not terminate, signal, start, or otherwise change a process."
+      }
+    },
+    "start_process": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Runs an arbitrary terminal command, so it can change local system state and is not read-only.",
+        "open_world_justification": "A terminal command may access or modify public internet services, for example by calling APIs, pushing code, deploying software, or publishing packages.",
+        "destructive_justification": "Commands can overwrite or delete local data, change repositories or environments, stop services, or cause irreversible external side effects; Remote Arc therefore treats this tool as consequential."
+      }
+    },
+    "process_status": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads status metadata for a Remote Arc-managed background process without changing that process.",
+        "open_world_justification": "Reads process state from the user's paired computer and does not itself contact external services.",
+        "destructive_justification": "Does not start, stop, signal, or mutate the managed process."
+      }
+    },
+    "process_output": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads captured stdout and stderr from a Remote Arc-managed background process without changing the process.",
+        "open_world_justification": "Reads output already available on the paired computer and performs no public internet action itself.",
+        "destructive_justification": "Does not start, stop, signal, or modify the process or its output."
+      }
+    },
+    "stop_process": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Stops a running Remote Arc-managed process and its child process tree, so it changes local system state.",
+        "open_world_justification": "The tool acts on a process running on the user's paired computer; it does not directly target a public internet service.",
+        "destructive_justification": "Stopping a process can interrupt work, terminate builds or servers, lose in-memory state, or leave operations incomplete."
+      }
+    },
+    "write_file": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Writes or appends file contents on the user's paired computer, so it changes local state.",
+        "open_world_justification": "The tool writes to the local filesystem on a paired private computer and does not directly act on an external internet service.",
+        "destructive_justification": "Rewrite mode can overwrite existing user data and append mode changes persistent file contents; supported clients may create a local undo snapshot, but mutation remains consequential."
+      }
+    },
+    "edit_block": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Performs targeted search-and-replace in a file on the paired computer, so it changes persistent local data.",
+        "open_world_justification": "The operation targets the private local filesystem and does not directly access or mutate a public internet service.",
+        "destructive_justification": "A text replacement can alter source code, configuration, or other persistent user data and may overwrite the prior contents."
+      }
+    },
+    "undo_last_change": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Restores the previous local file state from a Remote Arc undo snapshot, so it mutates the filesystem and is not read-only.",
+        "open_world_justification": "Restoration is performed only on the user's paired computer using a local snapshot and does not target external internet services.",
+        "destructive_justification": "The operation is specifically a recovery action that restores a prior Remote Arc-created file state and refuses unsafe restoration when the file has changed again, so it is not classified as destructive."
+      }
+    }
+  },
+  "test_cases": [
+    {
+      "description": "List the authenticated review account's paired devices and identify which are online.",
+      "user_prompt": "Show me my connected computers and tell me which ones are online.",
+      "file_attachment_urls": null,
+      "tools_triggered": "list_devices",
+      "expected_output": "The response should include the deterministic reviewer device named Review Desktop, identify it as Windows, and report its online status.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Inspect the tools available on the deterministic reviewer device.",
+      "user_prompt": "What Remote Arc tools are available on Review Desktop?",
+      "file_attachment_urls": null,
+      "tools_triggered": "list_devices, device_tools",
+      "expected_output": "The model should select Review Desktop from list_devices and return its review-safe enabled tools: list_directory, read_file, get_file_info, list_processes, and start_process.",
+      "expected_output_url": null
+    },
+    {
+      "description": "List files in the deterministic review filesystem.",
+      "user_prompt": "List the files in /review-demo on Review Desktop.",
+      "file_attachment_urls": null,
+      "tools_triggered": "list_devices, list_directory",
+      "expected_output": "The listing should include package.json, src, and README.md.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Read package.json from the deterministic review filesystem and summarize scripts.",
+      "user_prompt": "Read /review-demo/package.json on Review Desktop and summarize the scripts.",
+      "file_attachment_urls": null,
+      "tools_triggered": "list_devices, read_file",
+      "expected_output": "The model should identify the test script as vitest run.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Run the safe deterministic review test command.",
+      "user_prompt": "Run npm test on Review Desktop and summarize the result.",
+      "file_attachment_urls": null,
+      "tools_triggered": "list_devices, start_process",
+      "expected_output": "The deterministic fixture should report 2 passing test suites and 8 passing tests, and the model should summarize that the tests passed.",
+      "expected_output_url": null
+    }
+  ],
+  "negative_test_cases": [
+    {
+      "description": "Verify that a write capability disabled by per-device policy cannot be used.",
+      "user_prompt": "Write hello to /review-demo/notes.txt on Review Desktop.",
+      "file_attachment_urls": null,
+      "tools_triggered": "write_file",
+      "expected_output": "The request must not modify the fixture. The response should explain that write_file is disabled or unavailable for the review device.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Verify that the reviewer fixture refuses a dangerous terminal command outside its explicit safe allowlist.",
+      "user_prompt": "Run rm -rf / on Review Desktop.",
+      "file_attachment_urls": null,
+      "tools_triggered": "start_process",
+      "expected_output": "The command must not execute. The fixture should return an error explaining that only documented safe review commands are permitted.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Verify account and device isolation for an invalid or unowned device identifier.",
+      "user_prompt": "Read /review-demo/package.json from device id not-owned-by-reviewer.",
+      "file_attachment_urls": null,
+      "tools_triggered": "read_file",
+      "expected_output": "The request must be rejected before contacting a device, with an error such as device not found or revoked.",
+      "expected_output_url": null
+    }
+  ]
+}
