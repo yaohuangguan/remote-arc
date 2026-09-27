@@ -269,25 +269,43 @@ function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
 }
 function PublicHeader({ user }: { user?: User | null }) {
   const { tr } = useI18n();
+  const [showSignIn, setShowSignIn] = useState(false);
+  const returnTo = location.origin + location.pathname + location.search;
+
   return (
-    <header className="landingNav publicNav">
-      <Brand />
-      <nav className="publicNavLinks">
-        <a href="/#how-it-works">{tr("How it works", "如何使用")}</a>
-        <a href={MARKETING_ORIGIN + "/docs/mcp"}>{tr("MCP", "MCP")}</a>
-        <a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a>
-        <a href={MARKETING_ORIGIN + "/resources"}>{tr("Resources", "资源")}</a>
-        <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
-      </nav>
-      <div className="publicNavActions">
-        <ThemeSwitcher compact />
-        {user ? (
-          <a className="navDashboard" href={APP_ORIGIN + "/overview"}>{tr("Dashboard", "控制台")} <span>↗</span></a>
-        ) : (
-          <a className="navLogin installNavCta" href={MARKETING_ORIGIN + "/install/chatgpt"}>{tr("Install Remote Arc", "安装 Remote Arc")} <span>→</span></a>
-        )}
-      </div>
-    </header>
+    <>
+      <header className="landingNav publicNav">
+        <Brand />
+        <nav className="publicNavLinks">
+          <a href="/#how-it-works">{tr("How it works", "如何使用")}</a>
+          <a href={MARKETING_ORIGIN + "/docs/mcp"}>{tr("MCP", "MCP")}</a>
+          <a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a>
+          <a href={MARKETING_ORIGIN + "/resources"}>{tr("Resources", "资源")}</a>
+          <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
+        </nav>
+        <div className="publicNavActions">
+          <ThemeSwitcher compact />
+          {user ? (
+            <a className="navDashboard" href={APP_ORIGIN + "/overview"}>{tr("Dashboard", "控制台")} <span>↗</span></a>
+          ) : (
+            <button className="navLogin installNavCta" type="button" onClick={() => setShowSignIn(true)}>
+              {tr("Sign in", "登录")} <span>→</span>
+            </button>
+          )}
+        </div>
+      </header>
+      {showSignIn && (
+        <AuthProviderModal
+          returnTo={returnTo}
+          title={tr("Choose how to sign in.", "选择登录方式。")}
+          body={tr(
+            "Sign in to manage your Remote Arc account, paired computers and AI connections.",
+            "登录后管理你的 Remote Arc 账户、已配对电脑和 AI 连接。",
+          )}
+          onClose={() => setShowSignIn(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -814,11 +832,22 @@ function AuthProviderModal({
   onClose: () => void;
 }) {
   const { tr } = useI18n();
+  const absoluteReturnTo = (() => {
+    try {
+      return new URL(returnTo, location.origin).toString();
+    } catch {
+      return location.origin + "/";
+    }
+  })();
+
   const providers = [
     {
       id: "google",
       label: tr("Continue with Google", "使用 Google 继续"),
-      href: "/auth/google?return_to=" + encodeURIComponent(returnTo),
+      href:
+        MARKETING_ORIGIN +
+        "/auth/google?return_to=" +
+        encodeURIComponent(absoluteReturnTo),
       mark: "G",
     },
   ];
