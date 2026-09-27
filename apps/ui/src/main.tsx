@@ -1654,6 +1654,54 @@ function Landing({ user }: { user?: User | null }) {
 }
 
 
+
+const PLUGIN_DEMO_VIDEO_URL =
+  "https://assets.ps6.space/remote-arc/openai-plugin-demo/remote-arc-plugin-demo.mp4";
+
+function DemoPage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  return (
+    <PublicLayout user={user}>
+      <main className="pluginDemoPage">
+        <section className="pluginDemoIntro">
+          <span className="eyebrow">OPENAI PLUGIN DEMO</span>
+          <h1>{tr("Remote Arc in ChatGPT", "ChatGPT 中的 Remote Arc")}</h1>
+          <p>
+            {tr(
+              "A real end-to-end session: ChatGPT discovers a paired Mac, reads the demo project, runs its Node.js tests through Remote Arc, and returns the result.",
+              "一次真实的端到端演示：ChatGPT 发现已配对的 Mac，读取演示项目，通过 Remote Arc 运行 Node.js 测试，并返回结果。",
+            )}
+          </p>
+        </section>
+
+        <section className="pluginDemoVideoWrap" aria-label="Remote Arc plugin demonstration video">
+          <video
+            className="pluginDemoVideo"
+            controls
+            playsInline
+            preload="metadata"
+          >
+            <source src={PLUGIN_DEMO_VIDEO_URL} type="video/mp4" />
+            {tr(
+              "Your browser does not support HTML5 video.",
+              "你的浏览器不支持 HTML5 视频。",
+            )}
+          </video>
+        </section>
+
+        <div className="pluginDemoMeta">
+          <span>{tr("Recorded 27 Sep 2026", "录制于 2026 年 9 月 27 日")}</span>
+          <span aria-hidden="true">·</span>
+          <span>{tr("macOS · real Remote Arc connection", "macOS · 真实 Remote Arc 连接")}</span>
+          <span aria-hidden="true">·</span>
+          <a href={PLUGIN_DEMO_VIDEO_URL}>{tr("Open MP4 directly", "直接打开 MP4")}</a>
+        </div>
+      </main>
+    </PublicLayout>
+  );
+}
+
+
 function UseCasesPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const cases = [
@@ -4168,6 +4216,7 @@ function App() {
     );
   }
 
+  if (location.pathname === "/demo") return <DemoPage user={user === undefined ? null : user} />;
   if (location.pathname === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
   if (location.pathname === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
   if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
