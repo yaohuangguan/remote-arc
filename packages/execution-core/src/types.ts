@@ -2,6 +2,7 @@ export type ExecutionMode = "safe" | "developer" | "full" | "managed";
 
 export type ToolName =
   | "list_directory"
+  | "browse_directories"
   | "read_file"
   | "get_file_info"
   | "list_processes"
@@ -13,6 +14,7 @@ export type ToolName =
   | "start_process"
   | "process_status"
   | "process_output"
+  | "list_managed_processes"
   | "stop_process";
 
 export type JsonSchema = {

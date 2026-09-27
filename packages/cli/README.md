@@ -78,11 +78,12 @@ Remote Arc snapshots the previous local file state before supported
 `write_file` and `edit_block` operations. These snapshots stay under
 `~/.remotearc/undo` on the device and are never uploaded to Remote Arc Cloud.
 
-The `undo_last_change` skill restores the newest reversible Remote Arc file
-change. The dashboard can also list local undo metadata on demand and restore a
-specific action without uploading snapshot contents. Snapshots expire after 7
-days, use at most 200 MB in total, and files larger than 20 MB are not
-snapshotted.
+The `undo_last_change` skill controls whether an AI may invoke the newest
+reversible Remote Arc file change. Snapshot creation is a separate per-device
+Recovery setting in the dashboard. The dashboard can also list local undo
+metadata on demand and restore a specific action without uploading snapshot
+contents. Snapshots expire after 7 days, use at most 200 MB in total, and files
+larger than 20 MB are not snapshotted.
 
 Local Undo covers Remote Arc file writes only. It cannot reverse external side
 effects such as publishing a package, deploying cloud infrastructure, sending a
@@ -91,7 +92,9 @@ request to another service, or mutating a remote database.
 ## Workspace and sensitive-path policy
 
 The dashboard can configure allowed workspace roots, additional protected
-paths, and narrow sensitive-path exceptions per device. Sensitive-path
+paths, and narrow sensitive-path exceptions per device. Online devices also
+support a local directory picker so workspace roots can be selected without
+typing paths manually. Sensitive-path
 protection stays on by default for common credential locations and `.env`
 files; an exception bypasses only sensitive-path protection, not Workspace
 Scope.
@@ -112,7 +115,8 @@ the local execution core.
 Full mode also supports managed background processes. `start_process` can
 return a local process id, and `process_status`, `process_output`, and
 `stop_process` manage that process without introducing another execution
-backend.
+backend. The authenticated dashboard can list Remote Arc-managed jobs, inspect
+their captured output, and stop a running job on demand.
 
 ## Security
 
@@ -120,6 +124,8 @@ backend.
 - Raw device credentials are not stored in the hosted database.
 - Connections are initiated outbound from your computer.
 - MCP access uses OAuth 2.1 + PKCE.
+- Each AI OAuth authorization is shown separately as active, refreshable, or expired.
+- Revoking one AI authorization does not revoke paired computers or other AI grants.
 - Device access is scoped to the authenticated Remote Arc account.
 - You can revoke paired devices from the Remote Arc dashboard.
 - Supported file changes can be rolled back from local-only snapshots.

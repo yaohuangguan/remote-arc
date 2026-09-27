@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider, useI18n } from "./i18n.js";
 import { ThemeProvider, useTheme } from "./theme.js";
@@ -44,6 +44,33 @@ type UndoAction = {
   status: "ready" | "conflict" | "missing" | "legacy";
 };
 
+type DirectoryBrowser = {
+  path: string;
+  parent: string | null;
+  directories: Array<{
+    name: string;
+    path: string;
+    type: "directory" | "symlink";
+  }>;
+  protected_entries_omitted: number;
+  truncated: boolean;
+};
+
+type ManagedProcess = {
+  process_id: string;
+  pid: number | null;
+  command: string;
+  cwd: string | null;
+  status: "running" | "exited";
+  exit_code: number | null;
+  signal: string | null;
+  started_at: string;
+  ended_at: string | null;
+  duration_ms: number;
+  stdout_bytes: number;
+  stderr_bytes: number;
+};
+
 type Pairing = {
   user_code: string;
   device_name: string;
@@ -86,8 +113,22 @@ type SecurityGrant = {
   clientName: string;
   scopes: string[];
   authorizedAt: string;
+  lastTokenIssuedAt: string;
   accessExpiresAt: string;
   refreshExpiresAt: string | null;
+  tokenRows: number;
+  status: "active" | "refreshable" | "expired";
+};
+
+type DashboardDialog = {
+  kind: "notice" | "confirm" | "prompt";
+  title: string;
+  message: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  tone?: "default" | "danger";
+  placeholder?: string;
+  initialValue?: string;
 };
 
 type SecurityState = {
@@ -1030,6 +1071,18 @@ function Dashboard({
   const [undoByDevice, setUndoByDevice] = useState<Record<string, UndoAction[]>>({});
   const [undoLoading, setUndoLoading] = useState<string | null>(null);
   const [undoErrors, setUndoErrors] = useState<Record<string, string>>({});
+  const [processesByDevice, setProcessesByDevice] = useState<Record<string, ManagedProcess[]>>({});
+  const [processLoading, setProcessLoading] = useState<string | null>(null);
+  const [processErrors, setProcessErrors] = useState<Record<string, string>>({});
+  const [directoryPicker, setDirectoryPicker] = useState<{
+    device: Device;
+    browser: DirectoryBrowser | null;
+    loading: boolean;
+    error: string;
+  } | null>(null);
+  const [dialog, setDialog] = useState<DashboardDialog | null>(null);
+  const [dialogValue, setDialogValue] = useState("");
+  const dialogResolver = useRef<((value: boolean | string | null) => void) | null>(null);
   const [active, setActive] = useState<DashboardTab>(dashboardTabFromPath(location.pathname));
   useEffect(() => {
     const syncRoute = () => setActive(dashboardTabFromPath(location.pathname));
@@ -1051,6 +1104,69 @@ function Dashboard({
   const usage = status?.usage;
   const usagePct = usage?.limit ? Math.min(100, (usage.used / usage.limit) * 100) : 0;
 
+  function settleDialog(value: boolean | string | null) {
+    const resolve = dialogResolver.current;
+    dialogResolver.current = null;
+    setDialog(null);
+    if (resolve) resolve(value);
+  }
+
+  function showNotice(title: string, message: string) {
+    return new Promise<void>((resolve) => {
+      dialogResolver.current = () => resolve();
+      setDialogValue("");
+      setDialog({
+        kind: "notice",
+        title,
+        message,
+        confirmLabel: tr("Got it", "知道了"),
+      });
+    });
+  }
+
+  function askConfirm(
+    title: string,
+    message: string,
+    confirmLabel = tr("Continue", "继续"),
+    tone: "default" | "danger" = "default",
+  ) {
+    return new Promise<boolean>((resolve) => {
+      dialogResolver.current = (value) => resolve(value === true);
+      setDialogValue("");
+      setDialog({
+        kind: "confirm",
+        title,
+        message,
+        confirmLabel,
+        cancelLabel: tr("Cancel", "取消"),
+        tone,
+      });
+    });
+  }
+
+  function askPrompt(
+    title: string,
+    message: string,
+    initialValue = "",
+    placeholder = "",
+    confirmLabel = tr("Save", "保存"),
+  ) {
+    return new Promise<string | null>((resolve) => {
+      dialogResolver.current = (value) =>
+        resolve(typeof value === "string" ? value : null);
+      setDialogValue(initialValue);
+      setDialog({
+        kind: "prompt",
+        title,
+        message,
+        confirmLabel,
+        cancelLabel: tr("Cancel", "取消"),
+        placeholder,
+        initialValue,
+      });
+    });
+  }
+
   async function refreshSecurity() {
     const response = await fetch("/api/security");
     if (!response.ok) return;
@@ -1070,7 +1186,10 @@ function Dashboard({
         body: JSON.stringify({ paused }),
       });
       if (!response.ok) {
-        alert(tr("Could not update Remote MCP access.", "无法更新 Remote MCP 访问状态。"));
+        await showNotice(
+          tr("Remote MCP access was not updated", "Remote MCP 访问状态未更新"),
+          tr("The server did not accept this change. Your current access state has been left unchanged.", "服务器没有接受这次修改，当前访问状态保持不变。"),
+        );
         return;
       }
       await refreshSecurity();
@@ -1081,16 +1200,34 @@ function Dashboard({
   }
 
   async function revokeGrant(grant: SecurityGrant) {
-    if (!confirm(tr(
-      "Revoke " + grant.clientName + "? This AI client will need to authorize Remote Arc again.",
-      "撤销 " + grant.clientName + "？该 AI 客户端之后需要重新授权 Remote Arc。",
-    ))) return;
+    const shortId = grant.clientId.slice(0, 12) + "…";
+    const expired = grant.status === "expired";
+    const confirmed = await askConfirm(
+      expired
+        ? tr("Remove this expired authorization?", "移除这条已过期授权？")
+        : tr("Disconnect this " + grant.clientName + " authorization?", "断开这条 " + grant.clientName + " 授权？"),
+      expired
+        ? tr(
+            "Authorization " + shortId + " can no longer access Remote Arc. Removing it clears this expired grant from your account history. Your paired computers and other AI authorizations are not affected.",
+            "授权 " + shortId + " 已无法继续访问 Remote Arc。移除后只会清理这条已过期授权，不会影响已配对电脑或其他 AI 授权。",
+          )
+        : tr(
+            "Only authorization " + shortId + " will be revoked. The ChatGPT session using this grant will need to complete OAuth again. Your paired computers and other ChatGPT authorizations stay connected.",
+            "只会撤销授权 " + shortId + "。正在使用这条授权的 ChatGPT 之后需要重新完成 OAuth；已配对电脑以及其他 ChatGPT 授权不会受影响。",
+          ),
+      expired ? tr("Remove expired grant", "移除过期授权") : tr("Disconnect authorization", "断开此授权"),
+      "danger",
+    );
+    if (!confirmed) return;
 
     setSecurityBusy(true);
     try {
       const response = await fetch("/api/security/grants/" + encodeURIComponent(grant.clientId) + "/revoke", { method: "POST" });
       if (!response.ok) {
-        alert(tr("Could not revoke this AI connection.", "无法撤销这个 AI 连接。"));
+        await showNotice(
+          tr("Authorization was not revoked", "授权未撤销"),
+          tr("Remote Arc could not revoke this authorization. Nothing was disconnected.", "Remote Arc 无法撤销这条授权，当前连接没有发生变化。"),
+        );
         return;
       }
       await refreshSecurity();
@@ -1101,13 +1238,28 @@ function Dashboard({
   }
 
   async function revoke(deviceId: string) {
-    if (!confirm(tr("Revoke this device? It will need to pair again.", "撤销此设备？之后需要重新配对。"))) return;
+    const device = devices.find((item) => item.id === deviceId);
+    const confirmed = await askConfirm(
+      tr("Remove this computer from Remote Arc?", "从 Remote Arc 移除这台电脑？"),
+      tr(
+        (device?.name || "This computer") + " will lose its device credential and must be paired again before any AI can use it. This does not revoke your ChatGPT OAuth grants.",
+        (device?.name || "这台电脑") + " 的设备凭证会被撤销，之后必须重新配对才能继续被 AI 使用；这不会撤销 ChatGPT 的 OAuth 授权。",
+      ),
+      tr("Remove device", "移除设备"),
+      "danger",
+    );
+    if (!confirmed) return;
     await fetch("/api/devices/" + encodeURIComponent(deviceId) + "/revoke", { method: "POST" });
     await refreshAll();
   }
 
   async function rename(device: Device) {
-    const next = prompt(tr("Device name", "设备名称"), device.name)?.trim();
+    const next = (await askPrompt(
+      tr("Rename device", "重命名设备"),
+      tr("Choose the name shown throughout your Remote Arc dashboard.", "设置这台设备在 Remote Arc Dashboard 中显示的名称。"),
+      device.name,
+      tr("Device name", "设备名称"),
+    ))?.trim();
     if (!next || next === device.name) return;
     await fetch("/api/devices/" + encodeURIComponent(device.id) + "/rename", {
       method: "POST",
@@ -1128,7 +1280,10 @@ function Dashboard({
       body: JSON.stringify({ allowed_tools: allowedTools }),
     });
     if (!response.ok) {
-      alert(tr("Could not update tool access.", "无法更新工具权限。"));
+      await showNotice(
+        tr("Skill access was not updated", "技能权限未更新"),
+        tr("Remote Arc could not save this device skill policy. The previous permissions are still in effect.", "Remote Arc 无法保存这台设备的技能策略，之前的权限仍然生效。"),
+      );
       return false;
     }
     await refreshAll();
@@ -1136,10 +1291,18 @@ function Dashboard({
   }
 
   async function updateDeviceTools(device: Device, tool: string, enabled: boolean) {
-    if (enabled && tool === "start_process" && !confirm(tr(
-      "Enable terminal execution on " + device.name + "? This allows the connected AI to run commands that can modify files, software and external services.",
-      "在 " + device.name + " 上开启终端执行？这会允许已连接的 AI 运行可能修改文件、软件及外部服务的命令。",
-    ))) return;
+    if (enabled && tool === "start_process") {
+      const confirmed = await askConfirm(
+        tr("Enable terminal execution on " + device.name + "?", "在 " + device.name + " 上开启终端执行？"),
+        tr(
+          "This lets connected AI clients run shell commands that can modify files, software and external services. Safety Guard blocks a narrow set of catastrophic commands, but terminal access is not an OS sandbox.",
+          "这会允许已连接的 AI 运行可能修改文件、软件和外部服务的 Shell 命令。Safety Guard 会阻止少量灾难级命令，但终端权限并不是操作系统级沙箱。",
+        ),
+        tr("Enable terminal", "开启终端"),
+        "danger",
+      );
+      if (!confirmed) return;
+    }
     const advertised = device.available_tools || device.tools;
     const baseline = device.status === "online"
       ? advertised
@@ -1150,10 +1313,18 @@ function Dashboard({
   }
 
   async function applyDevicePreset(device: Device, preset: Exclude<DeviceAccessPreset, "custom">) {
-    if (preset === "full" && !confirm(tr(
-      "Switch " + device.name + " to Full Access? Full includes terminal execution and can perform destructive or irreversible operations.",
-      "将 " + device.name + " 切换为 Full Access？Full 包含终端执行能力，可能执行破坏性或不可逆操作。",
-    ))) return;
+    if (preset === "full") {
+      const confirmed = await askConfirm(
+        tr("Switch " + device.name + " to Full Access?", "将 " + device.name + " 切换为 Full Access？"),
+        tr(
+          "Full Access enables terminal execution and managed background processes. Commands may affect local files or external services and can include actions Local Undo cannot reverse.",
+          "Full Access 会开启终端执行和后台进程管理。命令可能影响本地文件或外部服务，其中部分操作无法通过 Local Undo 撤销。",
+        ),
+        tr("Enable Full Access", "开启 Full Access"),
+        "danger",
+      );
+      if (!confirmed) return;
+    }
     const next =
       preset === "safe"
         ? SAFE_DEVICE_TOOLS
@@ -1186,7 +1357,10 @@ function Dashboard({
     );
     if (!response.ok) {
       const payload = await response.json().catch(() => ({})) as { error?: string };
-      alert(payload.error || tr("Could not update device safety policy.", "无法更新设备安全策略。"));
+      await showNotice(
+        tr("Safety policy was not updated", "安全策略未更新"),
+        payload.error || tr("Remote Arc could not save this device safety policy.", "Remote Arc 无法保存这台设备的安全策略。"),
+      );
       return false;
     }
     await refreshAll();
@@ -1207,7 +1381,16 @@ function Dashboard({
       device.platform === "win32"
         ? "E:\\Coding"
         : "~/work";
-    const next = prompt(label + "\n" + tr("Example: ", "示例：") + example)?.trim();
+    const next = (await askPrompt(
+      label,
+      tr(
+        "Enter a local path on " + device.name + ". Example: " + example,
+        "输入 " + device.name + " 上的本地路径。示例：" + example,
+      ),
+      "",
+      example,
+      tr("Add path", "添加路径"),
+    ))?.trim();
     if (!next) return;
     const current = device[kind] || [];
     await saveDevicePolicy(device, {
@@ -1223,6 +1406,151 @@ function Dashboard({
     await saveDevicePolicy(device, {
       [kind]: (device[kind] || []).filter((item) => item !== value),
     });
+  }
+
+  async function browseDeviceDirectories(device: Device, path = "~") {
+    setDirectoryPicker((current) => ({
+      device,
+      browser: current?.device.id === device.id ? current.browser : null,
+      loading: true,
+      error: "",
+    }));
+    try {
+      const response = await fetch(
+        "/api/devices/" +
+          encodeURIComponent(device.id) +
+          "/directories?path=" +
+          encodeURIComponent(path),
+      );
+      const payload = await response.json().catch(() => ({})) as {
+        browser?: DirectoryBrowser;
+        error?: string;
+      };
+      if (!response.ok || !payload.browser) {
+        setDirectoryPicker({
+          device,
+          browser: null,
+          loading: false,
+          error:
+            payload.error ||
+            tr("Directory browsing is unavailable on this device.", "这台设备暂时无法浏览目录。"),
+        });
+        return;
+      }
+      setDirectoryPicker({
+        device,
+        browser: payload.browser,
+        loading: false,
+        error: "",
+      });
+    } catch {
+      setDirectoryPicker({
+        device,
+        browser: null,
+        loading: false,
+        error: tr("Could not reach this device.", "无法连接到这台设备。"),
+      });
+    }
+  }
+
+  async function addCurrentWorkspace() {
+    if (!directoryPicker?.browser) return;
+    const { device, browser } = directoryPicker;
+    const current = device.workspace_roots || [];
+    const saved = await saveDevicePolicy(device, {
+      workspace_roots: Array.from(new Set([...current, browser.path])),
+    });
+    if (saved) setDirectoryPicker(null);
+  }
+
+  async function loadManagedProcesses(device: Device) {
+    setProcessLoading(device.id);
+    setProcessErrors((current) => ({ ...current, [device.id]: "" }));
+    try {
+      const response = await fetch(
+        "/api/devices/" + encodeURIComponent(device.id) + "/processes",
+      );
+      const payload = await response.json().catch(() => ({})) as {
+        processes?: ManagedProcess[];
+        error?: string;
+      };
+      if (!response.ok) {
+        setProcessErrors((current) => ({
+          ...current,
+          [device.id]:
+            payload.error ||
+            tr("Managed processes are unavailable on this device.", "这台设备暂时不支持后台进程管理。"),
+        }));
+        return;
+      }
+      setProcessesByDevice((current) => ({
+        ...current,
+        [device.id]: payload.processes || [],
+      }));
+    } finally {
+      setProcessLoading((current) => (current === device.id ? null : current));
+    }
+  }
+
+  async function showManagedProcessOutput(device: Device, item: ManagedProcess) {
+    const response = await fetch(
+      "/api/devices/" +
+        encodeURIComponent(device.id) +
+        "/processes/" +
+        encodeURIComponent(item.process_id) +
+        "/output",
+    );
+    const payload = await response.json().catch(() => ({})) as {
+      process?: ManagedProcess & { stdout?: string; stderr?: string };
+      error?: string;
+    };
+    if (!response.ok || !payload.process) {
+      await showNotice(
+        tr("Process output is unavailable", "无法读取进程输出"),
+        payload.error || tr("Remote Arc could not read this process output.", "Remote Arc 无法读取这个后台进程的输出。"),
+      );
+      return;
+    }
+    const stdout = payload.process.stdout || "";
+    const stderr = payload.process.stderr || "";
+    const combined = [
+      stdout ? "stdout\n" + stdout : "",
+      stderr ? "stderr\n" + stderr : "",
+    ].filter(Boolean).join("\n\n");
+    await showNotice(
+      tr("Background process output", "后台进程输出"),
+      combined.slice(-12000) || tr("No output captured yet.", "当前还没有捕获到输出。"),
+    );
+  }
+
+  async function stopBackgroundProcess(device: Device, item: ManagedProcess) {
+    const confirmed = await askConfirm(
+      tr("Stop this background process?", "停止这个后台进程？"),
+      tr(
+        "Remote Arc will stop the managed process and its child process tree on " + device.name + ". This does not undo side effects the process may already have caused.",
+        "Remote Arc 会在 " + device.name + " 上停止这个后台进程及其子进程树；已经产生的副作用不会因此自动撤销。",
+      ),
+      tr("Stop process", "停止进程"),
+      "danger",
+    );
+    if (!confirmed) return;
+    const response = await fetch(
+      "/api/devices/" +
+        encodeURIComponent(device.id) +
+        "/processes/" +
+        encodeURIComponent(item.process_id) +
+        "/stop",
+      { method: "POST" },
+    );
+    const payload = await response.json().catch(() => ({})) as { error?: string };
+    if (!response.ok) {
+      await showNotice(
+        tr("Process was not stopped", "进程未停止"),
+        payload.error || tr("Remote Arc could not stop this process.", "Remote Arc 无法停止这个进程。"),
+      );
+      return;
+    }
+    await loadManagedProcesses(device);
   }
 
   async function loadUndoHistory(device: Device) {
@@ -1255,10 +1583,16 @@ function Dashboard({
   }
 
   async function restoreUndoAction(device: Device, action: UndoAction) {
-    if (!confirm(tr(
-      "Restore " + action.path + " to the state before this Remote Arc change?",
-      "将 " + action.path + " 恢复到 Remote Arc 修改前的状态？",
-    ))) return;
+    const confirmed = await askConfirm(
+      tr("Restore this local snapshot?", "恢复这个本机快照？"),
+      tr(
+        "Remote Arc will restore " + action.path + " to its state before this Remote Arc edit. The restore will run only if the current file still matches the recorded post-edit state.",
+        "Remote Arc 会把 " + action.path + " 恢复到本次 Remote Arc 修改之前的状态。只有当前文件仍与当时修改后的状态一致时才会执行恢复。",
+      ),
+      tr("Restore file", "恢复文件"),
+      "danger",
+    );
+    if (!confirmed) return;
 
     setUndoLoading(device.id);
     try {
@@ -1271,7 +1605,10 @@ function Dashboard({
       );
       const payload = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) {
-        alert(payload.error || tr("Could not restore this change.", "无法恢复这次修改。"));
+        await showNotice(
+          tr("Local Undo was not applied", "Local Undo 未执行"),
+          payload.error || tr("Remote Arc could not safely restore this change.", "Remote Arc 无法安全恢复这次修改。"),
+        );
         return;
       }
       await loadUndoHistory(device);
@@ -1493,7 +1830,22 @@ function Dashboard({
                         {allTools.map((tool) => {
                           const enabled = device.allowed_tools == null ? (device.status === "online" ? advertisedTools.includes(tool) : true) : device.allowed_tools.includes(tool);
                           const advertised = device.status === "online" ? advertisedTools.includes(tool) : true;
-                          return <label className={"toolToggle" + (!advertised ? " unavailable" : "")} key={tool}><input type="checkbox" checked={enabled} disabled={!advertised} onChange={(event) => void updateDeviceTools(device, tool, event.target.checked)} /><span>{tool}</span></label>;
+                          const description =
+                            tool === "undo_last_change"
+                              ? tr("AI permission: lets the connected AI invoke the newest Local Undo snapshot. Snapshot creation is controlled separately under Recovery below.", "AI 权限：允许已连接的 AI 调用最新一条 Local Undo 快照。是否创建快照由下方 Recovery 中的 Local Undo 单独控制。")
+                              : tool === "start_process"
+                                ? tr("Run shell commands on this computer.", "在这台电脑上执行 Shell 命令。")
+                                : tool === "process_status" || tool === "process_output"
+                                  ? tr("Inspect a Remote Arc managed background process.", "查看由 Remote Arc 管理的后台进程。")
+                                  : tool === "stop_process"
+                                    ? tr("Stop a Remote Arc managed background process.", "停止由 Remote Arc 管理的后台进程。")
+                                    : tr("Allow this AI client to use this native Remote Arc skill.", "允许 AI 客户端使用这个 Remote Arc 原生技能。");
+                          return (
+                            <label className={"toolToggle" + (!advertised ? " unavailable" : "")} key={tool}>
+                              <input type="checkbox" checked={enabled} disabled={!advertised} onChange={(event) => void updateDeviceTools(device, tool, event.target.checked)} />
+                              <span><strong>{tool}</strong><small>{description}</small></span>
+                            </label>
+                          );
                         })}
                       </div>
                       {device.status === "offline" && <span className="offlineTools">{tr("Offline: changes are saved now and enforced the next time this device connects.", "设备离线：修改会立即保存，并在设备下次连接时生效。")}</span>}
@@ -1549,9 +1901,14 @@ function Dashboard({
                                 "配置后，Remote Arc 文件工具只能访问这些根目录；留空表示可访问全部非敏感路径。",
                               )}</p>
                             </div>
-                            <button className="ghostButton small" onClick={() => void addPolicyPath(device, "workspace_roots")}>
-                              + {tr("Add path", "添加路径")}
-                            </button>
+                            <div className="policyHeaderActions">
+                              <button className="ghostButton small" disabled={device.status !== "online"} onClick={() => void browseDeviceDirectories(device)}>
+                                {tr("Browse folders", "浏览目录")}
+                              </button>
+                              <button className="ghostButton small" onClick={() => void addPolicyPath(device, "workspace_roots")}>
+                                + {tr("Enter path", "输入路径")}
+                              </button>
+                            </div>
                           </div>
                           <div className="policyPathList">
                             {(device.workspace_roots || []).map((root) => (
@@ -1653,10 +2010,10 @@ function Dashboard({
 
                         <div className="policyToggleRow undoPolicyToggle">
                           <div>
-                            <strong>{tr("Local Undo", "本机撤销")}</strong>
+                            <strong>{tr("Create Local Undo snapshots", "创建 Local Undo 快照")}</strong>
                             <p>{tr(
-                              "Snapshots stay on this computer. Remote Arc Cloud never stores the file contents.",
-                              "快照只保存在这台电脑上，Remote Arc Cloud 不保存文件内容。",
+                              "Recovery setting: when enabled, supported file edits save the previous state on this computer. This is separate from the undo_last_change skill above, which only controls whether AI is allowed to invoke an existing snapshot.",
+                              "恢复设置：开启后，支持的文件修改会先在本机保存修改前状态。它和上面的 undo_last_change 技能是两件事；后者只控制 AI 是否有权限调用已经存在的快照。",
                             )}</p>
                           </div>
                           <label className="compactSwitch">
@@ -1755,6 +2112,76 @@ function Dashboard({
                             )}</p>
                           )}
                         </div>
+                      </div>
+                    </details>
+
+                    <details className="deviceProcessDetails">
+                      <summary>
+                        {tr("Managed background processes", "后台进程管理")}
+                        <span>
+                          {processesByDevice[device.id]
+                            ? (processesByDevice[device.id] || []).filter((item) => item.status === "running").length + " " + tr("running", "个运行中")
+                            : tr("load on demand", "按需读取")}
+                        </span>
+                      </summary>
+                      <div className="managedProcessBody">
+                        <div className="policyBlockHead">
+                          <div>
+                            <strong>{tr("Processes started by Remote Arc", "由 Remote Arc 启动的进程")}</strong>
+                            <p>{tr(
+                              "Only background processes started with Remote Arc's managed process mode appear here. This is not a list of every process on your computer.",
+                              "这里只显示通过 Remote Arc 后台进程模式启动的进程，并不是这台电脑上所有系统进程的列表。",
+                            )}</p>
+                          </div>
+                          <button
+                            className="ghostButton small"
+                            disabled={device.status !== "online" || processLoading === device.id}
+                            onClick={() => void loadManagedProcesses(device)}
+                          >
+                            {processLoading === device.id ? tr("Loading…", "加载中…") : tr("Refresh", "刷新")}
+                          </button>
+                        </div>
+
+                        {!!processErrors[device.id] && (
+                          <p className="policyWarning">{processErrors[device.id]}</p>
+                        )}
+
+                        {!!processesByDevice[device.id]?.length && (
+                          <div className="managedProcessList">
+                            {(processesByDevice[device.id] || []).map((item) => (
+                              <div className="managedProcessRow" key={item.process_id}>
+                                <div className="managedProcessState">
+                                  <i className={item.status === "running" ? "running" : "exited"} />
+                                  <div>
+                                    <strong>{item.status === "running" ? tr("Running", "运行中") : tr("Exited", "已退出")}</strong>
+                                    <small>PID {item.pid || "—"} · {timeAgo(item.started_at)}</small>
+                                  </div>
+                                </div>
+                                <div className="managedProcessCommand">
+                                  <code title={item.command}>{item.command}</code>
+                                  <small>{item.cwd || tr("Default working directory", "默认工作目录")}</small>
+                                </div>
+                                <div className="managedProcessActions">
+                                  <button className="ghostButton small" onClick={() => void showManagedProcessOutput(device, item)}>
+                                    {tr("Output", "查看输出")}
+                                  </button>
+                                  {item.status === "running" && (
+                                    <button className="dangerButton small" onClick={() => void stopBackgroundProcess(device, item)}>
+                                      {tr("Stop", "停止")}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {processesByDevice[device.id] !== undefined && !(processesByDevice[device.id] || []).length && !processErrors[device.id] && (
+                          <p className="policyEmpty">{tr(
+                            "No Remote Arc managed background processes are currently retained on this device.",
+                            "这台设备当前没有由 Remote Arc 管理并保留的后台进程。",
+                          )}</p>
+                        )}
                       </div>
                     </details>
 
@@ -1919,22 +2346,57 @@ function Dashboard({
 
             <section className="securityPanel securityGrantsPanel">
               <div className="securityPanelHeader">
-                <div><span className="eyebrow">{tr("CONNECTED AI ACCESS", "已连接 AI 访问")}</span><h2>{tr("OAuth grants", "OAuth 授权")}</h2><p>{tr("These AI clients currently hold active or refreshable access to your Remote Arc account.", "这些 AI 客户端当前仍持有可用或可刷新的 Remote Arc 访问权限。")}</p></div>
+                <div><span className="eyebrow">{tr("CONNECTED AI ACCESS", "已连接 AI 访问")}</span><h2>{tr("AI authorizations", "AI 授权")}</h2><p>{tr("Review each OAuth authorization separately. Active, refreshable and expired grants are shown so you can understand exactly what can still reconnect.", "逐条查看 OAuth 授权。这里会区分当前有效、仍可刷新以及已过期的 Grant，让你明确哪些连接仍能重新获得访问权限。")}</p></div>
                 <button className="ghostButton" disabled={securityBusy} onClick={() => void refreshSecurity()}>{tr("Refresh", "刷新")}</button>
               </div>
+              <div className="securityGrantHelp">
+                <strong>{tr("What is a grant?", "Grant 是什么？")}</strong>
+                <span>{tr(
+                  "Each row is one OAuth authorization instance created when an AI client connects to Remote Arc. Multiple ChatGPT rows can exist if ChatGPT registered or authorized Remote Arc more than once. They are separate authorizations, not separate computers.",
+                  "每一行代表 AI 客户端连接 Remote Arc 时创建的一份 OAuth 授权实例。ChatGPT 多次注册或授权 Remote Arc 时，可能出现多行 ChatGPT；它们是不同授权，不是不同电脑。",
+                )}</span>
+              </div>
               <div className="securityGrantList">
-                {(securityState?.grants || []).map((grant) => (
-                  <div className="securityGrantRow" key={grant.clientId}>
-                    <div className="securityGrantIdentity">
-                      <span className="securityGrantIcon">AI</span>
-                      <div><strong>{grant.clientName}</strong><small>{grant.clientId.slice(0,12)}… · {tr("authorized", "授权于")} {timeAgo(grant.authorizedAt)}</small></div>
+                {(securityState?.grants || []).map((grant) => {
+                  const statusLabel =
+                    grant.status === "active"
+                      ? tr("Active now", "当前有效")
+                      : grant.status === "refreshable"
+                        ? tr("Refreshable", "可刷新")
+                        : tr("Expired", "已过期");
+                  const statusHelp =
+                    grant.status === "active"
+                      ? tr("Its current access token is still valid.", "当前 Access Token 仍有效。")
+                      : grant.status === "refreshable"
+                        ? tr("The short-lived access token expired, but the refresh authorization can still obtain a new one without asking you again.", "短期 Access Token 已过期，但 Refresh 授权仍可在无需再次询问你的情况下换取新 Token。")
+                        : tr("Both access and refresh authorization have expired. This grant can no longer access Remote Arc.", "Access 与 Refresh 授权均已过期，这条 Grant 已无法继续访问 Remote Arc。");
+                  return (
+                    <div className={"securityGrantRow " + grant.status} key={grant.clientId}>
+                      <div className="securityGrantIdentity">
+                        <span className="securityGrantIcon">AI</span>
+                        <div>
+                          <strong>{grant.clientName}</strong>
+                          <small>{tr("Authorization", "授权")} {grant.clientId.slice(0,12)}…</small>
+                        </div>
+                      </div>
+                      <div className="securityGrantState">
+                        <span className={"grantState " + grant.status}>{statusLabel}</span>
+                        <small>{statusHelp}</small>
+                      </div>
+                      <div className="securityGrantDetails">
+                        <span>{tr("First authorized", "首次授权")} <strong>{timeAgo(grant.authorizedAt)}</strong></span>
+                        <span>{tr("Last token issued", "最近签发 Token")} <strong>{timeAgo(grant.lastTokenIssuedAt)}</strong></span>
+                        <span>{tr("Access token expires", "Access Token 到期")} <strong>{new Date(grant.accessExpiresAt).toLocaleString(locale === "zh" ? "zh-CN" : "en-NZ", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</strong></span>
+                        <span>{tr("Refresh authorization", "Refresh 授权")} <strong>{grant.refreshExpiresAt ? new Date(grant.refreshExpiresAt).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-NZ", { year: "numeric", month: "short", day: "numeric" }) : tr("None", "无")}</strong></span>
+                      </div>
+                      <div className="securityGrantScopes">{grant.scopes.map((scope) => <code key={scope}>{scope}</code>)}</div>
+                      <button className={grant.status === "expired" ? "ghostButton" : "dangerButton"} disabled={securityBusy} onClick={() => void revokeGrant(grant)}>
+                        {grant.status === "expired" ? tr("Remove expired", "移除过期授权") : tr("Disconnect access", "断开此授权")}
+                      </button>
                     </div>
-                    <div className="securityGrantScopes">{grant.scopes.map((scope) => <code key={scope}>{scope}</code>)}</div>
-                    <div className="securityGrantExpiry"><span>{tr("Refresh access until", "刷新权限有效至")}</span><strong>{grant.refreshExpiresAt ? new Date(grant.refreshExpiresAt).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-NZ", { year: "numeric", month: "short", day: "numeric" }) : tr("No refresh token", "无 Refresh Token")}</strong></div>
-                    <button className="dangerButton" disabled={securityBusy} onClick={() => void revokeGrant(grant)}>{tr("Revoke", "撤销")}</button>
-                  </div>
-                ))}
-                {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No active AI grants", "暂无活跃 AI 授权")}</strong><span>{tr("Connect ChatGPT, Claude or another MCP client to see its OAuth access here.", "连接 ChatGPT、Claude 或其他 MCP 客户端后，其 OAuth 权限会显示在这里。")}</span><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
+                  );
+                })}
+                {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No AI authorizations", "暂无 AI 授权")}</strong><span>{tr("Connect ChatGPT, Claude or another MCP client to see each OAuth authorization here.", "连接 ChatGPT、Claude 或其他 MCP 客户端后，每一份 OAuth 授权都会显示在这里。")}</span><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
                 {!securityState && <div className="securityEmptyState compact"><strong>{tr("Loading access grants…", "正在加载访问授权…")}</strong></div>}
               </div>
             </section>
@@ -2027,6 +2489,110 @@ function Dashboard({
 
         <footer className="dashboardFooter"><span>Remote Arc · mcp.remotearc.app</span><div><a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a><a href={MARKETING_ORIGIN + "/resources"}>{tr("Resources", "资源")}</a><a href={MARKETING_ORIGIN + "/docs/mcp"}>MCP</a><a href={MARKETING_ORIGIN + "/privacy"}>{tr("Privacy", "隐私")}</a><a href={MARKETING_ORIGIN + "/terms"}>{tr("Terms", "条款")}</a><a href={MARKETING_ORIGIN + "/support"}>{tr("Support", "支持")}</a></div></footer>
       </main>
+
+      {directoryPicker && (
+        <div className="modalBackdrop" onMouseDown={() => setDirectoryPicker(null)}>
+          <section className="modal directoryPickerModal" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modalClose" onClick={() => setDirectoryPicker(null)}>×</button>
+            <span className="eyebrow">{tr("CHOOSE WORKSPACE", "选择工作区")}</span>
+            <h2>{tr("Choose a folder on " + directoryPicker.device.name, "选择 " + directoryPicker.device.name + " 上的目录")}</h2>
+            <p>{tr(
+              "Remote Arc will add the selected folder as an allowed Workspace Scope root. Sensitive paths remain protected.",
+              "Remote Arc 会把所选目录加入 Workspace Scope 允许根目录；敏感路径保护仍然生效。",
+            )}</p>
+
+            {directoryPicker.browser && (
+              <div className="directoryPickerPath">
+                <code>{directoryPicker.browser.path}</code>
+                {directoryPicker.browser.parent && (
+                  <button className="ghostButton small" onClick={() => void browseDeviceDirectories(directoryPicker.device, directoryPicker.browser!.parent!)}>
+                    ↑ {tr("Parent", "上一级")}
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="directoryPickerList">
+              {directoryPicker.loading && <div className="directoryPickerEmpty">{tr("Loading folders…", "正在加载目录…")}</div>}
+              {!directoryPicker.loading && !!directoryPicker.error && (
+                <div className="policyWarning">{directoryPicker.error}</div>
+              )}
+              {!directoryPicker.loading && !directoryPicker.error && directoryPicker.browser?.directories.map((entry) => (
+                <button
+                  className="directoryPickerEntry"
+                  key={entry.path}
+                  onClick={() => void browseDeviceDirectories(directoryPicker.device, entry.path)}
+                >
+                  <span>{entry.type === "symlink" ? "↗" : "▣"}</span>
+                  <strong>{entry.name}</strong>
+                  <small>›</small>
+                </button>
+              ))}
+              {!directoryPicker.loading && !directoryPicker.error && directoryPicker.browser && !directoryPicker.browser.directories.length && (
+                <div className="directoryPickerEmpty">{tr("No visible child folders.", "没有可见的子目录。")}</div>
+              )}
+            </div>
+
+            {directoryPicker.browser && directoryPicker.browser.protected_entries_omitted > 0 && (
+              <p className="directoryPickerNote">{tr(
+                directoryPicker.browser.protected_entries_omitted + " protected folder(s) are hidden by Sensitive Path Policy.",
+                "有 " + directoryPicker.browser.protected_entries_omitted + " 个受保护目录已被 Sensitive Path Policy 隐藏。",
+              )}</p>
+            )}
+
+            <div className="dialogActions">
+              <button className="ghostButton" onClick={() => setDirectoryPicker(null)}>{tr("Cancel", "取消")}</button>
+              <button className="primaryButton" disabled={!directoryPicker.browser || directoryPicker.loading} onClick={() => void addCurrentWorkspace()}>
+                {tr("Use this folder", "使用当前目录")}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {dialog && (
+        <div className="modalBackdrop" onMouseDown={() => settleDialog(dialog.kind === "notice" ? true : null)}>
+          <section className={"modal appDialog " + (dialog.tone === "danger" ? "danger" : "")} onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modalClose" onClick={() => settleDialog(dialog.kind === "notice" ? true : null)}>×</button>
+            <span className="eyebrow">
+              {dialog.kind === "prompt"
+                ? tr("INPUT REQUIRED", "需要输入")
+                : dialog.tone === "danger"
+                  ? tr("CONFIRM ACTION", "确认操作")
+                  : tr("REMOTE ARC", "REMOTE ARC")}
+            </span>
+            <h2>{dialog.title}</h2>
+            <p>{dialog.message}</p>
+            {dialog.kind === "prompt" && (
+              <input
+                className="dialogInput"
+                autoFocus
+                value={dialogValue}
+                placeholder={dialog.placeholder}
+                onChange={(event) => setDialogValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && dialogValue.trim()) settleDialog(dialogValue.trim());
+                  if (event.key === "Escape") settleDialog(null);
+                }}
+              />
+            )}
+            <div className="dialogActions">
+              {dialog.kind !== "notice" && (
+                <button className="ghostButton" onClick={() => settleDialog(null)}>
+                  {dialog.cancelLabel || tr("Cancel", "取消")}
+                </button>
+              )}
+              <button
+                className={dialog.tone === "danger" ? "dangerButton" : "primaryButton"}
+                disabled={dialog.kind === "prompt" && !dialogValue.trim()}
+                onClick={() => settleDialog(dialog.kind === "prompt" ? dialogValue.trim() : true)}
+              >
+                {dialog.confirmLabel}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {showAdd && (
         <div className="modalBackdrop" onMouseDown={() => setShowAdd(false)}>

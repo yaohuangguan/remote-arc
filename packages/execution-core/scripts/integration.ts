@@ -24,6 +24,9 @@ try {
   if (!safeNames.includes("list_undo_actions")) {
     throw new Error("safe mode did not expose read-only undo history");
   }
+  if (!safeNames.includes("browse_directories")) {
+    throw new Error("safe mode did not expose dashboard directory browsing");
+  }
   if (
     !developerNames.includes("write_file") ||
     !developerNames.includes("undo_change") ||
@@ -69,6 +72,16 @@ try {
     policy,
   );
   if (!read.content[0]?.text.includes("alpha")) throw new Error("read_file failed");
+
+  const directoryBrowser = jsonResult<{
+    path: string;
+    directories: Array<{ name: string }>;
+  }>(
+    await safe.callTool("browse_directories", { path: project }, policy),
+  );
+  if (!directoryBrowser.directories.some((entry) => entry.name === "src")) {
+    throw new Error("browse_directories did not return child directories");
+  }
 
   let outsideBlocked = false;
   await fs.writeFile(outside, "outside");
@@ -255,6 +268,12 @@ try {
   if (backgroundStatus.status !== "running") {
     throw new Error("background process was not running");
   }
+  const managed = jsonResult<Array<{ process_id: string }>>(
+    await full.callTool("list_managed_processes", {}, policy),
+  );
+  if (!managed.some((item) => item.process_id === background.process_id)) {
+    throw new Error("list_managed_processes did not return the running process");
+  }
   const backgroundOutput = await full.callTool(
     "process_output",
     { process_id: background.process_id },
@@ -301,6 +320,8 @@ try {
         undoHistory: "ok",
         process: "ok",
         backgroundProcess: "ok",
+        directoryBrowser: "ok",
+        managedProcessList: "ok",
         safetyGuard: "ok",
       },
       null,

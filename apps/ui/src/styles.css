@@ -5086,3 +5086,311 @@ body{font-size:18px;line-height:1.6}
   .policyBlockHead .ghostButton.small{width:max-content}
   .policyPathChip code{max-width:230px}
 }
+
+
+/* Dashboard readability + native control surfaces */
+.appFrame .eyebrow{font-size:12px}
+.appFrame small{font-size:12px;line-height:1.45}
+.appFrame .badge{font-size:12px}
+.appFrame .ghostButton.small,
+.appFrame .dangerButton.small{font-size:12px;min-height:32px;padding:7px 10px}
+.appFrame .policyBlockHead strong,
+.appFrame .policyToggleRow strong,
+.appFrame .undoActionRow strong{font-size:13px}
+.appFrame .policyBlockHead p,
+.appFrame .policyToggleRow p,
+.appFrame .policyEmpty,
+.appFrame .policyWarning,
+.appFrame .policyNotice,
+.appFrame .undoActionRow small{font-size:12px;line-height:1.5}
+.appFrame .policyPathChip code,
+.appFrame .undoActionRow code{font-size:12px}
+
+.toolToggleGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.toolToggle{
+  align-items:flex-start;
+  min-width:0;
+  padding:10px 11px;
+}
+.toolToggle>span{display:grid;gap:3px;min-width:0}
+.toolToggle>span strong{color:#c8dde3;font-size:12px;font-weight:700}
+.toolToggle>span small{color:#708b94;font-size:12px;line-height:1.4}
+.toolToggle.unavailable{opacity:.55}
+
+.policyHeaderActions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+/* Reusable Remote Arc dialog */
+.appDialog{width:min(560px,100%)}
+.appDialog>p{
+  margin-top:4px;
+  max-height:48vh;
+  overflow:auto;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.appDialog.danger{border-color:rgba(248,113,113,.26)}
+.dialogInput{
+  width:100%;
+  min-height:46px;
+  margin-top:18px;
+  padding:0 13px;
+  border:1px solid #29435d;
+  border-radius:10px;
+  outline:none;
+  background:#061018;
+  color:#eaf8fb;
+  font:inherit;
+}
+.dialogInput:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.10)}
+.dialogActions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}
+.dialogActions .primaryButton,
+.dialogActions .dangerButton,
+.dialogActions .ghostButton{min-height:40px}
+
+/* OAuth grant semantics */
+.securityGrantHelp{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:10px;
+  align-items:start;
+  margin:2px 0 12px;
+  padding:11px 13px;
+  border-left:2px solid #38bdf8;
+  background:rgba(8,70,87,.10);
+  color:#8fabB4;
+  font-size:13px;
+  line-height:1.55;
+}
+.securityGrantHelp strong{color:#d8edf2;white-space:nowrap}
+.securityGrantRow{
+  grid-template-columns:minmax(170px,.9fr) minmax(190px,1.05fr) minmax(210px,1.1fr) minmax(170px,.8fr) auto;
+  gap:12px;
+}
+.securityGrantIdentity strong{font-size:14px}
+.securityGrantIdentity small{font-size:12px;color:#78939c}
+.securityGrantState{display:grid;gap:5px;min-width:0}
+.securityGrantState small{color:#78939c;font-size:12px;line-height:1.4}
+.grantState{
+  width:max-content;
+  max-width:100%;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+}
+.grantState.active{border:1px solid rgba(74,222,128,.26);background:rgba(22,101,52,.15);color:#86efac}
+.grantState.refreshable{border:1px solid rgba(56,189,248,.28);background:rgba(3,105,161,.14);color:#7dd3fc}
+.grantState.expired{border:1px solid rgba(148,163,184,.18);background:rgba(71,85,105,.15);color:#a8b7bf}
+.securityGrantDetails{display:grid;gap:4px}
+.securityGrantDetails span{display:flex;justify-content:space-between;gap:8px;color:#6f8993;font-size:12px}
+.securityGrantDetails strong{color:#b9ccd2;font-size:12px;text-align:right}
+.securityGrantScopes code{font-size:12px}
+
+/* Directory picker */
+.directoryPickerModal{width:min(650px,100%)}
+.directoryPickerPath{display:flex;align-items:center;gap:8px;margin-top:18px}
+.directoryPickerPath code{
+  flex:1;min-width:0;overflow:auto;white-space:nowrap;
+  padding:10px 12px;border:1px solid #20394b;border-radius:9px;
+  background:#061018;color:#a7d7e2;font-size:13px
+}
+.directoryPickerList{
+  display:grid;
+  gap:5px;
+  max-height:330px;
+  margin-top:10px;
+  overflow:auto;
+  padding:2px;
+}
+.directoryPickerEntry{
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr) auto;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  padding:9px 10px;
+  border:1px solid #183243;
+  border-radius:9px;
+  background:#071821;
+  color:#c9e0e5;
+  text-align:left;
+  cursor:pointer;
+}
+.directoryPickerEntry:hover{border-color:#2c7187;background:#0a202a}
+.directoryPickerEntry span{color:#7dd3fc}
+.directoryPickerEntry strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.directoryPickerEntry small{font-size:16px;color:#65828d}
+.directoryPickerEmpty{padding:28px 12px;text-align:center;color:#78919a;font-size:13px}
+.directoryPickerNote{margin:9px 0 0!important;color:#78919a!important;font-size:12px!important}
+
+/* Managed background process UI */
+.deviceProcessDetails{
+  border-top:1px solid rgba(148,163,184,.08);
+  border-bottom:1px solid rgba(148,163,184,.08);
+}
+.deviceProcessDetails>summary{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 0;cursor:pointer;color:#bfd5da;font-size:13px;font-weight:700
+}
+.deviceProcessDetails>summary span{color:#6f8993;font-size:12px;font-weight:500}
+.managedProcessBody{padding:2px 0 12px}
+.managedProcessList{display:grid;gap:6px;margin-top:10px}
+.managedProcessRow{
+  display:grid;
+  grid-template-columns:140px minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  padding:10px;
+  border:1px solid rgba(148,163,184,.09);
+  border-radius:10px;
+  background:#061018;
+}
+.managedProcessState{display:flex;align-items:center;gap:8px}
+.managedProcessState>i{width:8px;height:8px;border-radius:50%;background:#64748b}
+.managedProcessState>i.running{background:#4ade80;box-shadow:0 0 10px rgba(74,222,128,.35)}
+.managedProcessState>div{display:grid;gap:2px}
+.managedProcessState strong{font-size:13px;color:#d3e6ea}
+.managedProcessState small{font-size:12px;color:#6e8992}
+.managedProcessCommand{display:grid;gap:3px;min-width:0}
+.managedProcessCommand code{
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:#9fcbd5;font-size:12px
+}
+.managedProcessCommand small{
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:#607b85;font-size:12px
+}
+.managedProcessActions{display:flex;gap:6px;justify-content:flex-end}
+
+/* Light theme contrast corrections for dashboard */
+:root[data-theme="light"] .appFrame{color:#17313a}
+:root[data-theme="light"] .toolToggle,
+:root[data-theme="light"] .deviceToolDetails,
+:root[data-theme="light"] .deviceSafetyDetails,
+:root[data-theme="light"] .deviceProcessDetails,
+:root[data-theme="light"] .policyBlock,
+:root[data-theme="light"] .undoHistorySection,
+:root[data-theme="light"] .managedProcessRow,
+:root[data-theme="light"] .securityGrantRow,
+:root[data-theme="light"] .directoryPickerEntry,
+:root[data-theme="light"] .dialogInput{
+  border-color:#d4e4e9;
+  background:#f8fcfd;
+}
+:root[data-theme="light"] .toolToggle>span strong,
+:root[data-theme="light"] .deviceProcessDetails>summary,
+:root[data-theme="light"] .managedProcessState strong,
+:root[data-theme="light"] .securityGrantHelp strong,
+:root[data-theme="light"] .securityGrantIdentity strong{color:#163944}
+:root[data-theme="light"] .toolToggle>span small,
+:root[data-theme="light"] .deviceProcessDetails>summary span,
+:root[data-theme="light"] .managedProcessState small,
+:root[data-theme="light"] .managedProcessCommand small,
+:root[data-theme="light"] .securityGrantState small,
+:root[data-theme="light"] .securityGrantIdentity small,
+:root[data-theme="light"] .securityGrantDetails span{color:#55727b}
+:root[data-theme="light"] .managedProcessCommand code,
+:root[data-theme="light"] .securityGrantDetails strong,
+:root[data-theme="light"] .policyPathChip code,
+:root[data-theme="light"] .undoActionRow code{color:#315c67}
+:root[data-theme="light"] .securityGrantHelp{
+  border-color:#0284c7;
+  background:#eef9fd;
+  color:#41636d;
+}
+:root[data-theme="light"] .grantState.active{border-color:#86c99d;background:#edf9f0;color:#166534}
+:root[data-theme="light"] .grantState.refreshable{border-color:#8bd0ea;background:#eef9fd;color:#075985}
+:root[data-theme="light"] .grantState.expired{border-color:#cbd5e1;background:#f1f5f9;color:#475569}
+:root[data-theme="light"] .securityGrantScopes code{
+  border-color:#cfe3e9;background:#f1f8fa;color:#315f6b
+}
+:root[data-theme="light"] .policyWarning{
+  border-color:#f59e0b;background:#fff7ed;color:#9a3412
+}
+:root[data-theme="light"] .policyNotice{
+  border-color:#0284c7;background:#eff9fd;color:#155e75
+}
+:root[data-theme="light"] .policyPathChip.protected{border-color:#f2c078;background:#fffaf0}
+:root[data-theme="light"] .policyPathChip.exception{border-color:#9bc9a8;background:#f0faf3}
+:root[data-theme="light"] .directoryPickerPath code{
+  border-color:#cfe3e9;background:#f7fbfc;color:#285865
+}
+:root[data-theme="light"] .directoryPickerEntry{color:#173944}
+:root[data-theme="light"] .directoryPickerEntry:hover{border-color:#79b8c8;background:#eef8fa}
+:root[data-theme="light"] .dialogInput{color:#173944}
+:root[data-theme="light"] .dangerButton{
+  border-color:#fecdd3;background:#fff1f2;color:#be123c
+}
+:root[data-theme="light"] .dangerButton:hover{border-color:#fda4af;background:#ffe4e6}
+:root[data-theme="light"] .modalClose{color:#55727b}
+:root[data-theme="light"] .appDialog.danger{border-color:#fecdd3}
+
+@media(max-width:1180px){
+  .securityGrantRow{grid-template-columns:minmax(180px,1fr) minmax(200px,1.1fr) auto}
+  .securityGrantDetails,.securityGrantScopes{grid-column:1/-1}
+}
+@media(max-width:720px){
+  .toolToggleGrid{grid-template-columns:1fr}
+  .securityGrantHelp{grid-template-columns:1fr}
+  .securityGrantRow{grid-template-columns:1fr}
+  .securityGrantDetails,.securityGrantScopes{grid-column:auto}
+  .securityGrantRow>button{width:100%}
+  .managedProcessRow{grid-template-columns:1fr}
+  .managedProcessActions{justify-content:flex-start}
+  .directoryPickerPath{align-items:stretch;flex-direction:column}
+}
+
+
+/* Dashboard minimum readable text size */
+.appFrame .deviceFilters button span,
+.appFrame .deviceStatusStrip span,
+.appFrame .deviceToolChips span,
+.appFrame .devicePresetRow>span,
+.appFrame .devicePresetRow button small,
+.appFrame .deviceToolDetails summary span,
+.appFrame .securityStatusCard>div,
+.appFrame .securityStatusCard>small,
+.appFrame .securityMiniState,
+.appFrame .securityDeviceRow span,
+.appFrame .securityExposureMeta span,
+.appFrame .securityFlow small,
+.appFrame .securityAuditRow span,
+.appFrame .securityAuditRow>b,
+.appFrame .privacyBoundaryGrid small,
+.appFrame .securityEmptyState span{
+  font-size:12px;
+}
+.appFrame .securityMiniState{
+  padding:5px 8px;
+}
+.appFrame .deviceStatusStrip span,
+.appFrame .devicePresetRow>span{
+  letter-spacing:.055em;
+}
+.appFrame .securityActionsPanel p,
+.appFrame .securityGrantsPanel .securityPanelHeader p{
+  font-size:13px;
+}
+:root[data-theme="light"] .deviceStatusStrip,
+:root[data-theme="light"] .deviceToolChips span,
+:root[data-theme="light"] .securityDeviceRow,
+:root[data-theme="light"] .securityFlow>div,
+:root[data-theme="light"] .privacyBoundaryGrid>div{
+  border-color:#d7e6eb;
+  background:#f8fcfd;
+}
+:root[data-theme="light"] .deviceStatusStrip span,
+:root[data-theme="light"] .deviceToolChips span,
+:root[data-theme="light"] .securityStatusCard>div,
+:root[data-theme="light"] .securityStatusCard>small,
+:root[data-theme="light"] .securityDeviceRow span,
+:root[data-theme="light"] .securityFlow small,
+:root[data-theme="light"] .securityAuditRow span,
+:root[data-theme="light"] .privacyBoundaryGrid small,
+:root[data-theme="light"] .securityEmptyState span{
+  color:#4c6872;
+}
+:root[data-theme="light"] .securityMiniState{
+  background:#e7f5fa;
+  color:#075985;
+}

@@ -20,6 +20,10 @@ import {
   handleDevicePolicyUpdate,
   handleDeviceUndoList,
   handleDeviceUndoAction,
+  handleDeviceDirectoryBrowse,
+  handleDeviceManagedProcesses,
+  handleDeviceManagedProcessOutput,
+  handleDeviceManagedProcessStop,
   handlePairingApprove,
   handlePairingLookup,
 } from "./device.js";
@@ -171,7 +175,7 @@ export default {
       return Response.json({
         ok: true,
         service: "remotearc-relay",
-        version: "0.3.11",
+        version: "0.3.12",
         auth: "oauth2-pkce",
       });
     }
@@ -326,6 +330,34 @@ export default {
       request.method === "POST"
     ) {
       return handleDevicePolicyUpdate(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/directories$/.test(url.pathname) &&
+      request.method === "GET"
+    ) {
+      return handleDeviceDirectoryBrowse(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/processes$/.test(url.pathname) &&
+      request.method === "GET"
+    ) {
+      return handleDeviceManagedProcesses(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/processes\/[^/]+\/output$/.test(url.pathname) &&
+      request.method === "GET"
+    ) {
+      return handleDeviceManagedProcessOutput(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/processes\/[^/]+\/stop$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDeviceManagedProcessStop(request, env);
     }
 
     if (

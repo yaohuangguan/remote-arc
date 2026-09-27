@@ -367,7 +367,12 @@ export async function getDevicesForUser(
     const live = onlineById.get(device.id) || reviewerFixture;
     const rawAvailableTools = live?.tools || [];
     const capabilities = live?.capabilities || [];
-    const internalTools = new Set(["list_undo_actions", "undo_change"]);
+    const internalTools = new Set([
+      "list_undo_actions",
+      "undo_change",
+      "browse_directories",
+      "list_managed_processes",
+    ]);
     const availableTools = rawAvailableTools.filter((tool) => !internalTools.has(tool));
     let allowedTools: string[] | null = null;
     if (device.allowed_tools) {
@@ -551,12 +556,32 @@ const devicePolicyPayload = (device: DevicePolicyRow) => ({
   undoEnabled: device.undo_enabled !== 0,
 });
 
+function unwrapDeviceToolResult(result: unknown) {
+  if (
+    result &&
+    typeof result === "object" &&
+    "content" in result &&
+    Array.isArray((result as { content?: unknown }).content)
+  ) {
+    const first = (result as { content: Array<{ type?: string; text?: unknown }> }).content[0];
+    if (first?.type === "text" && typeof first.text === "string") {
+      try {
+        return JSON.parse(first.text);
+      } catch {
+        return first.text;
+      }
+    }
+  }
+  return result;
+}
+
 async function callInternalDeviceTool(
   env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
   userId: string,
   device: DevicePolicyRow,
   tool: string,
   args: Record<string, unknown>,
+  policyOverride?: ReturnType<typeof devicePolicyPayload>,
 ) {
   const registryRequest = () =>
     new Request("https://registry/call", {
@@ -569,7 +594,7 @@ async function callInternalDeviceTool(
         deviceId: device.id,
         tool,
         arguments: args,
-        policy: devicePolicyPayload(device),
+        policy: policyOverride || devicePolicyPayload(device),
       }),
     });
 
@@ -594,7 +619,7 @@ async function callInternalDeviceTool(
     };
   }
 
-  return { ok: true as const, result: payload.result };
+  return { ok: true as const, result: unwrapDeviceToolResult(payload.result) };
 }
 
 export async function handleDevicePolicyUpdate(
@@ -752,4 +777,146 @@ export async function handleDeviceUndoAction(
   });
 
   return Response.json({ ok: true, result: call.result });
+}
+
+
+export async function handleDeviceDirectoryBrowse(
+  request: Request,
+  env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
+) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const match = url.pathname.match(/^\/api\/devices\/([^/]+)\/directories$/);
+  const deviceId = match?.[1];
+  if (!deviceId) return new Response("Not found", { status: 404 });
+
+  const device = await loadOwnedDevicePolicy(env, user.id, deviceId);
+  if (!device) return Response.json({ error: "device not found" }, { status: 404 });
+
+  const policy = devicePolicyPayload(device);
+  const call = await callInternalDeviceTool(
+    env,
+    user.id,
+    device,
+    "browse_directories",
+    { path: url.searchParams.get("path") || "~" },
+    {
+      ...policy,
+      workspaceRoots: [],
+    },
+  );
+
+  if (!call.ok) {
+    return Response.json(
+      { error: call.error, available: false },
+      { status: call.status === 403 || call.status === 404 ? 409 : call.status },
+    );
+  }
+
+  return Response.json({ available: true, browser: call.result });
+}
+
+export async function handleDeviceManagedProcesses(
+  request: Request,
+  env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
+) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const match = url.pathname.match(/^\/api\/devices\/([^/]+)\/processes$/);
+  const deviceId = match?.[1];
+  if (!deviceId) return new Response("Not found", { status: 404 });
+
+  const device = await loadOwnedDevicePolicy(env, user.id, deviceId);
+  if (!device) return Response.json({ error: "device not found" }, { status: 404 });
+
+  const call = await callInternalDeviceTool(
+    env,
+    user.id,
+    device,
+    "list_managed_processes",
+    {},
+  );
+  if (!call.ok) {
+    return Response.json(
+      { error: call.error, available: false },
+      { status: call.status === 403 || call.status === 404 ? 409 : call.status },
+    );
+  }
+
+  return Response.json({ available: true, processes: call.result });
+}
+
+export async function handleDeviceManagedProcessOutput(
+  request: Request,
+  env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
+) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const match = url.pathname.match(
+    /^\/api\/devices\/([^/]+)\/processes\/([^/]+)\/output$/,
+  );
+  const deviceId = match?.[1];
+  const processId = match?.[2] ? decodeURIComponent(match[2]) : "";
+  if (!deviceId || !processId) return new Response("Not found", { status: 404 });
+
+  const device = await loadOwnedDevicePolicy(env, user.id, deviceId);
+  if (!device) return Response.json({ error: "device not found" }, { status: 404 });
+
+  const call = await callInternalDeviceTool(
+    env,
+    user.id,
+    device,
+    "process_output",
+    { process_id: processId },
+  );
+  if (!call.ok) {
+    return Response.json({ error: call.error }, { status: call.status || 409 });
+  }
+
+  return Response.json({ ok: true, process: call.result });
+}
+
+export async function handleDeviceManagedProcessStop(
+  request: Request,
+  env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
+) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const match = url.pathname.match(
+    /^\/api\/devices\/([^/]+)\/processes\/([^/]+)\/stop$/,
+  );
+  const deviceId = match?.[1];
+  const processId = match?.[2] ? decodeURIComponent(match[2]) : "";
+  if (!deviceId || !processId) return new Response("Not found", { status: 404 });
+
+  const device = await loadOwnedDevicePolicy(env, user.id, deviceId);
+  if (!device) return Response.json({ error: "device not found" }, { status: 404 });
+
+  const call = await callInternalDeviceTool(
+    env,
+    user.id,
+    device,
+    "stop_process",
+    { process_id: processId },
+  );
+  if (!call.ok) {
+    return Response.json({ error: call.error }, { status: call.status || 409 });
+  }
+
+  await writeAudit(env, {
+    userId: user.id,
+    deviceId,
+    eventType: "device.background_process_stopped",
+    toolName: "stop_process",
+  }).catch(() => undefined);
+
+  return Response.json({ ok: true, process: call.result });
 }

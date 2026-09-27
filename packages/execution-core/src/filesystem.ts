@@ -195,3 +195,41 @@ export async function editTextBlock(
     atomic: true,
   };
 }
+
+
+export async function browseDirectories(
+  targetPath: string,
+  canReveal?: (candidatePath: string) => Promise<boolean>,
+) {
+  const stat = await fs.stat(targetPath);
+  if (!stat.isDirectory()) throw new Error("Path is not a directory: " + targetPath);
+
+  const entries = await fs.readdir(targetPath, { withFileTypes: true });
+  const directories: Array<{ name: string; path: string; type: "directory" | "symlink" }> = [];
+  let protectedEntries = 0;
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
+    const absolute = path.join(targetPath, entry.name);
+    if (canReveal && !(await canReveal(absolute))) {
+      protectedEntries += 1;
+      continue;
+    }
+    directories.push({
+      name: entry.name,
+      path: absolute,
+      type: entry.isSymbolicLink() ? "symlink" : "directory",
+    });
+    if (directories.length >= 300) break;
+  }
+
+  directories.sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    path: targetPath,
+    parent: path.dirname(targetPath) === targetPath ? null : path.dirname(targetPath),
+    directories,
+    protected_entries_omitted: protectedEntries,
+    truncated: directories.length >= 300,
+  };
+}

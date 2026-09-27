@@ -1,4 +1,5 @@
 import {
+  browseDirectories,
   editTextBlock,
   getFileInfo,
   listDirectory,
@@ -7,6 +8,7 @@ import {
 } from "./filesystem.js";
 import {
   getManagedProcessStatus,
+  listManagedProcesses,
   listProcesses,
   readManagedProcessOutput,
   runShellCommand,
@@ -37,6 +39,7 @@ import type {
 
 const SAFE_TOOLS = new Set<ToolName>([
   "list_directory",
+  "browse_directories",
   "read_file",
   "get_file_info",
   "list_processes",
@@ -56,6 +59,7 @@ const FULL_TOOLS = new Set<ToolName>([
   "start_process",
   "process_status",
   "process_output",
+  "list_managed_processes",
   "stop_process",
 ]);
 
@@ -68,6 +72,18 @@ const DEFINITIONS: ToolDefinition[] = [
       properties: {
         path: { type: "string" },
         depth: { type: "integer", minimum: 1, maximum: 10, default: 2 },
+      },
+      required: ["path"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "browse_directories",
+    description: "List child directories for the Remote Arc dashboard directory picker.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
       },
       required: ["path"],
       additionalProperties: false,
@@ -195,6 +211,15 @@ const DEFINITIONS: ToolDefinition[] = [
     },
   },
   {
+    name: "list_managed_processes",
+    description: "List background processes started and managed by Remote Arc on this device.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
     name: "stop_process",
     description: "Stop a Remote Arc managed background process and its child process tree.",
     inputSchema: {
@@ -264,6 +289,22 @@ export class RemoteArcExecutionCore {
           await listDirectory(
             target,
             optionalNumber(args, "depth") ?? 2,
+            async (candidate) => {
+              try {
+                await enforcePathPolicy(candidate, policy);
+                return true;
+              } catch {
+                return false;
+              }
+            },
+          ),
+        );
+      }
+      case "browse_directories": {
+        const target = await enforcePathPolicy(requiredString(args, "path"), policy);
+        return textResult(
+          await browseDirectories(
+            target,
             async (candidate) => {
               try {
                 await enforcePathPolicy(candidate, policy);
@@ -359,6 +400,8 @@ export class RemoteArcExecutionCore {
         return textResult(
           readManagedProcessOutput(requiredString(args, "process_id")),
         );
+      case "list_managed_processes":
+        return textResult(listManagedProcesses());
       case "stop_process":
         return textResult(
           await stopManagedProcess(requiredString(args, "process_id")),

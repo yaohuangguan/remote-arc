@@ -291,3 +291,24 @@ export async function stopAllManagedProcesses() {
     }),
   );
 }
+
+
+export function listManagedProcesses() {
+  cleanupManagedProcesses();
+  return [...managedProcesses.values()]
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .map((item) => ({
+      process_id: item.id,
+      pid: item.child.pid || null,
+      command: item.command,
+      cwd: item.cwd,
+      status: item.endedAt === null ? "running" : "exited",
+      exit_code: item.exitCode,
+      signal: item.signal,
+      started_at: new Date(item.startedAt).toISOString(),
+      ended_at: item.endedAt === null ? null : new Date(item.endedAt).toISOString(),
+      duration_ms: (item.endedAt || Date.now()) - item.startedAt,
+      stdout_bytes: Buffer.byteLength(item.stdout),
+      stderr_bytes: Buffer.byteLength(item.stderr),
+    }));
+}

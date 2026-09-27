@@ -11,9 +11,11 @@ type GrantRow = {
   client_id: string;
   client_name: string | null;
   scope: string;
-  created_at: string;
-  expires_at: string;
+  authorized_at: string;
+  last_token_issued_at: string;
+  access_expires_at: string;
   refresh_expires_at: string | null;
+  token_rows: number;
 };
 
 export async function isMcpPaused(env: SecurityEnv, userId: string) {
@@ -32,36 +34,40 @@ export async function handleSecurityState(request: Request, env: SecurityEnv) {
     `SELECT
        t.client_id,
        c.client_name,
-       t.scope,
-       t.created_at,
-       t.expires_at,
-       t.refresh_expires_at
+       MAX(t.scope) AS scope,
+       MIN(t.created_at) AS authorized_at,
+       MAX(t.created_at) AS last_token_issued_at,
+       MAX(t.expires_at) AS access_expires_at,
+       MAX(t.refresh_expires_at) AS refresh_expires_at,
+       COUNT(*) AS token_rows
      FROM oauth_tokens t
      LEFT JOIN oauth_clients c ON c.client_id = t.client_id
      WHERE t.user_id = ?1
        AND t.revoked_at IS NULL
-       AND (
-         t.expires_at > ?2
-         OR (t.refresh_expires_at IS NOT NULL AND t.refresh_expires_at > ?2)
-       )
-     ORDER BY t.created_at DESC`,
-  ).bind(user.id, nowIso()).all<GrantRow>();
+     GROUP BY t.client_id, c.client_name
+     ORDER BY last_token_issued_at DESC`,
+  ).bind(user.id).all<GrantRow>();
 
-  const latestByClient = new Map<string, GrantRow>();
-  for (const grant of grants.results || []) {
-    if (!latestByClient.has(grant.client_id)) latestByClient.set(grant.client_id, grant);
-  }
-
+  const now = Date.now();
   return Response.json({
     mcpPaused: paused,
-    grants: Array.from(latestByClient.values()).map((grant) => ({
-      clientId: grant.client_id,
-      clientName: grant.client_name || "MCP client",
-      scopes: grant.scope.split(/\s+/).filter(Boolean),
-      authorizedAt: grant.created_at,
-      accessExpiresAt: grant.expires_at,
-      refreshExpiresAt: grant.refresh_expires_at,
-    })),
+    grants: (grants.results || []).map((grant) => {
+      const accessActive = Date.parse(grant.access_expires_at) > now;
+      const refreshActive =
+        Boolean(grant.refresh_expires_at) &&
+        Date.parse(grant.refresh_expires_at || "") > now;
+      return {
+        clientId: grant.client_id,
+        clientName: grant.client_name || "MCP client",
+        scopes: grant.scope.split(/\s+/).filter(Boolean),
+        authorizedAt: grant.authorized_at,
+        lastTokenIssuedAt: grant.last_token_issued_at,
+        accessExpiresAt: grant.access_expires_at,
+        refreshExpiresAt: grant.refresh_expires_at,
+        tokenRows: grant.token_rows,
+        status: accessActive ? "active" : refreshActive ? "refreshable" : "expired",
+      };
+    }),
   });
 }
 

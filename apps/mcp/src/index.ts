@@ -16,6 +16,9 @@ const schemas = {
     path: z.string(),
     depth: z.number().int().min(1).max(10).default(2),
   }),
+  browse_directories: z.object({
+    path: z.string(),
+  }),
   read_file: z.object({
     path: z.string(),
     offset: z.number().int().optional(),
@@ -53,6 +56,7 @@ const schemas = {
   process_output: z.object({
     process_id: z.string(),
   }),
+  list_managed_processes: z.object({}),
   stop_process: z.object({
     process_id: z.string(),
   }),
@@ -60,12 +64,14 @@ const schemas = {
 
 const readOnlyTools = new Set([
   "list_directory",
+  "browse_directories",
   "read_file",
   "get_file_info",
   "list_processes",
   "list_undo_actions",
   "process_status",
   "process_output",
+  "list_managed_processes",
 ]);
 
 server.registerTool(

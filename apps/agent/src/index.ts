@@ -65,7 +65,7 @@ async function connectForever() {
           platform: process.platform,
           arch: process.arch,
           hostname: os.hostname(),
-          agentVersion: "0.3.11",
+          agentVersion: "0.3.12",
         },
         tools,
         capabilities: ["native_core_v1", "device_policy_v1", "undo_history_v1"],

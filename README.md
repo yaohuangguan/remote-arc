@@ -135,6 +135,7 @@ Current native tools:
 
 ```text
 list_directory
+browse_directories
 read_file
 get_file_info
 list_processes
@@ -144,6 +145,10 @@ list_undo_actions
 undo_change
 undo_last_change
 start_process
+process_status
+process_output
+list_managed_processes
+stop_process
 ```
 
 The implementation uses standard Node primitives such as:
@@ -173,8 +178,10 @@ get_file_info
 list_processes
 ```
 
-The native core also has an internal read-only `list_undo_actions` capability
-used by the dashboard. It is not exposed as a normal hosted AI skill.
+The native core also has internal dashboard capabilities such as
+`list_undo_actions` and `browse_directories`. They let the authenticated
+Remote Arc dashboard load local recovery metadata and browse selectable folders
+without turning those controls into normal hosted AI skills.
 
 ### Developer
 
@@ -204,7 +211,9 @@ stop_process
 
 `start_process` can run synchronously or return a local process handle for a
 managed background process. Output and status stay on the device and are read
-through the same authenticated Remote Arc tool path.
+through the same authenticated Remote Arc tool path. The dashboard uses the
+internal `list_managed_processes` capability to show these Remote Arc-managed
+jobs and lets the user inspect output or stop a running process.
 
 Presets are shortcuts. The actual hosted policy is an individually editable
 per-device skill list.
@@ -278,7 +287,10 @@ stored in D1. Remote Arc does not store the file contents behind those paths.
 
 ## Workspace Scope
 
-A device can optionally define one or more allowed workspace roots.
+A device can optionally define one or more allowed workspace roots. The
+dashboard supports both manual path entry and a device-backed directory picker;
+the picker is loaded from the authenticated computer and keeps protected
+sensitive directories hidden.
 
 When workspace roots are configured, Remote Arc filesystem tools can only
 operate on canonical paths under those roots. An empty workspace list means
@@ -332,7 +344,10 @@ Users sign in with Google. The Worker creates a secure HTTP-only session.
 ### MCP client
 
 Remote MCP uses OAuth 2.1 authorization code flow with PKCE and dynamic client
-registration.
+registration. The Security dashboard tracks each OAuth authorization instance
+separately and labels it as active, refreshable, or expired. Revoking one grant
+invalidates that client authorization without revoking paired computers or
+other AI-client grants.
 
 Discovery:
 
