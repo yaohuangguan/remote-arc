@@ -1059,10 +1059,10 @@ function Landing({ user }: { user?: User | null }) {
       <section className="landingHero">
         <div className="heroCopy">
           <span className="eyebrow">{tr("CONTROLLED COMPUTER ACCESS FOR AI", "面向 AI 的可控电脑访问")}</span>
-          <h1>{tr("Give your AI access. Keep the control.", "让 AI 获得能力，把控制权留给你。")}</h1>
+          <h1>{tr("Go beyond chat. Unleash your AI. Keep the control.", "不止聊天。释放 AI 的能力，把控制权留给你。")}</h1>
           <p>{tr(
-            "Remote Arc securely connects ChatGPT, Claude, Cursor and compatible Remote MCP clients to your real computers. New devices start read-only, every skill is controllable, and sensitive content is not intentionally retained by Remote Arc.",
-            "Remote Arc 安全连接 ChatGPT、Claude、Cursor 与兼容 Remote MCP 的 AI 到你的真实电脑。新设备默认只读，每项技能都可独立控制，Remote Arc 不会有意留存敏感操作内容。"
+            "Turn ChatGPT, Claude and Cursor into real computer operators for the machines you already own. Let AI inspect files, edit code and run permitted workflows while Remote Arc keeps access explicit and under your control.",
+            "让 ChatGPT、Claude 和 Cursor 不再只是聊天，而是真正连接你已有的电脑：检查文件、修改代码、执行被允许的工作流，同时由 Remote Arc 把访问范围和控制权留在你手里。"
           )}</p>
           <div className="landingActions">
             <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : "#install"}>{user ? tr("Open dashboard", "打开控制台") : tr("Install Remote Arc", "安装 Remote Arc")}</a>
@@ -1556,7 +1556,7 @@ function McpPage({ user }: { user?: User | null }) {
         <div className="sectionIntro"><span className="eyebrow">{tr("CHOOSE YOUR CLIENT", "选择你的 AI 客户端")}</span><h2>{tr("The setup is different. The endpoint is the same.", "入口不同，但端点完全相同。")}</h2></div>
         <div className="clientGuideGrid">
           <article className="clientGuideCard">
-            <header><img src={aiClients[0].icon} alt="" /><div><h3>ChatGPT</h3><span>{tr("Developer Mode required today", "目前需要 Developer Mode")}</span></div></header>
+            <header><img className="monoLogo" src={aiClients[0].icon} alt="" /><div><h3>ChatGPT</h3><span>{tr("Developer Mode required today", "目前需要 Developer Mode")}</span></div></header>
             <ol>
               <li><b>1</b><span>{tr("Open Settings → Apps → Advanced Settings and enable Developer Mode.", "打开 Settings → Apps → Advanced Settings，开启 Developer Mode。")}</span></li>
               <li><b>2</b><span>{tr("Create a custom app and paste the Remote Arc MCP URL.", "创建 Custom App，并粘贴 Remote Arc MCP 地址。")}</span></li>
@@ -1566,7 +1566,7 @@ function McpPage({ user }: { user?: User | null }) {
             <a href="https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt">{tr("OpenAI setup guide ↗", "查看 OpenAI 官方指南 ↗")}</a>
           </article>
           <article className="clientGuideCard">
-            <header><img src={aiClients[1].icon} alt="" /><div><h3>Claude</h3><span>{tr("No developer mode required", "无需 Developer Mode")}</span></div></header>
+            <header><img className="colorLogo" src={aiClients[1].icon} alt="" /><div><h3>Claude</h3><span>{tr("No developer mode required", "无需 Developer Mode")}</span></div></header>
             <ol>
               <li><b>1</b><span>{tr("Open Settings → Connectors.", "打开 Settings → Connectors。")}</span></li>
               <li><b>2</b><span>{tr("Choose Add custom connector and paste the Remote Arc MCP URL.", "选择 Add custom connector，并粘贴 Remote Arc MCP 地址。")}</span></li>
@@ -2913,8 +2913,8 @@ function Dashboard({
               </article>
               <article className="securityStatusCard">
                 <div><span>{tr("Edge protection", "边缘保护")}</span><span className="securityMiniState">Cloudflare</span></div>
-                <strong>{tr("Rate limited", "已限流")}</strong>
-                <small>{tr("Authenticated MCP traffic is capped per user/client; auth and pairing endpoints have separate limits.", "已认证 MCP 流量按用户/客户端限流；认证与配对入口使用独立限流。")}</small>
+                <strong>{tr("Rate limiting active", "限流保护已启用")}</strong>
+                <small>{tr("Traffic is protected by per-user/client limits. This status means protection is enabled, not that requests are currently being blocked.", "流量已受到按用户/客户端的限流保护。这个状态表示保护已启用，并不代表当前请求正在被拦截。")}</small>
               </article>
             </section>
 

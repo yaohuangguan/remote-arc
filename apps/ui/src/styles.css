@@ -6962,3 +6962,9 @@ body{font-size:18px;line-height:1.6}
     padding:11px 13px;
   }
 }
+
+/* Preserve native brand colors in MCP client guide cards. */
+.clientGuideCard header img.colorLogo{filter:none!important}
+.clientGuideCard header img.monoLogo{filter:invert(1)!important}
+:root[data-theme="light"] .clientGuideCard header img.colorLogo,
+:root[data-theme="light"] .clientGuideCard header img.monoLogo{filter:none!important}
