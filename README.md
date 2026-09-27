@@ -197,7 +197,14 @@ Developer plus:
 
 ```text
 start_process
+process_status
+process_output
+stop_process
 ```
+
+`start_process` can run synchronously or return a local process handle for a
+managed background process. Output and status stay on the device and are read
+through the same authenticated Remote Arc tool path.
 
 Presets are shortcuts. The actual hosted policy is an individually editable
 per-device skill list.
@@ -233,8 +240,10 @@ Local Undo cannot reverse external side effects such as deployments, package
 publishing, network requests, or remote database mutations.
 
 The dashboard can load undo metadata directly from an online device on demand
-and restore a specific action. Undo history is not persisted in D1 or another
-Remote Arc cloud store.
+and restore a specific action. Each row reports whether the current file still
+matches the recorded post-edit state. Conflicted, missing, or legacy snapshots
+are shown as unavailable instead of attempting an unsafe overwrite. Undo history
+is not persisted in D1 or another Remote Arc cloud store.
 
 ## Sensitive Path Policy
 
@@ -255,8 +264,12 @@ browser profile directories
 .env and .env.*
 ```
 
-Users can add additional protected paths per device in the dashboard. Path
-checks happen again on the local device immediately before filesystem
+Users can add additional protected paths per device in the dashboard. When a
+specific project genuinely needs a protected file such as one `.env`, users can
+add a narrow sensitive-path exception for that exact file or directory without
+turning off protection globally. Workspace Scope still applies to exceptions.
+
+Path checks happen again on the local device immediately before filesystem
 execution, including canonical-path checks that prevent a symlink inside an
 allowed workspace from escaping into a protected or out-of-scope directory.
 

@@ -90,9 +90,11 @@ request to another service, or mutating a remote database.
 
 ## Workspace and sensitive-path policy
 
-The dashboard can configure allowed workspace roots and additional protected
-paths per device. Sensitive-path protection is on by default for common
-credential locations and `.env` files.
+The dashboard can configure allowed workspace roots, additional protected
+paths, and narrow sensitive-path exceptions per device. Sensitive-path
+protection stays on by default for common credential locations and `.env`
+files; an exception bypasses only sensitive-path protection, not Workspace
+Scope.
 
 Filesystem paths are canonicalized and checked locally immediately before
 execution. If workspace roots are configured, file operations must stay under
@@ -106,6 +108,11 @@ only blocks a narrow set of catastrophic commands such as root/home recursive
 deletion, disk formatting or raw-disk overwrite, fork bombs, and machine
 shutdown/reboot. These checks happen on the device before the command reaches
 the local execution core.
+
+Full mode also supports managed background processes. `start_process` can
+return a local process id, and `process_status`, `process_output`, and
+`stop_process` manage that process without introducing another execution
+backend.
 
 ## Security
 
