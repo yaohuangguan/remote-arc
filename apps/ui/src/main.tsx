@@ -1431,17 +1431,39 @@ function Landing({ user }: { user?: User | null }) {
           )}</p>
         </div>
         <div className="demoGrid">
-          <article className="demoCard">
-            <div className="demoMedia">
-              <span className="demoBadge">{tr("MOBILE", "手机")}</span>
-            </div>
-            <div className="demoCopy">
-              <span className="eyebrow">{tr("MOBILE DASHBOARD", "移动端控制台")}</span>
-              <h3>{tr("Ask from your phone. Let Remote Arc do the work.", "在手机上说一句，让 Remote Arc 去执行。")}</h3>
+          <article className="demoCard mobileScenarioCard">
+            <div className="demoCopy mobileScenarioCopy">
+              <div className="mobileScenarioHeader">
+                <span className="eyebrow">{tr("CHATGPT ON MOBILE", "手机上的 CHATGPT")}</span>
+                <span className="demoBadge mobileScenarioBadge">{tr("MOBILE", "移动端")}</span>
+              </div>
+              <h3>{tr(
+                "Ask in ChatGPT on your phone. Let Remote Arc reach your computer.",
+                "在手机 ChatGPT 里提问，让 Remote Arc 去操作你的电脑。"
+              )}</h3>
               <p>{tr(
-                "Type a natural-language task from your phone and Remote Arc routes it to the paired computer you choose, then returns the result.",
-                "在手机上输入自然语言任务，Remote Arc 会把它路由到你选择的已配对电脑，再把执行结果返回给你。"
+                "Your request stays in the AI client you already use. Remote Arc exposes only the tools you allowed on the paired computer, runs the approved action there, and returns the result to ChatGPT.",
+                "请求仍然从你已经在用的 AI 客户端发出。Remote Arc 只提供你在已配对电脑上允许的工具，在那台电脑上执行获准操作，再把结果返回给 ChatGPT。"
               )}</p>
+              <div className="mobileScenarioFlow" aria-label={tr("ChatGPT mobile to Remote Arc to paired computer", "手机 ChatGPT 到 Remote Arc 再到已配对电脑")}>
+                <div className="mobileScenarioNode">
+                  <span>01</span>
+                  <strong>{tr("ChatGPT mobile", "手机 ChatGPT")}</strong>
+                  <small>{tr("Ask naturally", "自然语言提问")}</small>
+                </div>
+                <b aria-hidden="true">→</b>
+                <div className="mobileScenarioNode">
+                  <span>02</span>
+                  <strong>Remote Arc</strong>
+                  <small>{tr("Route allowed tools", "路由已授权工具")}</small>
+                </div>
+                <b aria-hidden="true">→</b>
+                <div className="mobileScenarioNode">
+                  <span>03</span>
+                  <strong>{tr("Your computer", "你的电脑")}</strong>
+                  <small>{tr("Run and return", "执行并返回结果")}</small>
+                </div>
+              </div>
             </div>
           </article>
           <article className="demoCard">

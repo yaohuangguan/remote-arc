@@ -2345,7 +2345,20 @@ body{font-size:18px;line-height:1.6}
 .demoCopy h3{margin:10px 0 10px;color:var(--text);font-size:25px;line-height:1.2;letter-spacing:-.03em}
 .demoCopy p{margin:0;color:var(--muted);font-size:16px;line-height:1.72}
 .demoEndpoint{display:block;width:fit-content;max-width:100%;margin-top:18px;padding:9px 11px;overflow:auto;border:1px solid var(--neutral-line);border-radius:9px;background:#030b11;color:var(--sky-light);font-size:14px;white-space:nowrap}
-@media(max-width:900px){.demoSection{padding:58px 0}.demoGrid{grid-template-columns:1fr}.demoCopy h3{font-size:22px}}
+.mobileScenarioCard{background:linear-gradient(145deg,rgba(8,20,35,.98),rgba(5,12,23,.98));}
+.mobileScenarioCopy{display:flex;flex:1;flex-direction:column;min-height:100%;padding:32px}
+.mobileScenarioHeader{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.mobileScenarioBadge{position:static;flex:0 0 auto;background:rgba(9,26,42,.9)}
+.mobileScenarioCopy h3{max-width:510px;margin-top:24px;font-size:clamp(27px,2.35vw,35px);line-height:1.08}
+.mobileScenarioCopy>p{max-width:540px;font-size:16px;line-height:1.72}
+.mobileScenarioFlow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:14px;align-items:center;margin-top:auto;padding-top:34px;border-top:1px solid var(--neutral-line)}
+.mobileScenarioNode{display:grid;gap:4px;min-width:0}
+.mobileScenarioNode span{color:var(--sky-light);font:800 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em}
+.mobileScenarioNode strong{color:var(--text);font-size:14px;white-space:nowrap}
+.mobileScenarioNode small{color:var(--muted);font-size:12px;line-height:1.35}
+.mobileScenarioFlow>b{color:var(--sky-light);font-size:18px;font-weight:700}
+@media(max-width:900px){.demoSection{padding:58px 0}.demoGrid{grid-template-columns:1fr}.demoCopy h3{font-size:22px}.mobileScenarioCopy{min-height:420px;padding:26px}.mobileScenarioFlow{padding-top:26px}}
+@media(max-width:560px){.mobileScenarioCopy{min-height:auto}.mobileScenarioFlow{grid-template-columns:1fr;gap:10px}.mobileScenarioFlow>b{transform:rotate(90deg);justify-self:start;margin-left:8px}.mobileScenarioNode strong{white-space:normal}}
 
 
 /* Animated hero connection map */
