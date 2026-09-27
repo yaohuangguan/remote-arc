@@ -26,6 +26,33 @@ type SavedConfig = {
   mode: Mode;
 };
 
+class RevokedDeviceCredentialError extends Error {
+  constructor() {
+    super("Saved device credential has been revoked.");
+    this.name = "RevokedDeviceCredentialError";
+  }
+}
+
+async function validateSavedPairing(config: SavedConfig) {
+  try {
+    const response = await fetch(new URL("/api/device/heartbeat", config.origin), {
+      method: "POST",
+      headers: { Authorization: "Bearer " + config.deviceToken },
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      throw new RevokedDeviceCredentialError();
+    }
+
+    // A transient server-side failure should not destroy a valid local pairing.
+    // The WebSocket connection remains the source of truth for availability.
+    return;
+  } catch (error) {
+    if (error instanceof RevokedDeviceCredentialError) throw error;
+    return;
+  }
+}
+
 type PairingStart = {
   device_code: string;
   device_secret: string;
@@ -244,7 +271,7 @@ class ExecutionCore {
   }
 }
 
-async function connectAgent(config: SavedConfig) {
+async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> {
   const core = new ExecutionCore(config.mode);
   banner();
   logLine("info", `Device: ${bold(config.deviceName)} · ${process.platform}/${process.arch}`);
@@ -256,6 +283,19 @@ async function connectAgent(config: SavedConfig) {
   const tools = await core.tools();
   logLine("success", `Local tools ready: ${tools.length} exposed`);
   process.stdout.write("       " + dim(tools.map((tool) => tool.name).join(" · ")) + "\n");
+  try {
+    await validateSavedPairing(config);
+  } catch (error) {
+    if (error instanceof RevokedDeviceCredentialError) {
+      logLine("warn", error.message);
+      await resetConfig();
+      logLine("event", "Starting a fresh device pairing…");
+      await core.close().catch(() => undefined);
+      return "rePair";
+    }
+    throw error;
+  }
+
   const wsUrl = new URL("/agent", config.origin.replace(/^http/, "ws"));
 
   let stopped = false;
@@ -264,7 +304,6 @@ async function connectAgent(config: SavedConfig) {
   const shutdown = async () => {
     stopped = true;
     await core.close().catch(() => undefined);
-    process.exit(0);
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
@@ -279,8 +318,38 @@ async function connectAgent(config: SavedConfig) {
 
     try {
       await new Promise<void>((resolve, reject) => {
-        ws.once("open", resolve);
-        ws.once("error", reject);
+        const onOpen = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = (error: Error) => {
+          cleanup();
+          reject(error);
+        };
+        const onUnexpectedResponse = (
+          _request: unknown,
+          response: { statusCode?: number },
+        ) => {
+          cleanup();
+          if (response.statusCode === 401 || response.statusCode === 403) {
+            reject(new RevokedDeviceCredentialError());
+            return;
+          }
+          reject(
+            new Error(
+              "Unexpected relay response: " + String(response.statusCode || "unknown"),
+            ),
+          );
+        };
+        const cleanup = () => {
+          ws.off("open", onOpen);
+          ws.off("error", onError);
+          ws.off("unexpected-response", onUnexpectedResponse);
+        };
+
+        ws.once("open", onOpen);
+        ws.once("error", onError);
+        ws.once("unexpected-response", onUnexpectedResponse);
       });
 
       backoff = 1000;
@@ -378,6 +447,14 @@ async function connectAgent(config: SavedConfig) {
       });
       clearInterval(heartbeatTimer);
     } catch (error) {
+      if (error instanceof RevokedDeviceCredentialError) {
+        logLine("warn", error.message);
+        await resetConfig();
+        logLine("event", "Starting a fresh device pairing…");
+        await core.close().catch(() => undefined);
+        return "rePair";
+      }
+
       logLine(
         "error",
         "Relay connection failed: " +
@@ -397,6 +474,9 @@ async function connectAgent(config: SavedConfig) {
       backoff = Math.min(backoff * 2, 30_000);
     }
   }
+
+  await core.close().catch(() => undefined);
+  return "stopped";
 }
 
 async function main() {
@@ -439,22 +519,27 @@ async function main() {
     DEFAULT_ORIGIN;
 
   let config = await readConfig();
-  if (config && ["https://remote.samyao.me", "https://remotearc.app"].includes(config.origin)) {
-    config.origin = DEFAULT_ORIGIN;
-    await writeConfig(config);
-    logLine("info", "Migrated relay origin to " + DEFAULT_ORIGIN);
-  }
-  if (!config) {
-    config = await pair(origin, selectedMode());
-  } else if (argFlag("--safe") || argFlag("--developer")) {
-    config.mode = argFlag("--safe") ? "safe" : "managed";
-    await writeConfig(config);
-  }
 
-  if (config) {
+  while (true) {
+    if (config && ["https://remote.samyao.me", "https://remotearc.app"].includes(config.origin)) {
+      config.origin = DEFAULT_ORIGIN;
+      await writeConfig(config);
+      logLine("info", "Migrated relay origin to " + DEFAULT_ORIGIN);
+    }
+
+    if (!config) {
+      config = await pair(origin, selectedMode());
+    } else if (argFlag("--safe") || argFlag("--developer")) {
+      config.mode = argFlag("--safe") ? "safe" : "managed";
+      await writeConfig(config);
+    }
+
     logLine("info", `Using paired device identity ${dim(config.deviceId.slice(0, 8))}…`);
+    const result = await connectAgent(config);
+    if (result !== "rePair") return;
+
+    config = null;
   }
-  await connectAgent(config);
 }
 
 main().catch((error) => {
