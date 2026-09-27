@@ -46,6 +46,8 @@
       "/install/*",
       "/pricing",
       "/resources",
+      "/blogs",
+      "/blogs/*",
       "/docs/*",
       "/privacy",
       "/terms",

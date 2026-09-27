@@ -278,10 +278,60 @@ function PublicHeader({ user }: { user?: User | null }) {
         <Brand />
         <nav className="publicNavLinks">
           <a href="/#how-it-works">{tr("How it works", "如何使用")}</a>
-          <a href={MARKETING_ORIGIN + "/docs/mcp"}>{tr("MCP", "MCP")}</a>
+
+          <div className="publicNavMenu">
+            <button type="button" className="publicNavMenuTrigger">
+              MCP <span aria-hidden="true">⌄</span>
+            </button>
+            <div className="publicNavDropdown mcpDropdown">
+              <a href={MARKETING_ORIGIN + "/docs/mcp"}>
+                <strong>{tr("MCP overview", "MCP 概览")}</strong>
+                <small>{tr("Endpoint, OAuth and client setup", "端点、OAuth 与客户端接入")}</small>
+              </a>
+              <a href={MARKETING_ORIGIN + "/install/chatgpt"}>
+                <strong>ChatGPT</strong>
+                <small>{tr("Installation guide", "安装指南")}</small>
+              </a>
+              <a href={MARKETING_ORIGIN + "/install/claude"}>
+                <strong>Claude</strong>
+                <small>{tr("Installation guide", "安装指南")}</small>
+              </a>
+              <a href={MARKETING_ORIGIN + "/install/cursor"}>
+                <strong>Cursor</strong>
+                <small>{tr("Installation guide", "安装指南")}</small>
+              </a>
+            </div>
+          </div>
+
           <a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a>
-          <a href={MARKETING_ORIGIN + "/resources"}>{tr("Resources", "资源")}</a>
-          <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
+
+          <div className="publicNavMenu">
+            <button type="button" className="publicNavMenuTrigger">
+              {tr("Resources", "资源")} <span aria-hidden="true">⌄</span>
+            </button>
+            <div className="publicNavDropdown resourceDropdown">
+              <a href={MARKETING_ORIGIN + "/blogs"}>
+                <strong>{tr("Blog", "博客")}</strong>
+                <small>{tr("Ideas, product notes and what we're building", "产品思考、开发记录与我们正在做的事")}</small>
+              </a>
+              <a href={MARKETING_ORIGIN + "/resources"}>
+                <strong>{tr("Technical resources", "技术资源")}</strong>
+                <small>{tr("Architecture, security and implementation", "架构、安全与实现细节")}</small>
+              </a>
+              <a href={MARKETING_ORIGIN + "/docs/mcp"}>
+                <strong>{tr("Docs", "文档")}</strong>
+                <small>{tr("Remote MCP setup and reference", "Remote MCP 配置与参考")}</small>
+              </a>
+              <a href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md">
+                <strong>{tr("Security", "安全")}</strong>
+                <small>{tr("Security model and reporting", "安全模型与漏洞报告")}</small>
+              </a>
+              <a href="https://github.com/yaohuangguan/remote-arc/releases">
+                <strong>{tr("Releases", "版本发布")}</strong>
+                <small>{tr("What's new in Remote Arc", "查看 Remote Arc 的版本更新")}</small>
+              </a>
+            </div>
+          </div>
         </nav>
         <div className="publicNavActions">
           <ThemeSwitcher compact />
@@ -1628,6 +1678,158 @@ function PricingPage({ user }: { user?: User | null }) {
           <a className="ghostButton priceLink" href={user ? APP_ORIGIN + "/settings" : APP_ORIGIN + "/auth/google?return_to=/settings"}>{tr("Manage usage", "管理额度")}</a>
         </article>
       </section>
+    </PublicLayout>
+  );
+}
+
+const blogPosts = [
+  {
+    slug: "why-i-built-remote-arc",
+    date: "27 Sep 2026",
+    readTime: "6 min read",
+    author: "Sam Yao",
+  },
+] as const;
+
+function BlogsPage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  const post = blogPosts[0];
+
+  return (
+    <PublicLayout user={user}>
+      <section className="blogIndexHero">
+        <span className="eyebrow">{tr("REMOTE ARC BLOG", "REMOTE ARC 博客")}</span>
+        <h1>{tr("Notes from building the bridge between AI and real computers.", "记录我们如何把 AI 真正连接到现实中的电脑。")}</h1>
+        <p>{tr(
+          "Product thinking, engineering decisions, security trade-offs and lessons from building Remote Arc in public.",
+          "这里分享 Remote Arc 的产品思考、工程决策、安全取舍，以及公开构建过程中的经验。",
+        )}</p>
+      </section>
+
+      <section className="blogIndex">
+        <a className="blogLeadPost" href={"/blogs/" + post.slug}>
+          <div className="blogLeadMeta">
+            <span>{post.date}</span>
+            <span>{post.readTime}</span>
+            <span>{post.author}</span>
+          </div>
+          <h2>{tr(
+            "Why I built Remote Arc: AI should reach your computer without owning it",
+            "为什么我做了 Remote Arc：AI 应该能使用你的电脑，但不该接管它",
+          )}</h2>
+          <p>{tr(
+            "Chat is useful. Agents are more useful when they can work with the files, tools and environments we already use. The hard part is making that access powerful without making it reckless.",
+            "聊天当然有用，但当 AI 能真正使用我们已经在用的文件、工具与开发环境时，它才更像一个 Agent。难点不是让它获得能力，而是让这种能力足够强、同时又足够克制。",
+          )}</p>
+          <span className="blogReadLink">{tr("Read the article", "阅读文章")} →</span>
+        </a>
+      </section>
+    </PublicLayout>
+  );
+}
+
+function BlogArticlePage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  const post = blogPosts[0];
+
+  return (
+    <PublicLayout user={user}>
+      <article className="blogArticle">
+        <header className="blogArticleHeader">
+          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <span className="eyebrow">{tr("BUILDING REMOTE ARC", "构建 REMOTE ARC")}</span>
+          <h1>{tr(
+            "Why I built Remote Arc: AI should reach your computer without owning it",
+            "为什么我做了 Remote Arc：AI 应该能使用你的电脑，但不该接管它",
+          )}</h1>
+          <p className="blogDeck">{tr(
+            "The most useful AI is not another chat window. It is an AI that can work with the computer you already have — under permissions you can actually understand and control.",
+            "真正有用的 AI 不应该只是另一个聊天窗口，而应该能够使用你已经拥有的电脑，同时所有权限都清晰、可理解、可控制。",
+          )}</p>
+          <div className="blogByline">
+            <span className="blogAuthorMark">SY</span>
+            <div>
+              <strong>Sam Yao</strong>
+              <span>{tr("Creator of Remote Arc", "Remote Arc 创建者")} · {post.date} · {post.readTime}</span>
+            </div>
+          </div>
+        </header>
+
+        <div className="blogArticleBody">
+          <p>{tr(
+            "I spend a lot of time using AI tools, and I kept running into the same boundary: the model could explain what I should do, write the command I should run, or generate the patch I should apply — but the final mile was still mine. My files, terminals, repositories and development environments were sitting on real computers, while the AI was trapped behind a chat box.",
+            "我长期使用各种 AI 工具，但总会撞到同一个边界：模型可以告诉我应该做什么，可以写好命令，也可以生成补丁，但最后一公里依然要我自己完成。我的文件、终端、代码仓库和开发环境都在真实电脑上，而 AI 仍然被困在聊天框里。",
+          )}</p>
+
+          <p>{tr(
+            "That gap is what pushed me to build Remote Arc. The idea sounds simple: let an AI client reach a computer you own. The implementation is not simple at all, because the moment an AI can read files, edit code or run a command, the product stops being a convenience layer and becomes security-sensitive infrastructure.",
+            "这就是我开始做 Remote Arc 的原因。想法听起来很简单：让 AI 客户端能够访问你自己的电脑。但真正实现起来完全不简单，因为一旦 AI 可以读取文件、修改代码或运行命令，这个产品就不再只是一个便利工具，而变成了安全敏感的基础设施。",
+          )}</p>
+
+          <h2>{tr("The goal was never “full control.”", "目标从来不是“完全控制”。")}</h2>
+          <p>{tr(
+            "A lot of remote-agent products are marketed around how much control they can give an AI. I wanted to start from the opposite question: how little authority does the AI need in order to finish the job?",
+            "很多远程 Agent 产品会强调 AI 能获得多大的控制权。我更想从相反的问题出发：为了完成任务，AI 最少需要多少权限？",
+          )}</p>
+
+          <p>{tr(
+            "Remote Arc therefore treats every computer as its own trust boundary. A development machine can expose file reads, targeted edits and terminal commands. Another machine can stay effectively read-only. Permissions belong to the device, not to a vague account-wide “agent mode.”",
+            "因此 Remote Arc 把每台电脑都视为独立的信任边界。一台开发机可以开放文件读取、定向编辑和终端命令；另一台电脑可以保持接近只读。权限属于设备本身，而不是某个模糊的全局“Agent 模式”。",
+          )}</p>
+
+          <blockquote>{tr(
+            "The product should make powerful actions possible, but it should never make them feel invisible.",
+            "产品应该允许强大的操作发生，但绝不能让这些操作变得不可见。",
+          )}</blockquote>
+
+          <h2>{tr("No public port. No VPN. No inbound listener.", "不需要公网端口，不需要 VPN，也不需要入站监听。")}</h2>
+          <p>{tr(
+            "The local Remote Arc agent creates an outbound connection to the hosted relay. That matters to me because I did not want installation to begin with router configuration, firewall exceptions or a machine permanently listening to the public internet. You pair the device explicitly, it receives its own revocable credential, and it can be removed independently later.",
+            "Remote Arc 的本地 Agent 主动向托管 Relay 建立出站连接。这一点对我很重要，因为我不希望安装流程从配置路由器、添加防火墙例外或让电脑永久监听公网开始。设备需要明确配对，每台设备都有独立、可撤销的凭证，也可以单独移除。",
+          )}</p>
+
+          <h2>{tr("MCP turned out to be the right interface.", "MCP 恰好是最合适的接口。")}</h2>
+          <p>{tr(
+            "I did not want Remote Arc to be tied to one model vendor. The useful abstraction is not “a ChatGPT remote-control feature” or “a Claude remote-control feature.” It is a set of clearly described tools that compatible AI clients can discover and call. MCP gives Remote Arc that boundary.",
+            "我不希望 Remote Arc 被绑定在某一家模型厂商上。真正有价值的抽象并不是“ChatGPT 的远程控制功能”或“Claude 的远程控制功能”，而是一组描述清晰、可以被兼容 AI 客户端发现并调用的工具。MCP 正好提供了这样的边界。",
+          )}</p>
+
+          <p>{tr(
+            "Today the same Remote Arc endpoint can be used from ChatGPT, Claude and other compatible clients. The client can change; the paired computers and their permission model do not have to.",
+            "现在，同一个 Remote Arc 端点可以被 ChatGPT、Claude 和其他兼容客户端使用。AI 客户端可以更换，但已经配对的电脑和权限模型不需要跟着重做。",
+          )}</p>
+
+          <h2>{tr("The hardest part is not execution. It is trust.", "最难的不是执行，而是信任。")}</h2>
+          <p>{tr(
+            "Running a command remotely is technically easy. Deciding when that command should be allowed, showing which machine will receive it, preserving a useful audit trail without turning the service into a content archive, and giving the user a reliable way to revoke access are the parts that deserve most of the engineering attention.",
+            "远程执行一条命令在技术上并不难。真正值得投入工程精力的是：什么时候应该允许它执行、明确告诉用户命令会发到哪台电脑、在不把服务变成内容存档系统的前提下保留有用的审计信息，以及让用户始终拥有可靠的撤销方式。",
+          )}</p>
+
+          <p>{tr(
+            "That is why Remote Arc has an account-level MCP pause, per-device tool policies, revocable OAuth grants, protected paths, local undo support for supported edits and a local execution layer that remains the final authority. None of those controls are glamorous. They are the product.",
+            "所以 Remote Arc 会有账户级 MCP Pause、每设备工具策略、可撤销 OAuth 授权、受保护路径、对支持编辑的本地 Undo，以及始终拥有最终决定权的本地执行层。这些功能可能并不“炫”，但它们本身就是产品。",
+          )}</p>
+
+          <h2>{tr("What I want Remote Arc to become", "我希望 Remote Arc 最终变成什么")}</h2>
+          <p>{tr(
+            "I want connecting an AI to your own computer to feel as normal as connecting a calendar or a code repository — but with controls that reflect how much more consequential a computer actually is. Installation should be simple. Permissions should be explicit. The AI client should be replaceable. And the user should always know where the boundary is.",
+            "我希望未来把 AI 连接到自己的电脑，能像连接日历或代码仓库一样自然——但权限设计必须体现出“电脑”本身远比这些服务更敏感。安装应该简单，权限应该明确，AI 客户端应该可以替换，而且用户始终知道边界在哪里。",
+          )}</p>
+
+          <p>{tr(
+            "Remote Arc is still early. I am building it in public, using it on my own machines, and refining the product every time something feels more powerful than it feels understandable. That tension is exactly what makes this project interesting to me.",
+            "Remote Arc 还处在很早期的阶段。我会继续公开构建它，在自己的电脑上真实使用它，并且每当某个能力显得比它本身更难理解时，就重新调整产品。对我来说，这种“能力与可控性之间的张力”正是这个项目最有意思的地方。",
+          )}</p>
+
+          <footer className="blogArticleFooter">
+            <div>
+              <span className="blogAuthorMark">SY</span>
+              <div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")}</span></div>
+            </div>
+            <a href="/install/chatgpt">{tr("Install Remote Arc for ChatGPT", "为 ChatGPT 安装 Remote Arc")} →</a>
+          </footer>
+        </div>
+      </article>
     </PublicLayout>
   );
 }
@@ -3552,6 +3754,8 @@ function App() {
   }
 
   if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
   if (location.pathname === "/resources") return <ResourcesPage user={user === undefined ? null : user} />;
   if (location.pathname === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
   if (location.pathname === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
