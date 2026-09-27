@@ -24,6 +24,20 @@ export class DeviceRegistry {
 
   constructor(private readonly ctx: DurableObjectState) {}
 
+  private preferredSocket(sockets: WebSocket[]) {
+    return [...sockets].sort((a, b) => {
+      const left = a.deserializeAttachment() as SocketAttachment | null;
+      const right = b.deserializeAttachment() as SocketAttachment | null;
+      const leftPolicy = left?.capabilities?.includes("device_policy_v1") ? 1 : 0;
+      const rightPolicy = right?.capabilities?.includes("device_policy_v1") ? 1 : 0;
+      if (leftPolicy !== rightPolicy) return rightPolicy - leftPolicy;
+
+      const leftTime = Date.parse(left?.device?.connectedAt || "") || 0;
+      const rightTime = Date.parse(right?.device?.connectedAt || "") || 0;
+      return rightTime - leftTime;
+    })[0];
+  }
+
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
@@ -74,22 +88,25 @@ export class DeviceRegistry {
     const userId = request.headers.get("x-remote-link-user-id");
     if (!userId) return [];
 
-    return this.ctx.getWebSockets("user:" + userId).map((socket) => {
+    const byDevice = new Map<string, WebSocket[]>();
+    for (const socket of this.ctx.getWebSockets("user:" + userId)) {
       const attachment =
         socket.deserializeAttachment() as SocketAttachment | null;
-      if (!attachment) {
-        return {
-          id: "unknown",
-          status: "online",
-          tools: [],
-        };
-      }
+      if (!attachment?.deviceId) continue;
+      const sockets = byDevice.get(attachment.deviceId) || [];
+      sockets.push(socket);
+      byDevice.set(attachment.deviceId, sockets);
+    }
 
+    return Array.from(byDevice.entries()).map(([deviceId, sockets]) => {
+      const socket = this.preferredSocket(sockets);
+      const attachment =
+        socket?.deserializeAttachment() as SocketAttachment | null;
       return {
-        id: attachment.deviceId,
-        ...(attachment.device || {}),
-        tools: attachment.tools || [],
-        capabilities: attachment.capabilities || [],
+        id: deviceId,
+        ...(attachment?.device || {}),
+        tools: attachment?.tools || [],
+        capabilities: attachment?.capabilities || [],
         status: "online",
       };
     });
@@ -115,7 +132,9 @@ export class DeviceRegistry {
       );
     }
 
-    const socket = this.ctx.getWebSockets("device:" + body.deviceId)[0];
+    const socket = this.preferredSocket(
+      this.ctx.getWebSockets("device:" + body.deviceId),
+    );
     if (!socket) {
       return Response.json({ error: "device offline" }, { status: 404 });
     }
