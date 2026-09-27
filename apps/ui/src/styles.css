@@ -1995,6 +1995,138 @@ a:focus-visible {
 }
 .blogLeadPost:hover h2{color:#bfeeff}
 
+.blogPostRow{
+  display:block;
+  max-width:1040px;
+  padding:34px 0 38px;
+  border-top:1px solid var(--border);
+  color:inherit;
+  text-decoration:none;
+}
+.blogPostRow h2{
+  max-width:900px;
+  margin:0 0 13px;
+  font-size:clamp(27px,3vw,42px);
+  line-height:1.12;
+  letter-spacing:-.035em;
+}
+.blogPostRow p{
+  max-width:790px;
+  margin:0 0 18px;
+  color:var(--muted);
+  font-size:16px;
+  line-height:1.72;
+}
+.blogPostRow:hover h2{color:#bfeeff}
+
+.blogCompareTable{
+  margin:34px 0 44px;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+.blogCompareTable>div{
+  display:grid;
+  grid-template-columns:1.05fr 1.2fr 1.2fr;
+  gap:18px;
+  padding:15px 0;
+  border-top:1px solid var(--border);
+}
+.blogCompareTable>div:first-child{border-top:0}
+.blogCompareTable span{
+  color:#76919a;
+  font-size:12px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.blogCompareTable b,
+.blogCompareTable strong{
+  color:#bed0d5;
+  font-size:13px;
+  line-height:1.55;
+  font-weight:650;
+}
+.blogCompareHead strong{
+  color:#7dd3fc;
+  font:800 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+.blogSourceNote{
+  display:grid;
+  gap:8px;
+  margin:42px 0 18px;
+  padding:18px 0;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+.blogSourceNote strong{
+  margin-bottom:2px;
+  color:#d8e8ec;
+  font-size:12px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.blogSourceNote a{
+  width:max-content;
+  color:#7dd3fc;
+  font-size:13px;
+  text-decoration:none;
+}
+
+.blogSecurityLayers{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1px;
+  margin:34px 0 44px;
+  border:1px solid var(--border);
+  background:var(--border);
+}
+.blogSecurityLayers span{
+  display:grid;
+  gap:5px;
+  padding:18px;
+  background:var(--panel);
+}
+.blogSecurityLayers b{
+  color:#dff3f7;
+  font-size:13px;
+}
+.blogSecurityLayers small{
+  color:#718c95;
+  font-size:12px;
+  line-height:1.5;
+}
+
+.blogArchitectureRail{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin:34px 0 44px;
+  padding:16px 0;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+.blogArchitectureRail span{
+  padding:7px 9px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  color:#bcd1d7;
+  font:700 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.blogArchitectureRail i{
+  color:#456874;
+  font-style:normal;
+}
+
+:root[data-theme="light"] .blogPostRow:hover h2{color:#036b8d}
+:root[data-theme="light"] .blogCompareTable b,
+:root[data-theme="light"] .blogCompareTable strong,
+:root[data-theme="light"] .blogSourceNote strong,
+:root[data-theme="light"] .blogSecurityLayers b{color:#173c49}
+
 .blogArticle{
   max-width:1120px;
   margin:0 auto;
@@ -2116,6 +2248,12 @@ a:focus-visible {
   .blogArticleBody h2{font-size:27px;margin-top:44px}
   .blogArticleBody blockquote{font-size:21px;padding-left:18px}
   .blogArticleFooter{align-items:flex-start;flex-direction:column}
+  .blogPostRow{padding:28px 0 32px}
+  .blogCompareTable>div{grid-template-columns:1fr;gap:6px;padding:16px 0}
+  .blogCompareHead span{display:none}
+  .blogCompareHead{grid-template-columns:1fr 1fr!important}
+  .blogSecurityLayers{grid-template-columns:1fr}
+  .blogArchitectureRail{gap:6px}
 }
 
 /* Readability pass: larger type scale across marketing + dashboard */
