@@ -342,6 +342,7 @@ function PairDevice({
   const [message, setMessage] = useState("");
   const [approved, setApproved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   async function lookup(targetCode = code) {
     if (!targetCode || !user) return;
@@ -390,16 +391,26 @@ function PairDevice({
 
   if (!user) {
     return (
-      <CenteredCard
-        title={tr("Sign in to pair this computer", "登录以配对这台电脑")}
-        body={initialCode
-          ? tr("Sign in with Google to confirm the code shown in your terminal.", "使用 Google 登录，然后确认终端中显示的配对码。")
-          : tr("Sign in with Google to approve this computer.", "使用 Google 登录以授权这台电脑。")}
-      >
-        <a className="primaryButton" href={"/auth/google?return_to=" + encodeURIComponent(location.pathname + location.search)}>
-          {tr("Continue with Google", "使用 Google 继续")}
-        </a>
-      </CenteredCard>
+      <>
+        <CenteredCard
+          title={tr("Sign in to pair this computer", "登录以配对这台电脑")}
+          body={initialCode
+            ? tr("Choose a Remote Arc account, then confirm the code shown in your terminal.", "选择一个 Remote Arc 账户，然后确认终端中显示的配对码。")
+            : tr("Choose a Remote Arc account before approving this computer.", "授权这台电脑前，请先选择 Remote Arc 账户。")}
+        >
+          <button className="primaryButton" type="button" onClick={() => setShowSignIn(true)}>
+            {tr("Sign in to Remote Arc", "登录 Remote Arc")} <span>→</span>
+          </button>
+        </CenteredCard>
+        {showSignIn && (
+          <AuthProviderModal
+            returnTo={location.pathname + location.search}
+            title={tr("Choose how to sign in.", "选择登录方式。")}
+            body={tr("Sign in to the Remote Arc account that should own this paired computer.", "登录将拥有这台已配对电脑的 Remote Arc 账户。")}
+            onClose={() => setShowSignIn(false)}
+          />
+        )}
+      </>
     );
   }
 
@@ -464,6 +475,7 @@ function PairDevice({
 
 function OAuthConsent({ user }: { user: User | null | undefined }) {
   const { tr } = useI18n();
+  const [showSignIn, setShowSignIn] = useState(false);
   const params = new URLSearchParams(location.search);
   const scopes = (params.get("scope") || "").split(/\s+/).filter(Boolean);
   const clientId = params.get("client_id") || "MCP client";
@@ -481,11 +493,21 @@ function OAuthConsent({ user }: { user: User | null | undefined }) {
   }
   if (!user) {
     return (
-      <CenteredCard title={tr("Sign in to continue", "登录后继续")} body={tr("Sign in before authorizing this MCP client.", "授权 MCP 客户端前请先登录。")}>
-        <a className="primaryButton" href={"/auth/google?return_to=" + encodeURIComponent(location.pathname + location.search)}>
-          {tr("Continue with Google", "使用 Google 继续")}
-        </a>
-      </CenteredCard>
+      <>
+        <CenteredCard title={tr("Sign in to continue", "登录后继续")} body={tr("Choose a Remote Arc account before authorizing this MCP client.", "授权 MCP 客户端前，请先选择 Remote Arc 账户。")}>
+          <button className="primaryButton" type="button" onClick={() => setShowSignIn(true)}>
+            {tr("Sign in to Remote Arc", "登录 Remote Arc")} <span>→</span>
+          </button>
+        </CenteredCard>
+        {showSignIn && (
+          <AuthProviderModal
+            returnTo={location.pathname + location.search}
+            title={tr("Choose how to sign in.", "选择登录方式。")}
+            body={tr("Sign in to the account you want this MCP client to access.", "登录你希望此 MCP 客户端访问的 Remote Arc 账户。")}
+            onClose={() => setShowSignIn(false)}
+          />
+        )}
+      </>
     );
   }
 
@@ -778,13 +800,17 @@ function InstallTypewriterDemo({ config }: { config: InstallDemoConfig }) {
   );
 }
 
-function InstallAuthModal({
-  clientName,
+function AuthProviderModal({
   returnTo,
+  title,
+  body,
+  note,
   onClose,
 }: {
-  clientName: string;
   returnTo: string;
+  title: string;
+  body: string;
+  note?: string;
   onClose: () => void;
 }) {
   const { tr } = useI18n();
@@ -810,12 +836,9 @@ function InstallAuthModal({
       <section className="installAuthModal" onMouseDown={(event) => event.stopPropagation()}>
         <button className="modalClose" type="button" onClick={onClose} aria-label={tr("Close", "关闭")}>×</button>
         <div className="installAuthBrand"><LogoMark /></div>
-        <span className="eyebrow">{tr("REMOTE ARC ACCOUNT", "REMOTE ARC 账户")}</span>
-        <h2>{tr("Sign in before installing.", "登录后开始安装。")}</h2>
-        <p>{tr(
-          "Your Remote Arc account keeps your paired computers, device permissions and usage together. Sign in once, then continue the " + clientName + " setup.",
-          "Remote Arc 账户用于统一保存已配对电脑、设备权限和使用额度。登录一次后，即可继续 " + clientName + " 的安装流程。",
-        )}</p>
+        <span className="eyebrow">{tr("SIGN IN TO REMOTE ARC", "登录 REMOTE ARC")}</span>
+        <h2>{title}</h2>
+        <p>{body}</p>
         <div className="installAuthProviders">
           {providers.map((provider) => (
             <a className={"authProviderButton " + provider.id} href={provider.href} key={provider.id}>
@@ -825,9 +848,9 @@ function InstallAuthModal({
             </a>
           ))}
         </div>
-        <small>{tr(
-          "Authentication is separate from your AI client connection. More sign-in methods can be added without changing your paired devices.",
-          "Remote Arc 登录与 AI 客户端连接彼此独立；以后新增其他登录方式时，不会影响你已经配对的设备。",
+        <small>{note || tr(
+          "More sign-in methods can be added here later without changing your paired computers or AI connections.",
+          "以后可以在这里增加更多登录方式，而不会影响已经配对的电脑或 AI 连接。",
         )}</small>
       </section>
     </div>
@@ -843,15 +866,26 @@ function ClientInstallPage({
 }) {
   const { tr } = useI18n();
   const [showAuth, setShowAuth] = useState(false);
-  const installReturnTo = "/install/" + slug + "#installation";
+  const installPath = "/install/" + slug;
+  const installReturnTo = installPath + "?continue=1";
+
+  function scrollToInstallation() {
+    document.getElementById("installation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   function beginInstallation() {
     if (!user) {
       setShowAuth(true);
       return;
     }
-    document.getElementById("installation")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToInstallation();
   }
+
+  useEffect(() => {
+    if (!user || new URLSearchParams(location.search).get("continue") !== "1") return;
+    window.requestAnimationFrame(() => scrollToInstallation());
+    history.replaceState({}, "", installPath);
+  }, [user?.id, slug]);
 
   const config = slug === "chatgpt"
     ? {
@@ -1116,9 +1150,17 @@ function ClientInstallPage({
         </div>
       </section>
       {showAuth && (
-        <InstallAuthModal
-          clientName={config.name}
+        <AuthProviderModal
           returnTo={installReturnTo}
+          title={tr("Sign in before installing.", "登录后开始安装。")}
+          body={tr(
+            "Your Remote Arc account keeps your paired computers, device permissions and usage together. Sign in once, then continue the " + config.name + " setup.",
+            "Remote Arc 账户用于统一保存已配对电脑、设备权限和使用额度。登录一次后，即可继续 " + config.name + " 的安装流程。",
+          )}
+          note={tr(
+            "Authentication is separate from your AI client connection. More sign-in methods can be added without changing your paired devices.",
+            "Remote Arc 登录与 AI 客户端连接彼此独立；以后新增其他登录方式时，不会影响你已经配对的设备。",
+          )}
           onClose={() => setShowAuth(false)}
         />
       )}
@@ -1128,7 +1170,9 @@ function ClientInstallPage({
 
 function DashboardAccess() {
   const { tr } = useI18n();
+  const [showSignIn, setShowSignIn] = useState(false);
   return (
+    <>
     <PublicLayout>
       <section className="dashboardAccess">
         <div className="dashboardAccessCopy">
@@ -1141,9 +1185,9 @@ function DashboardAccess() {
             "Sign in to pair computers, inspect online state, review usage and connect your AI clients. The public website always remains available at the root domain.",
             "登录后可配对电脑、查看在线状态、用量与 AI 客户端连接。根域名始终保留为公开官网。"
           )}</p>
-          <a className="primaryButton" href={APP_ORIGIN + "/auth/google?return_to=/overview"}>
-            {tr("Continue with Google", "使用 Google 继续")} <span>→</span>
-          </a>
+          <button className="primaryButton" type="button" onClick={() => setShowSignIn(true)}>
+            {tr("Sign in to Remote Arc", "登录 Remote Arc")} <span>→</span>
+          </button>
         </div>
         <div className="dashboardAccessPreview" aria-hidden="true">
           <div className="previewTop"><span>Remote Arc</span><i>Dashboard</i></div>
@@ -1158,6 +1202,15 @@ function DashboardAccess() {
         </div>
       </section>
     </PublicLayout>
+    {showSignIn && (
+      <AuthProviderModal
+        returnTo="/overview"
+        title={tr("Choose how to sign in.", "选择登录方式。")}
+        body={tr("Sign in to manage your devices, permissions, usage and AI connections.", "登录后管理设备、权限、用量与 AI 连接。")}
+        onClose={() => setShowSignIn(false)}
+      />
+    )}
+    </>
   );
 }
 
@@ -3455,8 +3508,8 @@ function App() {
   if (location.pathname === "/oauth/consent") return <OAuthConsent user={user} />;
 
   if (location.pathname === "/install") {
-    history.replaceState({}, "", "/install/chatgpt");
-    return <ClientInstallPage slug="chatgpt" user={user === undefined ? null : user} />;
+    location.replace("/install/chatgpt");
+    return <CenteredCard title={tr("Opening installation…", "正在打开安装页…")} body={tr("Redirecting to the ChatGPT installation guide.", "正在跳转到 ChatGPT 安装指南。")} />;
   }
 
   const installMatch = location.pathname.match(/^\/install\/(chatgpt|claude|cursor)$/);

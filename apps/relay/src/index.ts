@@ -433,6 +433,30 @@ export default {
       return Response.json(await getDevicesForUser(env, user.id));
     }
 
+    const acceptsHtml =
+      request.headers.get("sec-fetch-mode") === "navigate" ||
+      (request.headers.get("accept") || "").includes("text/html");
+
+    if (acceptsHtml) {
+      const assetHeaders = new Headers(request.headers);
+      assetHeaders.set("authorization", "Bearer remote-arc-html-shell");
+      assetHeaders.set("cache-control", "no-store");
+
+      const assetResponse = await env.ASSETS.fetch(
+        new Request(request, { headers: assetHeaders }),
+      );
+      const headers = new Headers(assetResponse.headers);
+      headers.set("cache-control", "no-store");
+      headers.set("cloudflare-cdn-cache-control", "no-store");
+      headers.delete("etag");
+
+      return new Response(assetResponse.body, {
+        status: assetResponse.status,
+        statusText: assetResponse.statusText,
+        headers,
+      });
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
