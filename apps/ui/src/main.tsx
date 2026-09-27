@@ -598,17 +598,20 @@ type InstallDemoConfig = {
   prompt: string;
   working: string;
   resultLines: string[];
+  terminalLines: string[];
 };
 
 function InstallTypewriterDemo({ config }: { config: InstallDemoConfig }) {
   const { tr } = useI18n();
   const [typed, setTyped] = useState("");
-  const [phase, setPhase] = useState<"typing" | "working" | "done">("typing");
+  const [phase, setPhase] = useState<"typing" | "sent" | "working" | "done">("typing");
+  const [activityCount, setActivityCount] = useState(0);
   const [cycle, setCycle] = useState(0);
 
   useEffect(() => {
     setTyped("");
     setPhase("typing");
+    setActivityCount(0);
 
     let index = 0;
     const timers: number[] = [];
@@ -617,43 +620,137 @@ function InstallTypewriterDemo({ config }: { config: InstallDemoConfig }) {
       setTyped(config.prompt.slice(0, index));
       if (index >= config.prompt.length) {
         window.clearInterval(interval);
-        timers.push(window.setTimeout(() => setPhase("working"), 450));
-        timers.push(window.setTimeout(() => setPhase("done"), 1550));
-        timers.push(window.setTimeout(() => setCycle((value) => value + 1), 7200));
+
+        const sendAt = 520;
+        const workingAt = 960;
+        timers.push(window.setTimeout(() => {
+          setTyped("");
+          setPhase("sent");
+        }, sendAt));
+        timers.push(window.setTimeout(() => setPhase("working"), workingAt));
+
+        config.terminalLines.forEach((_, lineIndex) => {
+          timers.push(window.setTimeout(
+            () => setActivityCount(lineIndex + 1),
+            workingAt + 280 + lineIndex * 430,
+          ));
+        });
+
+        const doneAt = workingAt + 520 + config.terminalLines.length * 430;
+        timers.push(window.setTimeout(() => setPhase("done"), doneAt));
+        timers.push(window.setTimeout(() => setCycle((value) => value + 1), doneAt + 4600));
       }
-    }, 42);
+    }, 34);
 
     return () => {
       window.clearInterval(interval);
       timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [config.prompt, cycle]);
+  }, [config.prompt, config.terminalLines, cycle]);
+
+  const messageSent = phase !== "typing";
 
   return (
-    <div className="installDemoShell" aria-label={tr("Simulated Remote Arc conversation", "Remote Arc 模拟对话")}>
-      <div className="installDemoTop">
+    <div className="remoteSessionDemo" aria-label={tr("Simulated Remote Arc live session", "Remote Arc 模拟实时会话")}>
+      <div className="remoteSessionHeader">
         <div>
-          <img src={config.icon} alt="" />
-          <strong>{config.name}</strong>
+          <LogoMark />
+          <span>
+            <strong>Remote Arc Live Session</strong>
+            <small>{tr("AI request → local device", "AI 请求 → 本机设备")}</small>
+          </span>
         </div>
-        <span><i />{tr("connected to your machine", "已连接你的电脑")}</span>
+        <div className="remoteSessionStatus">
+          <i />
+          <span>{tr("Personal Mac · online", "Personal Mac · 在线")}</span>
+        </div>
       </div>
 
-      <div className="installDemoConversation">
-        <div className="installDemoUserBubble">
-          {typed}
-          {phase === "typing" && <b className="typeCursor" />}
+      <div className="remoteSessionPanels">
+        <section className="sessionTerminalPanel">
+          <div className="sessionPanelLabel">
+            <span>{tr("LOCAL ACTIVITY", "本机活动")}</span>
+            <small>{tr("runs on your computer", "运行在你的电脑上")}</small>
+          </div>
+
+          <div className="sessionTerminalWindow">
+            <div className="sessionTerminalBar">
+              <span><i /><i /><i /></span>
+              <small>remote-arc@personal-mac</small>
+            </div>
+            <div className="sessionTerminalBody">
+              <div className="sessionTerminalPrompt">
+                <span>$</span>
+                <code>{tr("remote-arc session --client ", "remote-arc session --client ")}{config.name.toLowerCase()}</code>
+              </div>
+
+              <div className="sessionTerminalLine muted">
+                <b>✓</b>
+                <span>{tr("secure device connection ready", "设备安全连接已就绪")}</span>
+              </div>
+
+              {messageSent && (
+                <div className="sessionTerminalLine">
+                  <b>→</b>
+                  <span>{tr("routing request to Personal Mac", "正在把请求路由到 Personal Mac")}</span>
+                </div>
+              )}
+
+              {config.terminalLines.slice(0, activityCount).map((line, index) => (
+                <div className="sessionTerminalLine" key={line + index}>
+                  <b>{index === config.terminalLines.length - 1 && phase === "done" ? "✓" : "›"}</b>
+                  <span>{line}</span>
+                </div>
+              ))}
+
+              {phase === "working" && (
+                <div className="sessionTerminalCursor">
+                  <span>▌</span>
+                </div>
+              )}
+
+              {phase === "typing" && (
+                <div className="sessionTerminalIdle">
+                  <span>{tr("waiting for an AI request…", "等待 AI 请求…")}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <div className="sessionBridge">
+          <span>Remote MCP</span>
+          <i>→</i>
         </div>
 
-        {phase !== "typing" && (
-          <div className="installDemoWork">
-            <small>{phase === "working" ? config.working : tr("Remote Arc finished", "Remote Arc 已完成")} <span>›</span></small>
-            {phase === "working" ? (
-              <div className="installDemoThinking">
-                <i /><i /><i />
-              </div>
+        <section className="sessionChatPanel">
+          <div className="sessionChatHeader">
+            <div>
+              <img src={config.icon} alt="" />
+              <strong>{config.name}</strong>
+            </div>
+            <span><i />{tr("Remote Arc connected", "Remote Arc 已连接")}</span>
+          </div>
+
+          <div className="sessionChatBody">
+            {messageSent ? (
+              <div className="sessionUserMessage">{config.prompt}</div>
             ) : (
-              <div className="installDemoResult">
+              <div className="sessionChatHint">
+                <strong>{tr("Ask naturally.", "直接自然语言输入。")}</strong>
+                <span>{tr("Remote Arc will route the task to the computer you name.", "Remote Arc 会把任务路由到你指定的电脑。")}</span>
+              </div>
+            )}
+
+            {(phase === "sent" || phase === "working") && (
+              <div className="sessionAssistantState">
+                <span>{config.working}</span>
+                <div><i /><i /><i /></div>
+              </div>
+            )}
+
+            {phase === "done" && (
+              <div className="sessionAssistantResult">
                 <strong>{tr("Done on your computer.", "已在你的电脑上完成。")}</strong>
                 <ul>
                   {config.resultLines.map((line) => <li key={line}>{line}</li>)}
@@ -661,15 +758,22 @@ function InstallTypewriterDemo({ config }: { config: InstallDemoConfig }) {
               </div>
             )}
           </div>
-        )}
+
+          <div className={"sessionComposer " + (phase === "typing" ? "typing" : "")}>
+            <span>＋</span>
+            <div>
+              {phase === "typing" ? typed : tr("Ask another task…", "继续输入任务…")}
+              {phase === "typing" && <b className="typeCursor" />}
+            </div>
+            <button type="button" aria-hidden="true">↑</button>
+          </div>
+        </section>
       </div>
 
-      <div className="installDemoComposer">
-        <span>＋</span>
-        <em>{phase === "done" ? tr("Ask another task…", "继续输入任务…") : tr("Remote Arc", "Remote Arc")}</em>
-        <b>↑</b>
+      <div className="remoteSessionFooter">
+        <span>{tr("Simulated walkthrough — no live computer is being controlled.", "模拟演示——此处没有实际控制电脑。")}</span>
+        <span>{tr("The same device policy still applies.", "设备权限策略仍然生效。")}</span>
       </div>
-      <small className="installDemoCaption">{tr("Simulated product walkthrough", "模拟产品演示")}</small>
     </div>
   );
 }
@@ -728,6 +832,12 @@ function ClientInstallPage({
             tr("Moved 126 files; nothing was deleted.", "移动了 126 个文件，没有删除任何内容。"),
             tr("Changes stayed inside your allowed workspace.", "所有修改都限制在允许的工作区内。"),
           ],
+          terminalLines: [
+            tr("policy → Full · ~/Downloads", "policy → Full · ~/Downloads"),
+            tr("start_process → inspect and group files", "start_process → 检查并整理文件"),
+            tr("process_output → 126 files planned", "process_output → 已规划 126 个文件"),
+            tr("process_output → move complete · 0 deleted", "process_output → 移动完成 · 0 删除"),
+          ],
         },
       }
     : slug === "claude"
@@ -772,6 +882,13 @@ function ClientInstallPage({
               tr("Updated the file and reran the test suite.", "修改文件后重新跑了测试。"),
               tr("All tests pass; a Local Undo snapshot is available.", "测试已全部通过，并保留了 Local Undo 快照。"),
             ],
+            terminalLines: [
+              tr("start_process → pnpm test", "start_process → pnpm test"),
+              tr("process_output → 1 failing assertion", "process_output → 1 条断言失败"),
+              tr("read_file → src/auth.test.ts", "read_file → src/auth.test.ts"),
+              tr("edit_block → assertion updated", "edit_block → 已更新断言"),
+              tr("start_process → pnpm test · passed", "start_process → pnpm test · 已通过"),
+            ],
           },
         }
       : {
@@ -815,27 +932,51 @@ function ClientInstallPage({
               tr("Captured the process output through Remote Arc.", "通过 Remote Arc 获取了进程输出。"),
               tr("Test suite completed successfully.", "测试套件已成功完成。"),
             ],
+            terminalLines: [
+              tr("policy → Full · ~/Work/remote-arc", "policy → Full · ~/Work/remote-arc"),
+              tr("start_process → pnpm test · background", "start_process → pnpm test · 后台运行"),
+              tr("process_status → running", "process_status → running"),
+              tr("process_output → 42 tests passed", "process_output → 42 tests passed"),
+            ],
           },
         };
 
   return (
     <PublicLayout user={user}>
       <section className="clientInstallHero">
-        <div className="clientInstallCopy">
+        <nav className="installClientSwitcher" aria-label={tr("AI client installation", "AI 客户端安装")}>
+          {aiClients.map((client) => (
+            <a
+              className={client.slug === slug ? "active" : ""}
+              href={"/install/" + client.slug}
+              key={client.slug}
+            >
+              <img className={client.tone === "mono" ? "monoLogo" : "colorLogo"} src={client.icon} alt="" />
+              <span>{client.name}</span>
+              {client.slug === slug && <small>{tr("Current", "当前")}</small>}
+            </a>
+          ))}
+        </nav>
+
+        <div className="clientInstallIntro">
           <div className="installBrandChain">
             <span><img src={config.icon} alt="" /></span>
-            <i>···</i>
+            <i>×</i>
             <span><LogoMark /></span>
           </div>
-          <span className="eyebrow">{config.eyebrow}</span>
-          <h1>{config.title}</h1>
-          <p>{config.intro}</p>
-          <div className="installAvailability"><i />{config.availability}</div>
-          <div className="clientInstallActions">
-            <a className="primaryButton" href="#installation">{tr("Installation steps", "安装步骤")} <span>↓</span></a>
-            <a className="ghostButton" href={config.externalHref} target="_blank" rel="noreferrer">{config.externalLabel} ↗</a>
+
+          <div className="clientInstallCopy">
+            <span className="eyebrow">{config.eyebrow}</span>
+            <h1>{config.title}</h1>
+            <p>{config.intro}</p>
+            <div className="installAvailability"><i />{config.availability}</div>
+            <div className="clientInstallActions">
+              <a className="primaryButton" href="#installation">{tr("Installation steps", "安装步骤")} <span>↓</span></a>
+              <a className="ghostButton" href={config.externalHref} target="_blank" rel="noreferrer">{config.externalLabel} ↗</a>
+            </div>
           </div>
         </div>
+
         <InstallTypewriterDemo config={config.demo} />
       </section>
 

@@ -6399,3 +6399,566 @@ body{font-size:18px;line-height:1.6}
     grid-template-columns:1fr;
   }
 }
+
+
+/* Remote Arc installation experience: own layout, not a clone of external product pages */
+.clientInstallHero{
+  display:block!important;
+  min-height:0!important;
+  padding:44px 0 86px!important;
+}
+.installClientSwitcher{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:6px;
+  border:1px solid #21384a;
+  border-radius:14px;
+  background:#061018;
+}
+.installClientSwitcher a{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:40px;
+  padding:7px 11px;
+  border-radius:10px;
+  color:#7e99a3;
+  text-decoration:none;
+  transition:background .16s ease,color .16s ease;
+}
+.installClientSwitcher a:hover{
+  background:#0a1b25;
+  color:#cfe8ee;
+}
+.installClientSwitcher a.active{
+  background:#0d2531;
+  color:#e5f7fb;
+}
+.installClientSwitcher img{
+  width:23px;
+  height:23px;
+  object-fit:contain;
+}
+.installClientSwitcher img.monoLogo{filter:invert(1)}
+.installClientSwitcher img.colorLogo{filter:none}
+.installClientSwitcher span{
+  font-size:13px;
+  font-weight:750;
+}
+.installClientSwitcher small{
+  margin-left:2px;
+  padding:3px 6px;
+  border-radius:999px;
+  background:#153949;
+  color:#8ee3f2;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+.clientInstallIntro{
+  display:grid;
+  grid-template-columns:120px minmax(0,880px);
+  gap:28px;
+  align-items:start;
+  margin-top:54px;
+}
+.clientInstallIntro .installBrandChain{
+  margin:3px 0 0;
+  flex-direction:column;
+  gap:8px;
+}
+.clientInstallIntro .installBrandChain i{
+  color:#446977;
+  font-size:20px;
+}
+.clientInstallCopy{
+  max-width:900px!important;
+}
+.clientInstallCopy h1{
+  max-width:920px;
+  font-size:clamp(54px,6.8vw,94px)!important;
+}
+.clientInstallCopy>p{
+  max-width:760px!important;
+  font-size:18px!important;
+}
+.clientInstallActions{
+  margin-top:24px!important;
+}
+
+.remoteSessionDemo{
+  margin-top:70px;
+  overflow:hidden;
+  border:1px solid #1c3445;
+  border-radius:24px;
+  background:#061018;
+  box-shadow:0 38px 90px rgba(0,0,0,.24);
+}
+.remoteSessionHeader{
+  min-height:68px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  padding:0 20px;
+  border-bottom:1px solid #173040;
+  background:#08131c;
+}
+.remoteSessionHeader>div:first-child{
+  display:flex;
+  align-items:center;
+  gap:11px;
+}
+.remoteSessionHeader svg{
+  width:32px!important;
+  height:32px!important;
+}
+.remoteSessionHeader span{
+  display:grid;
+  gap:2px;
+}
+.remoteSessionHeader strong{
+  color:#dff4f8;
+  font-size:14px;
+}
+.remoteSessionHeader small{
+  color:#607f8a;
+  font-size:11px;
+}
+.remoteSessionStatus{
+  display:flex!important;
+  align-items:center;
+  gap:8px;
+  color:#7fa0aa;
+  font-size:12px;
+}
+.remoteSessionStatus i{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#4ade80;
+  box-shadow:0 0 11px rgba(74,222,128,.45);
+}
+
+.remoteSessionPanels{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 92px minmax(0,1fr);
+  min-height:480px;
+}
+.sessionTerminalPanel,
+.sessionChatPanel{
+  min-width:0;
+}
+.sessionTerminalPanel{
+  padding:20px;
+  background:
+    radial-gradient(circle at 10% 0%,rgba(14,165,233,.06),transparent 20rem),
+    #050b10;
+}
+.sessionPanelLabel{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:11px;
+}
+.sessionPanelLabel>span{
+  color:#6f98a5;
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.12em;
+}
+.sessionPanelLabel>small{
+  color:#4e6d77;
+  font-size:10px;
+}
+.sessionTerminalWindow{
+  min-height:384px;
+  overflow:hidden;
+  border:1px solid #192c38;
+  border-radius:15px;
+  background:#02070a;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+.sessionTerminalBar{
+  min-height:38px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:0 12px;
+  border-bottom:1px solid #142630;
+  background:#081017;
+}
+.sessionTerminalBar>span{
+  display:flex;
+  gap:5px;
+}
+.sessionTerminalBar i{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#34515c;
+}
+.sessionTerminalBar i:nth-child(1){background:#e06c75}
+.sessionTerminalBar i:nth-child(2){background:#d6a84b}
+.sessionTerminalBar i:nth-child(3){background:#55b685}
+.sessionTerminalBar small{
+  color:#4f6c76;
+  font:500 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.sessionTerminalBody{
+  min-height:345px;
+  padding:17px;
+  color:#86a5ae;
+  font:500 12px/1.62 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.sessionTerminalPrompt{
+  display:flex;
+  gap:8px;
+  margin-bottom:17px;
+}
+.sessionTerminalPrompt>span{
+  color:#38bdf8;
+  font-weight:900;
+}
+.sessionTerminalPrompt code{
+  color:#d0e1e6;
+  overflow-wrap:anywhere;
+}
+.sessionTerminalLine{
+  display:grid;
+  grid-template-columns:16px minmax(0,1fr);
+  gap:7px;
+  margin:7px 0;
+  animation:sessionLineIn .22s ease both;
+}
+.sessionTerminalLine b{
+  color:#38bdf8;
+  font-weight:800;
+}
+.sessionTerminalLine span{
+  color:#8aa8b1;
+  overflow-wrap:anywhere;
+}
+.sessionTerminalLine.muted b{color:#4ade80}
+.sessionTerminalLine.muted span{color:#5f7e87}
+@keyframes sessionLineIn{
+  from{opacity:0;transform:translateY(5px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.sessionTerminalCursor{
+  margin-top:10px;
+  color:#38bdf8;
+  animation:typeCursorBlink .8s steps(1,end) infinite;
+}
+.sessionTerminalIdle{
+  margin-top:26px;
+  color:#385661;
+}
+
+.sessionBridge{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  border-left:1px solid #173040;
+  border-right:1px solid #173040;
+  background:linear-gradient(180deg,#07131b,#091720);
+}
+.sessionBridge::before,
+.sessionBridge::after{
+  content:"";
+  width:1px;
+  height:82px;
+  background:linear-gradient(180deg,transparent,#245970,transparent);
+}
+.sessionBridge span{
+  writing-mode:vertical-rl;
+  transform:rotate(180deg);
+  color:#4d7b8b;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.sessionBridge i{
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  border:1px solid #245970;
+  border-radius:50%;
+  color:#6ed4e7;
+  font-style:normal;
+  font-size:14px;
+}
+
+.sessionChatPanel{
+  display:flex;
+  flex-direction:column;
+  background:#f7f7f8;
+  color:#17191d;
+}
+.sessionChatHeader{
+  min-height:54px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:0 16px;
+  border-bottom:1px solid #e1e3e6;
+  background:#fff;
+}
+.sessionChatHeader>div{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.sessionChatHeader img{
+  width:23px;
+  height:23px;
+  object-fit:contain;
+}
+.sessionChatHeader strong{font-size:13px}
+.sessionChatHeader>span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#188d75;
+  font-size:10px;
+}
+.sessionChatHeader>span i{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:#27b498;
+}
+.sessionChatBody{
+  flex:1;
+  min-height:340px;
+  padding:22px 16px;
+}
+.sessionChatHint{
+  display:grid;
+  gap:5px;
+  width:min(100%,330px);
+  margin:68px auto 0;
+  text-align:center;
+}
+.sessionChatHint strong{
+  color:#3f4349;
+  font-size:14px;
+}
+.sessionChatHint span{
+  color:#969ba2;
+  font-size:12px;
+  line-height:1.5;
+}
+.sessionUserMessage{
+  width:fit-content;
+  max-width:83%;
+  margin-left:auto;
+  padding:10px 14px;
+  border-radius:18px 18px 4px 18px;
+  background:#e9eaec;
+  color:#15171b;
+  font-size:13px;
+  line-height:1.5;
+  animation:sessionMessageIn .22s ease both;
+}
+@keyframes sessionMessageIn{
+  from{opacity:0;transform:translateY(8px) scale(.985)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.sessionAssistantState{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-top:22px;
+  color:#8d9299;
+  font-size:11px;
+}
+.sessionAssistantState>div{
+  display:flex;
+  gap:4px;
+}
+.sessionAssistantState i{
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:#969aa0;
+  animation:demoThinking 1s ease-in-out infinite;
+}
+.sessionAssistantState i:nth-child(2){animation-delay:.13s}
+.sessionAssistantState i:nth-child(3){animation-delay:.26s}
+.sessionAssistantResult{
+  max-width:90%;
+  margin-top:20px;
+  color:#35383d;
+  font-size:13px;
+  line-height:1.55;
+  animation:sessionLineIn .25s ease both;
+}
+.sessionAssistantResult strong{font-size:13px}
+.sessionAssistantResult ul{
+  display:grid;
+  gap:5px;
+  margin:9px 0 0;
+  padding-left:18px;
+}
+.sessionComposer{
+  min-height:46px;
+  display:grid;
+  grid-template-columns:22px minmax(0,1fr) 30px;
+  align-items:center;
+  gap:8px;
+  margin:0 11px 11px;
+  padding:0 8px;
+  border:1px solid #d5d8dc;
+  border-radius:23px;
+  background:#fff;
+}
+.sessionComposer>span{
+  color:#80858c;
+  font-size:20px;
+  font-weight:300;
+}
+.sessionComposer>div{
+  min-width:0;
+  overflow:hidden;
+  color:#8d9298;
+  font-size:12px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.sessionComposer.typing>div{color:#23262a}
+.sessionComposer button{
+  width:30px;
+  height:30px;
+  border:0;
+  border-radius:50%;
+  background:#151515;
+  color:#fff;
+  font-size:14px;
+}
+.sessionComposer .typeCursor{
+  background:#24272b;
+}
+
+.remoteSessionFooter{
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:0 17px;
+  border-top:1px solid #173040;
+  color:#4f6f79;
+  font-size:10px;
+  background:#071119;
+}
+
+:root[data-theme="light"] .installClientSwitcher{
+  border-color:#d7e6eb;
+  background:#fff;
+}
+:root[data-theme="light"] .installClientSwitcher a{color:#55737c}
+:root[data-theme="light"] .installClientSwitcher a:hover{background:#f2f8fa;color:#173944}
+:root[data-theme="light"] .installClientSwitcher a.active{background:#eaf6fa;color:#075985}
+:root[data-theme="light"] .installClientSwitcher img.monoLogo,
+:root[data-theme="light"] .installClientSwitcher img.colorLogo{filter:none}
+:root[data-theme="light"] .installClientSwitcher small{background:#d9f1f6;color:#075985}
+:root[data-theme="light"] .remoteSessionDemo{
+  border-color:#d5e6eb;
+  box-shadow:0 34px 80px rgba(36,75,88,.13);
+}
+:root[data-theme="light"] .remoteSessionHeader{
+  border-color:#d5e6eb;
+  background:#f7fbfc;
+}
+:root[data-theme="light"] .remoteSessionHeader strong{color:#173944}
+:root[data-theme="light"] .remoteSessionHeader small,
+:root[data-theme="light"] .remoteSessionStatus{color:#55737c}
+:root[data-theme="light"] .sessionTerminalPanel{background:#061018}
+:root[data-theme="light"] .sessionBridge{
+  border-color:#d5e6eb;
+  background:#eef7fa;
+}
+:root[data-theme="light"] .sessionBridge::before,
+:root[data-theme="light"] .sessionBridge::after{
+  background:linear-gradient(180deg,transparent,#83b7c6,transparent);
+}
+:root[data-theme="light"] .sessionBridge span{color:#557d8b}
+:root[data-theme="light"] .sessionBridge i{border-color:#9bc8d4;color:#075985}
+:root[data-theme="light"] .remoteSessionFooter{
+  border-color:#d5e6eb;
+  background:#f7fbfc;
+  color:#55737c;
+}
+
+@media(max-width:980px){
+  .clientInstallIntro{
+    grid-template-columns:1fr;
+  }
+  .clientInstallIntro .installBrandChain{
+    flex-direction:row;
+    margin-bottom:4px;
+  }
+  .remoteSessionPanels{
+    grid-template-columns:1fr;
+  }
+  .sessionBridge{
+    min-height:58px;
+    flex-direction:row;
+    border-left:0;
+    border-right:0;
+    border-top:1px solid #173040;
+    border-bottom:1px solid #173040;
+  }
+  .sessionBridge::before,
+  .sessionBridge::after{
+    width:82px;
+    height:1px;
+    background:linear-gradient(90deg,transparent,#245970,transparent);
+  }
+  .sessionBridge span{
+    writing-mode:horizontal-tb;
+    transform:none;
+  }
+  .sessionTerminalPanel{padding:14px}
+}
+@media(max-width:640px){
+  .clientInstallHero{padding-top:28px!important}
+  .installClientSwitcher{
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+  }
+  .installClientSwitcher a{
+    justify-content:center;
+    padding:7px 6px;
+  }
+  .installClientSwitcher small{display:none}
+  .clientInstallIntro{margin-top:38px}
+  .clientInstallCopy h1{font-size:clamp(44px,14vw,64px)!important}
+  .remoteSessionDemo{margin-top:48px;border-radius:18px}
+  .remoteSessionHeader{
+    align-items:flex-start;
+    flex-direction:column;
+    padding:13px 14px;
+  }
+  .remoteSessionStatus{padding-bottom:8px}
+  .sessionTerminalWindow{min-height:340px}
+  .sessionChatBody{min-height:300px}
+  .remoteSessionFooter{
+    align-items:flex-start;
+    flex-direction:column;
+    padding:11px 13px;
+  }
+}
