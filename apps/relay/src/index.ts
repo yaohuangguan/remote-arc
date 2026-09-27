@@ -448,7 +448,13 @@ export default {
       });
     }
 
+    const marketingDocumentRequest =
+      isMarketingHost &&
+      request.method === "GET" &&
+      !url.pathname.split("/").pop()?.includes(".");
+
     const acceptsHtml =
+      marketingDocumentRequest ||
       request.headers.get("sec-fetch-mode") === "navigate" ||
       (request.headers.get("accept") || "").includes("text/html");
 
