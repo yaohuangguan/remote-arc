@@ -219,7 +219,18 @@ export class RemoteArcExecutionCore {
       case "list_directory": {
         const target = await enforcePathPolicy(requiredString(args, "path"), policy);
         return textResult(
-          await listDirectory(target, optionalNumber(args, "depth") ?? 2),
+          await listDirectory(
+            target,
+            optionalNumber(args, "depth") ?? 2,
+            async (candidate) => {
+              try {
+                await enforcePathPolicy(candidate, policy);
+                return true;
+              } catch {
+                return false;
+              }
+            },
+          ),
         );
       }
       case "read_file": {

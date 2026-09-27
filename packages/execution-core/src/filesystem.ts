@@ -12,10 +12,15 @@ const printableSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-export async function listDirectory(targetPath: string, depth = 2) {
+export async function listDirectory(
+  targetPath: string,
+  depth = 2,
+  canReveal?: (candidatePath: string) => Promise<boolean>,
+) {
   const maxDepth = Math.max(1, Math.min(10, Math.trunc(depth || 2)));
   const lines: string[] = [];
   let entriesSeen = 0;
+  let protectedEntries = 0;
 
   async function walk(directory: string, level: number, prefix: string) {
     if (entriesSeen >= MAX_DIRECTORY_ENTRIES) return;
@@ -27,8 +32,14 @@ export async function listDirectory(targetPath: string, depth = 2) {
 
     for (const entry of entries) {
       if (entriesSeen >= MAX_DIRECTORY_ENTRIES) break;
-      entriesSeen += 1;
       const absolute = path.join(directory, entry.name);
+
+      if (canReveal && !(await canReveal(absolute))) {
+        protectedEntries += 1;
+        continue;
+      }
+
+      entriesSeen += 1;
       const label = entry.isDirectory()
         ? "[DIR]"
         : entry.isSymbolicLink()
@@ -50,7 +61,11 @@ export async function listDirectory(targetPath: string, depth = 2) {
     lines.push(`… truncated after ${MAX_DIRECTORY_ENTRIES} entries`);
   }
 
-  return `Directory: ${targetPath}\nDepth: ${maxDepth}\n\n${lines.join("\n") || "(empty)"}`;
+  const protectionNote = protectedEntries
+    ? `\n\n[Remote Arc omitted ${protectedEntries} protected or out-of-scope entr${protectedEntries === 1 ? "y" : "ies"}.]`
+    : "";
+
+  return `Directory: ${targetPath}\nDepth: ${maxDepth}\n\n${lines.join("\n") || "(empty)"}${protectionNote}`;
 }
 
 export async function readTextFile(

@@ -149,6 +149,12 @@ try {
   if (!tree.content[0]?.text.includes("app.txt")) {
     throw new Error("list_directory failed");
   }
+  if (tree.content[0]?.text.includes(".env")) {
+    throw new Error("Sensitive Path Policy leaked a protected filename through list_directory");
+  }
+  if (!tree.content[0]?.text.includes("Remote Arc omitted")) {
+    throw new Error("list_directory did not report that protected entries were omitted");
+  }
 
   const info = await safe.callTool("get_file_info", { path: file }, policy);
   if (!info.content[0]?.text.includes('"type": "file"')) {

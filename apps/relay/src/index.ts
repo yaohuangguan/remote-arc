@@ -171,7 +171,7 @@ export default {
       return Response.json({
         ok: true,
         service: "remotearc-relay",
-        version: "0.3.9",
+        version: "0.3.10",
         auth: "oauth2-pkce",
       });
     }
