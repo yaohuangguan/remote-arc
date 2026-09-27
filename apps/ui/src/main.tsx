@@ -548,18 +548,12 @@ function PublicLayout({
 }
 
 const aiClients = [
-  { name: "ChatGPT", icon: "/ai-openai.svg" },
-  { name: "Claude", icon: "/ai-anthropic.svg" },
+  { name: "ChatGPT", slug: "chatgpt", icon: "/ai-openai.svg", tone: "mono" },
+  { name: "Claude", slug: "claude", icon: "/ai-claude.svg", tone: "color" },
+  { name: "Cursor", slug: "cursor", icon: "/ai-cursor.svg", tone: "color" },
 ] as const;
 
-const topologyAiClients = [
-  { name: "ChatGPT", icon: "/ai-openai.svg", tone: "mono" },
-  { name: "Claude", icon: "/ai-anthropic.svg", tone: "mono" },
-  { name: "Cursor", icon: "/ai-cursor.svg", tone: "color" },
-  { name: "Gemini", icon: "/ai-gemini.svg", tone: "color" },
-  { name: "Grok", icon: "/ai-grok.svg", tone: "color" },
-  { name: "DeepSeek", icon: "/ai-deepseek.svg", tone: "color" },
-] as const;
+const topologyAiClients = aiClients;
 
 function AiClientBadge({ name, icon, note }: { name: string; icon: string; note: string }) {
   return (
@@ -593,6 +587,291 @@ function HelpTip({
       </button>
       <span className="helpTipBubble" role="tooltip">{text}</span>
     </span>
+  );
+}
+
+type InstallClientSlug = "chatgpt" | "claude" | "cursor";
+
+type InstallDemoConfig = {
+  name: string;
+  icon: string;
+  prompt: string;
+  working: string;
+  resultLines: string[];
+};
+
+function InstallTypewriterDemo({ config }: { config: InstallDemoConfig }) {
+  const { tr } = useI18n();
+  const [typed, setTyped] = useState("");
+  const [phase, setPhase] = useState<"typing" | "working" | "done">("typing");
+  const [cycle, setCycle] = useState(0);
+
+  useEffect(() => {
+    setTyped("");
+    setPhase("typing");
+
+    let index = 0;
+    const timers: number[] = [];
+    const interval = window.setInterval(() => {
+      index += 1;
+      setTyped(config.prompt.slice(0, index));
+      if (index >= config.prompt.length) {
+        window.clearInterval(interval);
+        timers.push(window.setTimeout(() => setPhase("working"), 450));
+        timers.push(window.setTimeout(() => setPhase("done"), 1550));
+        timers.push(window.setTimeout(() => setCycle((value) => value + 1), 7200));
+      }
+    }, 42);
+
+    return () => {
+      window.clearInterval(interval);
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [config.prompt, cycle]);
+
+  return (
+    <div className="installDemoShell" aria-label={tr("Simulated Remote Arc conversation", "Remote Arc 模拟对话")}>
+      <div className="installDemoTop">
+        <div>
+          <img src={config.icon} alt="" />
+          <strong>{config.name}</strong>
+        </div>
+        <span><i />{tr("connected to your machine", "已连接你的电脑")}</span>
+      </div>
+
+      <div className="installDemoConversation">
+        <div className="installDemoUserBubble">
+          {typed}
+          {phase === "typing" && <b className="typeCursor" />}
+        </div>
+
+        {phase !== "typing" && (
+          <div className="installDemoWork">
+            <small>{phase === "working" ? config.working : tr("Remote Arc finished", "Remote Arc 已完成")} <span>›</span></small>
+            {phase === "working" ? (
+              <div className="installDemoThinking">
+                <i /><i /><i />
+              </div>
+            ) : (
+              <div className="installDemoResult">
+                <strong>{tr("Done on your computer.", "已在你的电脑上完成。")}</strong>
+                <ul>
+                  {config.resultLines.map((line) => <li key={line}>{line}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="installDemoComposer">
+        <span>＋</span>
+        <em>{phase === "done" ? tr("Ask another task…", "继续输入任务…") : tr("Remote Arc", "Remote Arc")}</em>
+        <b>↑</b>
+      </div>
+      <small className="installDemoCaption">{tr("Simulated product walkthrough", "模拟产品演示")}</small>
+    </div>
+  );
+}
+
+function ClientInstallPage({
+  slug,
+  user,
+}: {
+  slug: InstallClientSlug;
+  user?: User | null;
+}) {
+  const { tr } = useI18n();
+
+  const config = slug === "chatgpt"
+    ? {
+        name: "ChatGPT",
+        icon: "/ai-openai.svg",
+        eyebrow: tr("CHATGPT INSTALLATION", "CHATGPT 安装"),
+        title: tr("Give ChatGPT access to your local computer.", "让 ChatGPT 连接你的本地电脑。"),
+        intro: tr(
+          "Pair a computer once, add Remote Arc as a Remote MCP app on an eligible ChatGPT account, then work with that machine from chat.",
+          "电脑只需配对一次，再在支持 Remote MCP App 的 ChatGPT 账户中添加 Remote Arc，之后即可直接在聊天里操作这台电脑。",
+        ),
+        availability: tr(
+          "Current setup: manual MCP app creation on eligible ChatGPT accounts. A public Remote Arc listing is planned.",
+          "当前方式：在支持手动创建 MCP App 的 ChatGPT 账户中接入。Remote Arc 公开上架仍在计划中。",
+        ),
+        externalHref: "https://chatgpt.com/",
+        externalLabel: tr("Open ChatGPT", "打开 ChatGPT"),
+        steps: [
+          {
+            title: tr("Pair your computer", "配对你的电脑"),
+            body: tr("Run this once on the Windows, macOS or Linux machine you want ChatGPT to reach.", "在你希望 ChatGPT 访问的 Windows、macOS 或 Linux 电脑上运行一次。"),
+            code: "npx remotelink",
+          },
+          {
+            title: tr("Create the Remote Arc app", "创建 Remote Arc App"),
+            body: tr(
+              "In ChatGPT, open Settings → Apps → Create, paste the Remote MCP endpoint, scan tools, and continue through OAuth. If Create is not available, your current account does not expose manual MCP app creation.",
+              "在 ChatGPT 中打开 Settings → Apps → Create，填入 Remote MCP 地址、扫描工具并完成 OAuth。如果没有 Create，说明当前账户尚未开放手动创建 MCP App。",
+            ),
+            code: MCP_ENDPOINT,
+          },
+          {
+            title: tr("Ask ChatGPT to use your computer", "让 ChatGPT 操作你的电脑"),
+            body: tr("Name the machine and task in normal language. Remote Arc checks the saved device policy before routing each tool call.", "直接用自然语言说明设备和任务。每次 Tool Call 路由前，Remote Arc 都会检查这台设备保存的权限策略。"),
+          },
+        ],
+        demo: {
+          name: "ChatGPT",
+          icon: "/ai-openai.svg",
+          prompt: tr("Organize my Downloads folder on my Mac", "整理我 Mac 上的 Downloads 文件夹"),
+          working: tr("Working on your Mac…", "正在你的 Mac 上处理…"),
+          resultLines: [
+            tr("Grouped screenshots and documents into folders.", "已将截图和文档按类型整理到文件夹。"),
+            tr("Moved 126 files; nothing was deleted.", "移动了 126 个文件，没有删除任何内容。"),
+            tr("Changes stayed inside your allowed workspace.", "所有修改都限制在允许的工作区内。"),
+          ],
+        },
+      }
+    : slug === "claude"
+      ? {
+          name: "Claude",
+          icon: "/ai-claude.svg",
+          eyebrow: tr("CLAUDE INSTALLATION", "CLAUDE 安装"),
+          title: tr("Connect Claude to the computer you already use.", "让 Claude 连接你正在使用的电脑。"),
+          intro: tr(
+            "Claude custom connectors support remote MCP. Add Remote Arc once, authorize your account, and your paired computers become available through the connector.",
+            "Claude Custom Connectors 支持 Remote MCP。添加一次 Remote Arc 并完成授权后，你配对的电脑即可通过 Connector 使用。",
+          ),
+          availability: tr("Available through Claude custom connectors using remote MCP.", "可通过 Claude 的 Remote MCP Custom Connector 接入。"),
+          externalHref: "https://claude.ai/",
+          externalLabel: tr("Open Claude", "打开 Claude"),
+          steps: [
+            {
+              title: tr("Pair your computer", "配对你的电脑"),
+              body: tr("Install the Remote Arc agent on the computer Claude should reach.", "在 Claude 需要访问的电脑上安装 Remote Arc Agent。"),
+              code: "npx remotelink",
+            },
+            {
+              title: tr("Add a custom connector", "添加 Custom Connector"),
+              body: tr(
+                "In Claude, open Settings → Connectors and add a custom connector that points to the Remote Arc MCP endpoint. Complete OAuth when Claude redirects you.",
+                "在 Claude 中打开 Settings → Connectors，添加一个指向 Remote Arc MCP 地址的 Custom Connector，并在跳转后完成 OAuth。",
+              ),
+              code: MCP_ENDPOINT,
+            },
+            {
+              title: tr("Use Remote Arc in a Claude conversation", "在 Claude 对话里使用 Remote Arc"),
+              body: tr("Ask Claude to inspect, edit or run a permitted task on a named paired device. The local skill policy remains the final boundary.", "让 Claude 在指定的已配对设备上执行允许的读取、编辑或命令任务；本机 Skill Policy 仍是最终边界。"),
+            },
+          ],
+          demo: {
+            name: "Claude",
+            icon: "/ai-claude.svg",
+            prompt: tr("Find why the tests fail on my desktop and fix it", "找出我桌面电脑上的测试为什么失败并修好"),
+            working: tr("Inspecting your desktop…", "正在检查你的桌面电脑…"),
+            resultLines: [
+              tr("Found one failing assertion in the auth flow.", "定位到认证流程里的一处失败断言。"),
+              tr("Updated the file and reran the test suite.", "修改文件后重新跑了测试。"),
+              tr("All tests pass; a Local Undo snapshot is available.", "测试已全部通过，并保留了 Local Undo 快照。"),
+            ],
+          },
+        }
+      : {
+          name: "Cursor",
+          icon: "/ai-cursor.svg",
+          eyebrow: tr("CURSOR INSTALLATION", "CURSOR 安装"),
+          title: tr("Let Cursor reach the machine behind your code.", "让 Cursor 连接代码所在的真实电脑。"),
+          intro: tr(
+            "Cursor supports remote HTTP MCP servers with OAuth. Point Cursor at Remote Arc and keep the actual filesystem and terminal on your paired machine.",
+            "Cursor 支持带 OAuth 的 Remote HTTP MCP Server。把 Cursor 指向 Remote Arc，就能让文件系统和终端仍然运行在你配对的真实电脑上。",
+          ),
+          availability: tr("Supported through Cursor remote HTTP MCP with OAuth.", "可通过 Cursor 的 Remote HTTP MCP + OAuth 接入。"),
+          externalHref: "https://cursor.com/",
+          externalLabel: tr("Open Cursor", "打开 Cursor"),
+          steps: [
+            {
+              title: tr("Pair your computer", "配对你的电脑"),
+              body: tr("Run Remote Arc on the machine that owns the project or development environment.", "在真正保存项目或开发环境的电脑上运行 Remote Arc。"),
+              code: "npx remotelink",
+            },
+            {
+              title: tr("Add Remote Arc as an MCP server", "把 Remote Arc 添加为 MCP Server"),
+              body: tr(
+                "Add a remote HTTP MCP server from Cursor's MCP settings, or place the configuration below in your Cursor MCP config. Cursor will complete OAuth for the remote server.",
+                "在 Cursor 的 MCP 设置中添加 Remote HTTP MCP Server，或者把下面配置写入 Cursor MCP 配置文件。Cursor 会为远程 Server 完成 OAuth。",
+              ),
+              code: '{ "mcpServers": { "remote-arc": { "url": "' + MCP_ENDPOINT + '" } } }',
+            },
+            {
+              title: tr("Use it from Agent", "从 Agent 中直接使用"),
+              body: tr("Cursor Agent can call the permitted Remote Arc tools while your source tree and commands stay on the selected paired computer.", "Cursor Agent 可以调用已授权的 Remote Arc 工具，同时源码和命令仍然留在你选择的已配对电脑上。"),
+            },
+          ],
+          demo: {
+            name: "Cursor",
+            icon: "/ai-cursor.svg",
+            prompt: tr("Run the tests in remote-arc on my Mac", "在我的 Mac 上运行 remote-arc 的测试"),
+            working: tr("Running on your Mac…", "正在你的 Mac 上运行…"),
+            resultLines: [
+              tr("Started the test command in the project workspace.", "已在项目工作区启动测试命令。"),
+              tr("Captured the process output through Remote Arc.", "通过 Remote Arc 获取了进程输出。"),
+              tr("Test suite completed successfully.", "测试套件已成功完成。"),
+            ],
+          },
+        };
+
+  return (
+    <PublicLayout user={user}>
+      <section className="clientInstallHero">
+        <div className="clientInstallCopy">
+          <div className="installBrandChain">
+            <span><img src={config.icon} alt="" /></span>
+            <i>···</i>
+            <span><LogoMark /></span>
+          </div>
+          <span className="eyebrow">{config.eyebrow}</span>
+          <h1>{config.title}</h1>
+          <p>{config.intro}</p>
+          <div className="installAvailability"><i />{config.availability}</div>
+          <div className="clientInstallActions">
+            <a className="primaryButton" href="#installation">{tr("Installation steps", "安装步骤")} <span>↓</span></a>
+            <a className="ghostButton" href={config.externalHref} target="_blank" rel="noreferrer">{config.externalLabel} ↗</a>
+          </div>
+        </div>
+        <InstallTypewriterDemo config={config.demo} />
+      </section>
+
+      <section className="clientInstallSteps" id="installation">
+        <div className="sectionIntro splitIntro">
+          <div>
+            <span className="eyebrow">{tr("INSTALLATION", "安装")}</span>
+            <h2>{tr("Three steps to connect " + config.name + ".", "三步连接 " + config.name + "。")}</h2>
+          </div>
+          <p>{tr("The computer is paired independently from the AI client. You can later disconnect one without removing the other.", "电脑配对和 AI 客户端授权彼此独立，之后可以单独断开其中一层，而不必删除另一层。")}</p>
+        </div>
+
+        <div className="clientInstallStepList">
+          {config.steps.map((step, index) => (
+            <article key={step.title}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+                {"code" in step && step.code && (
+                  <div className="clientInstallCode">
+                    <code>{step.code}</code>
+                    <CopyButton value={step.code} />
+                  </div>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="clientInstallSecurityNote">
+          <strong>{tr("Your computer still controls the boundary.", "最终权限仍由你的电脑控制。")}</strong>
+          <p>{tr("New devices start read-only. Workspace Scope, Sensitive Path Policy, Local Undo and per-device skills continue to apply no matter which supported AI client you connect.", "新设备默认只读。无论连接哪一个支持的 AI 客户端，Workspace Scope、Sensitive Path Policy、Local Undo 和逐设备 Skill 权限都会继续生效。")}</p>
+        </div>
+      </section>
+    </PublicLayout>
   );
 }
 
@@ -641,8 +920,8 @@ function Landing({ user }: { user?: User | null }) {
           <span className="eyebrow">{tr("CONTROLLED COMPUTER ACCESS FOR AI", "面向 AI 的可控电脑访问")}</span>
           <h1>{tr("Give your AI access. Keep the control.", "让 AI 获得能力，把控制权留给你。")}</h1>
           <p>{tr(
-            "Remote Arc securely connects ChatGPT, Claude and compatible MCP clients to your real computers. New devices start read-only, every skill is controllable, and sensitive content is not intentionally retained by Remote Arc.",
-            "Remote Arc 安全连接 ChatGPT、Claude 与兼容 MCP 的 AI 到你的真实电脑。新设备默认只读，每项技能都可独立控制，Remote Arc 不会有意留存敏感操作内容。"
+            "Remote Arc securely connects ChatGPT, Claude, Cursor and compatible Remote MCP clients to your real computers. New devices start read-only, every skill is controllable, and sensitive content is not intentionally retained by Remote Arc.",
+            "Remote Arc 安全连接 ChatGPT、Claude、Cursor 与兼容 Remote MCP 的 AI 到你的真实电脑。新设备默认只读，每项技能都可独立控制，Remote Arc 不会有意留存敏感操作内容。"
           )}</p>
           <div className="landingActions">
             <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : "#install"}>{user ? tr("Open dashboard", "打开控制台") : tr("Install Remote Arc", "安装 Remote Arc")}</a>
@@ -658,14 +937,15 @@ function Landing({ user }: { user?: User | null }) {
           <div className="architectureLabel">{tr("YOUR AI", "你的 AI")}</div>
           <div className="architectureClients">
             {topologyAiClients.map((client) => (
-              <div key={client.name}>
+              <a href={"/install/" + client.slug} key={client.name} aria-label={tr("Install Remote Arc in " + client.name, "在 " + client.name + " 中安装 Remote Arc")}>
                 <img
                   className={client.tone === "mono" ? "monoLogo" : "colorLogo"}
                   src={client.icon}
                   alt=""
                 />
                 <strong>{client.name}</strong>
-              </div>
+                <span className="agentCardArrow">↗</span>
+              </a>
             ))}
           </div>
           <div className="architectureCompatibility">
@@ -701,8 +981,13 @@ function Landing({ user }: { user?: User | null }) {
       </section>
 
       <section className="trustRail" aria-label={tr("Supported AI clients", "支持的 AI 客户端")}>
-        <span>{tr("Built for the AI tools you already use", "连接你已经在用的 AI")}</span>
-        {aiClients.map((client) => <div key={client.name}><img src={client.icon} alt="" /><strong>{client.name}</strong></div>)}
+        <span>{tr("Install for your AI client", "选择你的 AI 客户端安装")}</span>
+        {aiClients.map((client) => (
+          <a href={"/install/" + client.slug} key={client.name}>
+            <img className={client.tone === "mono" ? "monoLogo" : "colorLogo"} src={client.icon} alt="" />
+            <strong>{client.name}</strong>
+          </a>
+        ))}
         <div><span className="miniMcp">M</span><strong>Remote MCP</strong></div>
         <small>{tr("One endpoint. No client lock-in.", "一个端点，不绑定任何 AI。")}</small>
       </section>
@@ -714,12 +999,36 @@ function Landing({ user }: { user?: User | null }) {
         </div>
         <div className="journeyGrid">
           <article><span className="stepNumber">01</span><div className="journeyIcon">›_</div><h3>{tr("Run one command", "运行一条命令")}</h3><p>{tr("The CLI opens a pairing page automatically. No clone, token copy, VPN or router setup.", "CLI 自动打开配对页面，无需 clone、复制 Token、VPN 或路由器配置。")}</p><code>{command}</code></article>
-          <article><span className="stepNumber">02</span><div className="journeyLogos">{aiClients.map((client) => <img key={client.name} src={client.icon} alt="" />)}</div><h3>{tr("Install Remote Arc in your AI", "在你的 AI 中安装 Remote Arc")}</h3><p>{tr("After public launch, find Remote Arc in Plugins and install it. OAuth connects your Remote Arc account; no MCP setup is required for normal users.", "公开上架后，在 Plugins 中搜索并安装 Remote Arc。通过 OAuth 连接你的 Remote Arc 账户，普通用户无需自己配置 MCP。")}</p><code>{tr("Plugins → Remote Arc → Install", "Plugins → Remote Arc → 安装")}</code></article>
+          <article>
+            <span className="stepNumber">02</span>
+            <div className="journeyLogos">
+              {aiClients.map((client) => (
+                <a href={"/install/" + client.slug} key={client.name} aria-label={tr("Install for " + client.name, "查看 " + client.name + " 安装方式")}>
+                  <img className={client.tone === "mono" ? "monoLogo" : "colorLogo"} src={client.icon} alt="" />
+                </a>
+              ))}
+            </div>
+            <h3>{tr("Choose your AI client", "选择你的 AI 客户端")}</h3>
+            <p>{tr("Open the ChatGPT, Claude or Cursor installation guide and connect the same Remote Arc account through OAuth.", "打开 ChatGPT、Claude 或 Cursor 的安装页面，再通过 OAuth 连接同一个 Remote Arc 账户。")}</p>
+            <code>{tr("ChatGPT · Claude · Cursor", "ChatGPT · Claude · Cursor")}</code>
+          </article>
           <article><span className="stepNumber">03</span><div className="journeyIcon">✦</div><h3>{tr("Ask in natural language", "直接自然语言操作")}</h3><p>{tr("Say which computer you mean. Remote Arc finds it, checks its local capability policy and routes the tool call.", "只需说出设备名称。Remote Arc 会找到它、检查本机权限，再把工具调用路由过去。")}</p><blockquote>{tr("“Run the tests on my desktop.”", "“在我的桌面电脑上跑一下测试。”")}</blockquote></article>
         </div>
         <div className="clientSetupNote">
-          <div><img src={aiClients[0].icon} alt="" /><p><strong>{tr("For normal ChatGPT users", "普通 ChatGPT 用户")}</strong><span>{tr("Once Remote Arc is public, install it from Plugins, connect your account with OAuth, and start using it. No Create-MCP flow.", "Remote Arc 公开上架后，直接在 Plugins 中安装，通过 OAuth 连接账户即可使用，不需要自己 Create MCP。")}</span></p></div>
-          <div><span className="miniMcp">M</span><p><strong>{tr("Early access / manual MCP setup", "Early access / 手动 MCP")}</strong><span>{tr("Until the public listing is live, developers and early testers can add the production MCP endpoint manually in a client that supports remote MCP.", "在公开插件正式上线前，开发者和 Early Access 测试者可以在支持远程 MCP 的客户端中手动添加生产 MCP 地址。")}</span></p></div>
+          <div>
+            <div className="clientSetupMiniLogos">
+              {aiClients.map((client) => (
+                <a href={"/install/" + client.slug} key={client.name} title={client.name}>
+                  <img className={client.tone === "mono" ? "monoLogo" : "colorLogo"} src={client.icon} alt="" />
+                </a>
+              ))}
+            </div>
+            <p>
+              <strong>{tr("Client-specific installation", "按客户端安装")}</strong>
+              <span>{tr("ChatGPT, Claude and Cursor each have a dedicated installation page with the current connection path and a working example.", "ChatGPT、Claude 和 Cursor 都有独立安装页面，包含当前可用的连接方式和实际使用示例。")}</span>
+            </p>
+          </div>
+          <div><span className="miniMcp">M</span><p><strong>{tr("One Remote Arc endpoint", "一个 Remote Arc Endpoint")}</strong><span>{tr("The same paired computers and device permissions are reused across supported clients through Remote MCP and OAuth.", "支持的客户端通过 Remote MCP 与 OAuth 共用同一批已配对电脑和设备权限策略。")}</span></p></div>
         </div>
       </section>
 
@@ -844,7 +1153,7 @@ function Landing({ user }: { user?: User | null }) {
           <div className="comparisonHead"><span></span><strong>Remote Arc</strong><strong>{tr("Hosted-only connector", "纯托管连接器")}</strong></div>
           {[
             [tr("Control plane", "控制面"), tr("Managed Remote Arc service", "Remote Arc 托管服务"), tr("Provider-owned", "平台持有")],
-            [tr("AI clients", "AI 客户端"), tr("ChatGPT, Claude + Remote MCP", "ChatGPT、Claude + Remote MCP"), tr("Often product-specific", "通常绑定单一产品")],
+            [tr("AI clients", "AI 客户端"), tr("ChatGPT, Claude, Cursor + Remote MCP", "ChatGPT、Claude、Cursor + Remote MCP"), tr("Often product-specific", "通常绑定单一产品")],
             [tr("Onboarding", "上手方式"), tr("One command + browser approval", "一条命令 + 浏览器授权"), tr("Tokens and manual config", "Token 与手动配置")],
             [tr("Device permissions", "设备权限"), tr("Final boundary stays local", "最终边界留在本机"), tr("Cloud policy first", "云端策略优先")],
             [tr("Network exposure", "网络暴露"), tr("Outbound connection only", "仅需出站连接"), tr("VPN, tunnel or open port", "VPN、隧道或开放端口")],
@@ -875,134 +1184,67 @@ function Landing({ user }: { user?: User | null }) {
         <div className="faqList">
           {[
             [
-              tr("Does Remote Arc upload or keep a copy of my files?", "Remote Arc 会上传或保存我的文件副本吗？"),
+              tr("Does Remote Arc keep a cloud copy of my files?", "Remote Arc 会在云端保存我的文件副本吗？"),
               tr(
-                "Remote Arc does not build a cloud copy of your computer. In hosted mode, file contents and tool results may pass through the relay while a request is being delivered, but they are not intentionally persisted in D1 or audit history. Device metadata, permissions, usage metadata and the workspace roots you explicitly save are stored so the service can operate.",
-                "Remote Arc 不会在云端建立你的电脑副本。托管模式下，文件内容和工具结果在执行请求时可能会经过 Relay，但不会被有意持久化到 D1 或审计历史中。为了让服务正常工作，设备元数据、权限、使用量元数据，以及你主动保存的 Workspace Root 会被保存。",
+                "No. Remote Arc routes the content needed for the task, but it does not create a cloud copy of your computer or intentionally retain file contents and tool results after the request.",
+                "不会。Remote Arc 只转发完成任务所需的内容，不会在云端复制你的电脑，也不会在请求结束后有意留存文件内容和 Tool Result。",
               ),
             ],
             [
-              tr("Can Remote Arc see the contents that pass through the hosted relay?", "Remote Arc 能看到经过托管 Relay 的内容吗？"),
+              tr("What can AI do by default?", "AI 默认能对我的电脑做什么？"),
               tr(
-                "The hosted relay is protected by HTTPS/WSS in transit, but it is not a blind end-to-end-encrypted data plane: the service technically processes the tool payload needed to route the request. Remote Arc is designed not to persist those payload bodies. Your chosen AI provider also receives the tool results required to answer your request.",
-                "托管 Relay 使用 HTTPS/WSS 保护传输，但它并不是服务端完全不可见的端到端加密数据平面：为了路由请求，服务在技术上会处理对应的 Tool Payload。Remote Arc 的设计是不持久化这些 Payload Body。与此同时，你选择的 AI 提供商也会收到完成请求所需的 Tool Result。",
+                "New devices start read-only. You choose when to enable file editing, terminal access or individual skills, and each computer can have its own policy.",
+                "新设备默认只读。是否开启文件编辑、终端或某个具体 Skill 都由你决定，而且每台电脑可以使用不同权限策略。",
               ),
             ],
             [
-              tr("Does Browse folders store my directory tree in the cloud?", "Browse folders 会把我的目录树存到云端吗？"),
+              tr("Can I limit which folders and secrets AI can access?", "可以限制 AI 能访问哪些目录和敏感文件吗？"),
               tr(
-                "No. The picker requests one directory level from the online device on demand, filters protected locations locally, and returns that temporary listing to the dashboard. The directory tree is not stored in D1. Only the folder you finally choose as a Workspace Scope root is saved as policy.",
-                "不会。目录选择器只会在需要时向在线设备读取当前这一层目录，并在本机过滤受保护位置，再把这次临时 Listing 返回 Dashboard。目录树不会写入 D1；只有你最终选择为 Workspace Scope Root 的路径字符串会作为权限策略保存。",
+                "Yes. Workspace Scope limits file tools to folders you choose, while Sensitive Path Policy protects common credential locations and lets you add your own protected paths.",
+                "可以。Workspace Scope 把文件工具限制在你选择的目录内；Sensitive Path Policy 会保护常见凭证位置，也可以继续添加你自己的受保护路径。",
               ),
             ],
             [
-              tr("Can AI change my computer immediately after I install Remote Arc?", "安装 Remote Arc 后，AI 会立刻拥有修改电脑的权限吗？"),
+              tr("Can I undo AI changes?", "AI 修改错了可以撤销吗？"),
               tr(
-                "No. New devices start with the Safe preset, which is read-only. You can move to Developer for reversible file editing, or Full when you explicitly need terminal and managed background-process access. Individual skills can also be enabled or disabled one by one.",
-                "不会。新设备默认从 Safe 预设开始，只读。需要可撤销的文件编辑时可以切到 Developer；只有你明确需要终端和后台进程能力时才切到 Full。每个 Skill 也可以单独开启或关闭。",
+                "Supported file edits can create Local Undo snapshots on your own computer. Terminal commands, deployments and other external side effects may not be reversible.",
+                "受支持的文件修改可以在你的电脑本地创建 Local Undo 快照。终端命令、部署以及其他外部副作用则不一定能够撤销。",
               ),
             ],
             [
-              tr("What is the difference between Safe, Developer and Full?", "Safe、Developer 和 Full 有什么区别？"),
+              tr("Do I need a public IP, VPN or open port?", "需要公网 IP、VPN 或开放端口吗？"),
               tr(
-                "Safe exposes read-only inspection tools. Developer adds supported file writes, exact edits and Local Undo without arbitrary shell execution. Full additionally enables terminal execution and Remote Arc-managed background processes, which is the highest-risk mode.",
-                "Safe 只开放只读检查能力。Developer 增加受支持的文件写入、精确编辑和 Local Undo，但不开放任意 Shell。Full 进一步开启终端执行和 Remote Arc 管理的后台进程，因此风险最高。",
+                "No. Your computer connects outward to Remote Arc, so normal home and office networks work without port forwarding.",
+                "不需要。电脑会主动向 Remote Arc 建立出站连接，因此普通家庭和办公网络无需端口映射即可使用。",
               ),
             ],
             [
-              tr("Is every AI action reversible?", "AI 的每个操作都能撤销吗？"),
+              tr("Which AI clients can I use?", "目前支持哪些 AI 客户端？"),
               tr(
-                "No. Local Undo covers supported Remote Arc file writes and exact edits by snapshotting the previous local state before the change. Terminal commands, deployments, package publishing, network requests, remote database writes and other external side effects may be irreversible.",
-                "不能。Local Undo 会在受支持的 Remote Arc 文件写入和精确编辑前保存本机旧状态，因此这些操作可以恢复；但终端命令、部署、发布软件包、网络请求、远程数据库写入等外部副作用可能无法撤销。",
+                "Remote Arc currently provides guided installation for ChatGPT, Claude and Cursor. Other clients may work when they support compatible Remote MCP and OAuth flows.",
+                "Remote Arc 目前为 ChatGPT、Claude 和 Cursor 提供明确的安装流程。其他客户端如果支持兼容的 Remote MCP 与 OAuth 流程，也可能可以接入。",
               ),
             ],
             [
-              tr("How are secrets such as .ssh, .aws and .env protected?", "像 .ssh、.aws、.env 这样的敏感内容怎么保护？"),
+              tr("What happens when I disconnect access?", "断开授权以后会发生什么？"),
               tr(
-                "Sensitive Path Policy blocks common credential locations and .env files before local filesystem execution. You can add extra protected paths, and if one project genuinely needs a sensitive file you can add a narrow exception without disabling the policy globally.",
-                "Sensitive Path Policy 会在本机文件操作执行前阻止常见凭证目录和 .env 文件。你还可以增加额外保护路径；如果某个项目确实需要访问某个敏感文件，也可以只对那一个路径设置窄范围例外，而不是关闭整套保护。",
+                "Disconnecting an AI authorization only removes that client's access. Revoking a computer only removes that device. The two controls are independent.",
+                "断开 AI 授权只会移除那一个客户端的访问权限；撤销电脑只会移除那台设备，两者彼此独立。",
               ),
             ],
             [
-              tr("What does Workspace Scope actually protect?", "Workspace Scope 实际保护的是什么？"),
+              tr("What is included in the free plan?", "免费版包含什么？"),
               tr(
-                "When configured, Remote Arc filesystem tools can only operate inside the allowed canonical roots, including checks against symlink escapes. Full terminal access is different: Remote Arc requires an in-scope working directory, but a shell command can still reference another path, so Developer mode is safer when strict file confinement matters.",
-                "配置后，Remote Arc 的文件工具只能在允许的 Canonical Root 内工作，并会检查符号链接逃逸。Full 终端则不同：Remote Arc 会要求 Working Directory 位于 Scope 内，但 Shell 命令仍可能引用其他路径；需要严格文件隔离时，Developer 模式更安全。",
+                "The hosted free plan includes 10,000 Remote Arc tool calls each month. Website page loads and static assets are not counted as AI tool calls.",
+                "托管免费版每月包含 10,000 次 Remote Arc Tool Call。官网页面加载和静态资源请求不会被算成 AI Tool Call。",
               ),
             ],
-            [
-              tr("Why can I see several ChatGPT authorizations in the dashboard?", "为什么 Dashboard 里会出现多个 ChatGPT 授权？"),
-              tr(
-                "Each row is a separate OAuth authorization instance. ChatGPT or another client can register or authorize Remote Arc more than once, so multiple rows do not mean multiple computers. Active means the current access token works now; Refreshable means it can still obtain a new token; Expired can no longer reconnect.",
-                "每一行都是一份独立的 OAuth 授权实例。ChatGPT 或其他客户端可能多次注册或授权 Remote Arc，所以多行并不代表多台电脑。Active 表示当前 Access Token 可用；Refreshable 表示仍能换取新 Token；Expired 表示已经无法重新连接。",
-              ),
-            ],
-            [
-              tr("What happens when I disconnect or revoke an AI authorization?", "Disconnect 或 Revoke 一条 AI 授权会发生什么？"),
-              tr(
-                "Only that OAuth authorization is invalidated. The affected AI client will need to authorize Remote Arc again before it can reconnect. Your paired computers, their local credentials and your other AI authorizations remain unchanged.",
-                "只会使那一份 OAuth 授权失效。对应 AI 客户端之后需要重新授权 Remote Arc 才能再次连接；已配对电脑、本机设备凭证以及其他 AI 授权都不会受到影响。",
-              ),
-            ],
-            [
-              tr("Can I stop all AI access immediately?", "我可以立即停止所有 AI 访问吗？"),
-              tr(
-                "Yes. You can pause MCP access at the account level, disconnect a specific OAuth authorization, revoke a paired device, or remove individual device skills. These controls are independent so you can stop exactly the layer you want.",
-                "可以。你可以在账户层暂停 MCP、断开某一份 OAuth 授权、撤销某台已配对设备，或者关闭单独的设备 Skill。这些控制彼此独立，因此可以精确停掉你想停的那一层。",
-              ),
-            ],
-            [
-              tr("Does my computer need a public IP, VPN or open port?", "我的电脑需要公网 IP、VPN 或开放端口吗？"),
-              tr(
-                "No inbound access is required. The device agent initiates an outbound encrypted WebSocket to Remote Arc, so normal NAT and home-router setups work without port forwarding.",
-                "不需要任何入站访问。设备 Agent 会主动向 Remote Arc 建立加密的出站 WebSocket，因此普通 NAT 和家庭路由器环境无需端口映射即可使用。",
-              ),
-            ],
-            [
-              tr("Do I need to paste API keys or device tokens into my AI client?", "需要把 API Key 或设备 Token 粘贴到 AI 客户端里吗？"),
-              tr(
-                "No for the normal hosted flow. Device pairing is approved in the browser, each computer receives its own revocable local credential, and compatible AI clients authorize Remote Arc through OAuth instead of sharing the device token.",
-                "正常托管流程不需要。设备通过浏览器确认配对，每台电脑会获得自己独立、可撤销的本机凭证；兼容的 AI 客户端通过 OAuth 授权 Remote Arc，而不是共享设备 Token。",
-              ),
-            ],
-            [
-              tr("Which AI clients can use Remote Arc?", "哪些 AI 客户端可以使用 Remote Arc？"),
-              tr(
-                "Remote Arc is built on the open Remote MCP protocol rather than a single model vendor. It can work with clients and runtimes that support compatible Remote MCP and OAuth flows. Product support changes over time, so the logos on this page represent AI ecosystems and do not imply an official partnership or that every consumer app exposes the same MCP capability.",
-                "Remote Arc 基于开放的 Remote MCP 协议，而不是绑定某一家模型厂商。只要客户端或运行时支持兼容的 Remote MCP 与 OAuth 流程，就可以接入。不同产品的支持会随版本变化，因此首页 Logo 表示相关 AI 生态，并不代表官方合作，也不表示每个消费级 App 当前都开放完全相同的 MCP 能力。",
-              ),
-            ],
-            [
-              tr("What happens if my computer goes offline?", "电脑离线以后会怎样？"),
-              tr(
-                "Remote requests cannot execute while the device is offline. The dashboard keeps last-seen metadata, and the local client reconnects when it becomes available again. No cloud copy of the device is created to continue executing while it is offline.",
-                "设备离线时，远程请求无法执行。Dashboard 会保留最近在线时间，本地客户端重新可用后会再次连接；Remote Arc 不会在云端复制一份设备环境来代替离线电脑继续执行。",
-              ),
-            ],
-            [
-              tr("How does the free 10,000-call allowance work?", "每月 10,000 次免费调用是怎么计算的？"),
-              tr(
-                "The hosted plan includes 10,000 Remote Arc tool calls per month. This is an AI tool-call allowance, not a count of every static website request or every Cloudflare request used to run the service. You can review hosted usage from the dashboard.",
-                "托管免费版每月包含 10,000 次 Remote Arc Tool Call。这是 AI 工具调用额度，不是把官网静态资源请求或 Cloudflare 为运行服务产生的每一个请求都算进去。你可以在 Dashboard 查看托管使用量。",
-              ),
-            ],
-            [
-              tr("Does Remote Arc train an AI model on my computer data?", "Remote Arc 会拿我的电脑数据训练 AI 吗？"),
-              tr(
-                "Remote Arc is not an AI-model training service and does not train a model on your tool payloads. When you ask an AI client to use Remote Arc, the tool results needed for that request are shared with the AI provider you chose, so that provider's own data-handling terms still apply.",
-                "Remote Arc 不是 AI 模型训练服务，也不会用你的 Tool Payload 训练模型。当你让某个 AI 客户端调用 Remote Arc 时，完成请求所需的 Tool Result 会发送给你选择的 AI 提供商，因此该提供商自己的数据处理条款仍然适用。",
-              ),
-            ],
-            [
-              tr("Which operating systems are supported?", "支持哪些操作系统？"),
-              tr(
-                "The current CLI supports Windows, macOS and Linux with Node.js 20 or newer. Pairing is browser-approved and the same Remote MCP endpoint can reach any of your paired computers.",
-                "当前 CLI 支持 Windows、macOS 和 Linux，需要 Node.js 20 或更高版本。设备通过浏览器确认配对，同一个 Remote MCP Endpoint 可以访问你账户下已配对的电脑。",
-              ),
-            ],
-            [tr("What is the MCP URL?", "MCP 地址是什么？"), MCP_ENDPOINT],
-            [tr("Where is the dashboard?", "控制台在哪里？"), APP_ORIGIN],
-          ].map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}
+          ].map(([question, answer]) => (
+            <details key={question}>
+              <summary>{question}</summary>
+              <p>{answer}</p>
+            </details>
+          ))}
         </div>
       </section>
 
@@ -1159,7 +1401,7 @@ function McpPage({ user }: { user?: User | null }) {
         <h1>{tr("Connect your AI once. Reach every machine.", "连接一次 AI，访问你的所有电脑。")}</h1>
         <p>{tr("Remote Arc gives ChatGPT, Claude and compatible clients one OAuth-protected endpoint, then securely routes each tool call to the computer you name.", "Remote Arc 为 ChatGPT、Claude 与兼容客户端提供一个受 OAuth 保护的端点，再把每次工具调用安全路由到你指定的电脑。")}</p>
         <div className="mcpHeroClients">
-          {aiClients.map((client) => <div key={client.name}><img src={client.icon} alt="" /><span>{client.name}</span></div>)}
+          {aiClients.map((client) => <div key={client.name}><img className={client.tone === "mono" ? "monoLogo" : "colorLogo"} src={client.icon} alt="" /><span>{client.name}</span></div>)}
           <small>+ {tr("compatible Remote MCP clients", "兼容 Remote MCP 的客户端")}</small>
         </div>
       </section>
@@ -2960,6 +3202,17 @@ function App() {
 
   if (location.pathname === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;
   if (location.pathname === "/oauth/consent") return <OAuthConsent user={user} />;
+
+  const installMatch = location.pathname.match(/^\/install\/(chatgpt|claude|cursor)$/);
+  if (installMatch) {
+    return (
+      <ClientInstallPage
+        slug={installMatch[1] as InstallClientSlug}
+        user={user === undefined ? null : user}
+      />
+    );
+  }
+
   if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
   if (location.pathname === "/resources") return <ResourcesPage user={user === undefined ? null : user} />;
   if (location.pathname === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;

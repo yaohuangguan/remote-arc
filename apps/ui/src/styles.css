@@ -5916,3 +5916,486 @@ body{font-size:18px;line-height:1.6}
 
 .faqList summary{list-style:none}
 .faqList summary::-webkit-details-marker{display:none}
+
+
+/* AI client install navigation */
+.architectureClients>a{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:14px 14px;
+  border:1px solid transparent;
+  border-radius:14px;
+  background:rgba(10,20,32,.74);
+  color:inherit;
+  text-decoration:none;
+  transition:transform .16s ease,border-color .16s ease,background .16s ease;
+}
+.architectureClients>a:hover{
+  transform:translateY(-2px);
+  border-color:#2b6f84;
+  background:#0a1b27;
+}
+.architectureClients>a .agentCardArrow{
+  margin-left:auto;
+  color:#557883;
+  font-size:12px;
+}
+.architectureClients>a:hover .agentCardArrow{color:#7dd3fc}
+.architectureClients>a img{
+  width:34px!important;
+  height:34px!important;
+  object-fit:contain;
+  flex:0 0 auto;
+}
+.architectureClients>a strong{
+  min-width:0;
+  color:#eaf8fb;
+  font-size:15px!important;
+  line-height:1.15;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.architectureClients img.monoLogo,
+.trustRail img.monoLogo,
+.journeyLogos img.monoLogo,
+.mcpHeroClients img.monoLogo{
+  filter:invert(1)!important;
+}
+.architectureClients img.colorLogo,
+.trustRail img.colorLogo,
+.journeyLogos img.colorLogo,
+.mcpHeroClients img.colorLogo{
+  filter:none!important;
+}
+.trustRail>a{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:#dcecf1;
+  text-decoration:none;
+}
+.trustRail>a:hover strong{color:#7dd3fc}
+.journeyLogos>a{
+  display:inline-flex;
+  border-radius:12px;
+}
+.journeyLogos>a:hover img{
+  border-color:#38bdf8;
+  transform:translateY(-1px);
+}
+.journeyLogos img{transition:transform .16s ease,border-color .16s ease}
+:root[data-theme="light"] .architectureClients>a{
+  border-color:#d8e8ee;
+  background:#fff;
+}
+:root[data-theme="light"] .architectureClients>a:hover{
+  border-color:#8fc8d7;
+  background:#f4fafc;
+}
+:root[data-theme="light"] .architectureClients>a strong,
+:root[data-theme="light"] .trustRail>a{
+  color:#173944;
+}
+:root[data-theme="light"] .architectureClients img.monoLogo,
+:root[data-theme="light"] .trustRail img.monoLogo,
+:root[data-theme="light"] .journeyLogos img.monoLogo,
+:root[data-theme="light"] .mcpHeroClients img.monoLogo,
+:root[data-theme="light"] .architectureClients img.colorLogo,
+:root[data-theme="light"] .trustRail img.colorLogo,
+:root[data-theme="light"] .journeyLogos img.colorLogo,
+:root[data-theme="light"] .mcpHeroClients img.colorLogo{
+  filter:none!important;
+}
+
+/* Client-specific installation pages */
+.clientInstallHero{
+  display:grid;
+  grid-template-columns:minmax(0,.95fr) minmax(460px,1.05fr);
+  align-items:center;
+  gap:74px;
+  min-height:690px;
+  padding:70px 0 80px;
+}
+.clientInstallCopy{max-width:650px}
+.clientInstallCopy h1{
+  margin:14px 0 20px;
+  color:#f7fbfd;
+  font-size:clamp(56px,6.2vw,88px);
+  line-height:.94;
+  letter-spacing:-.06em;
+}
+.clientInstallCopy>p{
+  max-width:610px;
+  margin:0;
+  color:#91a6ad;
+  font-size:18px;
+  line-height:1.72;
+}
+.installBrandChain{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:28px;
+}
+.installBrandChain>span{
+  display:grid;
+  place-items:center;
+  width:54px;
+  height:54px;
+  border:1px solid #30465a;
+  border-radius:14px;
+  background:#fff;
+}
+.installBrandChain>span img,
+.installBrandChain>span svg{
+  width:34px!important;
+  height:34px!important;
+  object-fit:contain;
+}
+.installBrandChain>span:first-child img[src*="openai"]{filter:none}
+.installBrandChain i{
+  color:#6e8ca0;
+  font-style:normal;
+  font-weight:900;
+  letter-spacing:.16em;
+}
+.installAvailability{
+  display:flex;
+  align-items:flex-start;
+  gap:9px;
+  max-width:620px;
+  margin-top:20px;
+  color:#79949e;
+  font-size:13px;
+  line-height:1.55;
+}
+.installAvailability i{
+  width:8px;
+  height:8px;
+  margin-top:6px;
+  border-radius:50%;
+  background:#4ade80;
+  box-shadow:0 0 12px rgba(74,222,128,.4);
+  flex:0 0 auto;
+}
+.clientInstallActions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:28px;
+}
+.clientInstallActions .primaryButton,
+.clientInstallActions .ghostButton{
+  min-height:46px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  text-decoration:none;
+}
+
+.installDemoShell{
+  width:min(100%,590px);
+  min-height:430px;
+  justify-self:end;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:1px solid #dfe3e8;
+  border-radius:20px;
+  background:#fff;
+  color:#16181d;
+  box-shadow:0 32px 90px rgba(0,0,0,.32);
+}
+.installDemoTop{
+  min-height:58px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:0 18px;
+  border-bottom:1px solid #e7e9ed;
+}
+.installDemoTop>div{
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.installDemoTop img{
+  width:24px;
+  height:24px;
+  object-fit:contain;
+}
+.installDemoTop strong{font-size:14px}
+.installDemoTop>span{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#149a80;
+  font-size:12px;
+  white-space:nowrap;
+}
+.installDemoTop>span i{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:#26b99a;
+}
+.installDemoConversation{
+  flex:1;
+  min-height:305px;
+  padding:28px 18px 20px;
+}
+.installDemoUserBubble{
+  width:fit-content;
+  max-width:85%;
+  min-height:42px;
+  margin-left:auto;
+  padding:11px 15px;
+  border-radius:20px;
+  background:#f3f3f4;
+  color:#111317;
+  font-size:14px;
+  line-height:1.45;
+}
+.typeCursor{
+  display:inline-block;
+  width:1px;
+  height:1.1em;
+  margin-left:2px;
+  background:#111;
+  vertical-align:-2px;
+  animation:typeCursorBlink .75s steps(1,end) infinite;
+}
+@keyframes typeCursorBlink{50%{opacity:0}}
+.installDemoWork{margin-top:24px}
+.installDemoWork>small{
+  color:#90949a;
+  font-size:12px;
+}
+.installDemoThinking{
+  display:flex;
+  gap:5px;
+  margin-top:15px;
+}
+.installDemoThinking i{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#9aa0a8;
+  animation:demoThinking 1.1s ease-in-out infinite;
+}
+.installDemoThinking i:nth-child(2){animation-delay:.14s}
+.installDemoThinking i:nth-child(3){animation-delay:.28s}
+@keyframes demoThinking{0%,70%,100%{transform:translateY(0);opacity:.45}35%{transform:translateY(-4px);opacity:1}}
+.installDemoResult{
+  margin-top:10px;
+  color:#25282d;
+  font-size:14px;
+  line-height:1.58;
+}
+.installDemoResult strong{font-size:14px}
+.installDemoResult ul{
+  display:grid;
+  gap:6px;
+  margin:10px 0 0;
+  padding-left:18px;
+}
+.installDemoComposer{
+  min-height:48px;
+  display:grid;
+  grid-template-columns:24px minmax(0,1fr) 30px;
+  align-items:center;
+  gap:8px;
+  margin:0 12px 10px;
+  padding:0 9px;
+  border:1px solid #d7d9dd;
+  border-radius:24px;
+  color:#777c83;
+}
+.installDemoComposer>span{font-size:22px;font-weight:300}
+.installDemoComposer em{
+  overflow:hidden;
+  color:#777c83;
+  font-size:13px;
+  font-style:normal;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.installDemoComposer>b{
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  background:#111;
+  color:#fff;
+  font-size:15px;
+}
+.installDemoCaption{
+  padding:0 0 10px;
+  color:#a4a7ac;
+  font-size:10px;
+  text-align:center;
+}
+
+.clientInstallSteps{
+  padding:86px 0 44px;
+  border-top:1px solid var(--border);
+}
+.clientInstallStepList{
+  margin-top:30px;
+  border-top:1px solid #1e3446;
+}
+.clientInstallStepList article{
+  display:grid;
+  grid-template-columns:82px minmax(0,1fr);
+  gap:24px;
+  padding:30px 0;
+  border-bottom:1px solid #1e3446;
+}
+.clientInstallStepList article>span{
+  color:#2f86a1;
+  font:800 18px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.clientInstallStepList h3{
+  margin:0 0 8px;
+  color:#eaf8fb;
+  font-size:23px;
+}
+.clientInstallStepList p{
+  max-width:850px;
+  margin:0;
+  color:#8da4ac;
+  font-size:15px;
+  line-height:1.7;
+}
+.clientInstallCode{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:min(100%,760px);
+  margin-top:15px;
+  padding:8px;
+  border:1px solid #263d4e;
+  border-radius:11px;
+  background:#030b11;
+}
+.clientInstallCode code{
+  flex:1;
+  min-width:0;
+  overflow:auto;
+  padding:7px 9px;
+  color:#8fdcf0;
+  font:500 13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:pre;
+}
+.clientInstallSecurityNote{
+  display:grid;
+  grid-template-columns:260px minmax(0,1fr);
+  gap:30px;
+  margin:32px 0 40px;
+  padding:24px 0;
+  border-top:1px solid #1e3446;
+}
+.clientInstallSecurityNote strong{
+  color:#d9eef3;
+  font-size:17px;
+}
+.clientInstallSecurityNote p{
+  margin:0;
+  color:#7f9aa4;
+  font-size:14px;
+  line-height:1.7;
+}
+
+:root[data-theme="light"] .clientInstallCopy h1{color:#102f39}
+:root[data-theme="light"] .clientInstallCopy>p{color:#4f6e78}
+:root[data-theme="light"] .installBrandChain>span{
+  border-color:#d5e6eb;
+  background:#fff;
+}
+:root[data-theme="light"] .installAvailability{color:#55737c}
+:root[data-theme="light"] .clientInstallStepList,
+:root[data-theme="light"] .clientInstallStepList article,
+:root[data-theme="light"] .clientInstallSecurityNote{
+  border-color:#d8e8ee;
+}
+:root[data-theme="light"] .clientInstallStepList h3,
+:root[data-theme="light"] .clientInstallSecurityNote strong{
+  color:#173944;
+}
+:root[data-theme="light"] .clientInstallStepList p,
+:root[data-theme="light"] .clientInstallSecurityNote p{
+  color:#55737c;
+}
+:root[data-theme="light"] .clientInstallCode{
+  border-color:#d5e6eb;
+  background:#f7fbfc;
+}
+:root[data-theme="light"] .clientInstallCode code{color:#075985}
+
+@media(max-width:980px){
+  .clientInstallHero{
+    grid-template-columns:1fr;
+    min-height:0;
+    gap:48px;
+    padding:58px 0 64px;
+  }
+  .installDemoShell{
+    justify-self:start;
+    width:min(100%,680px);
+  }
+}
+@media(max-width:640px){
+  .clientInstallCopy h1{font-size:clamp(46px,14vw,66px)}
+  .installDemoTop{align-items:flex-start;flex-direction:column;padding:13px 15px}
+  .installDemoTop>span{white-space:normal}
+  .installDemoConversation{min-height:280px;padding:20px 14px}
+  .clientInstallStepList article{grid-template-columns:1fr;gap:12px}
+  .clientInstallSecurityNote{grid-template-columns:1fr;gap:8px}
+  .clientInstallActions>a{width:100%}
+}
+
+
+.clientSetupNote>div:first-child{
+  grid-template-columns:112px minmax(0,1fr);
+}
+.clientSetupMiniLogos{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.clientSetupMiniLogos a{
+  display:grid;
+  place-items:center;
+  width:32px;
+  height:32px;
+  border:1px solid #30465a;
+  border-radius:9px;
+  background:#0b1720;
+}
+.clientSetupMiniLogos img{
+  width:22px!important;
+  height:22px!important;
+  object-fit:contain;
+}
+.clientSetupMiniLogos img.monoLogo{filter:invert(1)!important}
+.clientSetupMiniLogos img.colorLogo{filter:none!important}
+:root[data-theme="light"] .clientSetupMiniLogos a{
+  border-color:#d7e6eb;
+  background:#f7fbfc;
+}
+:root[data-theme="light"] .clientSetupMiniLogos img.monoLogo,
+:root[data-theme="light"] .clientSetupMiniLogos img.colorLogo{
+  filter:none!important;
+}
+@media(max-width:600px){
+  .clientSetupNote>div:first-child{
+    grid-template-columns:1fr;
+  }
+}
