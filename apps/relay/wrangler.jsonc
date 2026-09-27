@@ -39,7 +39,32 @@
   "assets": {
     "directory": "../ui/dist",
     "binding": "ASSETS",
-    "run_worker_first": true,
+    "run_worker_first": [
+      "/",
+      "/install",
+      "/install/*",
+      "/pricing",
+      "/resources",
+      "/docs/*",
+      "/privacy",
+      "/terms",
+      "/support",
+      "/api/*",
+      "/mcp",
+      "/mcp/*",
+      "/agent",
+      "/oauth/*",
+      "/auth/*",
+      "/.well-known/*",
+      "/health",
+      "/dashboard",
+      "/overview",
+      "/devices",
+      "/connect",
+      "/security",
+      "/settings",
+      "/device"
+    ],
     "not_found_handling": "single-page-application"
   },
   "d1_databases": [
