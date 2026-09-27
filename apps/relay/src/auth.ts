@@ -70,9 +70,25 @@ function cookieValue(request: Request, name: string) {
   return null;
 }
 
-function safeReturnTo(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
+function safeReturnTo(value: string | null, request: Request, env: AuthEnv) {
+  const requestOrigin = new URL(request.url).origin;
+  const allowedOrigins = new Set(
+    [env.MARKETING_ORIGIN, env.APP_ORIGIN, env.PUBLIC_ORIGIN, requestOrigin]
+      .filter(Boolean)
+      .map((origin) => new URL(origin as string).origin),
+  );
+
+  if (!value) return requestOrigin + "/";
+
+  try {
+    const target = new URL(value, requestOrigin);
+    if (target.protocol !== "https:" || !allowedOrigins.has(target.origin)) {
+      return requestOrigin + "/";
+    }
+    return target.toString();
+  } catch {
+    return requestOrigin + "/";
+  }
 }
 
 export async function getSessionUser(
@@ -147,7 +163,7 @@ export async function handleGoogleLogin(request: Request, env: AuthEnv) {
   }
 
   const url = new URL(request.url);
-  const returnTo = safeReturnTo(url.searchParams.get("return_to"));
+  const returnTo = safeReturnTo(url.searchParams.get("return_to"), request, env);
   const state = randomToken();
   const stateHash = await sha256Hex(state);
 
