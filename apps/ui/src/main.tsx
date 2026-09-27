@@ -23,6 +23,22 @@ type Device = {
   tools: string[];
   available_tools?: string[];
   allowed_tools?: string[] | null;
+  workspace_roots?: string[];
+  sensitive_paths?: string[];
+  protect_sensitive_paths?: boolean;
+  undo_enabled?: boolean;
+  policy_enforcement_available?: boolean;
+  undo_history_available?: boolean;
+};
+
+type UndoAction = {
+  id: string;
+  created_at: string;
+  tool: "write_file" | "edit_block";
+  path: string;
+  bytes: number;
+  existed_before: boolean;
+  conflict_safe: boolean;
 };
 
 type Pairing = {
@@ -1005,6 +1021,9 @@ function Dashboard({
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
   const [securityState, setSecurityState] = useState<SecurityState | null>(null);
   const [securityBusy, setSecurityBusy] = useState(false);
+  const [undoByDevice, setUndoByDevice] = useState<Record<string, UndoAction[]>>({});
+  const [undoLoading, setUndoLoading] = useState<string | null>(null);
+  const [undoErrors, setUndoErrors] = useState<Record<string, string>>({});
   const [active, setActive] = useState<DashboardTab>(dashboardTabFromPath(location.pathname));
   useEffect(() => {
     const syncRoute = () => setActive(dashboardTabFromPath(location.pathname));
@@ -1138,6 +1157,121 @@ function Dashboard({
     await saveDeviceTools(device, next);
   }
 
+  async function saveDevicePolicy(
+    device: Device,
+    patch: Partial<Pick<Device, "workspace_roots" | "sensitive_paths" | "protect_sensitive_paths" | "undo_enabled">>,
+  ) {
+    const next = {
+      workspace_roots: patch.workspace_roots ?? device.workspace_roots ?? [],
+      sensitive_paths: patch.sensitive_paths ?? device.sensitive_paths ?? [],
+      protect_sensitive_paths:
+        patch.protect_sensitive_paths ?? device.protect_sensitive_paths ?? true,
+      undo_enabled: patch.undo_enabled ?? device.undo_enabled ?? true,
+    };
+
+    const response = await fetch(
+      "/api/devices/" + encodeURIComponent(device.id) + "/policy",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(next),
+      },
+    );
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({})) as { error?: string };
+      alert(payload.error || tr("Could not update device safety policy.", "无法更新设备安全策略。"));
+      return false;
+    }
+    await refreshAll();
+    return true;
+  }
+
+  async function addPolicyPath(
+    device: Device,
+    kind: "workspace_roots" | "sensitive_paths",
+  ) {
+    const label =
+      kind === "workspace_roots"
+        ? tr("Add an allowed workspace path", "添加允许访问的工作区路径")
+        : tr("Add a protected sensitive path", "添加额外受保护路径");
+    const example =
+      device.platform === "win32"
+        ? "E:\\Coding"
+        : "~/work";
+    const next = prompt(label + "\n" + tr("Example: ", "示例：") + example)?.trim();
+    if (!next) return;
+    const current = device[kind] || [];
+    await saveDevicePolicy(device, {
+      [kind]: Array.from(new Set([...current, next])),
+    });
+  }
+
+  async function removePolicyPath(
+    device: Device,
+    kind: "workspace_roots" | "sensitive_paths",
+    value: string,
+  ) {
+    await saveDevicePolicy(device, {
+      [kind]: (device[kind] || []).filter((item) => item !== value),
+    });
+  }
+
+  async function loadUndoHistory(device: Device) {
+    setUndoLoading(device.id);
+    setUndoErrors((current) => ({ ...current, [device.id]: "" }));
+    try {
+      const response = await fetch(
+        "/api/devices/" + encodeURIComponent(device.id) + "/undo",
+      );
+      const payload = await response.json().catch(() => ({})) as {
+        actions?: UndoAction[];
+        error?: string;
+      };
+      if (!response.ok) {
+        setUndoErrors((current) => ({
+          ...current,
+          [device.id]:
+            payload.error ||
+            tr("Undo history is unavailable on this device.", "这台设备暂时不支持撤销历史。"),
+        }));
+        return;
+      }
+      setUndoByDevice((current) => ({
+        ...current,
+        [device.id]: payload.actions || [],
+      }));
+    } finally {
+      setUndoLoading((current) => (current === device.id ? null : current));
+    }
+  }
+
+  async function restoreUndoAction(device: Device, action: UndoAction) {
+    if (!confirm(tr(
+      "Restore " + action.path + " to the state before this Remote Arc change?",
+      "将 " + action.path + " 恢复到 Remote Arc 修改前的状态？",
+    ))) return;
+
+    setUndoLoading(device.id);
+    try {
+      const response = await fetch(
+        "/api/devices/" +
+          encodeURIComponent(device.id) +
+          "/undo/" +
+          encodeURIComponent(action.id),
+        { method: "POST" },
+      );
+      const payload = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) {
+        alert(payload.error || tr("Could not restore this change.", "无法恢复这次修改。"));
+        return;
+      }
+      await loadUndoHistory(device);
+      await refreshAll();
+    } finally {
+      setUndoLoading((current) => (current === device.id ? null : current));
+    }
+  }
+
   function navigateTab(tab: DashboardTab) {
     const path = DASHBOARD_PATHS[tab];
     if (location.pathname !== path) history.pushState({}, "", path);
@@ -1148,6 +1282,8 @@ function Dashboard({
     if (event.event_type === "device.paired") return tr("Device paired", "设备已配对");
     if (event.event_type === "device.revoked") return tr("Device revoked", "设备已撤销");
     if (event.event_type === "device.renamed") return tr("Device renamed", "设备已重命名");
+    if (event.event_type === "device.policy_updated") return tr("Device safety policy updated", "设备安全策略已更新");
+    if (event.event_type === "device.undo_restored") return tr("Local change restored", "本机修改已恢复");
     if (event.event_type === "mcp.tool_call") return "MCP · " + (event.tool_name || "tool");
     if (event.event_type === "security.mcp_paused") return tr("Remote MCP paused", "Remote MCP 已暂停");
     if (event.event_type === "security.mcp_resumed") return tr("Remote MCP resumed", "Remote MCP 已恢复");
@@ -1352,6 +1488,207 @@ function Dashboard({
                         })}
                       </div>
                       {device.status === "offline" && <span className="offlineTools">{tr("Offline: changes are saved now and enforced the next time this device connects.", "设备离线：修改会立即保存，并在设备下次连接时生效。")}</span>}
+                    </details>
+
+                    <details className="deviceSafetyDetails">
+                      <summary>
+                        {tr("File boundaries & recovery", "文件边界与恢复")}
+                        <span>
+                          {(device.protect_sensitive_paths ?? true)
+                            ? tr("Sensitive paths protected", "敏感路径已保护")
+                            : tr("Sensitive protection off", "敏感路径保护已关闭")}
+                          {" · "}
+                          {(device.workspace_roots || []).length
+                            ? (device.workspace_roots || []).length + " " + tr("workspaces", "个工作区")
+                            : tr("all non-sensitive paths", "全部非敏感路径")}
+                        </span>
+                      </summary>
+
+                      <div className="deviceSafetyBody">
+                        {!device.policy_enforcement_available && device.status === "online" && (
+                          <p className="policyWarning">{tr(
+                            "This device is still running an older remotelink client. Policy settings are saved now, but symlink-safe local enforcement activates after you restart it with the latest npm release.",
+                            "这台设备仍在运行旧版 remotelink。策略会立即保存，但防符号链接绕过的本机强制执行，需要用最新版 npm 客户端重启后才会生效。",
+                          )}</p>
+                        )}
+                        <div className="policyToggleRow">
+                          <div>
+                            <strong>{tr("Sensitive Path Policy", "敏感路径策略")}</strong>
+                            <p>{tr(
+                              "Blocks built-in credential locations such as .ssh, .aws, browser profiles and .env files before local execution.",
+                              "在本机执行前阻止 .ssh、.aws、浏览器配置、.env 等内置敏感位置。",
+                            )}</p>
+                          </div>
+                          <label className="compactSwitch">
+                            <input
+                              type="checkbox"
+                              checked={device.protect_sensitive_paths ?? true}
+                              onChange={(event) => void saveDevicePolicy(device, {
+                                protect_sensitive_paths: event.target.checked,
+                              })}
+                            />
+                            <span />
+                          </label>
+                        </div>
+
+                        <div className="policyBlock">
+                          <div className="policyBlockHead">
+                            <div>
+                              <strong>{tr("Workspace Scope", "工作区范围")}</strong>
+                              <p>{tr(
+                                "When configured, Remote Arc file tools can only touch these roots. Empty means all non-sensitive paths.",
+                                "配置后，Remote Arc 文件工具只能访问这些根目录；留空表示可访问全部非敏感路径。",
+                              )}</p>
+                            </div>
+                            <button className="ghostButton small" onClick={() => void addPolicyPath(device, "workspace_roots")}>
+                              + {tr("Add path", "添加路径")}
+                            </button>
+                          </div>
+                          <div className="policyPathList">
+                            {(device.workspace_roots || []).map((root) => (
+                              <span className="policyPathChip" key={root}>
+                                <code>{root}</code>
+                                <button
+                                  title={tr("Remove", "移除")}
+                                  onClick={() => void removePolicyPath(device, "workspace_roots", root)}
+                                >×</button>
+                              </span>
+                            ))}
+                            {!(device.workspace_roots || []).length && (
+                              <span className="policyEmpty">{tr(
+                                "No workspace restriction yet.",
+                                "当前未限制工作区。",
+                              )}</span>
+                            )}
+                          </div>
+                          {enabledTools.includes("start_process") && !!(device.workspace_roots || []).length && (
+                            <p className="policyWarning">{tr(
+                              "Full terminal access is not an OS sandbox. Remote Arc requires an in-scope cwd, but shell commands may still reference other paths. Use Developer mode when strict file confinement matters.",
+                              "Full 终端并不是操作系统级沙箱。Remote Arc 会要求 cwd 位于工作区内，但 Shell 命令仍可能引用其他路径；需要严格文件隔离时请使用 Developer 模式。",
+                            )}</p>
+                          )}
+                        </div>
+
+                        <div className="policyBlock">
+                          <div className="policyBlockHead">
+                            <div>
+                              <strong>{tr("Extra protected paths", "额外保护路径")}</strong>
+                              <p>{tr(
+                                "Add private folders that should remain blocked in addition to Remote Arc's built-in sensitive locations.",
+                                "在内置敏感位置之外，再添加不希望 AI 访问的私有目录。",
+                              )}</p>
+                            </div>
+                            <button className="ghostButton small" onClick={() => void addPolicyPath(device, "sensitive_paths")}>
+                              + {tr("Protect path", "保护路径")}
+                            </button>
+                          </div>
+                          <div className="policyPathList">
+                            {(device.sensitive_paths || []).map((root) => (
+                              <span className="policyPathChip protected" key={root}>
+                                <code>{root}</code>
+                                <button
+                                  title={tr("Remove", "移除")}
+                                  onClick={() => void removePolicyPath(device, "sensitive_paths", root)}
+                                >×</button>
+                              </span>
+                            ))}
+                            {!(device.sensitive_paths || []).length && (
+                              <span className="policyEmpty">{tr(
+                                "Built-in sensitive paths only.",
+                                "当前仅使用内置敏感路径。",
+                              )}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="policyToggleRow undoPolicyToggle">
+                          <div>
+                            <strong>{tr("Local Undo", "本机撤销")}</strong>
+                            <p>{tr(
+                              "Snapshots stay on this computer. Remote Arc Cloud never stores the file contents.",
+                              "快照只保存在这台电脑上，Remote Arc Cloud 不保存文件内容。",
+                            )}</p>
+                          </div>
+                          <label className="compactSwitch">
+                            <input
+                              type="checkbox"
+                              checked={device.undo_enabled ?? true}
+                              onChange={(event) => void saveDevicePolicy(device, {
+                                undo_enabled: event.target.checked,
+                              })}
+                            />
+                            <span />
+                          </label>
+                        </div>
+
+                        <div className="undoHistorySection">
+                          <div className="policyBlockHead">
+                            <div>
+                              <strong>{tr("Undo history", "撤销历史")}</strong>
+                              <p>{tr(
+                                "Loaded directly from the device on demand; this history is not persisted in the cloud.",
+                                "仅在需要时直接从设备读取，历史记录不会持久化到云端。",
+                              )}</p>
+                            </div>
+                            <button
+                              className="ghostButton small"
+                              disabled={
+                                device.status !== "online" ||
+                                !device.undo_history_available ||
+                                undoLoading === device.id
+                              }
+                              onClick={() => void loadUndoHistory(device)}
+                            >
+                              {undoLoading === device.id ? tr("Loading…", "加载中…") : tr("Refresh", "刷新")}
+                            </button>
+                          </div>
+
+                          {!device.undo_history_available && (
+                            <p className="policyNotice">{tr(
+                              "Undo history UI requires the latest remotelink client. Restart this device with the current npm release after the update is published.",
+                              "撤销历史 UI 需要最新版 remotelink 客户端。新版本发布后，请用最新 npm 版本重启这台设备。",
+                            )}</p>
+                          )}
+
+                          {!!undoErrors[device.id] && (
+                            <p className="policyWarning">{undoErrors[device.id]}</p>
+                          )}
+
+                          {!!undoByDevice[device.id]?.length && (
+                            <div className="undoActionList">
+                              {(undoByDevice[device.id] || []).map((action) => (
+                                <div className="undoActionRow" key={action.id}>
+                                  <div>
+                                    <strong>{action.tool}</strong>
+                                    <code title={action.path}>{action.path}</code>
+                                    <small>
+                                      {timeAgo(action.created_at)}
+                                      {" · "}
+                                      {action.existed_before
+                                        ? tr("restore previous content", "恢复原有内容")
+                                        : tr("remove created file", "删除新建文件")}
+                                    </small>
+                                  </div>
+                                  <button
+                                    className="ghostButton small"
+                                    disabled={undoLoading === device.id || !(device.undo_enabled ?? true)}
+                                    onClick={() => void restoreUndoAction(device, action)}
+                                  >
+                                    {tr("Undo", "撤销")}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {undoByDevice[device.id] !== undefined && !(undoByDevice[device.id] || []).length && !undoErrors[device.id] && (
+                            <p className="policyEmpty">{tr(
+                              "No reversible Remote Arc file changes are currently stored.",
+                              "当前没有可撤销的 Remote Arc 文件修改。",
+                            )}</p>
+                          )}
+                        </div>
+                      </div>
                     </details>
 
                     <div className="deviceActions managedActions">

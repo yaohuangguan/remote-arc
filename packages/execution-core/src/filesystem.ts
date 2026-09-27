@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -115,6 +116,22 @@ export async function getFileInfo(targetPath: string) {
   };
 }
 
+async function atomicWriteText(targetPath: string, content: string) {
+  const directory = path.dirname(targetPath);
+  await fs.mkdir(directory, { recursive: true });
+  const temporary = path.join(
+    directory,
+    "." + path.basename(targetPath) + ".remotearc-" + crypto.randomUUID() + ".tmp",
+  );
+
+  try {
+    await fs.writeFile(temporary, content, "utf8");
+    await fs.rename(temporary, targetPath);
+  } finally {
+    await fs.rm(temporary, { force: true }).catch(() => undefined);
+  }
+}
+
 export async function writeTextFile(
   targetPath: string,
   content: string,
@@ -124,7 +141,7 @@ export async function writeTextFile(
   if (mode === "append") {
     await fs.appendFile(targetPath, content, "utf8");
   } else {
-    await fs.writeFile(targetPath, content, "utf8");
+    await atomicWriteText(targetPath, content);
   }
   const stat = await fs.stat(targetPath);
   return {
@@ -132,6 +149,7 @@ export async function writeTextFile(
     mode,
     bytes: Buffer.byteLength(content),
     file_size: stat.size,
+    atomic: mode === "rewrite",
   };
 }
 
@@ -153,11 +171,12 @@ export async function editTextBlock(
   }
 
   const next = parts.join(newString);
-  await fs.writeFile(filePath, next, "utf8");
+  await atomicWriteText(filePath, next);
   return {
     path: filePath,
     replacements,
     bytes_before: Buffer.byteLength(current),
     bytes_after: Buffer.byteLength(next),
+    atomic: true,
   };
 }

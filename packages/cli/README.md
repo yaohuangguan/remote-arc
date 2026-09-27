@@ -79,12 +79,25 @@ Remote Arc snapshots the previous local file state before supported
 `~/.remotearc/undo` on the device and are never uploaded to Remote Arc Cloud.
 
 The `undo_last_change` skill restores the newest reversible Remote Arc file
-change. Snapshots expire after 7 days, use at most 200 MB in total, and files
-larger than 20 MB are not snapshotted.
+change. The dashboard can also list local undo metadata on demand and restore a
+specific action without uploading snapshot contents. Snapshots expire after 7
+days, use at most 200 MB in total, and files larger than 20 MB are not
+snapshotted.
 
 Local Undo covers Remote Arc file writes only. It cannot reverse external side
 effects such as publishing a package, deploying cloud infrastructure, sending a
 request to another service, or mutating a remote database.
+
+## Workspace and sensitive-path policy
+
+The dashboard can configure allowed workspace roots and additional protected
+paths per device. Sensitive-path protection is on by default for common
+credential locations and `.env` files.
+
+Filesystem paths are canonicalized and checked locally immediately before
+execution. If workspace roots are configured, file operations must stay under
+those roots. Full terminal mode requires an in-scope `cwd`, but shell commands
+are not an OS sandbox and can still reference other paths.
 
 ## Safety Guard
 

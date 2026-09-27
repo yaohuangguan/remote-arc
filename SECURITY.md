@@ -10,6 +10,8 @@ Remote Arc gives AI clients access to real computers. Treat the relay, OAuth ser
 4. **Cloudflare Worker + D1** verifies account/device ownership.
 5. **Durable Object** routes only within the authenticated user boundary.
 6. **Local capability mode** controls which native Remote Arc tools are advertised by a device.
+7. **Workspace Scope** constrains native filesystem tools to configured canonical roots.
+8. **Sensitive Path Policy** blocks built-in and user-defined private paths locally before filesystem execution.
 
 ## Credential handling
 
@@ -35,8 +37,16 @@ recursive deletion, disk formatting or raw-disk overwrite, fork bombs, and
 machine shutdown/reboot. It intentionally does not turn normal development
 commands into an approval workflow.
 
+Workspace Scope and Sensitive Path Policy are enforced again inside the native
+execution core immediately before filesystem operations. The core canonicalizes
+existing ancestors so a symlink inside an allowed workspace cannot be used to
+escape into another directory.
+
 Neither preset is a full operating-system sandbox. Once terminal execution is
-enabled, commands can access resources with the permissions of the local OS user.
+enabled, commands can access resources with the permissions of the local OS
+user. When workspace roots exist, Remote Arc requires terminal calls to provide
+an in-scope working directory, but this does not prevent the shell command from
+referencing another absolute path or an external service.
 
 ## Local Undo
 
@@ -51,12 +61,17 @@ refused rather than overwriting newer work.
 Local Undo does not cover external side effects such as deployments, package
 publishes, network calls, or remote database mutations.
 
+The dashboard retrieves undo metadata from the device only on demand. Undo
+history and snapshot contents are not persisted in the cloud. Per-device
+workspace roots and protected-path strings are stored as explicit control-plane
+policy metadata.
+
 ## Before public multi-user release
 
 The project still needs:
 
 - CSRF tokens for state-changing browser actions
-- explicit sensitive-path deny rules
+- finer-grained command/network policy for Full terminal mode
 - signed and notarized installers
 - automatic security updates
 - continued abuse monitoring and security review of public OAuth/DCR endpoints

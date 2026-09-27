@@ -5,9 +5,12 @@ import fs from "node:fs/promises";
 import { spawn } from "node:child_process";
 import process from "node:process";
 import WebSocket from "ws";
-import { RemoteArcExecutionCore } from "@remotearc/execution-core";
+import {
+  RemoteArcExecutionCore,
+  type ExecutionPolicy,
+} from "@remotearc/execution-core";
 
-const VERSION = "0.3.8";
+const VERSION = "0.3.9";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -228,8 +231,12 @@ class ExecutionCore {
     return this.core.listTools();
   }
 
-  async call(name: string, args: Record<string, unknown>) {
-    return this.core.callTool(name, args);
+  async call(
+    name: string,
+    args: Record<string, unknown>,
+    policy?: ExecutionPolicy,
+  ) {
+    return this.core.callTool(name, args, policy);
   }
 
   async close() {
@@ -289,6 +296,7 @@ async function connectAgent(config: SavedConfig) {
             agentVersion: VERSION,
           },
           tools: tools.map((tool) => tool.name),
+          capabilities: ["native_core_v1", "device_policy_v1", "undo_history_v1"],
         }),
       );
 
@@ -320,6 +328,7 @@ async function connectAgent(config: SavedConfig) {
             id?: string;
             tool?: string;
             arguments?: Record<string, unknown>;
+            policy?: ExecutionPolicy;
           };
 
           try {
@@ -342,6 +351,7 @@ async function connectAgent(config: SavedConfig) {
             const result = await core.call(
               message.tool,
               message.arguments || {},
+              message.policy,
             );
             logLine("success", `tool.done ${message.tool} · ${Date.now() - callStarted}ms`);
             ws.send(

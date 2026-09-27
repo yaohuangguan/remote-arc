@@ -30,10 +30,14 @@ async function inspectMode(mode: "safe" | "developer" | "full") {
     const shouldEdit = mode !== "safe";
     const shouldTerminal = mode === "full";
 
-    for (const tool of ["write_file", "edit_block", "undo_last_change"]) {
+    for (const tool of ["write_file", "edit_block", "undo_change", "undo_last_change"]) {
       if (names.has(tool) !== shouldEdit) {
         throw new Error(mode + ": unexpected " + tool + " exposure");
       }
+    }
+
+    if (!names.has("list_undo_actions")) {
+      throw new Error(mode + ": list_undo_actions was not advertised");
     }
 
     if (names.has("start_process") !== shouldTerminal) {

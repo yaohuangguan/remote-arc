@@ -176,22 +176,36 @@ export async function discardUndoSnapshot(snapshot: UndoSnapshot | null) {
   await fs.rm(snapshot.directory, { recursive: true, force: true }).catch(() => undefined);
 }
 
-export async function undoLastChange() {
+async function undoCandidates() {
+  await cleanupUndoStore();
   const candidates: Array<{ directory: string; manifest: UndoManifest }> = [];
   for (const directory of await snapshotDirectories()) {
     const manifest = await readManifest(directory);
     if (manifest) candidates.push({ directory, manifest });
   }
-
   candidates.sort(
     (a, b) => Date.parse(b.manifest.createdAt) - Date.parse(a.manifest.createdAt),
   );
-  const latest = candidates[0];
-  if (!latest) {
-    throw new Error("No reversible Remote Arc file change is available on this device.");
-  }
+  return candidates;
+}
 
-  if (!latest.manifest.postChangeHash) {
+export async function listUndoActions(limit = 20) {
+  const candidates = await undoCandidates();
+  return candidates.slice(0, Math.max(1, Math.min(100, Math.trunc(limit)))).map(({ manifest }) => ({
+    id: manifest.id,
+    created_at: manifest.createdAt,
+    tool: manifest.tool,
+    path: manifest.targetPath,
+    bytes: manifest.bytes,
+    existed_before: manifest.existed,
+    conflict_safe: Boolean(manifest.postChangeHash),
+  }));
+}
+
+async function restoreUndoCandidate(candidate: { directory: string; manifest: UndoManifest }) {
+  const { directory, manifest } = candidate;
+
+  if (!manifest.postChangeHash) {
     throw new Error(
       "This snapshot predates conflict-safe Local Undo and cannot be restored automatically.",
     );
@@ -199,39 +213,55 @@ export async function undoLastChange() {
 
   let currentHash: string;
   try {
-    currentHash = await hashFile(latest.manifest.targetPath);
+    currentHash = await hashFile(manifest.targetPath);
   } catch {
     throw new Error(
       "The target file changed or disappeared after the Remote Arc edit. Automatic undo was refused to avoid overwriting newer work.",
     );
   }
 
-  if (currentHash !== latest.manifest.postChangeHash) {
+  if (currentHash !== manifest.postChangeHash) {
     throw new Error(
       "The target file changed again after the Remote Arc edit. Automatic undo was refused to avoid overwriting newer work.",
     );
   }
 
-  if (latest.manifest.existed) {
-    const original = await fs.readFile(path.join(latest.directory, "content.bin"));
-    await fs.mkdir(path.dirname(latest.manifest.targetPath), { recursive: true });
-    await fs.writeFile(latest.manifest.targetPath, original);
-    if (latest.manifest.mode !== undefined) {
-      await fs.chmod(latest.manifest.targetPath, latest.manifest.mode).catch(() => undefined);
+  if (manifest.existed) {
+    const original = await fs.readFile(path.join(directory, "content.bin"));
+    await fs.mkdir(path.dirname(manifest.targetPath), { recursive: true });
+    await fs.writeFile(manifest.targetPath, original);
+    if (manifest.mode !== undefined) {
+      await fs.chmod(manifest.targetPath, manifest.mode).catch(() => undefined);
     }
   } else {
-    await fs.rm(latest.manifest.targetPath, { force: true });
+    await fs.rm(manifest.targetPath, { force: true });
   }
 
-  await fs.rm(latest.directory, { recursive: true, force: true });
+  await fs.rm(directory, { recursive: true, force: true });
 
   return {
     restored: true,
-    action_id: latest.manifest.id,
-    tool: latest.manifest.tool,
-    path: latest.manifest.targetPath,
+    action_id: manifest.id,
+    tool: manifest.tool,
+    path: manifest.targetPath,
     snapshot_location: "local-device-only",
   };
+}
+
+export async function undoChange(actionId: string) {
+  const candidate = (await undoCandidates()).find(({ manifest }) => manifest.id === actionId);
+  if (!candidate) {
+    throw new Error("Undo action not found or expired on this device.");
+  }
+  return restoreUndoCandidate(candidate);
+}
+
+export async function undoLastChange() {
+  const latest = (await undoCandidates())[0];
+  if (!latest) {
+    throw new Error("No reversible Remote Arc file change is available on this device.");
+  }
+  return restoreUndoCandidate(latest);
 }
 
 type GuardRule = { pattern: RegExp; reason: string };

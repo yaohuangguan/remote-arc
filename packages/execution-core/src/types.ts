@@ -7,6 +7,8 @@ export type ToolName =
   | "list_processes"
   | "write_file"
   | "edit_block"
+  | "list_undo_actions"
+  | "undo_change"
   | "undo_last_change"
   | "start_process";
 

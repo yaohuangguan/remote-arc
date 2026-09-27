@@ -10,6 +10,9 @@ const safe = new RemoteArcExecutionCore("safe");
 const developer = new RemoteArcExecutionCore("developer");
 const full = new RemoteArcExecutionCore("full");
 
+const jsonResult = <T>(result: { content: Array<{ text: string }> }) =>
+  JSON.parse(result.content[0]?.text || "null") as T;
+
 try {
   const safeNames = safe.listTools().map((tool) => tool.name);
   const developerNames = developer.listTools().map((tool) => tool.name);
@@ -18,52 +21,168 @@ try {
   if (safeNames.includes("write_file") || safeNames.includes("start_process")) {
     throw new Error("safe mode exposed a mutating tool");
   }
-  if (!developerNames.includes("write_file") || developerNames.includes("start_process")) {
+  if (!safeNames.includes("list_undo_actions")) {
+    throw new Error("safe mode did not expose read-only undo history");
+  }
+  if (
+    !developerNames.includes("write_file") ||
+    !developerNames.includes("undo_change") ||
+    developerNames.includes("start_process")
+  ) {
     throw new Error("developer mode permissions are incorrect");
   }
   if (!fullNames.includes("start_process")) {
     throw new Error("full mode did not expose start_process");
   }
 
-  const nested = path.join(root, "project", "src");
+  const project = path.join(root, "project");
+  const nested = path.join(project, "src");
   const file = path.join(nested, "app.txt");
-  await developer.callTool("write_file", {
-    path: file,
-    content: "alpha\nbeta\n",
-    mode: "rewrite",
-  });
+  const outside = path.join(root, "outside.txt");
 
-  const read = await safe.callTool("read_file", { path: file, offset: 0, length: 10 });
+  const policy = {
+    workspaceRoots: [project],
+    protectSensitivePaths: true,
+    sensitivePaths: [],
+    undoEnabled: true,
+  };
+
+  const write = await developer.callTool(
+    "write_file",
+    {
+      path: file,
+      content: "alpha\nbeta\n",
+      mode: "rewrite",
+    },
+    policy,
+  );
+  if (!write.content[0]?.text.includes('"atomic": true')) {
+    throw new Error("rewrite was not atomic");
+  }
+
+  const read = await safe.callTool(
+    "read_file",
+    { path: file, offset: 0, length: 10 },
+    policy,
+  );
   if (!read.content[0]?.text.includes("alpha")) throw new Error("read_file failed");
 
-  await developer.callTool("edit_block", {
-    file_path: file,
-    old_string: "beta",
-    new_string: "gamma",
-    expected_replacements: 1,
-  });
+  let outsideBlocked = false;
+  await fs.writeFile(outside, "outside");
+  try {
+    await safe.callTool("read_file", { path: outside }, policy);
+  } catch {
+    outsideBlocked = true;
+  }
+  if (!outsideBlocked) throw new Error("Workspace Scope did not block outside path");
+
+  const envFile = path.join(project, ".env");
+  await fs.writeFile(envFile, "SECRET=test");
+  let sensitiveBlocked = false;
+  try {
+    await safe.callTool("read_file", { path: envFile }, policy);
+  } catch {
+    sensitiveBlocked = true;
+  }
+  if (!sensitiveBlocked) throw new Error("Sensitive Path Policy did not block .env");
+
+  const allowedSensitive = await safe.callTool(
+    "read_file",
+    { path: envFile },
+    { ...policy, protectSensitivePaths: false },
+  );
+  if (!allowedSensitive.content[0]?.text.includes("SECRET=test")) {
+    throw new Error("Sensitive Path Policy override failed");
+  }
+
+  if (process.platform !== "win32") {
+    const escapeLink = path.join(project, "escape-link");
+    await fs.symlink(root, escapeLink, "dir");
+    let symlinkBlocked = false;
+    try {
+      await safe.callTool(
+        "read_file",
+        { path: path.join(escapeLink, "outside.txt") },
+        policy,
+      );
+    } catch {
+      symlinkBlocked = true;
+    }
+    if (!symlinkBlocked) throw new Error("Workspace Scope allowed symlink escape");
+  }
+
+  await developer.callTool(
+    "edit_block",
+    {
+      file_path: file,
+      old_string: "beta",
+      new_string: "gamma",
+      expected_replacements: 1,
+    },
+    policy,
+  );
   if ((await fs.readFile(file, "utf8")) !== "alpha\ngamma\n") {
     throw new Error("edit_block failed");
   }
 
-  await developer.callTool("undo_last_change", {});
-  if ((await fs.readFile(file, "utf8")) !== "alpha\nbeta\n") {
-    throw new Error("undo_last_change failed");
+  const history = jsonResult<Array<{ id: string; path: string }>>(
+    await safe.callTool("list_undo_actions", { limit: 20 }, policy),
+  );
+  if (!history.length || path.basename(history[0]?.path || "") !== "app.txt") {
+    throw new Error("Local Undo history did not return the latest file change");
   }
 
-  const tree = await safe.callTool("list_directory", { path: root, depth: 3 });
-  if (!tree.content[0]?.text.includes("app.txt")) throw new Error("list_directory failed");
+  await developer.callTool(
+    "undo_change",
+    { action_id: history[0]!.id },
+    policy,
+  );
+  if ((await fs.readFile(file, "utf8")) !== "alpha\nbeta\n") {
+    throw new Error("undo_change failed");
+  }
 
-  const info = await safe.callTool("get_file_info", { path: file });
-  if (!info.content[0]?.text.includes('"type": "file"')) throw new Error("get_file_info failed");
+  const tree = await safe.callTool(
+    "list_directory",
+    { path: project, depth: 3 },
+    policy,
+  );
+  if (!tree.content[0]?.text.includes("app.txt")) {
+    throw new Error("list_directory failed");
+  }
 
-  const processes = await safe.callTool("list_processes", {});
-  if (!processes.content[0]?.text.includes("Processes on")) throw new Error("list_processes failed");
+  const info = await safe.callTool("get_file_info", { path: file }, policy);
+  if (!info.content[0]?.text.includes('"type": "file"')) {
+    throw new Error("get_file_info failed");
+  }
 
-  const processResult = await full.callTool("start_process", {
-    command: "echo remotearc-core-ok",
-    timeout_ms: 5000,
-  });
+  const processes = await safe.callTool("list_processes", {}, policy);
+  if (!processes.content[0]?.text.includes("Processes on")) {
+    throw new Error("list_processes failed");
+  }
+
+  let missingCwdBlocked = false;
+  try {
+    await full.callTool(
+      "start_process",
+      { command: "echo should-not-run", timeout_ms: 5000 },
+      policy,
+    );
+  } catch {
+    missingCwdBlocked = true;
+  }
+  if (!missingCwdBlocked) {
+    throw new Error("Workspace Scope allowed terminal execution without cwd");
+  }
+
+  const processResult = await full.callTool(
+    "start_process",
+    {
+      command: "echo remotearc-core-ok",
+      timeout_ms: 5000,
+      cwd: project,
+    },
+    policy,
+  );
   if (!processResult.content[0]?.text.includes("remotearc-core-ok")) {
     throw new Error("start_process failed");
   }
@@ -78,7 +197,7 @@ try {
 
   let safeBlocked = false;
   try {
-    await safe.callTool("write_file", { path: file, content: "nope" });
+    await safe.callTool("write_file", { path: file, content: "nope" }, policy);
   } catch {
     safeBlocked = true;
   }
@@ -92,7 +211,11 @@ try {
         developer: developerNames.length,
         full: fullNames.length,
         fileOps: "ok",
-        undo: "ok",
+        atomicWrite: "ok",
+        workspaceScope: "ok",
+        sensitivePaths: "ok",
+        symlinkEscape: process.platform === "win32" ? "ci-non-win" : "ok",
+        undoHistory: "ok",
         process: "ok",
         safetyGuard: "ok",
       },

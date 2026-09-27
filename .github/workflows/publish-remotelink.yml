@@ -40,7 +40,7 @@ jobs:
       - name: Verify publish artifact
         run: |
           test -f packages/cli/dist/index.js
-          grep -q '0.3.8' packages/cli/dist/index.js
+          grep -q '0.3.9' packages/cli/dist/index.js
           grep -q 'https://mcp.remotearc.app' packages/cli/dist/index.js
           ! grep -qi 'desktop.commander\|wonderwhy' packages/cli/dist/index.js
 

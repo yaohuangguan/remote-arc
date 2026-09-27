@@ -34,10 +34,17 @@ const schemas = {
     new_string: z.string(),
     expected_replacements: z.number().int().positive().default(1),
   }),
+  list_undo_actions: z.object({
+    limit: z.number().int().min(1).max(100).default(20),
+  }),
+  undo_change: z.object({
+    action_id: z.string(),
+  }),
   undo_last_change: z.object({}),
   start_process: z.object({
     command: z.string(),
     timeout_ms: z.number().int().positive().max(120_000).default(5000),
+    cwd: z.string().optional(),
   }),
 } as const;
 
@@ -46,6 +53,7 @@ const readOnlyTools = new Set([
   "read_file",
   "get_file_info",
   "list_processes",
+  "list_undo_actions",
 ]);
 
 server.registerTool(

@@ -4883,3 +4883,205 @@ body{font-size:18px;line-height:1.6}
     grid-template-columns:1fr;
   }
 }
+
+.deviceSafetyDetails{
+  border-bottom:1px solid rgba(148,163,184,.10);
+}
+.deviceSafetyDetails summary{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:13px 2px;
+  cursor:pointer;
+  list-style:none;
+  color:#b7cbd1;
+  font-size:13px;
+  font-weight:750;
+}
+.deviceSafetyDetails summary::-webkit-details-marker{display:none}
+.deviceSafetyDetails summary::before{
+  content:">";
+  color:#38bdf8;
+  transition:transform .18s ease;
+}
+.deviceSafetyDetails[open] summary::before{transform:rotate(90deg)}
+.deviceSafetyDetails summary span{
+  margin-left:auto;
+  color:#607983;
+  font-size:10px;
+  font-weight:600;
+}
+.deviceSafetyBody{
+  display:grid;
+  gap:0;
+  padding:0 0 14px;
+}
+.policyToggleRow,
+.policyBlock,
+.undoHistorySection{
+  padding:14px 2px;
+  border-top:1px solid rgba(148,163,184,.08);
+}
+.policyToggleRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+}
+.policyToggleRow>div,
+.policyBlockHead>div{min-width:0;display:grid;gap:4px}
+.policyToggleRow strong,
+.policyBlockHead strong{color:#d7e9ed;font-size:12px}
+.policyToggleRow p,
+.policyBlockHead p,
+.policyWarning,
+.policyNotice{
+  margin:0;
+  color:#6f8993;
+  font-size:11px;
+  line-height:1.55;
+}
+.policyBlockHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+.ghostButton.small{
+  flex:0 0 auto;
+  padding:6px 9px;
+  min-height:0;
+  font-size:10px;
+}
+.compactSwitch{
+  position:relative;
+  flex:0 0 auto;
+  width:38px;
+  height:22px;
+}
+.compactSwitch input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.compactSwitch span{
+  position:absolute;
+  inset:0;
+  border:1px solid #244454;
+  border-radius:999px;
+  background:#081921;
+  cursor:pointer;
+  transition:.18s ease;
+}
+.compactSwitch span::after{
+  content:"";
+  position:absolute;
+  top:3px;
+  left:3px;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:#6e8992;
+  transition:.18s ease;
+}
+.compactSwitch input:checked+span{
+  border-color:#1f91aa;
+  background:#0b2a34;
+}
+.compactSwitch input:checked+span::after{
+  transform:translateX(16px);
+  background:#67d6eb;
+}
+.policyPathList{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:10px;
+}
+.policyPathChip{
+  display:inline-flex;
+  align-items:center;
+  min-width:0;
+  max-width:100%;
+  gap:6px;
+  padding:5px 7px 5px 8px;
+  border:1px solid #1c3545;
+  border-radius:8px;
+  background:#071821;
+}
+.policyPathChip.protected{border-color:rgba(245,158,11,.24)}
+.policyPathChip code{
+  overflow:hidden;
+  max-width:360px;
+  color:#9bc3cc;
+  font-size:10px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.policyPathChip button{
+  padding:0;
+  border:0;
+  background:transparent;
+  color:#607983;
+  cursor:pointer;
+  font-size:14px;
+  line-height:1;
+}
+.policyPathChip button:hover{color:#fca5a5}
+.policyEmpty{
+  color:#5e7780;
+  font-size:11px;
+}
+.policyWarning{
+  margin-top:10px;
+  padding:8px 10px;
+  border-left:2px solid #d97706;
+  background:rgba(120,53,15,.12);
+  color:#c89b6c;
+}
+.policyNotice{
+  margin-top:10px;
+  padding:8px 10px;
+  border-left:2px solid #2b8ca4;
+  background:rgba(8,70,87,.12);
+}
+.undoActionList{
+  display:grid;
+  gap:0;
+  margin-top:10px;
+  border-top:1px solid rgba(148,163,184,.08);
+}
+.undoActionRow{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px 0;
+  border-bottom:1px solid rgba(148,163,184,.08);
+}
+.undoActionRow>div{
+  min-width:0;
+  display:grid;
+  flex:1;
+  gap:2px;
+}
+.undoActionRow strong{color:#bdd6dc;font-size:11px}
+.undoActionRow code{
+  overflow:hidden;
+  color:#7fa1aa;
+  font-size:10px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.undoActionRow small{color:#58727b;font-size:10px}
+:root[data-theme="light"] .policyToggleRow strong,
+:root[data-theme="light"] .policyBlockHead strong{color:#23444d}
+:root[data-theme="light"] .policyPathChip{background:#f7fbfc;border-color:#d4e4e9}
+:root[data-theme="light"] .policyPathChip code{color:#41636d}
+:root[data-theme="light"] .compactSwitch span{background:#eef6f8;border-color:#cbdde2}
+@media(max-width:560px){
+  .deviceSafetyDetails summary{align-items:flex-start;flex-wrap:wrap}
+  .deviceSafetyDetails summary span{width:100%;margin-left:18px}
+  .policyBlockHead{align-items:stretch;flex-direction:column}
+  .policyBlockHead .ghostButton.small{width:max-content}
+  .policyPathChip code{max-width:230px}
+}

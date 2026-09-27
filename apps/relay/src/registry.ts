@@ -16,6 +16,7 @@ type SocketAttachment = {
   deviceId: string;
   device?: DeviceMetadata;
   tools?: string[];
+  capabilities?: string[];
 };
 
 export class DeviceRegistry {
@@ -88,6 +89,7 @@ export class DeviceRegistry {
         id: attachment.deviceId,
         ...(attachment.device || {}),
         tools: attachment.tools || [],
+        capabilities: attachment.capabilities || [],
         status: "online",
       };
     });
@@ -103,6 +105,7 @@ export class DeviceRegistry {
       deviceId?: string;
       tool?: string;
       arguments?: Record<string, unknown>;
+      policy?: AgentCallMessage["policy"];
     };
 
     if (!body.deviceId || !body.tool) {
@@ -138,6 +141,7 @@ export class DeviceRegistry {
       id,
       tool: body.tool,
       arguments: body.arguments || {},
+      policy: body.policy,
     };
 
     const result = await new Promise<unknown>((resolve, reject) => {
@@ -195,6 +199,7 @@ export class DeviceRegistry {
           lastSeen: new Date().toISOString(),
         },
         tools: parsed.tools,
+        capabilities: parsed.capabilities || [],
       } satisfies SocketAttachment);
       return;
     }

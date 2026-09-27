@@ -17,6 +17,9 @@ import {
   handleDeviceStart,
   handleDeviceToken,
   handleDeviceToolsUpdate,
+  handleDevicePolicyUpdate,
+  handleDeviceUndoList,
+  handleDeviceUndoAction,
   handlePairingApprove,
   handlePairingLookup,
 } from "./device.js";
@@ -168,7 +171,7 @@ export default {
       return Response.json({
         ok: true,
         service: "remotearc-relay",
-        version: "0.3.8",
+        version: "0.3.9",
         auth: "oauth2-pkce",
       });
     }
@@ -316,6 +319,27 @@ export default {
       request.method === "POST"
     ) {
       return handleDeviceToolsUpdate(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/policy$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDevicePolicyUpdate(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/undo$/.test(url.pathname) &&
+      request.method === "GET"
+    ) {
+      return handleDeviceUndoList(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/undo\/[^/]+$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDeviceUndoAction(request, env);
     }
 
     if (url.pathname === "/agent") {

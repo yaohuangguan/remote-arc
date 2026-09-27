@@ -140,6 +140,8 @@ get_file_info
 list_processes
 write_file
 edit_block
+list_undo_actions
+undo_change
 undo_last_change
 start_process
 ```
@@ -171,6 +173,9 @@ get_file_info
 list_processes
 ```
 
+The native core also has an internal read-only `list_undo_actions` capability
+used by the dashboard. It is not exposed as a normal hosted AI skill.
+
 ### Developer
 
 Safe plus reversible file editing:
@@ -180,6 +185,9 @@ write_file
 edit_block
 undo_last_change
 ```
+
+The dashboard can additionally invoke the internal `undo_change` operation to
+restore a selected local snapshot.
 
 Developer mode does **not** include arbitrary terminal execution.
 
@@ -223,6 +231,61 @@ Properties:
 
 Local Undo cannot reverse external side effects such as deployments, package
 publishing, network requests, or remote database mutations.
+
+The dashboard can load undo metadata directly from an online device on demand
+and restore a specific action. Undo history is not persisted in D1 or another
+Remote Arc cloud store.
+
+## Sensitive Path Policy
+
+Sensitive-path protection is enabled by default in the native execution core.
+
+Built-in protected locations include common credential and profile areas such
+as:
+
+```text
+~/.ssh
+~/.aws
+~/.gnupg
+~/.azure
+~/.kube
+~/.docker
+~/.config/gcloud
+browser profile directories
+.env and .env.*
+```
+
+Users can add additional protected paths per device in the dashboard. Path
+checks happen again on the local device immediately before filesystem
+execution, including canonical-path checks that prevent a symlink inside an
+allowed workspace from escaping into a protected or out-of-scope directory.
+
+The selected workspace/protected-path strings are control-plane policy metadata
+stored in D1. Remote Arc does not store the file contents behind those paths.
+
+## Workspace Scope
+
+A device can optionally define one or more allowed workspace roots.
+
+When workspace roots are configured, Remote Arc filesystem tools can only
+operate on canonical paths under those roots. An empty workspace list means
+filesystem access is unrestricted except for Sensitive Path Policy.
+
+For Full mode, `start_process` accepts an optional `cwd`. If Workspace Scope
+is enabled, terminal calls must provide an in-scope `cwd`.
+
+Workspace Scope is a hard boundary for Remote Arc filesystem tools. It is
+**not** an operating-system sandbox for arbitrary shell commands: a command
+running from an allowed working directory may still reference other paths or
+external services. Use Developer mode without terminal access when strict file
+confinement matters.
+
+## Native-core reliability
+
+File rewrites and targeted `edit_block` changes use same-directory temporary
+files followed by rename, reducing the risk of leaving partially written files
+after an interrupted write. Append mode remains append semantics and is not
+described as an atomic rewrite.
 
 ## Safety Guard
 
@@ -436,13 +499,16 @@ Current protections include:
 - revoked-device checks before MCP forwarding
 - outbound-only device connections
 - Local Undo for supported file changes
+- on-demand Local Undo history from the device
+- Sensitive Path Policy enabled by default
+- configurable Workspace Scope
+- canonical/symlink-safe filesystem path enforcement
+- atomic rewrite/edit operations
 - local Safety Guard for catastrophic terminal commands
 - no Desktop Commander dependency
 
 Still planned before broader public use:
 
-- sensitive-path policy
-- directory/workspace scopes
 - stronger secret redaction in audit metadata
 - more granular command/network policy
 - signed/notarized installers
@@ -463,18 +529,19 @@ Still planned before broader public use:
 - [x] per-device skill management
 - [x] Safe / Developer / Full presets
 - [x] Local Undo
+- [x] targeted Local Undo history UI
+- [x] Sensitive Path Policy
+- [x] Workspace Scope
+- [x] atomic file rewrites
 - [x] Safety Guard
 - [x] native Remote Arc execution core
 - [x] remove Desktop Commander dependency
 - [x] Windows/macOS/Linux CI
 - [x] production relay deployment
-- [ ] publish current native-core CLI to npm
+- [x] publish native-core CLI to npm
 
 ### Phase 2 - local security and reliability
 
-- sensitive-path policy
-- directory/workspace scopes
-- atomic writes
 - process handles and background jobs
 - streaming command output
 - richer Windows/macOS/Linux process support

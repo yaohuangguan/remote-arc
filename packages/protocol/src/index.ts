@@ -13,6 +13,14 @@ export type AgentHelloMessage = {
   type: "hello";
   device: DeviceMetadata;
   tools: string[];
+  capabilities?: string[];
+};
+
+export type DeviceExecutionPolicy = {
+  workspaceRoots?: string[];
+  protectSensitivePaths?: boolean;
+  sensitivePaths?: string[];
+  undoEnabled?: boolean;
 };
 
 export type AgentCallMessage = {
@@ -20,6 +28,7 @@ export type AgentCallMessage = {
   id: string;
   tool: string;
   arguments: Record<string, unknown>;
+  policy?: DeviceExecutionPolicy;
 };
 
 export type AgentResultMessage = {

@@ -24,6 +24,18 @@ const hasScope = (identity: OAuthIdentity, scope: Scope) =>
 const consume = async (env: Env, identity: OAuthIdentity) =>
   consumeToolCall(env, identity.userId);
 
+const parseStoredStringArray = (value: string | null) => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
+};
+
 const oauthSchemes = (scope: Scope) => [
   {
     type: "oauth2",
@@ -61,10 +73,20 @@ async function callDevice(
   args: Record<string, unknown>,
 ) {
   const ownedDevice = await env.DB.prepare(
-    "SELECT id, allowed_tools FROM devices WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL",
+    `SELECT id, allowed_tools, workspace_roots, sensitive_paths,
+            protect_sensitive_paths, undo_enabled
+     FROM devices
+     WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
   )
     .bind(deviceId, identity.userId)
-    .first<{ id: string; allowed_tools: string | null }>();
+    .first<{
+      id: string;
+      allowed_tools: string | null;
+      workspace_roots: string | null;
+      sensitive_paths: string | null;
+      protect_sensitive_paths: number;
+      undo_enabled: number;
+    }>();
 
   if (!ownedDevice) {
     throw new Error("device not found or revoked");
@@ -94,7 +116,17 @@ async function callDevice(
         "content-type": "application/json",
         "x-remote-link-user-id": identity.userId,
       },
-      body: JSON.stringify({ deviceId, tool, arguments: args }),
+      body: JSON.stringify({
+        deviceId,
+        tool,
+        arguments: args,
+        policy: {
+          workspaceRoots: parseStoredStringArray(ownedDevice.workspace_roots),
+          sensitivePaths: parseStoredStringArray(ownedDevice.sensitive_paths),
+          protectSensitivePaths: ownedDevice.protect_sensitive_paths !== 0,
+          undoEnabled: ownedDevice.undo_enabled !== 0,
+        },
+      }),
     });
 
   let response = await registry(env, identity.userId).fetch(registryRequest());
@@ -394,11 +426,12 @@ export function createRemoteLinkMcp(
           device_id: z.string(),
           command: z.string(),
           timeout_ms: z.number().int().positive().default(5000),
+          cwd: z.string().optional(),
         }),
         annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true },
         _meta: oauthToolMeta("computer:write"),
       },
-      async ({ device_id, command, timeout_ms }) => {
+      async ({ device_id, command, timeout_ms, cwd }) => {
         if (!identity || !hasScope(identity, "computer:write")) {
           return authRequired(env, "computer:write");
         }
@@ -407,6 +440,7 @@ export function createRemoteLinkMcp(
           await callDevice(env, identity, device_id, "start_process", {
             command,
             timeout_ms,
+            ...(cwd ? { cwd } : {}),
           }),
         );
       },

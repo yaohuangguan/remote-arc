@@ -65,9 +65,10 @@ async function connectForever() {
           platform: process.platform,
           arch: process.arch,
           hostname: os.hostname(),
-          agentVersion: "0.2.0",
+          agentVersion: "0.3.9",
         },
         tools,
+        capabilities: ["native_core_v1", "device_policy_v1", "undo_history_v1"],
       };
 
       ws.send(JSON.stringify(hello));
@@ -87,7 +88,11 @@ async function connectForever() {
           if (message.type !== "call") return;
 
           try {
-            const result = await core.callTool(message.tool, message.arguments);
+            const result = await core.callTool(
+              message.tool,
+              message.arguments,
+              message.policy,
+            );
             const response: AgentResultMessage = {
               type: "result",
               id: message.id,

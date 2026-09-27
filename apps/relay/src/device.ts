@@ -28,6 +28,34 @@ const DEFAULT_ALLOWED_TOOLS = [
   "list_processes",
 ] as const;
 
+const parseJsonStringArray = (value: string | null) => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const sanitizePolicyPaths = (value: unknown) => {
+  if (!Array.isArray(value) || value.length > 32) return null;
+  if (
+    !value.every(
+      (item) =>
+        typeof item === "string" &&
+        item.trim().length > 0 &&
+        item.trim().length <= 500,
+    )
+  ) {
+    return null;
+  }
+
+  return Array.from(new Set(value.map((item) => item.trim())));
+};
+
 export async function handleDeviceStart(request: Request, env: DeviceEnv) {
   const body = (await request.json().catch(() => ({}))) as DeviceStartBody;
   const deviceName = (body.device_name || "").trim();
@@ -266,7 +294,8 @@ export async function getDevicesForUser(
   userId: string,
 ) {
   const rows = await env.DB.prepare(
-    `SELECT id, name, platform, arch, hostname, created_at, last_seen, allowed_tools
+    `SELECT id, name, platform, arch, hostname, created_at, last_seen, allowed_tools,
+            workspace_roots, sensitive_paths, protect_sensitive_paths, undo_enabled
      FROM devices
      WHERE user_id = ?1 AND revoked_at IS NULL
      ORDER BY created_at DESC`,
@@ -281,11 +310,16 @@ export async function getDevicesForUser(
       created_at: string;
       last_seen: string | null;
       allowed_tools: string | null;
+      workspace_roots: string | null;
+      sensitive_paths: string | null;
+      protect_sensitive_paths: number;
+      undo_enabled: number;
     }>();
 
   type OnlineDevice = {
     id: string;
     tools?: string[];
+    capabilities?: string[];
     status?: string;
   };
 
@@ -326,10 +360,14 @@ export async function getDevicesForUser(
             id: device.id,
             status: "online",
             tools: ["list_directory", "read_file", "get_file_info", "list_processes", "start_process"],
+            capabilities: [],
           }
         : undefined;
     const live = onlineById.get(device.id) || reviewerFixture;
-    const availableTools = live?.tools || [];
+    const rawAvailableTools = live?.tools || [];
+    const capabilities = live?.capabilities || [];
+    const internalTools = new Set(["list_undo_actions", "undo_change"]);
+    const availableTools = rawAvailableTools.filter((tool) => !internalTools.has(tool));
     let allowedTools: string[] | null = null;
     if (device.allowed_tools) {
       try {
@@ -344,9 +382,25 @@ export async function getDevicesForUser(
       : availableTools.filter((tool) => allowedTools!.includes(tool));
 
     return {
-      ...device,
+      id: device.id,
+      name: device.name,
+      platform: device.platform,
+      arch: device.arch,
+      hostname: device.hostname,
+      created_at: device.created_at,
+      last_seen: device.last_seen,
       allowed_tools: allowedTools,
       available_tools: availableTools,
+      workspace_roots: parseJsonStringArray(device.workspace_roots),
+      sensitive_paths: parseJsonStringArray(device.sensitive_paths),
+      protect_sensitive_paths: device.protect_sensitive_paths !== 0,
+      undo_enabled: device.undo_enabled !== 0,
+      policy_enforcement_available:
+        capabilities.includes("device_policy_v1"),
+      undo_history_available:
+        capabilities.includes("undo_history_v1") &&
+        rawAvailableTools.includes("list_undo_actions") &&
+        rawAvailableTools.includes("undo_change"),
       status: live ? "online" : "offline",
       tools,
     };
@@ -460,4 +514,233 @@ export async function handleDeviceToolsUpdate(request: Request, env: DeviceEnv) 
   });
 
   return Response.json({ ok: true, allowed_tools: allowedTools });
+}
+
+
+type DevicePolicyRow = {
+  id: string;
+  workspace_roots: string | null;
+  sensitive_paths: string | null;
+  protect_sensitive_paths: number;
+  undo_enabled: number;
+};
+
+async function loadOwnedDevicePolicy(
+  env: DeviceEnv,
+  userId: string,
+  deviceId: string,
+) {
+  return env.DB.prepare(
+    `SELECT id, workspace_roots, sensitive_paths,
+            protect_sensitive_paths, undo_enabled
+     FROM devices
+     WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
+  )
+    .bind(deviceId, userId)
+    .first<DevicePolicyRow>();
+}
+
+const devicePolicyPayload = (device: DevicePolicyRow) => ({
+  workspaceRoots: parseJsonStringArray(device.workspace_roots),
+  sensitivePaths: parseJsonStringArray(device.sensitive_paths),
+  protectSensitivePaths: device.protect_sensitive_paths !== 0,
+  undoEnabled: device.undo_enabled !== 0,
+});
+
+async function callInternalDeviceTool(
+  env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
+  userId: string,
+  device: DevicePolicyRow,
+  tool: string,
+  args: Record<string, unknown>,
+) {
+  const registryRequest = () =>
+    new Request("https://registry/call", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-remote-link-user-id": userId,
+      },
+      body: JSON.stringify({
+        deviceId: device.id,
+        tool,
+        arguments: args,
+        policy: devicePolicyPayload(device),
+      }),
+    });
+
+  let response = await env.REGISTRY
+    .getByName("user:" + userId)
+    .fetch(registryRequest());
+
+  if (response.status === 404) {
+    response = await env.REGISTRY.getByName("global").fetch(registryRequest());
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    result?: unknown;
+    error?: string;
+  };
+
+  if (!response.ok || payload.error) {
+    return {
+      ok: false as const,
+      status: response.status,
+      error: payload.error || "device call failed",
+    };
+  }
+
+  return { ok: true as const, result: payload.result };
+}
+
+export async function handleDevicePolicyUpdate(
+  request: Request,
+  env: DeviceEnv,
+) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const match = url.pathname.match(/^\/api\/devices\/([^/]+)\/policy$/);
+  const deviceId = match?.[1];
+  if (!deviceId) return new Response("Not found", { status: 404 });
+
+  const body = (await request.json().catch(() => ({}))) as {
+    workspace_roots?: unknown;
+    sensitive_paths?: unknown;
+    protect_sensitive_paths?: unknown;
+    undo_enabled?: unknown;
+  };
+
+  const workspaceRoots = sanitizePolicyPaths(body.workspace_roots ?? []);
+  const sensitivePaths = sanitizePolicyPaths(body.sensitive_paths ?? []);
+  if (!workspaceRoots || !sensitivePaths) {
+    return Response.json(
+      { error: "workspace_roots and sensitive_paths must be arrays of valid paths" },
+      { status: 400 },
+    );
+  }
+
+  if (
+    typeof body.protect_sensitive_paths !== "boolean" ||
+    typeof body.undo_enabled !== "boolean"
+  ) {
+    return Response.json(
+      { error: "protect_sensitive_paths and undo_enabled must be booleans" },
+      { status: 400 },
+    );
+  }
+
+  const result = await env.DB.prepare(
+    `UPDATE devices
+     SET workspace_roots = ?1,
+         sensitive_paths = ?2,
+         protect_sensitive_paths = ?3,
+         undo_enabled = ?4
+     WHERE id = ?5 AND user_id = ?6 AND revoked_at IS NULL`,
+  )
+    .bind(
+      JSON.stringify(workspaceRoots),
+      JSON.stringify(sensitivePaths),
+      body.protect_sensitive_paths ? 1 : 0,
+      body.undo_enabled ? 1 : 0,
+      deviceId,
+      user.id,
+    )
+    .run();
+
+  if (!result.meta.changes) {
+    return Response.json({ error: "device not found" }, { status: 404 });
+  }
+
+  await writeAudit(env, {
+    userId: user.id,
+    deviceId,
+    eventType: "device.policy_updated",
+  });
+
+  return Response.json({
+    ok: true,
+    workspace_roots: workspaceRoots,
+    sensitive_paths: sensitivePaths,
+    protect_sensitive_paths: body.protect_sensitive_paths,
+    undo_enabled: body.undo_enabled,
+  });
+}
+
+export async function handleDeviceUndoList(
+  request: Request,
+  env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
+) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const match = url.pathname.match(/^\/api\/devices\/([^/]+)\/undo$/);
+  const deviceId = match?.[1];
+  if (!deviceId) return new Response("Not found", { status: 404 });
+
+  const device = await loadOwnedDevicePolicy(env, user.id, deviceId);
+  if (!device) return Response.json({ error: "device not found" }, { status: 404 });
+
+  const call = await callInternalDeviceTool(
+    env,
+    user.id,
+    device,
+    "list_undo_actions",
+    { limit: 30 },
+  );
+  if (!call.ok) {
+    return Response.json(
+      { error: call.error, available: false },
+      { status: call.status === 403 || call.status === 404 ? 409 : call.status },
+    );
+  }
+
+  return Response.json({
+    available: true,
+    actions: call.result,
+  });
+}
+
+export async function handleDeviceUndoAction(
+  request: Request,
+  env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
+) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const match = url.pathname.match(
+    /^\/api\/devices\/([^/]+)\/undo\/([^/]+)$/,
+  );
+  const deviceId = match?.[1];
+  const actionId = match?.[2];
+  if (!deviceId || !actionId) return new Response("Not found", { status: 404 });
+
+  const device = await loadOwnedDevicePolicy(env, user.id, deviceId);
+  if (!device) return Response.json({ error: "device not found" }, { status: 404 });
+  if (device.undo_enabled === 0) {
+    return Response.json({ error: "Local Undo is disabled" }, { status: 409 });
+  }
+
+  const call = await callInternalDeviceTool(
+    env,
+    user.id,
+    device,
+    "undo_change",
+    { action_id: decodeURIComponent(actionId) },
+  );
+  if (!call.ok) {
+    return Response.json({ error: call.error }, { status: call.status || 409 });
+  }
+
+  await writeAudit(env, {
+    userId: user.id,
+    deviceId,
+    eventType: "device.undo_restored",
+    toolName: "undo_change",
+  });
+
+  return Response.json({ ok: true, result: call.result });
 }

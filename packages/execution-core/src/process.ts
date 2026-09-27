@@ -57,12 +57,17 @@ async function terminateTree(child: ReturnType<typeof spawn>) {
   }
 }
 
-export async function runShellCommand(command: string, timeoutMs = 5000) {
+export async function runShellCommand(
+  command: string,
+  timeoutMs = 5000,
+  cwd?: string,
+) {
   const timeout = Math.max(100, Math.min(120_000, Math.trunc(timeoutMs || 5000)));
   const startedAt = Date.now();
 
   return await new Promise<{
     command: string;
+    cwd: string | null;
     exit_code: number | null;
     signal: NodeJS.Signals | null;
     stdout: string;
@@ -72,6 +77,7 @@ export async function runShellCommand(command: string, timeoutMs = 5000) {
   }>((resolve, reject) => {
     const child = spawn(command, {
       shell: true,
+      cwd,
       windowsHide: true,
       detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"],
@@ -107,6 +113,7 @@ export async function runShellCommand(command: string, timeoutMs = 5000) {
       clearTimeout(timer);
       resolve({
         command,
+        cwd: cwd || null,
         exit_code: code,
         signal,
         stdout,
