@@ -2,7 +2,7 @@
   "mcpServers": {
     "remote-arc": {
       "type": "streamable-http",
-      "url": "https://remotearc.app/mcp",
+      "url": "https://mcp.remotearc.app/mcp",
       "headers": {}
     }
   }

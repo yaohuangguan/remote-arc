@@ -1,6 +1,6 @@
 # Remote Arc — OpenAI Public Plugin Submission Pack
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
 
 ## Submission type
 
@@ -11,7 +11,7 @@ Last updated: 2026-09-26
 - Support: `https://remotearc.app/support`
 - Privacy: `https://remotearc.app/privacy`
 - Terms: `https://remotearc.app/terms`
-- Developer identity: verified individual identity (currently pending OpenAI verification)
+- Developer identity: **Verified** individual identity
 - Suggested category: Developer Tools / Productivity
 
 ## Listing copy
@@ -53,8 +53,14 @@ Use Remote Arc only with computers, files, accounts, and services you own or are
 | `get_file_info` | true | false | false | Retrieves file/directory metadata only. |
 | `list_processes` | true | false | false | Retrieves running-process information from a private paired computer without changing processes. |
 | `start_process` | false | true | true | Executes an arbitrary terminal command on a paired computer. A command may modify local state and may access or change public internet services (for example, pushing code or calling an external API). Commands can cause irreversible effects. |
+| `process_status` | true | false | false | Reads status for a Remote Arc-managed background process without changing that process. |
+| `process_output` | true | false | false | Reads captured stdout/stderr for a Remote Arc-managed background process without changing it. |
+| `stop_process` | false | false | true | Stops a Remote Arc-managed background process and its child process tree. This changes local process state and can interrupt work. |
 | `write_file` | false | false | true | Writes or appends content to a file on the user's private paired computer. Rewrite mode can overwrite existing user data. |
 | `edit_block` | false | false | true | Performs targeted search-and-replace in a file on the user's private paired computer and therefore changes/overwrites user data. |
+| `undo_last_change` | false | false | false | Restores the newest reversible Remote Arc file change from a device-local snapshot. It mutates local state but is a bounded recovery action that refuses conflicting restores. |
+
+Production currently exposes 13 hosted MCP tools. The reviewer fixture intentionally advertises only the five deterministic review-safe tools documented below; production-only managed-process, file-mutation, and undo capabilities remain covered by the annotations above.
 
 Operational service metering and audit metadata are described in the Privacy Policy. The hints above describe the user-facing capability and external effect of each tool.
 
@@ -189,7 +195,7 @@ The Terms explicitly require authorization over every controlled computer/accoun
 
 Initial public submission of Remote Arc.
 
-Remote Arc provides an OAuth-protected Universal Remote MCP endpoint that connects ChatGPT and Codex to Windows, macOS, and Linux computers explicitly paired by the user. This initial version includes device discovery, per-device tool visibility, directory/file reads, file metadata, process inspection, terminal command execution, file writes, and targeted text edits.
+Remote Arc provides an OAuth-protected Universal Remote MCP endpoint that connects ChatGPT and Codex to Windows, macOS, and Linux computers explicitly paired by the user. This initial version includes device discovery, per-device tool visibility, directory/file reads, file metadata, process inspection, terminal command execution, managed background-process status/output/stop controls, file writes, targeted text edits, and device-local undo of the newest supported Remote Arc file change.
 
 For review, use the dedicated reviewer account and the isolated Review Desktop fixture. The fixture provides deterministic read/test outputs and intentionally disables file-write tools and destructive commands so reviewers can exercise positive and negative authorization cases safely.
 
@@ -205,7 +211,7 @@ For review, use the dedicated reviewer account and the isolated Review Desktop f
 - [ ] Add domain challenge token to `OPENAI_APPS_CHALLENGE`.
 - [ ] Verify domain.
 - [ ] Scan Tools.
-- [ ] Confirm all 9 tools and annotation values.
+- [ ] Confirm all 13 production tools and annotation values.
 - [ ] Add annotation justifications from this document.
 - [ ] Add listing copy and production URLs.
 - [ ] Add starter prompts.
