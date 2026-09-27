@@ -570,6 +570,32 @@ function AiClientBadge({ name, icon, note }: { name: string; icon: string; note:
   );
 }
 
+function HelpTip({
+  label,
+  text,
+}: {
+  label: string;
+  text: string;
+}) {
+  return (
+    <span className="helpTipWrap">
+      <button
+        type="button"
+        className="helpTip"
+        aria-label={label}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          event.currentTarget.focus();
+        }}
+      >
+        ?
+      </button>
+      <span className="helpTipBubble" role="tooltip">{text}</span>
+    </span>
+  );
+}
+
 function DashboardAccess() {
   const { tr } = useI18n();
   return (
@@ -1861,7 +1887,13 @@ function Dashboard({
                           return (
                             <label className={"toolToggle" + (!advertised ? " unavailable" : "")} key={tool}>
                               <input type="checkbox" checked={enabled} disabled={!advertised} onChange={(event) => void updateDeviceTools(device, tool, event.target.checked)} />
-                              <span><strong>{tool}</strong><small>{description}</small></span>
+                              <span className="skillLabel">
+                                <strong>{tool}</strong>
+                                <HelpTip
+                                  label={tr("About " + tool, "了解 " + tool)}
+                                  text={description}
+                                />
+                              </span>
                             </label>
                           );
                         })}
@@ -1891,12 +1923,15 @@ function Dashboard({
                           )}</p>
                         )}
                         <div className="policyToggleRow">
-                          <div>
+                          <div className="labelWithHelp">
                             <strong>{tr("Sensitive Path Policy", "敏感路径策略")}</strong>
-                            <p>{tr(
-                              "Blocks built-in credential locations such as .ssh, .aws, browser profiles and .env files before local execution.",
-                              "在本机执行前阻止 .ssh、.aws、浏览器配置、.env 等内置敏感位置。",
-                            )}</p>
+                            <HelpTip
+                              label={tr("About Sensitive Path Policy", "了解敏感路径策略")}
+                              text={tr(
+                                "Blocks built-in credential locations such as .ssh, .aws, browser profiles and .env files before local execution.",
+                                "在本机执行前阻止 .ssh、.aws、浏览器配置、.env 等内置敏感位置。",
+                              )}
+                            />
                           </div>
                           <label className="compactSwitch">
                             <input
@@ -1912,12 +1947,15 @@ function Dashboard({
 
                         <div className="policyBlock">
                           <div className="policyBlockHead">
-                            <div>
+                            <div className="labelWithHelp">
                               <strong>{tr("Workspace Scope", "工作区范围")}</strong>
-                              <p>{tr(
-                                "When configured, Remote Arc file tools can only touch these roots. Empty means all non-sensitive paths.",
-                                "配置后，Remote Arc 文件工具只能访问这些根目录；留空表示可访问全部非敏感路径。",
-                              )}</p>
+                              <HelpTip
+                                label={tr("About Workspace Scope", "了解工作区范围")}
+                                text={tr(
+                                  "When configured, Remote Arc file tools can only touch these roots. Empty means all non-sensitive paths.",
+                                  "配置后，Remote Arc 文件工具只能访问这些根目录；留空表示可访问全部非敏感路径。",
+                                )}
+                              />
                             </div>
                             <div className="policyHeaderActions">
                               <button className="ghostButton small" disabled={device.status !== "online"} onClick={() => void browseDeviceDirectories(device)}>
@@ -1955,12 +1993,15 @@ function Dashboard({
 
                         <div className="policyBlock">
                           <div className="policyBlockHead">
-                            <div>
+                            <div className="labelWithHelp">
                               <strong>{tr("Extra protected paths", "额外保护路径")}</strong>
-                              <p>{tr(
-                                "Add private folders that should remain blocked in addition to Remote Arc's built-in sensitive locations.",
-                                "在内置敏感位置之外，再添加不希望 AI 访问的私有目录。",
-                              )}</p>
+                              <HelpTip
+                                label={tr("About extra protected paths", "了解额外保护路径")}
+                                text={tr(
+                                  "Add private folders that should remain blocked in addition to Remote Arc's built-in sensitive locations.",
+                                  "在内置敏感位置之外，再添加不希望 AI 访问的私有目录。",
+                                )}
+                              />
                             </div>
                             <button className="ghostButton small" onClick={() => void addPolicyPath(device, "sensitive_paths")}>
                               + {tr("Protect path", "保护路径")}
@@ -1987,12 +2028,15 @@ function Dashboard({
 
                         <div className="policyBlock">
                           <div className="policyBlockHead">
-                            <div>
+                            <div className="labelWithHelp">
                               <strong>{tr("Sensitive path exceptions", "敏感路径例外")}</strong>
-                              <p>{tr(
-                                "Keep protection enabled globally, but explicitly allow only the sensitive files or folders this device truly needs.",
-                                "保持整体敏感路径保护开启，只对确实需要访问的敏感文件或目录做窄范围例外。",
-                              )}</p>
+                              <HelpTip
+                                label={tr("About sensitive path exceptions", "了解敏感路径例外")}
+                                text={tr(
+                                  "Keep protection enabled globally, but explicitly allow only the sensitive files or folders this device truly needs. Exceptions still remain inside Workspace Scope.",
+                                  "保持整体敏感路径保护开启，只对确实需要访问的敏感文件或目录做窄范围例外；例外仍受 Workspace Scope 限制。",
+                                )}
+                              />
                             </div>
                             <button
                               className="ghostButton small"
@@ -2018,21 +2062,19 @@ function Dashboard({
                               )}</span>
                             )}
                           </div>
-                          {!!(device.sensitive_allow_paths || []).length && (
-                            <p className="policyWarning">{tr(
-                              "Exceptions bypass only Sensitive Path protection. Workspace Scope still applies.",
-                              "例外只绕过敏感路径保护，Workspace Scope 仍然生效。",
-                            )}</p>
-                          )}
+
                         </div>
 
                         <div className="policyToggleRow undoPolicyToggle">
-                          <div>
+                          <div className="labelWithHelp">
                             <strong>{tr("Create Local Undo snapshots", "创建 Local Undo 快照")}</strong>
-                            <p>{tr(
-                              "Recovery setting: when enabled, supported file edits save the previous state on this computer. This is separate from the undo_last_change skill above, which only controls whether AI is allowed to invoke an existing snapshot.",
-                              "恢复设置：开启后，支持的文件修改会先在本机保存修改前状态。它和上面的 undo_last_change 技能是两件事；后者只控制 AI 是否有权限调用已经存在的快照。",
-                            )}</p>
+                            <HelpTip
+                              label={tr("About Local Undo snapshots", "了解 Local Undo 快照")}
+                              text={tr(
+                                "Recovery setting: when enabled, supported file edits save the previous state on this computer. This is separate from the undo_last_change skill, which only controls whether AI may invoke an existing snapshot.",
+                                "恢复设置：开启后，支持的文件修改会先在本机保存修改前状态。它和 undo_last_change 技能是两件事；后者只控制 AI 是否能调用已有快照。",
+                              )}
+                            />
                           </div>
                           <label className="compactSwitch">
                             <input
@@ -2048,12 +2090,15 @@ function Dashboard({
 
                         <div className="undoHistorySection">
                           <div className="policyBlockHead">
-                            <div>
+                            <div className="labelWithHelp">
                               <strong>{tr("Undo history", "撤销历史")}</strong>
-                              <p>{tr(
-                                "Loaded directly from the device on demand; this history is not persisted in the cloud.",
-                                "仅在需要时直接从设备读取，历史记录不会持久化到云端。",
-                              )}</p>
+                              <HelpTip
+                                label={tr("About Undo history", "了解撤销历史")}
+                                text={tr(
+                                  "Loaded directly from the device on demand; this history is not persisted in the cloud.",
+                                  "仅在需要时直接从设备读取，历史记录不会持久化到云端。",
+                                )}
+                              />
                             </div>
                             <button
                               className="ghostButton small"
@@ -2144,12 +2189,15 @@ function Dashboard({
                       </summary>
                       <div className="managedProcessBody">
                         <div className="policyBlockHead">
-                          <div>
+                          <div className="labelWithHelp">
                             <strong>{tr("Processes started by Remote Arc", "由 Remote Arc 启动的进程")}</strong>
-                            <p>{tr(
-                              "Only background processes started with Remote Arc's managed process mode appear here. This is not a list of every process on your computer.",
-                              "这里只显示通过 Remote Arc 后台进程模式启动的进程，并不是这台电脑上所有系统进程的列表。",
-                            )}</p>
+                            <HelpTip
+                              label={tr("About managed background processes", "了解后台进程管理")}
+                              text={tr(
+                                "Only background processes started with Remote Arc's managed process mode appear here. This is not a list of every process on your computer.",
+                                "这里只显示通过 Remote Arc 后台进程模式启动的进程，并不是这台电脑上所有系统进程的列表。",
+                              )}
+                            />
                           </div>
                           <button
                             className="ghostButton small"
@@ -2364,15 +2412,20 @@ function Dashboard({
 
             <section className="securityPanel securityGrantsPanel">
               <div className="securityPanelHeader">
-                <div><span className="eyebrow">{tr("CONNECTED AI ACCESS", "已连接 AI 访问")}</span><h2>{tr("AI authorizations", "AI 授权")}</h2><p>{tr("Review each OAuth authorization separately. Active, refreshable and expired grants are shown so you can understand exactly what can still reconnect.", "逐条查看 OAuth 授权。这里会区分当前有效、仍可刷新以及已过期的 Grant，让你明确哪些连接仍能重新获得访问权限。")}</p></div>
+                <div>
+                  <span className="eyebrow">{tr("CONNECTED AI ACCESS", "已连接 AI 访问")}</span>
+                  <div className="headingWithHelp">
+                    <h2>{tr("AI authorizations", "AI 授权")}</h2>
+                    <HelpTip
+                      label={tr("About AI authorizations", "了解 AI 授权")}
+                      text={tr(
+                        "Each row is one OAuth authorization instance created when an AI client connects to Remote Arc. Multiple ChatGPT rows can exist if ChatGPT registered or authorized Remote Arc more than once. Active means the current access token works now; Refreshable means the access token expired but the client can obtain a new one without asking again; Expired can no longer reconnect.",
+                        "每一行代表 AI 客户端连接 Remote Arc 时创建的一份 OAuth 授权实例。ChatGPT 多次注册或授权时可能出现多行。Active 表示当前 Access Token 可用；Refreshable 表示 Access Token 已过期但仍可无须重新确认地换取新 Token；Expired 表示已无法重新连接。",
+                      )}
+                    />
+                  </div>
+                </div>
                 <button className="ghostButton" disabled={securityBusy} onClick={() => void refreshSecurity()}>{tr("Refresh", "刷新")}</button>
-              </div>
-              <div className="securityGrantHelp">
-                <strong>{tr("What is a grant?", "Grant 是什么？")}</strong>
-                <span>{tr(
-                  "Each row is one OAuth authorization instance created when an AI client connects to Remote Arc. Multiple ChatGPT rows can exist if ChatGPT registered or authorized Remote Arc more than once. They are separate authorizations, not separate computers.",
-                  "每一行代表 AI 客户端连接 Remote Arc 时创建的一份 OAuth 授权实例。ChatGPT 多次注册或授权 Remote Arc 时，可能出现多行 ChatGPT；它们是不同授权，不是不同电脑。",
-                )}</span>
               </div>
               <div className="securityGrantList">
                 {(securityState?.grants || []).map((grant) => {
@@ -2399,7 +2452,10 @@ function Dashboard({
                       </div>
                       <div className="securityGrantState">
                         <span className={"grantState " + grant.status}>{statusLabel}</span>
-                        <small>{statusHelp}</small>
+                        <HelpTip
+                          label={tr("About this authorization status", "了解此授权状态")}
+                          text={statusHelp}
+                        />
                       </div>
                       <div className="securityGrantDetails">
                         <span>{tr("First authorized", "首次授权")} <strong>{timeAgo(grant.authorizedAt)}</strong></span>

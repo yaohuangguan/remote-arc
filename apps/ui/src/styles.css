@@ -5744,3 +5744,123 @@ body{font-size:18px;line-height:1.6}
 :root[data-theme="light"] .appFrame .pageHeader p{
   color:#4f6e78;
 }
+
+
+/* Context help: explanations stay available without filling the dashboard */
+.helpTipWrap{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  flex:0 0 auto;
+  vertical-align:middle;
+}
+.helpTip{
+  width:19px;
+  height:19px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:1px solid #355262;
+  border-radius:50%;
+  background:#091923;
+  color:#8db1bc;
+  font-size:11px;
+  font-weight:850;
+  line-height:1;
+  cursor:help;
+}
+.helpTip:hover,
+.helpTip:focus-visible{
+  border-color:#38bdf8;
+  color:#bae6fd;
+  outline:none;
+}
+.helpTipBubble{
+  position:absolute;
+  left:50%;
+  top:calc(100% + 8px);
+  width:max-content;
+  max-width:min(310px,70vw);
+  padding:10px 11px;
+  border:1px solid #29485a;
+  border-radius:10px;
+  background:#07131c;
+  box-shadow:0 14px 36px rgba(0,0,0,.34);
+  color:#bdd0d6;
+  font-size:12px;
+  font-weight:500;
+  line-height:1.5;
+  letter-spacing:0;
+  text-transform:none;
+  white-space:normal;
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transform:translate(-50%,4px);
+  transition:opacity .14s ease,transform .14s ease,visibility .14s ease;
+  z-index:120;
+}
+.helpTipWrap:hover .helpTipBubble,
+.helpTipWrap:focus-within .helpTipBubble{
+  opacity:1;
+  visibility:visible;
+  transform:translate(-50%,0);
+}
+.labelWithHelp,
+.headingWithHelp,
+.skillLabel{
+  display:flex!important;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+}
+.headingWithHelp h2{
+  margin-right:0!important;
+}
+.skillLabel{
+  flex:1;
+}
+.skillLabel strong{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.toolToggle{
+  align-items:center;
+  min-height:42px;
+}
+.deviceCard.managed{
+  overflow:visible;
+}
+.policyBlockHead>.labelWithHelp,
+.policyToggleRow>.labelWithHelp{
+  align-self:center;
+}
+.securityGrantState{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex-wrap:wrap;
+}
+:root[data-theme="light"] .helpTip{
+  border-color:#b9d4dc;
+  background:#f4f9fb;
+  color:#456873;
+}
+:root[data-theme="light"] .helpTip:hover,
+:root[data-theme="light"] .helpTip:focus-visible{
+  border-color:#0284c7;
+  color:#075985;
+}
+:root[data-theme="light"] .helpTipBubble{
+  border-color:#c9dee5;
+  background:#fff;
+  box-shadow:0 14px 36px rgba(38,79,91,.15);
+  color:#294f5b;
+}
+@media(max-width:720px){
+  .helpTipBubble{
+    max-width:min(280px,78vw);
+  }
+}
