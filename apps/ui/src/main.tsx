@@ -1433,10 +1433,6 @@ function Landing({ user }: { user?: User | null }) {
         <div className="demoGrid">
           <article className="demoCard">
             <div className="demoMedia">
-              <video autoPlay muted loop playsInline preload="metadata" poster="/demos/mobile-command-demo-poster.webp" aria-label={tr("Remote Arc mobile natural language command demo", "Remote Arc 手机自然语言操作演示")}>
-                <source src="/demos/mobile-command-demo.webm" type="video/webm" />
-                <source src="/demos/mobile-command-demo.mp4" type="video/mp4" />
-              </video>
               <span className="demoBadge">{tr("MOBILE", "手机")}</span>
             </div>
             <div className="demoCopy">
