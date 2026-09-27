@@ -136,6 +136,9 @@ export default {
       return Response.redirect(new URL("/overview", appOrigin).toString(), 302);
     }
 
+    // Serve the OpenAI domain-verification challenge directly on both the
+    // MCP hostname and the parent marketing hostname. OpenAI allows either
+    // origin and the verifier should not need to follow redirects.
     if (url.hostname === "remotearc.app" && (
       url.pathname === "/mcp" ||
       url.pathname.startsWith("/oauth/") ||
