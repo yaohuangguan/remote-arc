@@ -1,4 +1,5 @@
 import { DeviceRegistry } from "./registry.js";
+import { renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
 import { createRemoteLinkMcp } from "./mcp.js";
 import {
   authenticateDevice,
@@ -433,6 +434,20 @@ export default {
       return Response.json(await getDevicesForUser(env, user.id));
     }
 
+    const isMarketingHost = url.hostname === "remotearc.app" || url.hostname === "www.remotearc.app";
+
+    if (request.method === "GET" && url.pathname === "/robots.txt") {
+      return new Response(isMarketingHost ? robotsTxt() : "User-agent: *\nDisallow: /\n", {
+        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" },
+      });
+    }
+
+    if (request.method === "GET" && isMarketingHost && url.pathname === "/sitemap.xml") {
+      return new Response(sitemapXml(), {
+        headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=3600" },
+      });
+    }
+
     const acceptsHtml =
       request.headers.get("sec-fetch-mode") === "navigate" ||
       (request.headers.get("accept") || "").includes("text/html");
@@ -450,7 +465,10 @@ export default {
       headers.set("cloudflare-cdn-cache-control", "no-store");
       headers.delete("etag");
 
-      return new Response(assetResponse.body, {
+      const html = await assetResponse.text();
+      const rendered = isMarketingHost ? renderMarketingHtml(html, url.pathname) : html;
+
+      return new Response(rendered, {
         status: assetResponse.status,
         statusText: assetResponse.statusText,
         headers,
