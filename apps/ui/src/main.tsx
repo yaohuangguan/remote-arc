@@ -284,7 +284,7 @@ function PublicHeader({ user }: { user?: User | null }) {
         {user ? (
           <a className="navDashboard" href={APP_ORIGIN + "/overview"}>{tr("Dashboard", "控制台")} <span>↗</span></a>
         ) : (
-          <a className="navLogin installNavCta" href={MARKETING_ORIGIN + "/#install"}>{tr("Install Remote Arc", "安装 Remote Arc")} <span>↓</span></a>
+          <a className="navLogin installNavCta" href={MARKETING_ORIGIN + "/install"}>{tr("Install Remote Arc", "安装 Remote Arc")} <span>→</span></a>
         )}
       </div>
     </header>
@@ -1065,7 +1065,7 @@ function Landing({ user }: { user?: User | null }) {
             "让 ChatGPT、Claude 和 Cursor 不再只是聊天，而是真正连接你已有的电脑：检查文件、修改代码、执行被允许的工作流，同时由 Remote Arc 把访问范围和控制权留在你手里。"
           )}</p>
           <div className="landingActions">
-            <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : "#install"}>{user ? tr("Open dashboard", "打开控制台") : tr("Install Remote Arc", "安装 Remote Arc")}</a>
+            <a className="primaryButton goldButton" href="/install">{tr("Install Remote Arc", "安装 Remote Arc")}</a>
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
@@ -3343,6 +3343,10 @@ function App() {
 
   if (location.pathname === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;
   if (location.pathname === "/oauth/consent") return <OAuthConsent user={user} />;
+
+  if (location.pathname === "/install") {
+    return <ClientInstallPage slug="chatgpt" user={user === undefined ? null : user} />;
+  }
 
   const installMatch = location.pathname.match(/^\/install\/(chatgpt|claude|cursor)$/);
   if (installMatch) {
