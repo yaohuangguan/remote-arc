@@ -7,7 +7,7 @@ on:
       - "remotelink-v*"
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -47,3 +47,13 @@ jobs:
       - name: Publish
         working-directory: packages/cli
         run: npm publish --access public --provenance
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/remotelink-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" \
+              --title "remotelink ${GITHUB_REF_NAME#remotelink-v}" \
+              --generate-notes
