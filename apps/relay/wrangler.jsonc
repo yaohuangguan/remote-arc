@@ -3,6 +3,9 @@
   "name": "remote-link-relay",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-20",
+  "cache": {
+    "enabled": false
+  },
   "durable_objects": {
     "bindings": [
       {
