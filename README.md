@@ -490,6 +490,8 @@ Allowed action:       npm publish
 Remote computer access is high impact. Remote Arc therefore starts from a
 restricted capability model instead of granting unrestricted terminal access.
 
+[![M8ven Verified](https://m8ven.ai/badge/mcp/yaohuangguan/remote-arc?variant=verified)](https://m8ven.ai/mcp/yaohuangguan/remote-arc)
+
 Current protections include:
 
 - read-only default preset
