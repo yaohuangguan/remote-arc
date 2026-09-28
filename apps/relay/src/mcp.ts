@@ -13,7 +13,11 @@ type Env = {
   REVIEWER_DEMO_DEVICE_ID?: string;
 };
 
-type Scope = "devices:read" | "computer:read" | "computer:write";
+type Scope =
+  | "devices:read"
+  | "computer:read"
+  | "computer:write"
+  | "browser:read";
 
 const registry = (env: Env, userId: string) =>
   env.REGISTRY.getByName("user:" + userId);
@@ -314,6 +318,161 @@ export function createRemoteLinkMcp(
         const device = devices.find((item) => item.id === device_id);
         if (!device) throw new Error("device not found");
         return textResult(device.tools || []);
+      },
+    );
+
+    server.registerTool(
+      "browser_list_tabs",
+      {
+        title: "List explicitly shared browser tabs",
+        description:
+          "List the browser tabs the user explicitly shared with Remote Arc. Use the returned tabId when more than one tab is shared.",
+        inputSchema: z.object({
+          device_id: z.string(),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("browser:read"),
+      },
+      async ({ device_id }) => {
+        if (!identity || !hasScope(identity, "browser:read")) {
+          return authRequired(env, "browser:read");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "browser_list_tabs", {}),
+        );
+      },
+    );
+
+    server.registerTool(
+      "browser_get_current_tab",
+      {
+        title: "Get the currently shared browser tab",
+        description:
+          "Return metadata for one explicitly shared browser tab. Pass tab_id when multiple tabs are shared.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          tab_id: z.number().int().optional(),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("browser:read"),
+      },
+      async ({ device_id, tab_id }) => {
+        if (!identity || !hasScope(identity, "browser:read")) {
+          return authRequired(env, "browser:read");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "browser_get_current_tab", {
+            ...(tab_id !== undefined ? { tab_id } : {}),
+          }),
+        );
+      },
+    );
+
+    server.registerTool(
+      "browser_read_page",
+      {
+        title: "Read the shared browser page",
+        description:
+          "Read a simplified, read-only snapshot of the explicitly shared tab, including text, headings, and interactive element labels. Does not return raw HTML or form values.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          tab_id: z.number().int().optional(),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("browser:read"),
+      },
+      async ({ device_id, tab_id }) => {
+        if (!identity || !hasScope(identity, "browser:read")) {
+          return authRequired(env, "browser:read");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "browser_read_page", {
+            ...(tab_id !== undefined ? { tab_id } : {}),
+          }),
+        );
+      },
+    );
+
+    server.registerTool(
+      "browser_get_selected_text",
+      {
+        title: "Read selected text in the shared browser tab",
+        description:
+          "Return only the text currently selected by the user in the explicitly shared tab.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          tab_id: z.number().int().optional(),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("browser:read"),
+      },
+      async ({ device_id, tab_id }) => {
+        if (!identity || !hasScope(identity, "browser:read")) {
+          return authRequired(env, "browser:read");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "browser_get_selected_text", {
+            ...(tab_id !== undefined ? { tab_id } : {}),
+          }),
+        );
+      },
+    );
+
+    server.registerTool(
+      "browser_extract_links",
+      {
+        title: "Extract links from the shared browser tab",
+        description:
+          "Return visible links from the explicitly shared tab without navigating or clicking them.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          tab_id: z.number().int().optional(),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("browser:read"),
+      },
+      async ({ device_id, tab_id }) => {
+        if (!identity || !hasScope(identity, "browser:read")) {
+          return authRequired(env, "browser:read");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "browser_extract_links", {
+            ...(tab_id !== undefined ? { tab_id } : {}),
+          }),
+        );
+      },
+    );
+
+    server.registerTool(
+      "browser_extract_table",
+      {
+        title: "Extract a table from the shared browser tab",
+        description:
+          "Return rows from one visible table in the explicitly shared tab without modifying the page.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          tab_id: z.number().int().optional(),
+          table_index: z.number().int().min(0).default(0),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("browser:read"),
+      },
+      async ({ device_id, tab_id, table_index }) => {
+        if (!identity || !hasScope(identity, "browser:read")) {
+          return authRequired(env, "browser:read");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "browser_extract_table", {
+            ...(tab_id !== undefined ? { tab_id } : {}),
+            table_index,
+          }),
+        );
       },
     );
 

@@ -344,11 +344,22 @@ export async function handleLogout(request: Request, env: AuthEnv) {
   });
 }
 
-export async function authenticateDevice(request: Request, env: AuthEnv) {
+function deviceTokenFromRequest(request: Request) {
   const header = request.headers.get("authorization") || "";
-  if (!header.startsWith("Bearer ")) return null;
+  if (header.startsWith("Bearer ")) return header.slice(7);
 
-  const tokenHash = await sha256Hex(header.slice(7));
+  const protocols = (request.headers.get("sec-websocket-protocol") || "")
+    .split(",")
+    .map((value) => value.trim());
+  const tokenProtocol = protocols.find((value) => value.startsWith("token."));
+  return tokenProtocol ? tokenProtocol.slice("token.".length) : null;
+}
+
+export async function authenticateDevice(request: Request, env: AuthEnv) {
+  const token = deviceTokenFromRequest(request);
+  if (!token) return null;
+
+  const tokenHash = await sha256Hex(token);
   const row = await env.DB.prepare(
     `SELECT id, user_id, name, platform, arch, hostname
      FROM devices

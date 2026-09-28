@@ -20,13 +20,14 @@ const SUPPORTED_SCOPES = [
   "devices:read",
   "computer:read",
   "computer:write",
+  "browser:read",
 ] as const;
 
 const appOrigin = (env: OAuthEnv) => env.APP_ORIGIN || env.PUBLIC_ORIGIN;
 const mcpResource = (env: OAuthEnv) => appOrigin(env) + "/mcp";
 
 function normalizeScope(value: string | null) {
-  const requested = (value || "devices:read computer:read computer:write")
+  const requested = (value || "devices:read computer:read computer:write browser:read")
     .split(/\s+/)
     .filter(Boolean);
   const allowed = requested.filter((scope) =>
@@ -397,7 +398,7 @@ export function mcpUnauthorized(env: OAuthEnv) {
       "WWW-Authenticate":
         'Bearer resource_metadata="' +
         metadata +
-        '", scope="devices:read computer:read"',
+        '", scope="devices:read computer:read browser:read"',
     },
   });
 }

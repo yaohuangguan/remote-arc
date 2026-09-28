@@ -28,6 +28,15 @@ const DEFAULT_ALLOWED_TOOLS = [
   "list_processes",
 ] as const;
 
+const BROWSER_DEFAULT_ALLOWED_TOOLS = [
+  "browser_list_tabs",
+  "browser_get_current_tab",
+  "browser_read_page",
+  "browser_get_selected_text",
+  "browser_extract_links",
+  "browser_extract_table",
+] as const;
+
 const parseJsonStringArray = (value: string | null) => {
   if (!value) return [];
   try {
@@ -252,7 +261,11 @@ export async function handlePairingApprove(request: Request, env: DeviceEnv) {
       pairing.hostname,
       pairing.device_secret_hash,
       createdAt,
-      JSON.stringify(DEFAULT_ALLOWED_TOOLS),
+      JSON.stringify(
+        pairing.platform === "browser"
+          ? BROWSER_DEFAULT_ALLOWED_TOOLS
+          : DEFAULT_ALLOWED_TOOLS,
+      ),
     ),
     env.DB.prepare(
       `UPDATE device_pairings
