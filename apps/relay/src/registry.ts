@@ -81,7 +81,16 @@ export class DeviceRegistry {
       "device:" + deviceId,
     ]);
 
-    return new Response(null, { status: 101, webSocket: client });
+    const requestedProtocols = (request.headers.get("sec-websocket-protocol") || "")
+      .split(",")
+      .map((value) => value.trim());
+
+    const headers = new Headers();
+    if (requestedProtocols.includes("remotearc")) {
+      headers.set("sec-websocket-protocol", "remotearc");
+    }
+
+    return new Response(null, { status: 101, webSocket: client, headers });
   }
 
   private listDevices(request: Request) {
