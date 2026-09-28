@@ -7769,3 +7769,148 @@ body{font-size:18px;line-height:1.6}
   .monitorIncidentRow{grid-template-columns:48px minmax(0,1fr)}
   .monitorIncidentRow time{grid-column:2}
 }
+
+/* Large desktop density — sized for QHD/2K+ displays without inflating laptop layouts. */
+@media (min-width:2000px) and (min-height:1100px){
+  .sidebar{
+    width:252px!important;
+    padding:26px 18px 18px;
+  }
+  .dashboardMain{
+    width:min(1480px,calc(100vw - 340px))!important;
+    margin-left:calc(252px + max(34px,(100vw - 1820px)/2))!important;
+    margin-right:34px!important;
+    padding:34px 0 56px;
+  }
+
+  .sideNav{gap:5px;margin-top:22px}
+  .sideNav button{
+    gap:12px;
+    padding:12px 13px;
+    border-radius:11px;
+    font-size:13px;
+  }
+  .sideNav button span{width:18px}
+  .sidebarStatus{padding:14px 12px;border-radius:13px}
+  .sidebarStatus strong,.sidebarAccount strong{font-size:13px}
+  .sidebarStatus span,.sidebarAccount span{font-size:11px}
+  .sidebarAccount{
+    grid-template-columns:36px minmax(0,1fr) 26px;
+    gap:10px;
+    padding:11px;
+  }
+  .sidebarAccount img,.avatarFallback{width:36px;height:36px}
+  .avatarFallback{font-size:13px}
+
+  .appFrame .eyebrow{font-size:11px}
+  .overviewTopbar,.securityTopbar{padding:36px 0 22px}
+  .overviewTopbar h1,.securityTopbar h1{font-size:36px}
+  .overviewTopbar p,.securityTopbar p{font-size:15px;line-height:1.6}
+  .appFrame .ghostButton,
+  .appFrame .addButton,
+  .appFrame .dangerButton{
+    min-height:40px;
+    padding:9px 13px;
+    font-size:13px;
+  }
+
+  .overviewStatusGrid{gap:15px}
+  .overviewStatusCard{
+    min-height:158px;
+    padding:20px 21px;
+    border-radius:18px;
+  }
+  .statusCardHead{font-size:12px}
+  .overviewStatusCard>strong{font-size:31px}
+  .overviewStatusCard>small{font-size:12px}
+  .overviewStatusCard.endpoint code{font-size:12px}
+  .overviewQuickGrid,.overviewMainGrid{gap:16px;margin-top:16px}
+  .overviewQuickCard,.overviewAttentionCard{padding:22px;border-radius:18px}
+  .quickActionList{gap:11px;margin-top:15px}
+  .quickActionList button,.attentionList button,.attentionClear{
+    grid-template-columns:38px minmax(0,1fr);
+    gap:12px;
+    padding:13px;
+  }
+  .quickActionList strong,.attentionList strong,.attentionClear strong{font-size:14px}
+  .quickActionList small,.attentionList small,.attentionClear small{font-size:12px}
+  .panelBlock{padding:23px}
+  .blockHeader h2{font-size:20px}
+  .overviewDeviceRow{padding:13px}
+  .overviewDeviceRow strong{font-size:14px}
+  .overviewDeviceRow span,.overviewDeviceMeta{font-size:12px}
+
+  .deviceStatsGrid{gap:16px;margin-bottom:18px}
+  .deviceStatsGrid article{padding:21px 23px}
+  .deviceStatsGrid span{font-size:13px}
+  .deviceStatsGrid strong{font-size:33px}
+  .deviceStatsGrid small{font-size:12px}
+  .deviceToolbar{margin:20px 0}
+  .deviceSearch{max-width:590px;height:48px;padding:0 15px}
+  .deviceSearch input{font-size:15px}
+  .deviceFilters button{height:38px;padding:0 13px;font-size:13px}
+  .deviceManagementGrid{gap:18px!important}
+  .deviceCard.managed{padding:23px}
+  .deviceCard.managed .deviceIdentity h3{font-size:22px}
+  .deviceCard.managed .deviceIdentity span{font-size:13px}
+  .deviceStatusStrip span{font-size:11px}
+  .deviceStatusStrip strong{font-size:14px}
+  .deviceAccessSummary strong{font-size:15px}
+  .deviceAccessSummary p{font-size:13px}
+  .deviceToolChips{max-width:280px}
+  .deviceToolChips span{font-size:11px}
+  .devicePresetRow>span{font-size:12px}
+  .devicePresetRow button{min-width:104px;padding:10px 13px}
+  .devicePresetRow button strong{font-size:13px}
+  .devicePresetRow button small{font-size:11px}
+  .deviceToolDetails summary{font-size:14px}
+  .deviceToolDetails summary span{font-size:12px}
+  .deviceEmptyState{min-height:380px;padding:48px}
+  .deviceEmptyState .emptyIcon{font-size:50px}
+  .deviceEmptyState h3{font-size:24px}
+  .deviceEmptyState p{font-size:15px}
+  .deviceEmptyState>button{font-size:14px;padding:13px 18px}
+
+  .connectOverview{gap:15px}
+  .connectClientCard,.connectGuide,.connectTryPanel{padding:27px}
+  .connectClientIdentity h3{font-size:23px}
+  .connectClientCard>p{font-size:15px;line-height:1.7}
+  .connectStepRow strong,.connectPromptGrid strong{font-size:14px}
+  .connectStepRow span,.connectPromptGrid span,.clientHint{font-size:12px}
+  .connectHealthRow strong{font-size:14px}
+  .connectHealthRow span{font-size:12px}
+
+  .securitySummaryGrid{gap:15px}
+  .securitySummaryCard{min-height:156px;padding:20px 21px}
+  .securitySummaryCard>strong{font-size:23px}
+  .securitySummaryCard>small{font-size:12px}
+  .securityMainGrid,.securityLowerGrid{gap:16px}
+  .securityPanel{padding:23px}
+  .securityPanelHeader h2{font-size:21px}
+  .securityGrantRow{padding:13px 14px}
+  .securityGrantIdentity strong,.securityDeviceRow strong{font-size:14px}
+  .securityGrantIdentity small,.securityDeviceRow span,.securityGrantDetails span{font-size:11px}
+  .securityFlow strong{font-size:13px}
+  .securityFlow small{font-size:11px}
+
+  .settingsGrid{gap:16px}
+  .settingsCard{padding:22px}
+  .settingsCard h2{font-size:20px}
+  .settingsCard p{font-size:15px;line-height:1.65}
+  .settingsCard code,.planValue{font-size:14px}
+
+  .monitorSummary{gap:15px}
+  .monitorSummary>div{min-height:130px;padding:20px 21px}
+  .monitorSummary span{font-size:13px}
+  .monitorSummary strong{font-size:29px}
+  .monitorSummary small{font-size:12px}
+  .monitorMainGrid{gap:18px}
+  .monitorPanelHeader,.monitorSide>section{padding:22px}
+  .monitorIncidentRow{grid-template-columns:64px minmax(0,1fr) auto;gap:16px;padding:18px 22px}
+  .monitorIncidentBody strong{font-size:15px}
+  .monitorIncidentBody small{font-size:13px}
+  .monitorCheck span,.monitorAlertState span{font-size:14px}
+  .monitorAlertState small{font-size:13px}
+
+  .dashboardFooter{font-size:12px}
+}

@@ -1636,59 +1636,122 @@ function Landing({ user }: { user?: User | null }) {
         <div className="faqList">
           {[
             [
-              tr("Does Remote Arc keep a cloud copy of my files?", "Remote Arc 会在云端保存我的文件副本吗？"),
+              tr("What makes Remote Arc different from remote desktop or a generic tunnel?", "Remote Arc 和远程桌面、通用隧道有什么不同？"),
               tr(
-                "No. Remote Arc routes the content needed for the task, but it does not create a cloud copy of your computer or intentionally retain file contents and tool results after the request.",
-                "不会。Remote Arc 只转发完成任务所需的内容，不会在云端复制你的电脑，也不会在请求结束后有意留存文件内容和 Tool Result。",
+                "Remote Arc is purpose-built for AI through MCP. Instead of exposing a whole desktop or network, it exposes explicit tools, scopes and per-device policies so an AI gets only the capabilities you choose.",
+                "Remote Arc 是专门为 AI + MCP 设计的。它不是把整台桌面或整个网络暴露出去，而是只开放明确的 Tool、Scope 和逐设备策略，让 AI 只获得你选择的能力。",
               ),
             ],
             [
               tr("What can AI do by default?", "AI 默认能对我的电脑做什么？"),
               tr(
-                "New devices start read-only. You choose when to enable file editing, terminal access or individual skills, and each computer can have its own policy.",
-                "新设备默认只读。是否开启文件编辑、终端或某个具体 Skill 都由你决定，而且每台电脑可以使用不同权限策略。",
+                "New devices start read-only. You choose when to enable file editing, terminal access or individual skills, and every computer can have a different policy.",
+                "新设备默认只读。是否开启文件编辑、终端或某个具体 Skill 都由你决定，而且每台电脑都可以使用不同权限策略。",
+              ),
+            ],
+            [
+              tr("Can I hard-lock a device to read-only?", "可以把设备硬锁定成只读吗？"),
+              tr(
+                "Yes. Running npx remotelink --safe applies a local read-only ceiling that the dashboard cannot expand remotely. It is a device-side boundary, not just a UI preset.",
+                "可以。使用 npx remotelink --safe 会在本机建立只读上限，Dashboard 无法远程把它扩大。这是设备侧边界，不只是一个 UI 预设。",
               ),
             ],
             [
               tr("Can I limit which folders and secrets AI can access?", "可以限制 AI 能访问哪些目录和敏感文件吗？"),
               tr(
-                "Yes. Workspace Scope limits file tools to folders you choose, while Sensitive Path Policy protects common credential locations and lets you add your own protected paths.",
-                "可以。Workspace Scope 把文件工具限制在你选择的目录内；Sensitive Path Policy 会保护常见凭证位置，也可以继续添加你自己的受保护路径。",
+                "Yes. Workspace Scope limits file tools to folders you choose. Sensitive Path Policy protects common credential locations, supports custom protected paths, and re-checks canonical paths locally to block symlink escapes.",
+                "可以。Workspace Scope 把文件工具限制在你选择的目录内；Sensitive Path Policy 保护常见凭证位置、支持自定义敏感路径，并在本机再次检查真实路径以阻止符号链接逃逸。",
               ),
             ],
             [
-              tr("Can I undo AI changes?", "AI 修改错了可以撤销吗？"),
+              tr("Can I undo AI file changes?", "AI 修改文件后可以撤销吗？"),
               tr(
-                "Supported file edits can create Local Undo snapshots on your own computer. Terminal commands, deployments and other external side effects may not be reversible.",
-                "受支持的文件修改可以在你的电脑本地创建 Local Undo 快照。终端命令、部署以及其他外部副作用则不一定能够撤销。",
+                "Supported write and edit operations create Local Undo snapshots on your own computer. Undo verifies that the file has not changed again before restoring it, reducing the risk of overwriting newer work.",
+                "受支持的写入和编辑操作会在你的电脑本地创建 Local Undo 快照。恢复前还会确认文件没有被再次修改，避免覆盖更新后的内容。",
+              ),
+            ],
+            [
+              tr("Does Remote Arc keep a cloud copy of my files?", "Remote Arc 会在云端保存我的文件副本吗？"),
+              tr(
+                "No cloud copy is created. Remote Arc routes the content needed for a request but does not intentionally persist file contents or tool results after the request. Operational metadata is kept separately for product and security visibility.",
+                "不会创建云端文件副本。Remote Arc 会转发请求所需内容，但不会在请求结束后有意持久化文件内容或 Tool Result；产品与安全所需的运行元数据会单独记录。",
+              ),
+            ],
+            [
+              tr("Is Remote Arc end-to-end encrypted?", "Remote Arc 是端到端加密的吗？"),
+              tr(
+                "Transport is encrypted with HTTPS/WSS, but the hosted relay must process task payloads in transit to route MCP requests, so Remote Arc does not claim zero-knowledge end-to-end encryption. The design instead minimizes retention and keeps final execution boundaries on the device.",
+                "传输使用 HTTPS/WSS 加密，但托管 Relay 需要在转发 MCP 请求时处理任务内容，因此 Remote Arc 不声称是 zero-knowledge 端到端加密。设计重点是尽量不留存内容，并把最终执行边界留在设备本地。",
               ),
             ],
             [
               tr("Do I need a public IP, VPN or open port?", "需要公网 IP、VPN 或开放端口吗？"),
               tr(
-                "No. Your computer connects outward to Remote Arc, so normal home and office networks work without port forwarding.",
-                "不需要。电脑会主动向 Remote Arc 建立出站连接，因此普通家庭和办公网络无需端口映射即可使用。",
+                "No. The device agent creates an outbound encrypted connection to Remote Arc. There is no inbound listener, router port forwarding or VPN requirement for normal home and office networks.",
+                "不需要。设备 Agent 会主动建立到 Remote Arc 的加密出站连接，不需要入站监听、路由器端口映射或 VPN，普通家庭和办公网络即可使用。",
               ),
             ],
             [
-              tr("Which AI clients can I use?", "目前支持哪些 AI 客户端？"),
+              tr("Can I connect more than one computer?", "可以同时连接多台电脑吗？"),
               tr(
-                "Remote Arc currently provides guided installation for ChatGPT, Claude and Cursor. Other clients may work when they support compatible Remote MCP and OAuth flows.",
-                "Remote Arc 目前为 ChatGPT、Claude 和 Cursor 提供明确的安装流程。其他客户端如果支持兼容的 Remote MCP 与 OAuth 流程，也可能可以接入。",
+                "Yes. Windows, macOS and Linux devices are paired independently. Each gets its own revocable credential, online presence and tool policy, so one computer can stay read-only while another enables development tools.",
+                "可以。Windows、macOS 和 Linux 设备会独立配对，每台都有自己的可撤销凭证、在线状态和 Tool 策略，因此一台可以保持只读，另一台可以开启开发能力。",
               ),
             ],
             [
-              tr("What happens when I disconnect access?", "断开授权以后会发生什么？"),
+              tr("Can I use Remote Arc from different AI clients?", "可以从不同 AI 客户端使用 Remote Arc 吗？"),
               tr(
-                "Disconnecting an AI authorization only removes that client's access. Revoking a computer only removes that device. The two controls are independent.",
-                "断开 AI 授权只会移除那一个客户端的访问权限；撤销电脑只会移除那台设备，两者彼此独立。",
+                "Yes. ChatGPT, Claude and Cursor have guided setup, and the same OAuth-protected Remote MCP endpoint is designed to work with compatible MCP clients instead of locking your computers to one AI provider.",
+                "可以。ChatGPT、Claude 和 Cursor 都有明确接入流程，同一个受 OAuth 保护的 Remote MCP 地址也面向兼容 MCP 的客户端，不把你的电脑绑定在单一 AI 平台上。",
+              ),
+            ],
+            [
+              tr("Are AI authorizations and paired devices separate?", "AI 授权和设备配对是分开的吗？"),
+              tr(
+                "Yes. OAuth grants and device credentials are independent. You can revoke one AI authorization without re-pairing your computers, or revoke one computer without disconnecting every AI client.",
+                "是。OAuth Grant 与设备凭证彼此独立。你可以只撤销某一个 AI 授权而不用重新配对电脑，也可以只撤销某一台电脑而不影响所有 AI 客户端。",
+              ),
+            ],
+            [
+              tr("Does Remote Arc depend on another computer-control server?", "Remote Arc 是否依赖其他电脑控制服务？"),
+              tr(
+                "No. Filesystem, process, terminal and undo capabilities run through Remote Arc's own native execution core built on standard Node and OS APIs. This keeps the execution path, safety rules and release lifecycle under one codebase.",
+                "不依赖。文件、进程、终端和 Undo 能力都通过 Remote Arc 自己的原生执行核心实现，基于标准 Node 与操作系统 API，让执行链路、安全规则和版本生命周期保持在同一套代码中。",
+              ),
+            ],
+            [
+              tr("Can Remote Arc handle long-running commands?", "Remote Arc 能处理长时间运行的命令吗？"),
+              tr(
+                "Yes. Full mode can start managed background processes, retain their local process handle, inspect output and status later, and stop them from the dashboard or MCP path.",
+                "可以。Full 模式支持启动受管理的后台进程，在本机保留进程句柄，之后继续查看输出和状态，并可从 Dashboard 或 MCP 路径停止进程。",
+              ),
+            ],
+            [
+              tr("Can AI read browser tabs too?", "AI 也可以读取浏览器标签页吗？"),
+              tr(
+                "Remote Arc Browser Beta adds a separate read-only browser capability. Every tab must be shared explicitly, multiple tabs can be shared at once, and browser access uses its own browser:read scope.",
+                "Remote Arc Browser Beta 提供独立的只读浏览器能力。每个标签页都必须明确授权，可以同时共享多个标签页，并使用独立的 browser:read Scope。",
+              ),
+            ],
+            [
+              tr("What happens if the relay connection drops?", "Relay 连接中断会怎样？"),
+              tr(
+                "The agent reconnects automatically with exponential backoff. A transient handshake failure should not terminate the agent, and the dashboard reflects whether each device is currently online.",
+                "Agent 会自动按指数退避策略重连。一次临时握手失败不应让 Agent 退出，Dashboard 也会实时反映每台设备当前是否在线。",
+              ),
+            ],
+            [
+              tr("How can I review Remote Arc's security model?", "我怎么审查 Remote Arc 的安全模型？"),
+              tr(
+                "The source is publicly reviewable, the repository documents its trust boundaries and security controls, and the MCP listing is M8ven Verified. Remote Arc treats those as transparency signals, not as a substitute for independent security certification.",
+                "源码可以公开审查，仓库文档明确描述信任边界与安全控制，MCP Listing 也已获得 M8ven Verified。Remote Arc 把这些视为透明度信号，而不是正式安全认证的替代品。",
               ),
             ],
             [
               tr("What is included in the free plan?", "免费版包含什么？"),
               tr(
-                "The hosted free plan includes 10,000 Remote Arc tool calls each month. Website page loads and static assets are not counted as AI tool calls.",
-                "托管免费版每月包含 10,000 次 Remote Arc Tool Call。官网页面加载和静态资源请求不会被算成 AI Tool Call。",
+                "The hosted free plan includes 10,000 Remote Arc tool calls each month, multiple personal devices and the same OAuth-protected MCP connection. Website page loads and static assets are not counted as AI tool calls.",
+                "托管免费版每月包含 10,000 次 Remote Arc Tool Call、支持多台个人设备，并使用同一套受 OAuth 保护的 MCP 连接。官网页面加载和静态资源请求不会被算成 AI Tool Call。",
               ),
             ],
           ].map(([question, answer]) => (
