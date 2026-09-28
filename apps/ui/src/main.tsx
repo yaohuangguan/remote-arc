@@ -9,6 +9,8 @@ type User = {
   email: string;
   name: string | null;
   avatarUrl: string | null;
+  role: "user" | "admin";
+  isAdmin: boolean;
 };
 
 type Device = {
@@ -136,7 +138,52 @@ type SecurityState = {
   grants: SecurityGrant[];
 };
 
-type DashboardTab = "overview" | "devices" | "connect" | "security" | "settings";
+type MonitorIncident = {
+  id: string;
+  created_at: string;
+  severity: "warning" | "error" | "critical";
+  kind: string;
+  status_code: number | null;
+  method: string | null;
+  path: string | null;
+  message: string;
+  ray_id: string | null;
+  colo: string | null;
+};
+
+type MonitorState = {
+  status: "operational" | "degraded";
+  checkedAt: string;
+  worker: {
+    status: "operational" | "degraded";
+    errors15m: number;
+    errors1h: number;
+    errors24h: number;
+  };
+  dependencies: {
+    d1: { status: string };
+    durableObjects: { status: string };
+  };
+  account: {
+    users: number;
+    devices: number;
+    activeTokens: number;
+  };
+  alerts: {
+    emailConfigured: boolean;
+    destination: string | null;
+    cooldownMinutes: number;
+    recent: Array<{
+      alert_key: string;
+      last_sent_at: string | null;
+      last_status_code: number | null;
+      last_path: string | null;
+    }>;
+  };
+  incidents: MonitorIncident[];
+};
+
+type DashboardTab = "overview" | "devices" | "connect" | "security" | "monitor" | "settings";
 
 const MARKETING_ORIGIN = "https://remotearc.app";
 const APP_ORIGIN = "https://mcp.remotearc.app";
@@ -146,6 +193,7 @@ const DASHBOARD_PATHS: Record<DashboardTab, string> = {
   devices: "/devices",
   connect: "/connect",
   security: "/security",
+  monitor: "/monitor",
   settings: "/settings",
 };
 const dashboardTabFromPath = (pathname: string): DashboardTab =>
@@ -2516,6 +2564,8 @@ function Dashboard({
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
   const [securityState, setSecurityState] = useState<SecurityState | null>(null);
   const [securityBusy, setSecurityBusy] = useState(false);
+  const [monitorState, setMonitorState] = useState<MonitorState | null>(null);
+  const [monitorLoading, setMonitorLoading] = useState(false);
   const [undoByDevice, setUndoByDevice] = useState<Record<string, UndoAction[]>>({});
   const [undoLoading, setUndoLoading] = useState<string | null>(null);
   const [undoErrors, setUndoErrors] = useState<Record<string, string>>({});
@@ -2551,6 +2601,9 @@ function Dashboard({
 
   const usage = status?.usage;
   const usagePct = usage?.limit ? Math.min(100, (usage.used / usage.limit) * 100) : 0;
+  const usageLimitLabel = usage?.unlimited
+    ? tr("Unlimited", "无限")
+    : (usage?.limit ?? 10000).toLocaleString();
 
   function settleDialog(value: boolean | string | null) {
     const resolve = dialogResolver.current;
@@ -2624,6 +2677,25 @@ function Dashboard({
   useEffect(() => {
     if (active === "security") void refreshSecurity();
   }, [active]);
+
+  async function refreshMonitor() {
+    if (!user.isAdmin) return;
+    setMonitorLoading(true);
+    try {
+      const response = await fetch("/api/monitor");
+      if (!response.ok) return;
+      setMonitorState(await response.json() as MonitorState);
+    } finally {
+      setMonitorLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (active !== "monitor" || !user.isAdmin) return;
+    void refreshMonitor();
+    const timer = window.setInterval(() => void refreshMonitor(), 30_000);
+    return () => window.clearInterval(timer);
+  }, [active, user.isAdmin]);
 
   async function setMcpPaused(paused: boolean) {
     setSecurityBusy(true);
@@ -3090,6 +3162,7 @@ function Dashboard({
     ["devices", "▣", tr("Devices", "设备")],
     ["connect", "↗", tr("Connect AI", "连接 AI")],
     ["security", "◇", tr("Security", "安全")],
+    ...(user.isAdmin ? [["monitor", "◉", tr("Monitor", "监控")] as [DashboardTab, string, string]] : []),
     ["settings", "⚙", tr("Settings", "设置")],
   ];
 
@@ -3131,7 +3204,7 @@ function Dashboard({
             <section className="overviewStatusGrid">
               <article className="overviewStatusCard primary"><div className="statusCardHead"><span>{tr("System status", "系统状态")}</span><i className="healthDot good" /></div><strong>{tr("Operational", "运行正常")}</strong><small>Remote MCP · OAuth 2.1 + PKCE</small></article>
               <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr("Devices online", "在线设备")}</span><i className={"healthDot " + ((status?.onlineDevices ?? 0) > 0 ? "good" : "idle")} /></div><strong>{status?.onlineDevices ?? 0} / {status?.totalDevices ?? devices.length}</strong><small>{tr("Ready for MCP calls", "可接受 MCP 调用")}</small></article>
-              <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr("Monthly usage", "本月用量")}</span><span>{Math.round(usagePct)}%</span></div><strong>{(usage?.used ?? 0).toLocaleString()}</strong><div className="miniUsageBar"><i style={{ width: usagePct + "%" }} /></div><small>{tr("of", "共")} {(usage?.limit ?? 10000).toLocaleString()} {tr("hosted calls", "次托管调用")}</small></article>
+              <article className="overviewStatusCard"><div className="statusCardHead"><span>{tr("Monthly usage", "本月用量")}</span><span>{usage?.unlimited ? tr("Unlimited", "无限") : Math.round(usagePct) + "%"}</span></div><strong>{(usage?.used ?? 0).toLocaleString()}</strong><div className="miniUsageBar"><i style={{ width: (usage?.unlimited ? 0 : usagePct) + "%" }} /></div><small>{usage?.unlimited ? tr("Admin account · unlimited hosted calls", "管理员账户 · 托管调用无限额") : tr("of", "共") + " " + usageLimitLabel + " " + tr("hosted calls", "次托管调用")}</small></article>
               <article className="overviewStatusCard endpoint"><div className="statusCardHead"><span>Remote MCP</span><span className="privacyPill">{tr("Secure", "安全")}</span></div><code>{mcpEndpoint}</code><div className="statusCardActions"><CopyButton value={mcpEndpoint} label={tr("Copy", "复制")} /><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Manage", "管理")}</button></div></article>
             </section>
 
@@ -3957,13 +4030,88 @@ function Dashboard({
           </>
         )}
 
+        {active === "monitor" && user.isAdmin && (
+          <>
+            <section className="overviewTopbar monitorTopbar">
+              <div>
+                <span className="eyebrow">{tr("MONITOR", "监控")}</span>
+                <h1>{tr("Service health", "服务健康度")}</h1>
+                <p>{tr("Worker errors, dependencies and alert delivery for Remote Arc production.", "查看 Remote Arc 生产环境的 Worker 错误、依赖状态与告警投递。")}</p>
+              </div>
+              <button className="ghostButton" disabled={monitorLoading} onClick={() => void refreshMonitor()}>
+                {monitorLoading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}
+              </button>
+            </section>
+
+            <section className="monitorSummary">
+              <div className={"monitorHealth " + (monitorState?.status || "unknown")}>
+                <span>{tr("Overall", "整体状态")}</span>
+                <strong>{monitorState?.status === "operational" ? tr("Operational", "运行正常") : monitorState?.status === "degraded" ? tr("Degraded", "存在异常") : tr("Loading", "加载中")}</strong>
+                <small>{monitorState ? tr("Checked ", "检查于 ") + new Date(monitorState.checkedAt).toLocaleTimeString() : "—"}</small>
+              </div>
+              <div><span>5xx · 15m</span><strong>{monitorState?.worker.errors15m ?? "—"}</strong><small>{tr("Recent errors", "最近错误")}</small></div>
+              <div><span>5xx · 1h</span><strong>{monitorState?.worker.errors1h ?? "—"}</strong><small>{tr("Last hour", "过去一小时")}</small></div>
+              <div><span>5xx · 24h</span><strong>{monitorState?.worker.errors24h ?? "—"}</strong><small>{tr("Last 24 hours", "过去 24 小时")}</small></div>
+            </section>
+
+            <section className="monitorMainGrid">
+              <article className="monitorPanel">
+                <div className="monitorPanelHeader">
+                  <div><span className="eyebrow">{tr("RECENT INCIDENTS", "最近异常")}</span><h2>{tr("Production errors", "生产错误")}</h2></div>
+                  <span className="privacyPill">{monitorState?.incidents.length ?? 0} {tr("shown", "条")}</span>
+                </div>
+                <div className="monitorIncidentList">
+                  {(monitorState?.incidents || []).map((incident) => (
+                    <div className={"monitorIncidentRow " + incident.severity} key={incident.id}>
+                      <span className="monitorIncidentCode">{incident.status_code || "ERR"}</span>
+                      <div className="monitorIncidentBody">
+                        <strong>{incident.method ? incident.method + " " : ""}{incident.path || incident.kind}</strong>
+                        <small>{incident.message}</small>
+                        <code>{incident.ray_id ? "CF-Ray " + incident.ray_id : incident.kind}{incident.colo ? " · " + incident.colo : ""}</code>
+                      </div>
+                      <time>{timeAgo(incident.created_at)}</time>
+                    </div>
+                  ))}
+                  {monitorState && !monitorState.incidents.length && (
+                    <div className="monitorEmpty">✓ {tr("No recorded production errors.", "暂无已记录的生产错误。")}</div>
+                  )}
+                  {!monitorState && <div className="monitorEmpty">{tr("Loading monitor data…", "正在加载监控数据…")}</div>}
+                </div>
+              </article>
+
+              <aside className="monitorSide">
+                <section>
+                  <span className="eyebrow">{tr("DEPENDENCIES", "依赖")}</span>
+                  <div className="monitorCheck"><span><i className="healthDot good" />Cloudflare Worker</span><strong>{monitorState?.worker.status || "—"}</strong></div>
+                  <div className="monitorCheck"><span><i className="healthDot good" />D1</span><strong>{monitorState?.dependencies.d1.status || "—"}</strong></div>
+                  <div className="monitorCheck"><span><i className="healthDot good" />Durable Objects</span><strong>{monitorState?.dependencies.durableObjects.status || "—"}</strong></div>
+                </section>
+                <section>
+                  <span className="eyebrow">{tr("ALERTING", "告警")}</span>
+                  <div className="monitorAlertState">
+                    <strong>{monitorState?.alerts.emailConfigured ? tr("Email active", "邮件告警已启用") : tr("Email channel pending", "邮件通道待启用")}</strong>
+                    <span>{monitorState?.alerts.destination || "moviegoer24@gmail.com"}</span>
+                    <small>{monitorState?.alerts.emailConfigured ? tr("5xx and exceptions are rate-limited to one email per alert type every 10 minutes.", "5xx 与异常告警按类型限频，每 10 分钟最多一封。") : tr("Monitoring is active. Cloudflare Email Service is not enabled for this account yet, so incidents are stored here but email delivery is pending.", "监控已经生效；当前 Cloudflare Email Service 尚未对账号开放，因此异常会记录在这里，但邮件投递仍待启用。")}</small>
+                  </div>
+                </section>
+                <section>
+                  <span className="eyebrow">{tr("SERVICE", "服务")}</span>
+                  <div className="monitorCheck"><span>{tr("Users", "用户")}</span><strong>{monitorState?.account.users ?? "—"}</strong></div>
+                  <div className="monitorCheck"><span>{tr("Devices", "设备")}</span><strong>{monitorState?.account.devices ?? "—"}</strong></div>
+                  <div className="monitorCheck"><span>{tr("Active OAuth tokens", "有效 OAuth Token")}</span><strong>{monitorState?.account.activeTokens ?? "—"}</strong></div>
+                </section>
+              </aside>
+            </section>
+          </>
+        )}
+
         {active === "settings" && (
           <>
             <section className="pageHeader"><div><span className="eyebrow">{tr("SETTINGS", "设置")}</span><h1>{tr("Make Remote Arc yours.", "把 Remote Arc 调成你喜欢的样子。")}</h1><p>{tr("Language, plan information and account preferences.", "语言、套餐信息与账户偏好。")}</p></div></section>
             <section className="settingsGrid">
               <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Choose Light, Dark or System. Your preference is saved in this browser.", "选择浅色、深色或跟随系统；偏好会保存在当前浏览器。")}</p></div><ThemeSwitcher /></article>
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
-              <article className="settingsCard"><div><h2>{tr("Account & profile", "账号与个人信息")}</h2><p>{user.name || tr("Remote Arc user", "Remote Arc 用户")} · {user.email}</p></div><button className="ghostButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button></article><article className="settingsCard"><div><h2>{tr("MCP connection", "MCP 连接")}</h2><p>{tr("Manage per-device tool access from Devices. Disabled tools are enforced by the relay.", "在设备页管理每台电脑的工具权限；关闭的工具会由 Relay 强制拦截。")}</p><code>{mcpEndpoint}</code></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button></article><article className="settingsCard"><div><h2>{tr("Billing & payments", "账单与支付")}</h2><p>{tr("Your account starts on the free hosted tier. Paid usage is added through top-ups when you need more capacity.", "账户默认使用免费托管额度；需要更多容量时通过充值增加付费调用额度。")}</p></div><div className="planValue">{`${usage?.used ?? 0} / ${usage?.limit ?? 10000}`}</div></article>
+              <article className="settingsCard"><div><h2>{tr("Account & profile", "账号与个人信息")}</h2><p>{user.name || tr("Remote Arc user", "Remote Arc 用户")} · {user.email}</p></div><button className="ghostButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button></article><article className="settingsCard"><div><h2>{tr("MCP connection", "MCP 连接")}</h2><p>{tr("Manage per-device tool access from Devices. Disabled tools are enforced by the relay.", "在设备页管理每台电脑的工具权限；关闭的工具会由 Relay 强制拦截。")}</p><code>{mcpEndpoint}</code></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button></article><article className="settingsCard"><div><h2>{tr("Billing & payments", "账单与支付")}</h2><p>{usage?.unlimited ? tr("Administrator account with unlimited hosted usage.", "管理员账户，托管调用无限额。") : tr("Your account starts on the free hosted tier. Paid usage is added through top-ups when you need more capacity.", "账户默认使用免费托管额度；需要更多容量时通过充值增加付费调用额度。")}</p></div><div className="planValue">{usage?.unlimited ? tr("Unlimited", "无限") : `${usage?.used ?? 0} / ${usageLimitLabel}`}</div></article>
               <article className="settingsCard"><div><h2>{tr("Usage & top-ups", "额度与充值")}</h2><p>{tr("Your hosted account includes a free monthly allowance. Add paid usage when you need more capacity.", "托管账户每月包含免费额度；需要更多容量时可按需充值。")}</p></div><a className="ghostButton" href={MARKETING_ORIGIN + "/pricing"}>{tr("View pricing", "查看价格")}</a></article>
             </section>
           </>
@@ -4279,6 +4427,9 @@ function App() {
       return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
     }
     if (!user) return <DashboardAccess />;
+    if (location.pathname === "/monitor" && !user.isAdmin) {
+      return <CenteredCard title={tr("Admin only", "仅管理员可访问")} body={tr("Service monitoring is restricted to Remote Arc administrators.", "服务监控仅限 Remote Arc 管理员访问。")} />;
+    }
     return <Dashboard user={user} devices={devices} status={status} refreshAll={loadAll} signOut={signOut} />;
   }
 

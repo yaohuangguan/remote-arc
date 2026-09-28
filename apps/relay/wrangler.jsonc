@@ -7,6 +7,19 @@
   "cache": {
     "enabled": false
   },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "head_sampling_rate": 1
+    }
+  },
+  "triggers": {
+    "crons": [
+      "*/5 * * * *"
+    ]
+  },
   "durable_objects": {
     "bindings": [
       {
@@ -71,6 +84,7 @@
       "/connect",
       "/security",
       "/settings",
+      "/monitor",
       "/device"
     ],
     "not_found_handling": "single-page-application"
@@ -90,7 +104,9 @@
     "ALLOW_SIGNUPS": "1",
     "MONTHLY_TOOL_CALL_LIMIT": "10000",
     "REVIEWER_DEMO_DEVICE_ID": "review-desktop-v1",
-    "REVIEWER_EMAIL": "openai-reviewer@remotearc.app"
+    "REVIEWER_EMAIL": "openai-reviewer@remotearc.app",
+    "ALERT_EMAIL": "moviegoer24@gmail.com",
+    "ALERT_FROM_EMAIL": "alerts@remotearc.app"
   },
   "ratelimits": [
     {

@@ -7681,3 +7681,66 @@ body{font-size:18px;line-height:1.6}
 .pluginDemoMeta a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 .pluginDemoMeta a:hover{color:var(--text)}
 @media(max-width:700px){.pluginDemoPage{padding:52px 18px 72px}.pluginDemoIntro h1{font-size:42px}.pluginDemoIntro p{font-size:16px}.pluginDemoVideoWrap{border-radius:12px}}
+
+/* Admin service monitor */
+.monitorSummary{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:16px;
+}
+.monitorSummary>div{
+  display:grid;
+  gap:5px;
+  min-height:116px;
+  padding:17px 18px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--panel);
+}
+.monitorSummary span{color:var(--muted);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.monitorSummary strong{font-size:25px;letter-spacing:-.035em}
+.monitorSummary small{color:var(--muted);font-size:12px}
+.monitorHealth.operational{border-color:rgba(74,222,128,.28)}
+.monitorHealth.operational strong{color:#86efac}
+.monitorHealth.degraded{border-color:rgba(251,191,36,.35)}
+.monitorHealth.degraded strong{color:#fbbf24}
+.monitorMainGrid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(280px,.65fr);gap:16px}
+.monitorPanel,.monitorSide>section{border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+.monitorPanel{min-width:0;overflow:hidden}
+.monitorPanelHeader{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:20px;border-bottom:1px solid var(--line)}
+.monitorPanelHeader h2{margin:5px 0 0;font-size:20px}
+.monitorIncidentList{display:grid}
+.monitorIncidentRow{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:14px;align-items:start;padding:16px 20px;border-bottom:1px solid rgba(148,163,184,.10)}
+.monitorIncidentRow:last-child{border-bottom:0}
+.monitorIncidentCode{display:inline-flex;align-items:center;justify-content:center;min-height:30px;border-radius:8px;background:rgba(239,68,68,.10);color:#fca5a5;font-size:12px;font-weight:900}
+.monitorIncidentRow.critical .monitorIncidentCode{background:rgba(239,68,68,.18);color:#fecaca}
+.monitorIncidentBody{display:grid;gap:4px;min-width:0}
+.monitorIncidentBody strong{font-size:14px;overflow-wrap:anywhere}
+.monitorIncidentBody small{color:var(--muted);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.monitorIncidentBody code{color:#6f8790;font-size:11px;overflow-wrap:anywhere}
+.monitorIncidentRow time{color:var(--muted);font-size:11px;white-space:nowrap}
+.monitorEmpty{padding:28px 20px;color:var(--muted);font-size:13px}
+.monitorSide{display:grid;gap:12px;align-content:start}
+.monitorSide>section{padding:18px}
+.monitorCheck{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(148,163,184,.10)}
+.monitorCheck:last-child{border-bottom:0}
+.monitorCheck span{display:flex;align-items:center;gap:8px;color:#a8bac1;font-size:13px}
+.monitorCheck strong{font-size:12px;text-transform:capitalize}
+.monitorAlertState{display:grid;gap:7px;margin-top:13px}
+.monitorAlertState strong{font-size:14px}
+.monitorAlertState span{color:#7dd3fc;font-size:13px;overflow-wrap:anywhere}
+.monitorAlertState small{color:var(--muted);font-size:12px;line-height:1.55}
+:root[data-theme="light"] .monitorHealth.operational strong{color:#166534}
+:root[data-theme="light"] .monitorHealth.degraded strong{color:#92400e}
+:root[data-theme="light"] .monitorIncidentCode{background:#fef2f2;color:#b91c1c}
+:root[data-theme="light"] .monitorCheck span{color:#315c67}
+@media(max-width:980px){
+  .monitorSummary{grid-template-columns:1fr 1fr}
+  .monitorMainGrid{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .monitorSummary{grid-template-columns:1fr}
+  .monitorIncidentRow{grid-template-columns:48px minmax(0,1fr)}
+  .monitorIncidentRow time{grid-column:2}
+}

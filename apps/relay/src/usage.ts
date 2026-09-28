@@ -13,11 +13,22 @@ export type MonthlyUsage = {
 
 const monthKey = () => new Date().toISOString().slice(0, 7);
 
-export function monthlyLimit(env: UsageEnv) {
+function configuredMonthlyLimit(env: UsageEnv) {
   const raw = env.MONTHLY_TOOL_CALL_LIMIT ?? "10000";
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return Math.floor(parsed);
+}
+
+async function monthlyLimitForUser(env: UsageEnv, userId: string) {
+  const user = await env.DB.prepare(
+    "SELECT role FROM users WHERE id = ?1 LIMIT 1",
+  )
+    .bind(userId)
+    .first<{ role: string | null }>();
+
+  if (user?.role === "admin") return null;
+  return configuredMonthlyLimit(env);
 }
 
 function usageSnapshot(month: string, used: number, limit: number | null): MonthlyUsage {
@@ -35,7 +46,7 @@ export async function getMonthlyUsage(
   userId: string,
 ): Promise<MonthlyUsage> {
   const month = monthKey();
-  const limit = monthlyLimit(env);
+  const limit = await monthlyLimitForUser(env, userId);
   const row = await env.DB.prepare(
     "SELECT tool_calls FROM user_monthly_usage WHERE user_id = ?1 AND month_key = ?2",
   )
@@ -47,7 +58,7 @@ export async function getMonthlyUsage(
 
 export async function consumeToolCall(env: UsageEnv, userId: string) {
   const month = monthKey();
-  const limit = monthlyLimit(env);
+  const limit = await monthlyLimitForUser(env, userId);
   const now = new Date().toISOString();
 
   if (limit === null) {

@@ -37,6 +37,12 @@ import {
   isMcpPaused,
 } from "./security.js";
 import {
+  handleMonitorState,
+  incidentFromRequest,
+  recordServiceIncident,
+  runSyntheticMonitor,
+} from "./monitor.js";
+import {
   authorizationServerMetadata,
   handleDynamicClientRegistration,
   handleOAuthAuthorize,
@@ -63,6 +69,17 @@ type Env = {
   REVIEWER_EMAIL?: string;
   REVIEWER_PASSWORD_SHA256?: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  EMAIL?: {
+    send(message: {
+      to?: string;
+      from: string;
+      subject: string;
+      text?: string;
+      html?: string;
+    }): Promise<unknown>;
+  };
+  ALERT_EMAIL?: string;
+  ALERT_FROM_EMAIL?: string;
   MCP_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
   AUTH_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
 };
@@ -80,8 +97,7 @@ function withTrustedDeviceHeaders(
   return new Request(request, { headers });
 }
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+async function handleFetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
     const marketingOrigin = env.MARKETING_ORIGIN || "https://remotearc.app";
@@ -252,6 +268,10 @@ export default {
         recentActivity: recent,
         usage,
       });
+    }
+
+    if (url.pathname === "/api/monitor" && request.method === "GET") {
+      return handleMonitorState(request, env);
     }
 
     if (url.pathname === "/api/activity" && request.method === "GET") {
@@ -495,5 +515,62 @@ export default {
     }
 
     return env.ASSETS.fetch(request);
+}
+
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<Response> {
+    try {
+      const response = await handleFetch(request, env);
+      if (response.status >= 500) {
+        ctx.waitUntil(
+          recordServiceIncident(
+            env,
+            incidentFromRequest(request, {
+              severity: response.status >= 503 ? "critical" : "error",
+              kind: "http_5xx",
+              statusCode: response.status,
+              message: "Remote Arc returned HTTP " + response.status,
+            }),
+          ),
+        );
+      }
+      return response;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("worker_unhandled_exception", { message });
+      ctx.waitUntil(
+        recordServiceIncident(
+          env,
+          incidentFromRequest(request, {
+            severity: "critical",
+            kind: "exception",
+            statusCode: 500,
+            message,
+          }),
+        ),
+      );
+      return Response.json(
+        {
+          error: "internal_error",
+          message: "Remote Arc encountered an unexpected error.",
+        },
+        {
+          status: 500,
+          headers: { "cache-control": "no-store" },
+        },
+      );
+    }
+  },
+
+  async scheduled(
+    _controller: ScheduledController,
+    env: Env,
+    ctx: ExecutionContext,
+  ) {
+    ctx.waitUntil(runSyntheticMonitor(env));
   },
 };
