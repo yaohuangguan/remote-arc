@@ -3189,8 +3189,12 @@ function Dashboard({
 
         {active === "devices" && (
           <>
-            <section className="pageHeader consolePageHeader devicesPageHeader">
-              <div><h1>{tr("Devices", "设备")}</h1><p>{tr("Manage paired computers and per-device access.", "管理已配对电脑和每台设备的访问权限。")}</p></div>
+            <section className="overviewTopbar devicesPageHeader">
+              <div>
+                <span className="eyebrow">{tr("DEVICES", "设备")}</span>
+                <h1>{tr("Device management", "设备管理")}</h1>
+                <p>{tr("Manage paired computers and per-device access.", "管理已配对电脑和每台设备的访问权限。")}</p>
+              </div>
               <button className="addButton goldButton" onClick={() => setShowAdd(true)}>+ {tr("Add device", "添加设备")}</button>
             </section>
 
@@ -3672,9 +3676,10 @@ function Dashboard({
 
         {active === "connect" && (
           <>
-            <section className="pageHeader consolePageHeader connectPageHeader">
+            <section className="overviewTopbar connectPageHeader">
               <div>
-                <h1>{tr("Connect AI", "连接 AI")}</h1>
+                <span className="eyebrow">{tr("CONNECT AI", "连接 AI")}</span>
+                <h1>{tr("AI connections", "AI 连接")}</h1>
                 <p>{tr("Connect supported AI clients to your Remote Arc MCP endpoint.", "把支持的 AI 客户端连接到 Remote Arc MCP 地址。")}</p>
               </div>
               <div className="connectReadyPill"><i />{tr("Remote MCP ready", "Remote MCP 已就绪")}</div>

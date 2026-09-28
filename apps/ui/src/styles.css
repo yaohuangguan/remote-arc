@@ -3271,23 +3271,6 @@ body{font-size:18px;line-height:1.6}
 }
 
 
-/* Compact console headers */
-.appFrame .consolePageHeader{
-  padding-top:22px;
-  padding-bottom:18px;
-}
-.appFrame .consolePageHeader h1{
-  margin:0 0 5px;
-  font-size:30px;
-  line-height:1.12;
-  letter-spacing:-.035em;
-}
-.appFrame .consolePageHeader p{
-  max-width:620px;
-  font-size:14px;
-  line-height:1.55;
-}
-
 /* Connect AI — onboarding-focused dashboard */
 .connectPageHeader{
   display:flex;
@@ -3683,7 +3666,6 @@ body{font-size:18px;line-height:1.6}
 }
 
 /* Devices management center */
-.devicesPageHeader{padding-bottom:22px}
 .deviceStatsGrid{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
