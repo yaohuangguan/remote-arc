@@ -10,7 +10,7 @@ import {
   type ExecutionPolicy,
 } from "@remotearc/execution-core";
 
-const VERSION = "0.3.13";
+const VERSION = "0.3.14";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -316,6 +316,13 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
       },
     });
 
+    // Keep a permanent error listener on every socket attempt. During a
+    // failed handshake, ws can emit a second asynchronous error when the
+    // connecting socket is aborted. Without this guard Node treats that as
+    // an unhandled EventEmitter error and terminates the process.
+    const absorbSocketError = () => undefined;
+    ws.on("error", absorbSocketError);
+
     try {
       await new Promise<void>((resolve, reject) => {
         const onOpen = () => {
@@ -328,9 +335,10 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
         };
         const onUnexpectedResponse = (
           _request: unknown,
-          response: { statusCode?: number },
+          response: { statusCode?: number; resume?: () => void },
         ) => {
           cleanup();
+          response.resume?.();
           if (response.statusCode === 401 || response.statusCode === 403) {
             reject(new RevokedDeviceCredentialError());
             return;
@@ -461,8 +469,18 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
           (error instanceof Error ? error.message : String(error)),
       );
     } finally {
-      ws.removeAllListeners();
-      ws.close();
+      ws.removeAllListeners("message");
+      ws.removeAllListeners("open");
+      ws.removeAllListeners("unexpected-response");
+      ws.removeAllListeners("close");
+      ws.removeAllListeners("error");
+      ws.on("error", absorbSocketError);
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      } else if (ws.readyState === WebSocket.CONNECTING) {
+        ws.terminate();
+      }
     }
 
     if (!stopped) {

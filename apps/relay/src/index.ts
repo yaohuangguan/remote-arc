@@ -176,7 +176,7 @@ export default {
       return Response.json({
         ok: true,
         service: "remotearc-relay",
-        version: "0.3.12",
+        version: "0.3.14",
         auth: "oauth2-pkce",
       });
     }
@@ -376,14 +376,27 @@ export default {
     }
 
     if (url.pathname === "/agent") {
-      const identity = await authenticateDevice(request, env);
-      if (!identity) {
-        return new Response("Unauthorized device", { status: 401 });
-      }
+      try {
+        const identity = await authenticateDevice(request, env);
+        if (!identity) {
+          return new Response("Unauthorized device", { status: 401 });
+        }
 
-      return env.REGISTRY
-        .getByName("user:" + identity.user_id)
-        .fetch(withTrustedDeviceHeaders(request, identity));
+        return await env.REGISTRY
+          .getByName("user:" + identity.user_id)
+          .fetch(withTrustedDeviceHeaders(request, identity));
+      } catch (error) {
+        console.error("agent_connect_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return new Response("Relay temporarily unavailable", {
+          status: 503,
+          headers: {
+            "retry-after": "2",
+            "cache-control": "no-store",
+          },
+        });
+      }
     }
 
     if (url.pathname === "/mcp" || url.pathname === "/mcp/") {

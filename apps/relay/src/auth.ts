@@ -377,9 +377,19 @@ export async function authenticateDevice(request: Request, env: AuthEnv) {
 
   if (!row) return null;
 
-  await env.DB.prepare("UPDATE devices SET last_seen = ?1 WHERE id = ?2")
-    .bind(nowIso(), row.id)
-    .run();
+  // Presence metadata is useful, but it is not part of credential validity.
+  // A transient D1 write failure must not turn an otherwise valid WebSocket
+  // reconnect into a 500 response.
+  try {
+    await env.DB.prepare("UPDATE devices SET last_seen = ?1 WHERE id = ?2")
+      .bind(nowIso(), row.id)
+      .run();
+  } catch (error) {
+    console.warn("device_last_seen_update_failed", {
+      deviceId: row.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   return row;
 }
