@@ -10,6 +10,8 @@ Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients t
 
 [Website](https://remotearc.app) · [Dashboard](https://mcp.remotearc.app) · [Remote MCP](https://mcp.remotearc.app/mcp) · [Security](./SECURITY.md)
 
+[![M8ven Verified](https://m8ven.ai/badge/mcp/yaohuangguan/remote-arc?variant=verified)](https://m8ven.ai/mcp/yaohuangguan/remote-arc)
+
 </div>
 
 <p align="center">
@@ -490,7 +492,6 @@ Allowed action:       npm publish
 Remote computer access is high impact. Remote Arc therefore starts from a
 restricted capability model instead of granting unrestricted terminal access.
 
-[![M8ven Verified](https://m8ven.ai/badge/mcp/yaohuangguan/remote-arc?variant=verified)](https://m8ven.ai/mcp/yaohuangguan/remote-arc)
 
 Current protections include:
 
