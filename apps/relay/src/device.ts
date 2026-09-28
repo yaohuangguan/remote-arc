@@ -29,6 +29,7 @@ const DEFAULT_ALLOWED_TOOLS = [
 ] as const;
 
 const BROWSER_DEFAULT_ALLOWED_TOOLS = [
+  "browser_list_tabs",
   "browser_get_current_tab",
   "browser_read_page",
   "browser_get_selected_text",

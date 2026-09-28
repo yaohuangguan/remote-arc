@@ -12,6 +12,7 @@ function escapeHtml(value) {
 
 async function render() {
   const state = await send("browser-state");
+
   connection.innerHTML = state.connected
     ? `<div class="permission"><span>Remote Arc</span><span class="on">Connected</span></div>
        <div class="meta">${escapeHtml(state.deviceName || "Chrome")}</div>
@@ -30,20 +31,24 @@ async function render() {
     status.textContent = result?.error || "Approve the pairing in the Remote Arc tab.";
   });
 
-  tab.innerHTML = state.grant
+  const count = state.grants?.length || 0;
+  const shared = Boolean(state.activeGrant);
+
+  tab.innerHTML = shared
     ? `<div class="permission"><span>Current tab</span><span class="on">AI access on</span></div>
-       <div class="meta">${escapeHtml(state.grant.url)}</div>
+       <div class="meta">${escapeHtml(state.activeGrant.url)}</div>
+       <div class="permission"><span>Shared tabs</span><span>${count}</span></div>
        <div class="permission"><span>Read page</span><span class="on">Allowed</span></div>
-       <div class="permission"><span>Fill forms</span><span>Blocked</span></div>
-       <div class="permission"><span>Click buttons</span><span>Blocked</span></div>
-       <button class="secondary" id="revoke">Stop AI access</button>`
+       <div class="permission"><span>Fill / click</span><span>Blocked</span></div>
+       <button class="secondary" id="revoke">Stop AI access on this tab</button>`
     : `<div class="permission"><span>Current tab</span><span>No access</span></div>
-       <p class="meta">AI cannot see this tab until you explicitly share it.</p>
+       <div class="permission"><span>Shared tabs</span><span>${count}</span></div>
+       <p class="meta">Each tab must be shared explicitly.</p>
        <button class="primary" id="grant" ${state.connected ? "" : "disabled"}>Allow AI on this tab</button>`;
 
   document.querySelector("#revoke")?.addEventListener("click", async () => {
     await send("revoke-tab");
-    status.textContent = "Access revoked.";
+    status.textContent = "Access revoked for this tab.";
     await render();
   });
 

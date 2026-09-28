@@ -1,5 +1,6 @@
 const API_ORIGIN = "https://mcp.remotearc.app";
 const TOOLS = [
+  "browser_list_tabs",
   "browser_get_current_tab",
   "browser_read_page",
   "browser_get_selected_text",
@@ -9,8 +10,8 @@ const TOOLS = [
 
 let socket = null;
 let heartbeat = null;
-let grant = null;
 let pairingTimer = null;
+const grants = new Map();
 
 const storageGet = (keys) => chrome.storage.local.get(keys);
 const storageSet = (values) => chrome.storage.local.set(values);
@@ -19,13 +20,21 @@ async function credentials() {
   return storageGet(["deviceId", "deviceToken", "relayUrl", "deviceName"]);
 }
 
+async function activeTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab || null;
+}
+
 async function currentState() {
   const creds = await credentials();
+  const tab = await activeTab();
   return {
     connected: Boolean(creds.deviceId && creds.deviceToken),
     deviceName: creds.deviceName,
     socketConnected: socket?.readyState === WebSocket.OPEN,
-    grant,
+    activeTab: tab?.id ? { id: tab.id, url: tab.url, title: tab.title } : null,
+    activeGrant: tab?.id ? grants.get(tab.id) || null : null,
+    grants: Array.from(grants.values()),
   };
 }
 
@@ -46,11 +55,12 @@ async function connectSocket() {
         platform: "browser",
         arch: "chrome",
         hostname: "chrome-extension",
-        agentVersion: "browser-0.1.0",
+        agentVersion: "browser-0.1.1",
       },
       tools: TOOLS,
-      capabilities: ["browser_tab_grant_v1", "browser_read_only_v1"],
+      capabilities: ["browser_tab_grant_v1", "browser_multi_tab_v1", "browser_read_only_v1"],
     }));
+
     clearInterval(heartbeat);
     heartbeat = setInterval(() => {
       if (socket?.readyState === WebSocket.OPEN) {
@@ -66,7 +76,6 @@ async function connectSocket() {
     } catch {
       return;
     }
-
     if (message?.type !== "call" || !message.id) return;
 
     try {
@@ -89,27 +98,59 @@ async function connectSocket() {
   });
 }
 
-async function sharedTab() {
+async function resolveSharedTab(tabId) {
+  let grant = null;
+
+  if (tabId !== undefined && tabId !== null) {
+    grant = grants.get(Number(tabId)) || null;
+  } else if (grants.size === 1) {
+    grant = grants.values().next().value || null;
+  } else if (grants.size > 1) {
+    throw new Error("Multiple tabs are shared. Call browser_list_tabs and pass tab_id.");
+  }
+
   if (!grant) {
-    throw new Error("No tab is shared. Open Remote Arc Browser and choose Allow AI on this tab.");
+    throw new Error("No matching shared tab. Share the tab in Remote Arc Browser first.");
   }
 
   const tab = await chrome.tabs.get(grant.tabId).catch(() => null);
   if (!tab?.url) {
-    grant = null;
+    await revokeGrant(grant.tabId);
     throw new Error("The shared tab is no longer available.");
   }
 
   const origin = new URL(tab.url).origin;
   if (origin !== grant.origin || tab.url !== grant.url) {
-    await revokeGrant();
+    await revokeGrant(grant.tabId);
     throw new Error("Tab access was revoked because the page navigated.");
   }
+
   return tab;
 }
 
+async function listSharedTabs() {
+  const items = [];
+  for (const grant of grants.values()) {
+    const tab = await chrome.tabs.get(grant.tabId).catch(() => null);
+    if (!tab?.url) {
+      await revokeGrant(grant.tabId);
+      continue;
+    }
+    items.push({
+      tabId: grant.tabId,
+      title: tab.title || "",
+      url: tab.url,
+      origin: grant.origin,
+      permissions: ["read"],
+    });
+  }
+  return { tabs: items };
+}
+
 async function executeTool(tool, args) {
-  const tab = await sharedTab();
+  if (tool === "browser_list_tabs") return listSharedTabs();
+
+  const tab = await resolveSharedTab(args.tab_id);
 
   if (tool === "browser_get_current_tab") {
     return {
@@ -133,7 +174,7 @@ async function executeTool(tool, args) {
 }
 
 async function grantCurrentTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = await activeTab();
   if (!tab?.id || !tab.url) throw new Error("No active browser tab.");
 
   const url = new URL(tab.url);
@@ -146,24 +187,32 @@ async function grantCurrentTab() {
     files: ["content-script.js"],
   });
 
-  grant = {
+  const grant = {
     tabId: tab.id,
+    title: tab.title || "",
     url: tab.url,
     origin: url.origin,
     grantedAt: new Date().toISOString(),
     permissions: ["read"],
   };
 
+  grants.set(tab.id, grant);
   await chrome.action.setBadgeText({ tabId: tab.id, text: "AI" });
   await chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: "#76b900" });
   return grant;
 }
 
-async function revokeGrant() {
-  if (grant?.tabId) {
-    await chrome.action.setBadgeText({ tabId: grant.tabId, text: "" }).catch(() => undefined);
+async function revokeGrant(tabId) {
+  const id = Number(tabId);
+  if (!grants.has(id)) return;
+  await chrome.action.setBadgeText({ tabId: id, text: "" }).catch(() => undefined);
+  grants.delete(id);
+}
+
+async function revokeAllGrants() {
+  for (const tabId of Array.from(grants.keys())) {
+    await revokeGrant(tabId);
   }
-  grant = null;
 }
 
 async function startPairing() {
@@ -225,11 +274,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "start-pairing") return startPairing();
     if (message?.type === "grant-current-tab") return grantCurrentTab();
     if (message?.type === "revoke-tab") {
-      await revokeGrant();
+      const tab = await activeTab();
+      if (tab?.id) await revokeGrant(tab.id);
       return { ok: true };
     }
     if (message?.type === "disconnect-browser") {
-      await revokeGrant();
+      await revokeAllGrants();
       socket?.close();
       socket = null;
       await chrome.storage.local.remove(["deviceId", "deviceToken", "relayUrl", "deviceName"]);
@@ -246,13 +296,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (grant?.tabId === tabId && (changeInfo.status === "loading" || changeInfo.url)) {
-    revokeGrant();
+  if (grants.has(tabId) && (changeInfo.status === "loading" || changeInfo.url)) {
+    revokeGrant(tabId);
   }
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
-  if (grant?.tabId === tabId) revokeGrant();
+  if (grants.has(tabId)) revokeGrant(tabId);
 });
 
 chrome.runtime.onStartup.addListener(() => connectSocket().catch(() => undefined));

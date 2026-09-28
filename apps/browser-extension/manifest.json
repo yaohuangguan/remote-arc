@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Remote Arc Browser",
-  "version": "0.1.0",
-  "description": "Share one browser tab with AI, with explicit scope and permission.",
+  "version": "0.1.1",
+  "description": "Share selected browser tabs with AI, with explicit scope and permission.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["https://mcp.remotearc.app/*"],
   "action": {
