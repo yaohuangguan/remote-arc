@@ -3189,8 +3189,8 @@ function Dashboard({
 
         {active === "devices" && (
           <>
-            <section className="pageHeader devicesPageHeader">
-              <div><span className="eyebrow">{tr("DEVICES", "设备")}</span><h1>{tr("Your computers.", "你的电脑。")}</h1><p>{tr("Pair, monitor and control exactly what each computer exposes to your AI.", "配对、监控并精确控制每台电脑向 AI 开放的能力。")}</p></div>
+            <section className="pageHeader consolePageHeader devicesPageHeader">
+              <div><h1>{tr("Devices", "设备")}</h1><p>{tr("Manage paired computers and per-device access.", "管理已配对电脑和每台设备的访问权限。")}</p></div>
               <button className="addButton goldButton" onClick={() => setShowAdd(true)}>+ {tr("Add device", "添加设备")}</button>
             </section>
 
@@ -3672,11 +3672,10 @@ function Dashboard({
 
         {active === "connect" && (
           <>
-            <section className="pageHeader connectPageHeader">
+            <section className="pageHeader consolePageHeader connectPageHeader">
               <div>
-                <span className="eyebrow">{tr("CONNECT AI", "连接 AI")}</span>
-                <h1>{tr("Bring your AI to your computers.", "让你的 AI 连接到你的电脑。")}</h1>
-                <p>{tr("Use one Remote Arc account and one OAuth-protected MCP endpoint across supported AI clients.", "一个 Remote Arc 账户、一个受 OAuth 保护的 MCP 地址，就能连接支持 Remote MCP 的 AI 客户端。")}</p>
+                <h1>{tr("Connect AI", "连接 AI")}</h1>
+                <p>{tr("Connect supported AI clients to your Remote Arc MCP endpoint.", "把支持的 AI 客户端连接到 Remote Arc MCP 地址。")}</p>
               </div>
               <div className="connectReadyPill"><i />{tr("Remote MCP ready", "Remote MCP 已就绪")}</div>
             </section>
@@ -3715,7 +3714,7 @@ function Dashboard({
               <div className="connectClientGrid">
                 <article className="connectClientCard primary">
                   <div className="connectClientTop">
-                    <div className="connectClientIdentity"><img src={aiClients[0].icon} alt="" /><div><span className="eyebrow">CHATGPT</span><h3>ChatGPT</h3></div></div>
+                    <div className="connectClientIdentity"><img className="monoLogo" src={aiClients[0].icon} alt="" /><div><span className="eyebrow">CHATGPT</span><h3>ChatGPT</h3></div></div>
                     <span className="clientState recommended">{tr("Recommended", "推荐")}</span>
                   </div>
                   <p>{tr("Remote Arc is prepared for the public Plugins flow. Until the public listing is live, use the manual MCP setup below for early access.", "Remote Arc 已按公开 Plugin 流程准备完成；正式上架前，可通过下方手动 MCP 流程进行 Early Access。")}</p>
@@ -3729,7 +3728,7 @@ function Dashboard({
 
                 <article className="connectClientCard">
                   <div className="connectClientTop">
-                    <div className="connectClientIdentity"><img src={aiClients[1].icon} alt="" /><div><span className="eyebrow">CLAUDE</span><h3>Claude</h3></div></div>
+                    <div className="connectClientIdentity"><img className="colorLogo" src={aiClients[1].icon} alt="" /><div><span className="eyebrow">CLAUDE</span><h3>Claude</h3></div></div>
                     <span className="clientState">{tr("Remote MCP", "Remote MCP")}</span>
                   </div>
                   <p>{tr("If your Claude client exposes a Remote MCP / custom integration flow, use the same endpoint and complete Remote Arc OAuth.", "如果你的 Claude 客户端提供 Remote MCP / 自定义集成入口，使用同一个地址并完成 Remote Arc OAuth 即可。")}</p>

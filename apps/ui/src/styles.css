@@ -3271,6 +3271,23 @@ body{font-size:18px;line-height:1.6}
 }
 
 
+/* Compact console headers */
+.appFrame .consolePageHeader{
+  padding-top:22px;
+  padding-bottom:18px;
+}
+.appFrame .consolePageHeader h1{
+  margin:0 0 5px;
+  font-size:30px;
+  line-height:1.12;
+  letter-spacing:-.035em;
+}
+.appFrame .consolePageHeader p{
+  max-width:620px;
+  font-size:14px;
+  line-height:1.55;
+}
+
 /* Connect AI — onboarding-focused dashboard */
 .connectPageHeader{
   display:flex;
@@ -3438,7 +3455,8 @@ body{font-size:18px;line-height:1.6}
 .connectClientIdentity img,.connectClientIdentity .protocolMark.large{
   width:44px;height:44px;flex:0 0 auto;
 }
-.connectClientIdentity img{filter:invert(1)}
+.connectClientIdentity img.monoLogo{filter:invert(1)}
+.connectClientIdentity img.colorLogo{filter:none}
 .connectClientIdentity .protocolMark.large{
   display:grid;place-items:center;border-radius:12px;
   background:#0d2535;color:#7dd3fc;font-size:18px;font-weight:900;
@@ -3606,7 +3624,8 @@ body{font-size:18px;line-height:1.6}
   background:linear-gradient(180deg,#f5fbff,#fff);
   border-color:#bae6fd;
 }
-:root[data-theme="light"] .connectClientIdentity img{filter:none}
+:root[data-theme="light"] .connectClientIdentity img.monoLogo,
+:root[data-theme="light"] .connectClientIdentity img.colorLogo{filter:none}
 :root[data-theme="light"] .connectEndpointBox,
 :root[data-theme="light"] .connectPromptGrid code{
   background:#f7fbfd;
