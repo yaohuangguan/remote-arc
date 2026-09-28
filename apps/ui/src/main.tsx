@@ -1420,22 +1420,11 @@ function Landing({ user }: { user?: User | null }) {
       </section>
 
       <section className="demoSection" id="demos">
-        <div className="sectionIntro splitIntro">
-          <div>
-            <span className="eyebrow">{tr("SEE IT IN ACTION", "看看实际效果")}</span>
-            <h2>{tr("From a phone request to a real computer action.", "从手机上的一句话，到电脑上的真实操作。")}</h2>
-          </div>
-          <p>{tr(
-            "See how a request from ChatGPT on mobile reaches a paired computer, then watch the current manual MCP connection flow used before the public plugin listing is live.",
-            "先看手机 ChatGPT 的请求如何到达已配对电脑，再看公开插件上架前当前使用的手动 MCP 连接流程。"
-          )}</p>
-        </div>
         <div className="demoGrid">
           <article className="mobileScenarioPanel">
             <div className="demoCopy mobileScenarioCopy">
               <div className="mobileScenarioHeader">
                 <span className="eyebrow">{tr("CHATGPT ON MOBILE", "手机上的 CHATGPT")}</span>
-                <span className="demoBadge mobileScenarioBadge">{tr("MOBILE", "移动端")}</span>
               </div>
               <h3>{tr(
                 "Ask in ChatGPT on your phone. Let Remote Arc reach your computer.",
