@@ -1,0 +1,14 @@
+:root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+body { margin: 0; width: 330px; min-height: 220px; }
+main { padding: 18px; }
+header { display:flex; align-items:baseline; gap:8px; margin-bottom:16px; }
+header strong { font-size:18px; }
+header span { opacity:.6; font-size:12px; }
+section { padding: 12px 0; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+button { width:100%; border:0; border-radius:10px; padding:11px 12px; font:inherit; font-weight:650; cursor:pointer; }
+button.primary { background:#b7f34a; color:#111; }
+button.secondary { background:color-mix(in srgb, currentColor 10%, transparent); color:inherit; }
+.meta { font-size:12px; opacity:.65; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:6px 0 10px; }
+.permission { display:flex; justify-content:space-between; font-size:13px; margin:8px 0; }
+.on { color:#76b900; font-weight:700; }
+#status { min-height:18px; font-size:12px; opacity:.75; margin:8px 0 0; }
