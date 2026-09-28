@@ -300,6 +300,10 @@ function PublicHeader({ user }: { user?: User | null }) {
                 <strong>Cursor</strong>
                 <small>{tr("Installation guide", "安装指南")}</small>
               </a>
+              <a href={MARKETING_ORIGIN + "/docs/mcp#chrome-browser"}>
+                <strong>Chrome Browser <span className="navBeta">Beta</span></strong>
+                <small>{tr("Share selected tabs with AI", "把指定浏览器标签页共享给 AI")}</small>
+              </a>
             </div>
           </div>
 
@@ -2442,9 +2446,37 @@ function McpPage({ user }: { user?: User | null }) {
         </div>
       </section>
 
+      <section className="browserCapabilitySection" id="chrome-browser">
+        <div className="browserCapabilityIntro">
+          <span className="eyebrow">CHROME BROWSER · BETA</span>
+          <h2>{tr("Share only the tabs you choose.", "只把你选择的标签页共享给 AI。")}</h2>
+          <p>{tr(
+            "Remote Arc Browser adds a lightweight, read-only browser capability to the same MCP connection. Each tab must be explicitly allowed, multiple tabs can be shared at once, and access can be revoked per tab.",
+            "Remote Arc Browser 为同一条 MCP 连接增加轻量、只读的浏览器能力。每个标签页都需要单独授权，可同时共享多个标签页，也可以逐个撤销访问。",
+          )}</p>
+          <div className="browserCapabilityActions">
+            <a className="primaryButton" href="/downloads/remote-arc-browser.zip" download>
+              {tr("Download Chrome Browser (.zip)", "下载 Chrome Browser (.zip)")}
+            </a>
+            <a className="ghostButton" href="https://github.com/yaohuangguan/remote-arc/issues" target="_blank" rel="noreferrer">
+              {tr("GitHub Issues", "GitHub Issues")} ↗
+            </a>
+          </div>
+          <small className="browserBetaNote">{tr(
+            "Beta distribution: install manually as an unpacked extension. It is not currently listed in the Chrome Web Store.",
+            "Beta 版本目前通过手动加载未打包扩展安装，暂未上架 Chrome Web Store。",
+          )}</small>
+        </div>
+        <ol className="browserInstallSteps">
+          <li><b>01</b><div><strong>{tr("Download and unzip", "下载并解压")}</strong><span>{tr("Download the extension package above and unzip it to a folder you keep.", "下载上方扩展包并解压到一个保留的文件夹。")}</span></div></li>
+          <li><b>02</b><div><strong>{tr("Load the extension", "加载扩展")}</strong><span>{tr("Open chrome://extensions, enable Developer mode, choose Load unpacked, then select the extracted folder.", "打开 chrome://extensions，开启 Developer mode，选择 Load unpacked，再选择解压后的文件夹。")}</span></div></li>
+          <li><b>03</b><div><strong>{tr("Share a tab explicitly", "明确授权标签页")}</strong><span>{tr("Connect the extension to Remote Arc, then use Allow AI on this tab only on pages you want the AI to read.", "把扩展连接到 Remote Arc，然后只在希望 AI 读取的页面点击 Allow AI on this tab。")}</span></div></li>
+        </ol>
+      </section>
+
       <section className="mcpSystemGrid">
         <article><span className="eyebrow">{tr("1 · PAIR THE DEVICE", "1 · 配对设备")}</span><h3>{tr("Install the device agent", "安装设备 Agent")}</h3><code>npx remotelink</code><p>{tr("The browser confirms the pairing code and stores a unique revocable credential on that machine.", "浏览器确认配对码，并在这台设备上保存一份独立、可撤销的凭证。")}</p></article>
-        <article><span className="eyebrow">{tr("2 · GRANT SCOPES", "2 · 授予权限")}</span><h3>{tr("OAuth stays explicit", "OAuth 权限清晰可见")}</h3><div className="scopeChips"><code>devices:read</code><code>computer:read</code><code>computer:write</code></div><p>{tr("AI access can be revoked without re-pairing the computer.", "可以单独撤销 AI 的访问权限，而不需要重新配对电脑。")}</p></article>
+        <article><span className="eyebrow">{tr("2 · GRANT SCOPES", "2 · 授予权限")}</span><h3>{tr("OAuth stays explicit", "OAuth 权限清晰可见")}</h3><div className="scopeChips"><code>devices:read</code><code>computer:read</code><code>computer:write</code><code>browser:read</code></div><p>{tr("AI access can be revoked without re-pairing the computer.", "可以单独撤销 AI 的访问权限，而不需要重新配对电脑。")}</p></article>
         <article><span className="eyebrow">{tr("3 · CHOOSE DEVICE SKILLS", "3 · 选择设备技能")}</span><h3>{tr("Start Safe. Add only what you need.", "默认 Safe，只增加真正需要的能力。")}</h3><div className="modeRows"><span><b>Safe</b>{tr("Read files and inspect processes", "读取文件与查看进程")}</span><span><b>Developer</b>{tr("Read and edit files", "读取并编辑文件")}</span><span><b>Full</b>{tr("Adds terminal execution", "额外开启终端执行")}</span></div><p>{tr("Presets are shortcuts. The real policy is a per-device skill list that you can customize at any time.", "预设只是快捷方式；真正生效的是每台设备独立的技能列表，你可以随时逐项修改。")}</p></article>
       </section>
 

@@ -978,6 +978,18 @@ button, input, textarea, select { font:inherit; }
 .clientReality { margin-top:auto; padding:16px; border-left:2px solid #38bdf8; background:rgba(56,189,248,.055); color:#91a8af; font-size:14px; line-height:1.65; }
 .clientReality strong { color:#dff8fc; }
 .clientGuideCard > a { color:#38bdf8; font-size:14px; }
+.navBeta { display:inline-flex; margin-left:6px; padding:1px 5px; border:1px solid rgba(56,189,248,.35); border-radius:999px; color:#7dd3fc; font-size:9px; line-height:1.4; letter-spacing:.05em; text-transform:uppercase; vertical-align:2px; }
+.browserCapabilitySection { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr); gap:64px; align-items:start; margin:58px 0 4px; padding:34px 0; border-top:1px solid #1f3352; border-bottom:1px solid #1f3352; }
+.browserCapabilityIntro h2 { margin:9px 0 13px; max-width:720px; font-size:34px; line-height:1.08; letter-spacing:-.04em; }
+.browserCapabilityIntro > p { max-width:760px; margin:0; color:#90a6ad; font-size:15px; line-height:1.75; }
+.browserCapabilityActions { display:flex; flex-wrap:wrap; gap:10px; margin:24px 0 12px; }
+.browserBetaNote { display:block; color:#6f8790; font-size:12px; line-height:1.55; }
+.browserInstallSteps { display:grid; gap:0; list-style:none; margin:0; padding:0; border-top:1px solid #1f3352; }
+.browserInstallSteps li { display:grid; grid-template-columns:44px minmax(0,1fr); gap:16px; padding:18px 0; border-bottom:1px solid #1f3352; }
+.browserInstallSteps li > b { color:#38bdf8; font-size:12px; letter-spacing:.08em; }
+.browserInstallSteps li div { display:grid; gap:5px; }
+.browserInstallSteps strong { color:#dff8fc; font-size:15px; }
+.browserInstallSteps span { color:#8da4ab; font-size:13px; line-height:1.6; }
 .mcpSystemGrid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; padding:72px 0 22px; }
 .mcpSystemGrid article { min-height:320px; padding:25px; border:1px solid #1f3352; border-radius:18px; background:#071019; }
 .mcpSystemGrid h3 { margin:14px 0 12px; font-size:21px; }
@@ -1118,6 +1130,13 @@ body { color:var(--text); background:radial-gradient(circle at 18% -10%,rgba(56,
 :root[data-theme="light"] .mcpHeroClients > div { border-color:#e0f2fe; background:#fff; }
 :root[data-theme="light"] .clientGuideCard header { border-color:#eaf6ff; }
 :root[data-theme="light"] .endpointHero p { color:#55717a; }
+:root[data-theme="light"] .browserCapabilitySection,
+:root[data-theme="light"] .browserInstallSteps,
+:root[data-theme="light"] .browserInstallSteps li { border-color:#e0f2fe; }
+:root[data-theme="light"] .browserCapabilityIntro > p,
+:root[data-theme="light"] .browserInstallSteps span,
+:root[data-theme="light"] .browserBetaNote { color:#55717a; }
+:root[data-theme="light"] .browserInstallSteps strong { color:#08212a; }
 
 @media (max-width: 1050px) {
   .landingHero { grid-template-columns:1fr; gap:46px; min-height:auto; }
@@ -1131,7 +1150,8 @@ body { color:var(--text); background:radial-gradient(circle at 18% -10%,rgba(56,
   .trustRail { flex-wrap:wrap; gap:16px 24px; padding:20px 4px; }
   .trustRail > span,.trustRail small { width:100%; margin:0; }
   .splitIntro,.pluginPath,.endpointHero { grid-template-columns:1fr; gap:26px; }
-  .clientGuideGrid,.clientSetupNote { grid-template-columns:1fr; }
+  .clientGuideGrid,.clientSetupNote,.browserCapabilitySection { grid-template-columns:1fr; }
+  .browserCapabilitySection { gap:30px; }
   .clientGuideCard { min-height:0; }
   .endpointCopy { width:100%; }
   .sidebarControls { display:none; }
@@ -1158,6 +1178,9 @@ body { color:var(--text); background:radial-gradient(circle at 18% -10%,rgba(56,
   .endpointCopy { align-items:stretch; flex-direction:column; }
   .endpointCopy code { white-space:nowrap; }
   .clientGuideCard { padding:22px; }
+  .browserCapabilityActions { align-items:stretch; flex-direction:column; }
+  .browserCapabilityActions .primaryButton,.browserCapabilityActions .ghostButton { width:100%; }
+  .browserCapabilityIntro h2 { font-size:28px; }
   .mcpSystemGrid { padding-top:52px; }
   .fullSetupCard { grid-column:auto; }
 }
