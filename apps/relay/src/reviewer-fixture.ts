@@ -67,9 +67,8 @@ async function readFixtureFile(
 ) {
   const overlay = await overlayFile(env, userId, path);
   if (overlay) return overlay.content;
-  if (Object.prototype.hasOwnProperty.call(BASE_FILES, path)) {
-    return BASE_FILES[path];
-  }
+  const baseContent = BASE_FILES[path];
+  if (baseContent !== undefined) return baseContent;
   throw new Error(`review fixture file not found: ${path}`);
 }
 
@@ -167,9 +166,9 @@ export async function reviewerDemoResult(
         .all<{ path: string; content: string }>();
 
       const entries = new Map<string, { name: string; type: string; size?: number }>([
-        ["package.json", { name: "package.json", type: "file", size: byteLength(BASE_FILES["/review-demo/package.json"]) }],
+        ["package.json", { name: "package.json", type: "file", size: byteLength(BASE_FILES["/review-demo/package.json"]!) }],
         ["src", { name: "src", type: "directory" }],
-        ["README.md", { name: "README.md", type: "file", size: byteLength(BASE_FILES["/review-demo/README.md"]) }],
+        ["README.md", { name: "README.md", type: "file", size: byteLength(BASE_FILES["/review-demo/README.md"]!) }],
       ]);
 
       for (const row of overlay.results || []) {
@@ -186,8 +185,8 @@ export async function reviewerDemoResult(
 
     if (path === `${REVIEW_ROOT}/src`) {
       return [
-        { name: "router.test.ts", type: "file", size: byteLength(BASE_FILES["/review-demo/src/router.test.ts"]) },
-        { name: "auth.test.ts", type: "file", size: byteLength(BASE_FILES["/review-demo/src/auth.test.ts"]) },
+        { name: "router.test.ts", type: "file", size: byteLength(BASE_FILES["/review-demo/src/router.test.ts"]!) },
+        { name: "auth.test.ts", type: "file", size: byteLength(BASE_FILES["/review-demo/src/auth.test.ts"]!) },
       ];
     }
 
