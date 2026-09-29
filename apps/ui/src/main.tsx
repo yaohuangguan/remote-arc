@@ -464,9 +464,15 @@ function PairDevice({
   const [code, setCode] = useState(initialCode);
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [message, setMessage] = useState("");
-  const [approved, setApproved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [approvedDeviceId, setApprovedDeviceId] = useState("");
+  const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
+  const [setupStep, setSetupStep] = useState<"permissions" | "workspace" | "done">("permissions");
+  const [directoryBrowser, setDirectoryBrowser] = useState<DirectoryBrowser | null>(null);
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [setupError, setSetupError] = useState("");
+  const [terminalConfirm, setTerminalConfirm] = useState(false);
 
   async function lookup(targetCode = code) {
     if (!targetCode || !user) return;
@@ -489,6 +495,34 @@ function PairDevice({
     if (user && initialCode) void lookup(initialCode);
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!approvedDeviceId || setupStep === "done") return;
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const refreshPairedDevice = async () => {
+      try {
+        const response = await fetch("/api/devices");
+        if (!response.ok) return;
+        const devices = (await response.json()) as Device[];
+        const device = devices.find((item) => item.id === approvedDeviceId) || null;
+        if (!cancelled && device) {
+          setPairedDevice(device);
+        }
+      } finally {
+        if (!cancelled) {
+          timer = window.setTimeout(() => void refreshPairedDevice(), 1400);
+        }
+      }
+    };
+
+    void refreshPairedDevice();
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [approvedDeviceId, setupStep]);
+
   async function approve() {
     if (!pairing) return;
     setBusy(true);
@@ -499,15 +533,173 @@ function PairDevice({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ user_code: pairing.user_code }),
       });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(payload.error || tr("Could not approve device", "设备授权失败"));
-      setApproved(true);
+      const payload = (await response.json()) as {
+        error?: string;
+        device?: { id: string; name: string; platform: string; arch: string | null };
+      };
+      if (!response.ok || !payload.device?.id) {
+        throw new Error(payload.error || tr("Could not approve device", "设备授权失败"));
+      }
+      setApprovedDeviceId(payload.device.id);
+      setPairedDevice({
+        id: payload.device.id,
+        name: payload.device.name,
+        platform: payload.device.platform,
+        arch: payload.device.arch,
+        hostname: pairing.hostname,
+        created_at: new Date().toISOString(),
+        last_seen: null,
+        status: "offline",
+        tools: [],
+        available_tools: [],
+        allowed_tools: [...SAFE_DEVICE_TOOLS],
+        workspace_roots: [],
+        sensitive_paths: [],
+        sensitive_allow_paths: [],
+        protect_sensitive_paths: true,
+        undo_enabled: true,
+      });
+      setSetupStep("permissions");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
   }
+
+  async function browseWorkspace(path = "~") {
+    if (!approvedDeviceId) return;
+    setDirectoryLoading(true);
+    setSetupError("");
+    try {
+      const response = await fetch(
+        "/api/devices/" +
+          encodeURIComponent(approvedDeviceId) +
+          "/directories?path=" +
+          encodeURIComponent(path),
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        browser?: DirectoryBrowser;
+        error?: string;
+      };
+      if (!response.ok || !payload.browser) {
+        throw new Error(
+          payload.error ||
+            tr("Directory browsing is unavailable until the device is online.", "设备上线后才能浏览目录。"),
+        );
+      }
+      setDirectoryBrowser(payload.browser);
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setDirectoryLoading(false);
+    }
+  }
+
+  async function openWorkspacePicker() {
+    setSetupStep("workspace");
+    if (!directoryBrowser) await browseWorkspace("~");
+  }
+
+  async function saveTools(nextTools: readonly string[]) {
+    if (!approvedDeviceId) return false;
+    const available = pairedDevice?.available_tools || pairedDevice?.tools || [];
+    const supported =
+      available.length > 0
+        ? nextTools.filter((tool) => available.includes(tool))
+        : [...nextTools];
+
+    const response = await fetch(
+      "/api/devices/" + encodeURIComponent(approvedDeviceId) + "/tools",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ allowed_tools: supported }),
+      },
+    );
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(payload.error || tr("Could not save device permissions.", "无法保存设备权限。"));
+    }
+    setPairedDevice((current) =>
+      current ? { ...current, allowed_tools: supported } : current,
+    );
+    return true;
+  }
+
+  async function enableFileEditing() {
+    if (!directoryBrowser || !approvedDeviceId) return;
+    setBusy(true);
+    setSetupError("");
+    try {
+      const policyResponse = await fetch(
+        "/api/devices/" + encodeURIComponent(approvedDeviceId) + "/policy",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            workspace_roots: [directoryBrowser.path],
+            sensitive_paths: [],
+            sensitive_allow_paths: [],
+            protect_sensitive_paths: true,
+            undo_enabled: true,
+          }),
+        },
+      );
+      if (!policyResponse.ok) {
+        const payload = (await policyResponse.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error || tr("Could not save Workspace Scope.", "无法保存 Workspace Scope。"));
+      }
+
+      await saveTools(DEVELOPER_DEVICE_TOOLS);
+      setPairedDevice((current) =>
+        current
+          ? {
+              ...current,
+              workspace_roots: [directoryBrowser.path],
+              protect_sensitive_paths: true,
+              undo_enabled: true,
+            }
+          : current,
+      );
+      setSetupStep("permissions");
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function enableTerminal() {
+    if (!pairedDevice?.workspace_roots?.length) return;
+    setBusy(true);
+    setSetupError("");
+    try {
+      const current = pairedDevice.allowed_tools || [...DEVELOPER_DEVICE_TOOLS];
+      await saveTools([...current, "start_process"]);
+      setTerminalConfirm(false);
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const availableTools = pairedDevice?.available_tools || pairedDevice?.tools || [];
+  const fileEditingSupported =
+    pairedDevice?.status === "online" &&
+    ["write_file", "edit_block", "undo_last_change"].every((tool) =>
+      availableTools.includes(tool),
+    );
+  const terminalSupported =
+    pairedDevice?.status === "online" && availableTools.includes("start_process");
+  const enabledTools = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
+  const fileEditingEnabled =
+    enabledTools.includes("write_file") &&
+    enabledTools.includes("edit_block") &&
+    enabledTools.includes("undo_last_change") &&
+    !!pairedDevice?.workspace_roots?.length;
+  const terminalEnabled = enabledTools.includes("start_process");
 
   if (user === undefined) {
     return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Checking your Remote Arc account.", "正在检查 Remote Arc 账户。")} />;
@@ -538,14 +730,201 @@ function PairDevice({
     );
   }
 
-  if (approved) {
+  if (approvedDeviceId && setupStep === "done") {
     return (
       <CenteredCard
-        title={tr("Device connected", "设备已连接")}
-        body={tr("Authorization is complete. Return to your terminal — Remote Arc will connect automatically.", "授权完成。返回终端，Remote Arc 会自动完成连接。")}
+        title={tr("Device ready", "设备已就绪")}
+        body={tr(
+          "Remote Arc will keep using the permissions you just chose. You can change them later from Devices.",
+          "Remote Arc 会继续使用你刚刚选择的权限；之后可以在设备页随时修改。",
+        )}
       >
         <div className="successMark">✓</div>
-        <a className="secondaryLink" href="/">{tr("Back to dashboard", "返回控制台")}</a>
+        <div className="pairSetupSummary">
+          <div><span>{tr("Read access", "读取权限")}</span><strong>{tr("Enabled", "已开启")}</strong></div>
+          <div><span>{tr("File editing", "文件编辑")}</span><strong>{fileEditingEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
+          <div><span>{tr("Terminal", "终端")}</span><strong>{terminalEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
+        </div>
+        <a className="primaryButton pairSetupDone" href="/devices">{tr("Open Devices", "打开设备页")}</a>
+      </CenteredCard>
+    );
+  }
+
+  if (approvedDeviceId && setupStep === "workspace") {
+    return (
+      <CenteredCard
+        title={tr("Choose a workspace", "选择工作区")}
+        body={tr(
+          "File editing will be limited to this folder. Read access to files will also be scoped to the same workspace, while sensitive paths stay protected.",
+          "开启文件编辑后，文件读写都会限制在这个目录内，同时继续保护敏感路径。",
+        )}
+      >
+        <div className="pairWorkspacePath">
+          <code>{directoryBrowser?.path || tr("Waiting for device…", "等待设备上线…")}</code>
+          {directoryBrowser?.parent && (
+            <button className="ghostButton small" onClick={() => void browseWorkspace(directoryBrowser.parent!)}>
+              ↑ {tr("Parent", "上一级")}
+            </button>
+          )}
+        </div>
+
+        <div className="pairWorkspaceList">
+          {directoryLoading && <div className="pairSetupEmpty">{tr("Loading folders…", "正在加载目录…")}</div>}
+          {!directoryLoading && directoryBrowser?.directories.map((entry) => (
+            <button key={entry.path} onClick={() => void browseWorkspace(entry.path)}>
+              <span>{entry.type === "symlink" ? "↗" : "▣"}</span>
+              <strong>{entry.name}</strong>
+              <small>›</small>
+            </button>
+          ))}
+          {!directoryLoading && directoryBrowser && !directoryBrowser.directories.length && (
+            <div className="pairSetupEmpty">{tr("No visible child folders.", "没有可见的子目录。")}</div>
+          )}
+        </div>
+
+        {directoryBrowser && directoryBrowser.protected_entries_omitted > 0 && (
+          <p className="pairSetupNote">{tr(
+            directoryBrowser.protected_entries_omitted + " protected folder(s) are hidden.",
+            "有 " + directoryBrowser.protected_entries_omitted + " 个受保护目录已隐藏。",
+          )}</p>
+        )}
+        {setupError && <p className="errorText">{setupError}</p>}
+
+        <div className="pairSetupActions">
+          <button className="ghostButton" onClick={() => setSetupStep("permissions")}>
+            {tr("Back", "返回")}
+          </button>
+          <button
+            className="primaryButton"
+            disabled={!directoryBrowser || directoryLoading || busy}
+            onClick={() => void enableFileEditing()}
+          >
+            {busy ? tr("Enabling…", "正在开启…") : tr("Use this folder & enable editing", "使用此目录并开启编辑")}
+          </button>
+        </div>
+      </CenteredCard>
+    );
+  }
+
+  if (approvedDeviceId) {
+    return (
+      <CenteredCard
+        title={tr("Choose what AI can do", "选择 AI 可以做什么")}
+        body={tr(
+          "Your computer is paired. Start with the safe default, then opt in to file editing or terminal execution when you need them.",
+          "电脑已经配对。默认从安全的只读权限开始，需要时再主动开启文件编辑或终端执行。",
+        )}
+      >
+        <div className="pairConnectedDevice">
+          <div className="deviceIcon large">{platformGlyph(pairedDevice?.platform)}</div>
+          <div>
+            <strong>{pairedDevice?.name || pairing?.device_name}</strong>
+            <span>
+              {pairedDevice?.status === "online"
+                ? tr("Connected and ready", "已连接，可以使用")
+                : tr("Waiting for the local agent to connect…", "正在等待本地 Agent 连接…")}
+            </span>
+          </div>
+          <i className={"pairStatusDot " + (pairedDevice?.status === "online" ? "online" : "")} />
+        </div>
+
+        <div className="pairPermissionStack">
+          <section className="pairPermissionCard enabled">
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">R</span>
+                <div>
+                  <strong>{tr("Read access", "读取权限")}</strong>
+                  <small>{tr("Safe default", "安全默认")}</small>
+                </div>
+              </div>
+              <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>
+            </div>
+            <ul>
+              <li>{tr("Browse files and folders", "浏览文件和目录")}</li>
+              <li>{tr("Read file contents and metadata", "读取文件内容与元数据")}</li>
+              <li>{tr("View running processes", "查看运行中的进程")}</li>
+            </ul>
+          </section>
+
+          <section className={"pairPermissionCard " + (fileEditingEnabled ? "enabled" : "")}>
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">✎</span>
+                <div>
+                  <strong>{tr("File editing", "文件编辑")}</strong>
+                  <small>{tr("Recommended for coding, documents and data", "推荐用于开发、文档和数据任务")}</small>
+                </div>
+              </div>
+              {fileEditingEnabled && <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>}
+            </div>
+            <p>{tr(
+              "Create and edit files only inside workspace folders you choose. Sensitive paths stay protected and supported changes keep local undo snapshots.",
+              "只允许 AI 在你选择的工作区内创建和编辑文件。敏感路径继续受保护，并为支持的修改保留本地 Undo 快照。",
+            )}</p>
+            {fileEditingEnabled ? (
+              <code className="pairWorkspaceEnabled">{pairedDevice?.workspace_roots?.[0]}</code>
+            ) : (
+              <button
+                className="primaryButton"
+                disabled={!fileEditingSupported || busy}
+                onClick={() => void openWorkspacePicker()}
+              >
+                {fileEditingSupported
+                  ? tr("Enable file editing", "开启文件编辑")
+                  : tr("Waiting for device capability…", "等待设备能力上线…")}
+              </button>
+            )}
+          </section>
+
+          <section className={"pairPermissionCard terminal " + (terminalEnabled ? "enabled" : "")}>
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">›_</span>
+                <div>
+                  <strong>{tr("Terminal access", "终端权限")}</strong>
+                  <small>{tr("Advanced", "高级功能")}</small>
+                </div>
+              </div>
+              {terminalEnabled && <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>}
+            </div>
+            <p>{tr(
+              "Allow AI to run shell commands. Commands can modify local state or external services, and Workspace Scope is not a complete OS sandbox.",
+              "允许 AI 执行 Shell 命令。命令可能修改本地状态或外部服务，Workspace Scope 也不是完整的操作系统沙箱。",
+            )}</p>
+            {!terminalEnabled && !terminalConfirm && (
+              <button
+                className="ghostButton"
+                disabled={!terminalSupported || !fileEditingEnabled}
+                onClick={() => setTerminalConfirm(true)}
+              >
+                {!fileEditingEnabled
+                  ? tr("Configure a workspace first", "请先配置工作区")
+                  : tr("Enable terminal access", "开启终端权限")}
+              </button>
+            )}
+            {!terminalEnabled && terminalConfirm && (
+              <div className="pairTerminalConfirm">
+                <span>{tr("Terminal commands can have effects that Local Undo cannot reverse.", "终端命令可能产生 Local Undo 无法撤销的影响。")}</span>
+                <div>
+                  <button className="ghostButton" onClick={() => setTerminalConfirm(false)}>{tr("Cancel", "取消")}</button>
+                  <button className="dangerConfirmButton" disabled={busy} onClick={() => void enableTerminal()}>
+                    {busy ? tr("Enabling…", "正在开启…") : tr("Confirm terminal access", "确认开启终端")}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+
+        {setupError && <p className="errorText">{setupError}</p>}
+
+        <div className="pairSetupFooter">
+          <span>{tr("You can change every permission later from Devices.", "之后可以在设备页随时修改所有权限。")}</span>
+          <button className="primaryButton" onClick={() => setSetupStep("done")}>
+            {tr("Finish setup", "完成设置")}
+          </button>
+        </div>
       </CenteredCard>
     );
   }
@@ -581,10 +960,10 @@ function PairDevice({
           </div>
           <div className="permissionBox">
             <div>
-              <strong>{tr("Developer access", "开发者权限")}</strong>
-              <span>{tr("Files, processes and development commands", "文件、进程与开发命令")}</span>
+              <strong>{tr("Read-only access", "只读权限")}</strong>
+              <span>{tr("Files, folders, metadata and process visibility", "文件、目录、元数据与进程可见性")}</span>
             </div>
-            <span className="permissionBadge">{tr("Local policy enforced", "本机权限策略生效")}</span>
+            <span className="permissionBadge">{tr("Safe default", "安全默认")}</span>
           </div>
           <button className="approveButton" onClick={() => void approve()} disabled={busy}>
             {busy ? tr("Authorizing…", "授权中…") : tr("Authorize this device", "授权此设备")}
