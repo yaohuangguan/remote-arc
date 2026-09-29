@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%" role="img" aria-label="Remote Arc app icon">
+  <defs>
+    <radialGradient id="bg" cx="35%" cy="22%" r="92%">
+      <stop offset="0" stop-color="#0d2334"/>
+      <stop offset="0.55" stop-color="#07111e"/>
+      <stop offset="1" stop-color="#020617"/>
+    </radialGradient>
+    <linearGradient id="arc" x1="120" y1="360" x2="400" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7DD3FC"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#38BDF8" stroke-opacity=".08" stroke-width="2"/>
+  <g filter="url(#glow)">
+    <path d="M112 336C143 199 218 149 324 180C361 191 391 221 404 259" fill="none" stroke="url(#arc)" stroke-width="42" stroke-linecap="round"/>
+    <path d="M398 336C367 254 323 223 256 223C190 223 143 266 112 336" fill="none" stroke="url(#arc)" stroke-width="42" stroke-linecap="round" opacity=".78"/>
+    <circle cx="112" cy="336" r="28" fill="#7DD3FC"/>
+    <circle cx="398" cy="336" r="28" fill="#38BDF8"/>
+    <circle cx="256" cy="223" r="20" fill="#F0F9FF"/>
+  </g>
+</svg>
