@@ -4182,6 +4182,21 @@ function Dashboard({
         <footer className="dashboardFooter"><span>Remote Arc · mcp.remotearc.app</span><div><a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a><a href={MARKETING_ORIGIN + "/resources"}>{tr("Resources", "资源")}</a><a href={MARKETING_ORIGIN + "/docs/mcp"}>MCP</a><a href={MARKETING_ORIGIN + "/privacy"}>{tr("Privacy", "隐私")}</a><a href={MARKETING_ORIGIN + "/terms"}>{tr("Terms", "条款")}</a><a href={MARKETING_ORIGIN + "/support"}>{tr("Support", "支持")}</a></div></footer>
       </main>
 
+      <nav className="mobileBottomNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
+        {([
+          ["overview", "⌂", tr("Home", "首页")],
+          ["devices", "▣", tr("Devices", "设备")],
+          ["connect", "↗", tr("Connect", "连接")],
+          ["security", "◇", tr("Security", "安全")],
+          ["settings", "⚙", tr("Settings", "设置")],
+        ] as Array<[DashboardTab, string, string]>).map(([id, icon, label]) => (
+          <button key={id} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
+            <span aria-hidden="true">{icon}</span>
+            <small>{label}</small>
+          </button>
+        ))}
+      </nav>
+
       {directoryPicker && (
         <div className="modalBackdrop" onMouseDown={() => setDirectoryPicker(null)}>
           <section className="modal directoryPickerModal" onMouseDown={(event) => event.stopPropagation()}>
@@ -4430,6 +4445,12 @@ function App() {
   }
 
   useEffect(() => { void loadMe(); }, []);
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || location.protocol !== "https:") return;
+    void navigator.serviceWorker.register("/sw.js").catch(() => {
+      // PWA support is progressive enhancement; dashboard functionality must not depend on it.
+    });
+  }, []);
   useEffect(() => {
     if (!user) return;
     const refreshIfVisible = () => {
