@@ -1,0 +1,36 @@
+{
+  "name": "Remote Arc",
+  "short_name": "Remote Arc",
+  "description": "Manage Remote Arc devices, permissions and MCP access from your phone.",
+  "id": "/overview",
+  "start_url": "/devices",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "categories": ["utilities", "productivity", "developer"],
+  "icons": [
+    {
+      "src": "/remote-arc.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Devices",
+      "short_name": "Devices",
+      "description": "Manage paired computers",
+      "url": "/devices"
+    },
+    {
+      "name": "Security",
+      "short_name": "Security",
+      "description": "Review Remote Arc security",
+      "url": "/security"
+    }
+  ]
+}

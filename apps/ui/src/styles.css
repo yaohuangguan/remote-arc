@@ -7914,3 +7914,181 @@ body{font-size:18px;line-height:1.6}
 
   .dashboardFooter{font-size:12px}
 }
+
+
+/* Mobile PWA dashboard */
+.mobileBottomNav{display:none}
+
+@media(max-width:820px){
+  .dashboardMain{
+    padding-bottom:calc(92px + env(safe-area-inset-bottom))!important;
+  }
+  .mobileTopbar{
+    position:sticky;
+    top:0;
+    z-index:35;
+    margin:0 -11px;
+    padding:calc(8px + env(safe-area-inset-top)) 11px 12px!important;
+    background:color-mix(in srgb,var(--bg) 88%,transparent);
+    border-bottom:1px solid rgba(148,163,184,.10);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+  }
+  .mobileBottomNav{
+    position:fixed;
+    z-index:70;
+    left:10px;
+    right:10px;
+    bottom:calc(8px + env(safe-area-inset-bottom));
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:4px;
+    padding:6px;
+    border:1px solid rgba(148,163,184,.16);
+    border-radius:18px;
+    background:rgba(5,13,22,.94);
+    box-shadow:0 18px 48px rgba(0,0,0,.34);
+    backdrop-filter:blur(22px);
+    -webkit-backdrop-filter:blur(22px);
+  }
+  .mobileBottomNav button{
+    min-width:0;
+    min-height:54px;
+    display:grid;
+    place-items:center;
+    align-content:center;
+    gap:3px;
+    border:0;
+    border-radius:13px;
+    background:transparent;
+    color:#78919a;
+    padding:5px 2px;
+  }
+  .mobileBottomNav button span{
+    font-size:18px;
+    line-height:1;
+  }
+  .mobileBottomNav button small{
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:10px!important;
+    font-weight:720;
+    line-height:1.1;
+  }
+  .mobileBottomNav button.active{
+    background:#0b2231;
+    color:#7dd3fc;
+  }
+  .dashboardFooter{
+    margin-bottom:8px;
+  }
+  .deviceCard.managed{
+    padding:16px;
+    border-radius:15px;
+  }
+  .deviceCard.managed .deviceIdentity h3{
+    font-size:18px;
+  }
+  .devicePresetRow>div{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+  .devicePresetRow button{
+    min-height:58px;
+  }
+}
+
+@media(max-width:560px){
+  .devicesPageHeader{
+    padding-top:24px;
+  }
+  .devicesPageHeader h1{
+    font-size:40px;
+  }
+  .devicesPageHeader p{
+    font-size:13px;
+  }
+  .deviceStatsGrid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:7px;
+  }
+  .deviceStatsGrid article,
+  .deviceStatsGrid article:last-child{
+    grid-column:auto;
+    min-width:0;
+    padding:12px 10px;
+    border-radius:13px;
+  }
+  .deviceStatsGrid span{
+    font-size:10px;
+  }
+  .deviceStatsGrid strong{
+    font-size:22px;
+  }
+  .deviceStatsGrid small{
+    display:none;
+  }
+  .deviceToolbar{
+    margin:13px 0;
+    gap:9px;
+  }
+  .deviceSearch{
+    height:46px;
+  }
+  .deviceFilters{
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+  }
+  .deviceFilters button{
+    justify-content:center;
+  }
+  .deviceTop{
+    align-items:flex-start;
+  }
+  .deviceAccessSummary{
+    padding-top:14px;
+  }
+  .managedActions{
+    display:grid!important;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:7px!important;
+  }
+  .managedActions button{
+    width:100%;
+    min-height:42px;
+  }
+  .managedActions .dangerButton{
+    margin:0;
+  }
+}
+
+@media(display-mode:standalone){
+  body{
+    min-height:100dvh;
+    overscroll-behavior-y:none;
+  }
+  .dashboardFooter{
+    display:none;
+  }
+}
+
+:root[data-theme="light"] .mobileBottomNav{
+  border-color:#d8e8ee;
+  background:rgba(250,253,255,.96);
+  box-shadow:0 18px 44px rgba(31,72,86,.14);
+}
+:root[data-theme="light"] .mobileBottomNav button{
+  color:#607983;
+}
+:root[data-theme="light"] .mobileBottomNav button.active{
+  background:#e3f5f9;
+  color:#075985;
+}
+:root[data-theme="light"] .mobileTopbar{
+  background:rgba(248,252,253,.92);
+  border-color:#dce9ed;
+}
