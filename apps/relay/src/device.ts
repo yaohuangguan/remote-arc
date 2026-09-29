@@ -7,6 +7,7 @@ import {
   sha256Hex,
 } from "./auth.js";
 import { writeAudit } from "./audit.js";
+import { REVIEWER_DEMO_TOOLS } from "./reviewer-fixture.js";
 
 type DeviceEnv = {
   DB: D1Database;
@@ -373,8 +374,8 @@ export async function getDevicesForUser(
         ? {
             id: device.id,
             status: "online",
-            tools: ["list_directory", "read_file", "get_file_info", "list_processes", "start_process"],
-            capabilities: [],
+            tools: [...REVIEWER_DEMO_TOOLS],
+            capabilities: ["device_policy_v1"],
           }
         : undefined;
     const live = onlineById.get(device.id) || reviewerFixture;
@@ -387,8 +388,10 @@ export async function getDevicesForUser(
       "list_managed_processes",
     ]);
     const availableTools = rawAvailableTools.filter((tool) => !internalTools.has(tool));
-    let allowedTools: string[] | null = null;
-    if (device.allowed_tools) {
+    let allowedTools: string[] | null = reviewerFixture
+      ? [...REVIEWER_DEMO_TOOLS]
+      : null;
+    if (!reviewerFixture && device.allowed_tools) {
       try {
         const parsed = JSON.parse(device.allowed_tools);
         if (Array.isArray(parsed)) allowedTools = parsed.filter((tool): tool is string => typeof tool === "string");
