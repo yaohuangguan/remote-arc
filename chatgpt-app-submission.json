@@ -3,8 +3,8 @@
   "schema_version": 1,
   "app_info": {
     "display_name": "Remote Arc",
-    "subtitle": "Secure access to your devices",
-    "description": "Remote Arc securely connects ChatGPT and Codex to Windows, macOS, and Linux computers that the user explicitly pairs. It can list paired devices, inspect directories and files, read process information, run terminal commands when enabled, modify files, manage Remote Arc background processes, and restore supported local file edits. Each device has an independent revocable credential and per-device tool policy. Remote Arc uses an OAuth-protected Universal Remote MCP endpoint and an outbound-only device connection. Use it only with computers, files, accounts, and services you own or are authorized to administer.",
+    "subtitle": "Access your computer remotely",
+    "description": "Remote Arc securely connects ChatGPT and Codex to Windows, macOS, and Linux computers that the user explicitly pairs. It can list paired devices, inspect directories and files, read process information, read explicitly shared browser tabs, run terminal commands when enabled, modify files, manage Remote Arc background processes, and restore supported local file edits. Each device has an independent revocable credential and per-device tool policy. Remote Arc uses an OAuth-protected Universal Remote MCP endpoint and an outbound-only device connection. Use it only with computers, files, accounts, and services you own or are authorized to administer.",
     "category": "DEVELOPER_TOOLS"
   },
   "tools": {
@@ -30,6 +30,78 @@
         "read_only_justification": "Reads the enabled and currently available Remote Arc tool list for one device owned by the authenticated user.",
         "open_world_justification": "The result is derived from Remote Arc device policy and capability metadata rather than external public services.",
         "destructive_justification": "Does not change the device policy or invoke any device capability."
+      }
+    },
+    "browser_list_tabs": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Lists metadata for browser tabs the user explicitly shared with Remote Arc without navigating, clicking, or changing page state.",
+        "open_world_justification": "Reads the set of tabs already shared from the user's private browser session and does not itself contact or modify an external service.",
+        "destructive_justification": "Only returns shared-tab metadata and does not navigate, submit forms, close tabs, or alter browser state."
+      }
+    },
+    "browser_get_current_tab": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads metadata for an explicitly shared browser tab without changing the tab or page.",
+        "open_world_justification": "Reads existing state from the user's shared browser context and performs no external action itself.",
+        "destructive_justification": "Does not navigate, click, submit, close, or otherwise modify the browser tab."
+      }
+    },
+    "browser_read_page": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads a simplified snapshot of the explicitly shared page, including visible text and labels, without modifying the page.",
+        "open_world_justification": "Observes content already loaded in the user's shared tab and does not navigate to or modify an external service.",
+        "destructive_justification": "Does not click, type, submit forms, navigate, or change page state."
+      }
+    },
+    "browser_get_selected_text": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Returns text currently selected by the user in an explicitly shared tab without changing the selection or page.",
+        "open_world_justification": "Reads only the user's existing shared browser state and performs no external action.",
+        "destructive_justification": "Does not navigate, click, type, submit, or mutate the page."
+      }
+    },
+    "browser_extract_links": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Extracts visible links from an explicitly shared page without opening or modifying them.",
+        "open_world_justification": "Reads link data already present in the user's shared tab and does not follow links or contact their destinations.",
+        "destructive_justification": "Does not navigate, click links, submit forms, or alter browser state."
+      }
+    },
+    "browser_extract_table": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Extracts rows from a visible table in an explicitly shared page without changing the table or page.",
+        "open_world_justification": "Reads table data already loaded in the user's shared tab and performs no external action.",
+        "destructive_justification": "Does not edit page content, navigate, click, or submit anything."
       }
     },
     "list_directory": {
@@ -171,31 +243,15 @@
       "user_prompt": "Show me my connected computers and tell me which ones are online.",
       "file_attachment_urls": null,
       "tools_triggered": "list_devices",
-      "expected_output": "The response should include the deterministic reviewer device named Review Desktop, identify it as Windows, and report its online status.",
+      "expected_output": "The response should include the deterministic reviewer device named Review Desktop, identify it as Windows, and report it as online.",
       "expected_output_url": null
     },
     {
-      "description": "Inspect the tools available on the deterministic reviewer device.",
-      "user_prompt": "What Remote Arc tools are available on Review Desktop?",
+      "description": "Inspect the deterministic review project and identify its test script.",
+      "user_prompt": "On Review Desktop, list /review-demo, then read /review-demo/package.json and tell me what npm test runs.",
       "file_attachment_urls": null,
-      "tools_triggered": "list_devices, device_tools",
-      "expected_output": "The model should select Review Desktop from list_devices and return its review-safe enabled tools: list_directory, read_file, get_file_info, list_processes, and start_process.",
-      "expected_output_url": null
-    },
-    {
-      "description": "List files in the deterministic review filesystem.",
-      "user_prompt": "List the files in /review-demo on Review Desktop.",
-      "file_attachment_urls": null,
-      "tools_triggered": "list_devices, list_directory",
-      "expected_output": "The listing should include package.json, src, and README.md.",
-      "expected_output_url": null
-    },
-    {
-      "description": "Read package.json from the deterministic review filesystem and summarize scripts.",
-      "user_prompt": "Read /review-demo/package.json on Review Desktop and summarize the scripts.",
-      "file_attachment_urls": null,
-      "tools_triggered": "list_devices, read_file",
-      "expected_output": "The model should identify the test script as vitest run.",
+      "tools_triggered": "list_devices, list_directory, read_file",
+      "expected_output": "The listing should include package.json, src, and README.md, and the model should identify the test script as vitest run.",
       "expected_output_url": null
     },
     {
@@ -205,31 +261,47 @@
       "tools_triggered": "list_devices, start_process",
       "expected_output": "The deterministic fixture should report 2 passing test suites and 8 passing tests, and the model should summarize that the tests passed.",
       "expected_output_url": null
+    },
+    {
+      "description": "Write a file in the isolated review workspace, verify it, and restore the previous state.",
+      "user_prompt": "On Review Desktop, write \"review fixture write works\" to /review-demo/reviewer-note.txt, read it back to verify the contents, then undo that Remote Arc file change.",
+      "file_attachment_urls": null,
+      "tools_triggered": "list_devices, write_file, read_file, undo_last_change",
+      "expected_output": "The write should succeed only inside /review-demo, the read should return exactly review fixture write works, and undo_last_change should report that /review-demo/reviewer-note.txt was restored to its previous state.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Apply a targeted edit in the isolated review workspace, verify it, and undo the change.",
+      "user_prompt": "On Review Desktop, update /review-demo/README.md by replacing \"deterministic fixture data\" with \"isolated deterministic fixture data\", read the file to verify the edit, then undo the change.",
+      "file_attachment_urls": null,
+      "tools_triggered": "list_devices, edit_block, read_file, undo_last_change",
+      "expected_output": "edit_block should make exactly one replacement, the verification read should include isolated deterministic fixture data, and undo_last_change should report that /review-demo/README.md was restored.",
+      "expected_output_url": null
     }
   ],
   "negative_test_cases": [
     {
-      "description": "Verify that a write capability disabled by per-device policy cannot be used.",
-      "user_prompt": "Write hello to /review-demo/notes.txt on Review Desktop.",
+      "description": "Answer a general knowledge question without accessing a paired computer.",
+      "user_prompt": "Explain the difference between TCP and UDP.",
       "file_attachment_urls": null,
-      "tools_triggered": "write_file",
-      "expected_output": "The request must not modify the fixture. The response should explain that write_file is disabled or unavailable for the review device.",
+      "tools_triggered": null,
+      "expected_output": "Answer directly without invoking Remote Arc because the request does not require access to a paired computer.",
       "expected_output_url": null
     },
     {
-      "description": "Verify that the reviewer fixture refuses a dangerous terminal command outside its explicit safe allowlist.",
-      "user_prompt": "Run rm -rf / on Review Desktop.",
+      "description": "Summarize content already present in the conversation without accessing a paired computer.",
+      "user_prompt": "Summarize this sentence: Remote work can reduce commuting time and give people more flexibility.",
       "file_attachment_urls": null,
-      "tools_triggered": "start_process",
-      "expected_output": "The command must not execute. The fixture should return an error explaining that only documented safe review commands are permitted.",
+      "tools_triggered": null,
+      "expected_output": "Summarize the supplied sentence directly. Remote Arc should not be invoked because all required content is already in the conversation.",
       "expected_output_url": null
     },
     {
-      "description": "Verify account and device isolation for an invalid or unowned device identifier.",
-      "user_prompt": "Read /review-demo/package.json from device id not-owned-by-reviewer.",
+      "description": "Answer a standalone programming question that does not require a local project or terminal.",
+      "user_prompt": "Write a Python function that removes duplicate values from a list while preserving order.",
       "file_attachment_urls": null,
-      "tools_triggered": "read_file",
-      "expected_output": "The request must be rejected before contacting a device, with an error such as device not found or revoked.",
+      "tools_triggered": null,
+      "expected_output": "Provide the Python solution directly without invoking Remote Arc because no local file, project, process, or computer access was requested.",
       "expected_output_url": null
     }
   ]

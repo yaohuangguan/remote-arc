@@ -4,6 +4,7 @@ import {
   sessionCookie,
   sha256Hex,
 } from "./auth.js";
+import { REVIEWER_DEMO_TOOLS, resetReviewerDemoState } from "./reviewer-fixture.js";
 
 type ReviewerEnv = {
   DB: D1Database;
@@ -11,6 +12,7 @@ type ReviewerEnv = {
   APP_ORIGIN?: string;
   REVIEWER_EMAIL?: string;
   REVIEWER_PASSWORD_SHA256?: string;
+  REVIEWER_DEMO_DEVICE_ID?: string;
 };
 
 const appOrigin = (env: ReviewerEnv) => env.APP_ORIGIN || env.PUBLIC_ORIGIN;
@@ -106,6 +108,43 @@ export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
        VALUES (?1, ?2, ?3, ?4, NULL, ?5)`,
     ).bind(userId, "reviewer-openai-v1", email, "OpenAI Reviewer", nowIso()).run();
     user = { id: userId };
+  }
+
+  if (env.REVIEWER_DEMO_DEVICE_ID) {
+    const now = nowIso();
+    const credentialHash = await sha256Hex(
+      `reviewer-fixture:${env.REVIEWER_DEMO_DEVICE_ID}`,
+    );
+    await env.DB.prepare(
+      `INSERT INTO devices (
+         id, user_id, name, platform, arch, hostname,
+         credential_hash, created_at, last_seen, revoked_at, allowed_tools
+       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, ?10)
+       ON CONFLICT(id) DO UPDATE SET
+         user_id = excluded.user_id,
+         name = excluded.name,
+         platform = excluded.platform,
+         arch = excluded.arch,
+         hostname = excluded.hostname,
+         last_seen = excluded.last_seen,
+         revoked_at = NULL,
+         allowed_tools = excluded.allowed_tools`,
+    )
+      .bind(
+        env.REVIEWER_DEMO_DEVICE_ID,
+        user.id,
+        "Review Desktop",
+        "win32",
+        "x64",
+        "review-desktop",
+        credentialHash,
+        now,
+        now,
+        JSON.stringify(REVIEWER_DEMO_TOOLS),
+      )
+      .run();
+
+    await resetReviewerDemoState(env, user.id);
   }
 
   const token = await createSession(user.id, env);
