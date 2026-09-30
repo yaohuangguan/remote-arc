@@ -193,7 +193,7 @@ type AutomationCreateKind = AutomationKind | "agent_goal";
 type AgentGoalTool = "list_directory" | "read_file" | "get_file_info" | "write_file" | "edit_block" | "start_process";
 type AutomationStatus =
   | "waiting" | "running" | "waiting_for_device" | "waiting_for_event"
-  | "approval_required" | "paused" | "completed" | "failed"
+  | "paused" | "completed" | "failed"
   | "cancelled" | "expired";
 
 type Automation = {
@@ -2792,8 +2792,8 @@ function DocsPage({ user }: { user?: User | null }) {
                 "Long Task 会持续跟踪已批准命令直到退出；Condition Watch 等待 Webhook 后执行设备或云端动作；Schedule Watch 在未来时间或固定间隔执行；Goal Loop 重复同一工作计划直到验证成功。Agent Goal 则不同：每轮 Planner 都会读取最新的受限结果、更新精简工作记忆，并可在已批准工具范围内选择不同的下一步。还可以配置最终确定性验证命令，只有退出码为 0 才允许完成。",
               )}</p>
               <p>{tr(
-                "Persistent authority is explicit. Deterministic automations freeze the trigger and action plan. Agent Goals freeze the objective, success criteria, approved tool set, iteration/expiry limits and device permission snapshot; only the next action is chosen dynamically inside those boundaries. If device policy changes, execution moves to approval_required. A GitHub condition may instead run a cloud-side merge action through a repository-scoped GitHub App installation token, so the paired computer is not part of that action path.",
-                "持久权限是显式的。确定性 Automation 会冻结 Trigger 与 Action Plan；Agent Goal 则冻结 Objective、成功标准、已批准 Tool Set、迭代/到期限制和设备权限快照，只允许在这些边界内动态选择下一步。如果设备策略变化，执行会进入 approval_required。GitHub Condition 也可以改为通过仓库范围 GitHub App Installation Token 执行云端 Merge，此时不依赖已配对电脑参与动作链路。",
+                "Persistent authority is explicit. Deterministic automations freeze the trigger and action plan. Agent Goals freeze the objective, success criteria, approved tool set, iteration/expiry limits and device permission snapshot; only the next action is chosen dynamically inside those boundaries. Routine reconnects and lost process handles recover without human approval. If the device security policy itself changes, unattended execution stops rather than inheriting a different trust boundary. A GitHub condition may instead run a cloud-side merge action through a repository-scoped GitHub App installation token, so the paired computer is not part of that action path.",
+                "持久权限是显式的。确定性 Automation 会冻结 Trigger 与 Action Plan；Agent Goal 则冻结 Objective、成功标准、已批准 Tool Set、迭代/到期限制和设备权限快照，只允许在这些边界内动态选择下一步。普通断线重连和进程句柄丢失不需要人工批准，会自动恢复；如果设备安全策略本身发生变化，无人值守执行会停止，而不是继承新的信任边界。GitHub Condition 也可以通过仓库范围的 GitHub App Installation Token 执行云端 Merge，因此无需依赖已配对电脑参与动作链路。",
               )}</p>
               <div className="articleCallout">
                 <strong>{tr("24/7 means reconnectable, not magically awake", "24/7 指可持续重连，不代表电脑永不休眠")}</strong>
@@ -2996,8 +2996,8 @@ function SecurityModelPage({ user }: { user?: User | null }) {
                 "Durable Automation 可能在创建它的 MCP 请求结束数小时后才执行。确定性 Automation 会保存明确 Trigger 与 Action Plan；Adaptive Agent Goal 则保存用户批准的目标、成功标准、Tool Set、可选确定性验证、迭代/到期限制、目标设备和权限快照。Planner 可以重新理解结果并调整下一步，但不能扩大这些已经保存的权限边界。",
               )}</p>
               <p>{tr(
-                "Every future device action still passes the normal ownership, revocation, allowed-tool and local path-policy checks. If the saved device policy changes, execution stops in approval_required. If an agent restart loses a local managed-process handle, the default recovery policy also requires approval before rerunning it so Remote Arc does not silently duplicate an external side effect.",
-                "未来每次设备执行仍然经过正常的 Ownership、Revocation、Allowed Tool 与本地路径策略检查。如果保存的设备策略发生变化，任务会停在 approval_required；如果 Agent 重启导致本地受管进程 Handle 丢失，默认恢复策略同样要求先确认，避免 Remote Arc 静默重复外部副作用。",
+                "Every future device action still passes the normal ownership, revocation, allowed-tool and local path-policy checks. Unattended tasks do not enter a mid-run approval queue: disconnects wait for the device, deterministic long tasks restart a lost attempt by default, and Agent Goals re-inspect state before choosing another action after a lost process handle. If the device security policy itself changes, execution stops and records the policy change instead of waiting for someone to approve it.",
+                "未来每次设备执行仍然经过正常的 Ownership、Revocation、Allowed Tool 与本地路径策略检查。无人值守任务不会在运行途中进入审批队列：断线时等待设备；确定性的长任务默认会在句柄丢失后重新启动当前尝试；Agent Goal 则会先重新检查状态，再决定下一步。如果设备安全策略本身发生变化，执行会停止并记录原因，而不是等待有人批准。",
               )}</p>
               <p>{tr(
                 "Condition Watch callback URLs contain a high-entropy secret and act as bearer capabilities. Only a SHA-256 hash is stored and delivery IDs can be deduplicated when supplied. A configured GitHub condition can merge one explicitly selected pull request with a repository-scoped GitHub App installation token. The current webhook transport still relies on the secret callback URL rather than claiming provider-specific GitHub HMAC verification.",
@@ -4280,7 +4280,7 @@ function Dashboard({
         Math.round((Number.isFinite(intervalMinutes) ? intervalMinutes : 5) * 60),
       ),
       ...(maxRunsRaw ? { max_runs: Math.max(0, Math.round(Number(maxRunsRaw))) } : {}),
-      recovery: "require_approval",
+      recovery: "restart",
     };
 
     if (isAgentGoal) {
@@ -4399,7 +4399,7 @@ function Dashboard({
 
   async function manageDashboardAutomation(
     automation: Automation,
-    action: "pause" | "resume" | "cancel" | "reapprove",
+    action: "pause" | "resume" | "cancel",
   ) {
     if (UI_PREVIEW) return;
     if (
@@ -4977,10 +4977,8 @@ function Dashboard({
           ? tr("Waiting for device", "等待设备")
           : value === "waiting_for_event"
             ? tr("Waiting for event", "等待事件")
-            : value === "approval_required"
-              ? tr("Approval required", "需要重新确认")
-              : value === "paused"
-                ? tr("Paused", "已暂停")
+            : value === "paused"
+              ? tr("Paused", "已暂停")
                 : value === "completed"
                   ? tr("Completed", "已完成")
                   : value === "failed"
@@ -4995,7 +4993,6 @@ function Dashboard({
   const automationActiveCount = automations.filter((item) =>
     ["waiting", "running", "waiting_for_device", "waiting_for_event"].includes(item.status),
   ).length;
-  const automationApprovalCount = automations.filter((item) => item.status === "approval_required").length;
   const backgroundConfiguredCount = devices.filter((device) => device.background_enabled === true).length;
 
   const navItems: Array<[DashboardTab, string]> = [
@@ -5689,18 +5686,6 @@ function Dashboard({
               </article>
             </section>
 
-            {automationApprovalCount > 0 && (
-              <section className="automationAttention">
-                <div>
-                  <strong>{automationApprovalCount} {tr("automation(s) need approval", "条自动化需要重新确认")}</strong>
-                  <span>{tr(
-                    "A device permission changed or a managed process handle was lost. Remote Arc will not silently continue with a different trust boundary.",
-                    "设备权限发生变化，或受管进程句柄丢失。Remote Arc 不会在信任边界变化后静默继续执行。",
-                  )}</span>
-                </div>
-              </section>
-            )}
-
             {createdWebhook && (
               <section className="automationWebhookNotice">
                 <div>
@@ -5727,8 +5712,8 @@ function Dashboard({
                     <h2>{tr("Persistent execution", "持久执行")}</h2>
                   </div>
                   <p>{tr(
-                    "The plan is frozen when you create it. Device permissions are snapshotted and must be explicitly reapproved if they change later.",
-                    "创建后执行计划会被冻结，同时保存设备权限快照；未来权限发生变化时必须明确重新批准。",
+                    "The plan is frozen when you create it. Long-running work recovers automatically from disconnects and lost local process handles. If you later change the device security policy, Remote Arc stops the unattended task rather than waiting for approval or silently crossing the new boundary.",
+                    "创建后执行计划会被冻结。长任务遇到断线或本地进程句柄丢失时会自动恢复；如果之后你主动修改设备安全策略，Remote Arc 会停止该无人值守任务，而不是等待人工批准，也不会静默跨过新的权限边界。",
                   )}</p>
                 </div>
 
@@ -6149,13 +6134,10 @@ function Dashboard({
                       <span className={"automationStatusBadge " + automation.status}>{automationStatusLabel(automation.status)}</span>
 
                       <div className="automationActions">
-                        {automation.status === "approval_required" && (
-                          <button disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "reapprove")}>{tr("Review & approve", "确认并继续")}</button>
-                        )}
                         {automation.status === "paused" && (
                           <button disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "resume")}>{tr("Resume", "恢复")}</button>
                         )}
-                        {!automationTerminal(automation.status) && automation.status !== "paused" && automation.status !== "approval_required" && (
+                        {!automationTerminal(automation.status) && automation.status !== "paused" && (
                           <button disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "pause")}>{tr("Pause", "暂停")}</button>
                         )}
                         {!automationTerminal(automation.status) && (

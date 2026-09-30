@@ -32,7 +32,6 @@ export type AutomationStatus =
   | "running"
   | "waiting_for_device"
   | "waiting_for_event"
-  | "approval_required"
   | "paused"
   | "completed"
   | "failed"
@@ -58,7 +57,7 @@ type AutomationStep = DeviceCommandStep | GitHubMergeSpec;
 
 type ActionPlan = {
   steps: AutomationStep[];
-  recovery?: "require_approval" | "restart";
+  recovery?: "restart" | "fail";
 };
 
 type CommandGoalSpec = {
@@ -211,7 +210,7 @@ export type CreateAutomationInput = {
   interval_seconds?: number;
   max_runs?: number;
   expires_at?: string | null;
-  recovery?: "require_approval" | "restart";
+  recovery?: "restart" | "fail";
 };
 
 const isTerminalStatus = (status: AutomationStatus) =>
@@ -377,7 +376,7 @@ function sanitizeSteps(input: CreateAutomationInput): ActionPlan {
   if (input.kind === "agent_goal") {
     return {
       steps: [],
-      recovery: input.recovery === "restart" ? "restart" : "require_approval",
+      recovery: input.recovery === "fail" ? "fail" : "restart",
     };
   }
 
@@ -388,7 +387,7 @@ function sanitizeSteps(input: CreateAutomationInput): ActionPlan {
     }
     return {
       steps: [githubMerge],
-      recovery: "require_approval",
+      recovery: "fail",
     };
   }
 
@@ -421,7 +420,7 @@ function sanitizeSteps(input: CreateAutomationInput): ActionPlan {
 
   return {
     steps,
-    recovery: input.recovery === "restart" ? "restart" : "require_approval",
+    recovery: input.recovery === "fail" ? "fail" : "restart",
   };
 }
 
@@ -863,58 +862,6 @@ export async function cancelAutomation(
   return updateAutomationStatus(env, userId, automationId, "cancelled", null);
 }
 
-export async function reapproveAutomation(
-  env: AutomationEnv,
-  userId: string,
-  automationId: string,
-) {
-  const automation = await getAutomation(env, userId, automationId);
-  if (!automation || !automation.device_id) throw new Error("Automation not found.");
-  const snapshot = await devicePolicySnapshot(env, userId, automation.device_id);
-  if (!snapshot) throw new Error("Device not found or revoked.");
-
-  const currentGoal = parseJson<GoalSpec | null>(automation.goal_json, null);
-  let nextGoalJson = automation.goal_json;
-  if (currentGoal?.type === "agent_goal") {
-    const narrowedTools = normalizeAgentTools(snapshot, currentGoal.allowed_tools);
-    nextGoalJson = stableJson({ ...currentGoal, allowed_tools: narrowedTools });
-  } else if (!policySupportsCommandAutomation(snapshot)) {
-    throw new Error("Device policy no longer permits persistent command execution.");
-  }
-
-  const state = parseJson<RuntimeState>(automation.state_json, {});
-  const status: AutomationStatus =
-    automation.kind === "condition_watch" && !state.process_id
-      ? "waiting_for_event"
-      : "waiting";
-  const nextRun = status === "waiting" ? nowIso() : null;
-
-  await env.DB.prepare(
-    `UPDATE automations
-     SET permission_snapshot_json = ?1,
-         goal_json = ?2,
-         status = ?3,
-         next_run_at = ?4,
-         last_error = NULL,
-         lease_token = NULL,
-         lease_until = NULL,
-         updated_at = ?5
-     WHERE id = ?6 AND user_id = ?7`,
-  )
-    .bind(
-      stableJson(snapshot),
-      nextGoalJson,
-      status,
-      nextRun,
-      nowIso(),
-      automationId,
-      userId,
-    )
-    .run();
-
-  return getAutomation(env, userId, automationId);
-}
-
 const getByPath = (value: unknown, path: string): unknown => {
   const parts = path.split(".").filter(Boolean);
   let current: unknown = value;
@@ -966,7 +913,6 @@ export async function handleAutomationWebhook(
   }
   if (
     hook.status === "paused" ||
-    hook.status === "approval_required" ||
     isTerminalStatus(hook.status)
   ) {
     return Response.json({ accepted: false, status: hook.status }, { status: 202 });
@@ -1402,13 +1348,17 @@ async function executeAgentGoal(
         return;
       }
       if (isLostProcessError(error)) {
+        state.process_id = undefined;
+        state.phase = "idle";
+        state.agent.observation =
+          "The local agent restarted and the managed process handle was lost. The previous command outcome is unknown. Re-inspect the current state before deciding whether to rerun anything.";
         await persistRuntime(
           env,
           automation,
           state,
-          "approval_required",
-          null,
-          "The local agent lost the managed process handle. Confirm before the Agent Goal chooses another action.",
+          "waiting",
+          addSeconds(now, automation.interval_seconds),
+          "Managed process state was lost after reconnect; the Agent Goal will re-inspect and continue automatically.",
         );
         return;
       }
@@ -1734,13 +1684,29 @@ async function executeAutomation(
     }
 
     if (stableJson(currentPolicy) !== (automation.permission_snapshot_json || "")) {
+      if (state.process_id) {
+        await callDevice(
+          env,
+          automationIdentity(automation, env),
+          automation.device_id,
+          "stop_process",
+          { process_id: state.process_id },
+        ).catch(() => undefined);
+      }
+      await markRunFinished(
+        env,
+        state,
+        "failed",
+        null,
+        "Device permissions changed while this unattended automation was active.",
+      );
       await persistRuntime(
         env,
         automation,
         state,
-        "approval_required",
+        "failed",
         null,
-        "Device permissions changed after this automation was approved.",
+        "Device permissions changed; unattended execution stopped instead of waiting for approval.",
       );
       return;
     }
@@ -1784,7 +1750,7 @@ async function executeAutomation(
         return;
       }
       if (isLostProcessError(error)) {
-        if (action.recovery === "restart") {
+        if (action.recovery !== "fail") {
           state.process_id = undefined;
           state.phase = "idle";
           await persistRuntime(
@@ -1793,17 +1759,24 @@ async function executeAutomation(
             state,
             "waiting",
             addSeconds(now, automation.interval_seconds),
-            "Process handle was lost after an agent restart; restarting this attempt.",
+            "Process handle was lost after an agent restart; this unattended task will restart the current attempt automatically.",
           );
           return;
         }
+        await markRunFinished(
+          env,
+          state,
+          "failed",
+          null,
+          "Managed process state was lost after reconnect and this task is configured to fail instead of restart.",
+        );
         await persistRuntime(
           env,
           automation,
           state,
-          "approval_required",
+          "failed",
           null,
-          "The agent lost the managed process handle. Confirm before restarting to avoid duplicate work.",
+          "Managed process state was lost after reconnect; unattended recovery policy is fail.",
         );
         return;
       }
@@ -2238,12 +2211,6 @@ export async function handleAutomationItem(
         automation: await cancelAutomation(env, user.id, automationId),
       });
     }
-    if (request.method === "POST" && action === "reapprove") {
-      return Response.json({
-        automation: await reapproveAutomation(env, user.id, automationId),
-      });
-    }
-
     return new Response("Method not allowed", { status: 405 });
   } catch (error) {
     return Response.json(

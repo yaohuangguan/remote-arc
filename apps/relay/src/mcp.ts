@@ -11,7 +11,6 @@ import {
   listAutomationRuns,
   listAutomations,
   pauseAutomation,
-  reapproveAutomation,
   resumeAutomation,
 } from "./automations.js";
 
@@ -723,8 +722,8 @@ export function createRemoteLinkMcp(
           max_runs: z.number().int().min(0).max(10000).optional(),
           expires_at: z.string().nullable().optional(),
           recovery: z
-            .enum(["require_approval", "restart"])
-            .default("require_approval"),
+            .enum(["restart", "fail"])
+            .default("restart"),
         }),
         annotations: {
           readOnlyHint: false,
@@ -962,12 +961,12 @@ export function createRemoteLinkMcp(
     server.registerTool(
       "manage_automation",
       {
-        title: "Pause, resume, cancel, or reapprove an automation",
+        title: "Pause, resume, or cancel an automation",
         description:
-          "Manage a durable Remote Arc automation. Reapprove is required after device permissions change; cancel also attempts to stop the currently managed process.",
+          "Manage a durable Remote Arc automation. Unattended tasks recover automatically from reconnect/process-handle loss according to their recovery policy; a later device-policy change stops the task instead of waiting for approval. Cancel also attempts to stop the currently managed process.",
         inputSchema: z.object({
           automation_id: z.string(),
-          action: z.enum(["pause", "resume", "cancel", "reapprove"]),
+          action: z.enum(["pause", "resume", "cancel"]),
         }),
         annotations: {
           readOnlyHint: false,
@@ -986,13 +985,7 @@ export function createRemoteLinkMcp(
             ? await pauseAutomation(env, identity.userId, automation_id)
             : action === "resume"
               ? await resumeAutomation(env, identity.userId, automation_id)
-              : action === "cancel"
-                ? await cancelAutomation(env, identity.userId, automation_id)
-                : await reapproveAutomation(
-                    env,
-                    identity.userId,
-                    automation_id,
-                  );
+              : await cancelAutomation(env, identity.userId, automation_id);
         return textResult(
           row
             ? {

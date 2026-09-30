@@ -202,13 +202,16 @@ Five persistent modes share the same durable task engine:
 - **Long task** — start a command and keep tracking it after the MCP call/chat ends.
 - **Condition watch** — wait for a webhook event, then execute an approved plan.
 - **Schedule watch** — execute a plan on a recurring interval or at a future time.
-- **Goal loop** — repeat a fixed work plan, execute a verification command, and retry until verification succeeds, the task expires, the run limit is reached, or the user stops it.\n- **Agent Goal** — after each bounded tool result, a hosted planner updates compact working memory, rethinks the strategy and chooses a different next action from the user-approved tool set. An optional deterministic verification command can prevent model-only completion.\n\nCondition watches may also use a cloud-side GitHub App merge action. A matching CI webhook can therefore merge an explicitly configured pull request without depending on a paired computer being online.
+- **Goal loop** — repeat a fixed work plan, execute a verification command, and retry until verification succeeds, the task expires, the run limit is reached, or the user stops it.
+- **Agent Goal** — after each bounded tool result, a hosted planner updates compact working memory, rethinks the strategy and chooses a different next action from the user-approved tool set. An optional deterministic verification command can prevent model-only completion.
+
+Condition watches may also use a cloud-side GitHub App merge action. A matching CI webhook can therefore merge an explicitly configured pull request without depending on a paired computer being online.
 
 Automation state lives in D1 and is advanced by the Worker scheduler or webhook events. Device execution still goes through the same authenticated Durable Object route and the device's existing skill/path policy.
 
-Creating an automation snapshots the current device permission policy. If that policy changes later, Remote Arc moves the automation to `approval_required` instead of silently inheriting a different trust boundary.
+Creating an automation snapshots the current device permission policy. Routine disconnects and local agent restarts do not introduce an approval step: unattended work waits for the device and automatically recovers. If you later change the device security policy itself, Remote Arc stops that automation rather than silently inheriting a different trust boundary.
 
-A device going offline moves eligible work to `waiting_for_device`; it does not automatically fail the automation. If the local agent restarts and loses an in-memory managed process handle, the default recovery policy requires explicit approval before rerunning that command to reduce duplicate side effects.
+A device going offline moves eligible work to `waiting_for_device`; it does not automatically fail the automation. Deterministic long-running work defaults to automatic attempt restart if the local agent reconnects without its previous managed-process handle. Agent Goals handle the same case by marking the previous outcome as unknown, re-inspecting current state, and replanning instead of waiting for a person to approve continuation.
 
 The background agent and automation engine solve different problems:
 

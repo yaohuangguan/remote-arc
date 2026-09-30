@@ -103,7 +103,7 @@ try {
   const updateTools=await fetch(base+"/api/devices/"+deviceId+"/tools",{method:"POST",headers:authHeaders,body:JSON.stringify({allowed_tools:tools})});
   assert(updateTools.ok,"tools update "+updateTools.status+" "+await updateTools.text());
 
-  let verifyStarts=0; let processSeq=0;
+  let verifyStarts=0; let processSeq=0; let lostHandleInjected=false;
   const processes=new Map();
   let socket=new WebSocket(base.replace("http","ws")+"/agent",{headers:{Authorization:"Bearer "+tokenBody.device_token}});
   const attachSocket=ws=>{
@@ -128,6 +128,7 @@ try {
           ws.send(JSON.stringify({type:"result",id:m.id,result:{process_id:id,pid:1000+processSeq,command,status:"running",started_at:new Date().toISOString()}}));
         } else if(m.tool==="process_status"){
           const proc=processes.get(String(m.arguments.process_id)); if(!proc)throw new Error("Managed process not found");
+          if(proc.command==="lost-handle"&&!lostHandleInjected){lostHandleInjected=true;processes.delete(String(m.arguments.process_id));throw new Error("Managed process not found");}
           proc.statusChecks++; let exit=0; let running=false;
           if(proc.command==="long-task"&&proc.statusChecks===1)running=true;
           if(proc.command==="verify-goal"&&proc.verifyAttempt===1)exit=1;
@@ -164,6 +165,14 @@ try {
   await poke(longId); await tick(); row=await get(longId); assert(row.status==="running","long stays running after first poll "+row.status);
   await poke(longId); await tick(); row=await get(longId); assert(row.status==="completed"&&row.run_count===1,"long completes "+JSON.stringify(row));
 
+  // Unattended recovery: a lost local process handle automatically restarts instead of waiting for approval.
+  created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E unattended recovery",kind:"long_task",device_id:deviceId,command:"lost-handle",interval_seconds:60})});
+  const recoveryId=created.automation.id;
+  await tick(); row=await get(recoveryId); assert(row.status==="running","recovery task starts "+row.status);
+  await poke(recoveryId); await tick(); row=await get(recoveryId); assert(row.status==="waiting","lost handle schedules automatic restart "+JSON.stringify(row));
+  await poke(recoveryId); await tick(); row=await get(recoveryId); assert(row.status==="running","recovery task restarts automatically "+row.status);
+  await poke(recoveryId); await tick(); row=await get(recoveryId); assert(row.status==="completed","recovery task completes without approval "+JSON.stringify(row));
+
   // Goal loop: first verification fails, second attempt succeeds.
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E goal",kind:"goal_loop",device_id:deviceId,command:"work-goal",goal:{command:"verify-goal",expected_exit_code:0},interval_seconds:60,max_runs:3})});
   const goalId=created.automation.id;
@@ -194,13 +203,13 @@ try {
   assert(row.status==="completed","agent goal completes "+JSON.stringify(row));
   assert(plannerCalls===6,"agent planner should rethink across six turns, got "+plannerCalls);
 
-  // Permission snapshot: changing policy requires explicit approval.
-  created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E approval",kind:"long_task",device_id:deviceId,command:"approval-test",interval_seconds:60})});
-  const approvalId=created.automation.id;
+  // Permission snapshot: a real security-policy change stops unattended work; it never waits for approval.
+  created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E policy stop",kind:"long_task",device_id:deviceId,command:"policy-test",interval_seconds:60})});
+  const policyId=created.automation.id;
   await api("/api/devices/"+deviceId+"/tools",{method:"POST",body:JSON.stringify({allowed_tools:["list_processes","start_process","process_status"]})});
-  await tick(); row=await get(approvalId); assert(row.status==="approval_required","permission change pauses "+row.status);
+  await tick(); row=await get(policyId); assert(row.status==="failed","policy change stops unattended task "+JSON.stringify(row));
+  assert(String(row.last_error||"").includes("stopped instead of waiting for approval"),"policy stop should explain no approval queue");
   await api("/api/devices/"+deviceId+"/tools",{method:"POST",body:JSON.stringify({allowed_tools:tools})});
-  await api("/api/automations/"+approvalId+"/reapprove",{method:"POST"});
 
   // Condition watch: mismatch ignored, match triggers.
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E CI",kind:"condition_watch",device_id:deviceId,command:"condition-action",condition:{source:"github",event:"workflow_run",match:{action:"completed","workflow_run.conclusion":"success"}},max_runs:1,interval_seconds:60})});
@@ -234,7 +243,7 @@ try {
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E offline",kind:"long_task",device_id:deviceId,command:"offline-task",interval_seconds:60})});
   const offlineId=created.automation.id; await tick(); row=await get(offlineId); assert(row.status==="waiting_for_device","offline waits "+row.status);
 
-  console.log(JSON.stringify({ok:true,long:"completed",goal:{status:"completed",attempts:2},agent_goal:{status:"completed",planner_turns:plannerCalls},permission:"approval_required",condition:"completed",github_merge:{status:"completed",api_calls:githubMergeCalls},offline:"waiting_for_device",deviceId},null,2));
+  console.log(JSON.stringify({ok:true,long:"completed",unattended_recovery:"completed_without_approval",goal:{status:"completed",attempts:2},agent_goal:{status:"completed",planner_turns:plannerCalls},policy_change:"failed_without_approval",condition:"completed",github_merge:{status:"completed",api_calls:githubMergeCalls},offline:"waiting_for_device",deviceId},null,2));
 } finally {
   worker.kill("SIGTERM");
   await sleep(300);

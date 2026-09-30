@@ -11561,8 +11561,7 @@ body{font-size:18px;line-height:1.6}
 .automationStatusDot.waiting_for_event{
   background:#3697b5;
 }
-.automationStatusDot.waiting_for_device,
-.automationStatusDot.approval_required{
+.automationStatusDot.waiting_for_device{
   background:#c58a20;
 }
 .automationStatusDot.failed,
@@ -11627,8 +11626,7 @@ body{font-size:18px;line-height:1.6}
   background:#eaf5f8;
   color:#176b86;
 }
-.automationStatusBadge.waiting_for_device,
-.automationStatusBadge.approval_required{
+.automationStatusBadge.waiting_for_device{
   background:#fff5df;
   color:#815c17;
 }

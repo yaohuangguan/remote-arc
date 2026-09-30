@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS automations (
   kind TEXT NOT NULL CHECK(kind IN ('long_task','condition_watch','schedule_watch','goal_loop')),
   status TEXT NOT NULL DEFAULT 'waiting' CHECK(status IN (
     'waiting','running','waiting_for_device','waiting_for_event',
-    'approval_required','paused','completed','failed','cancelled','expired'
+    'paused','completed','failed','cancelled','expired'
   )),
   device_id TEXT,
   trigger_json TEXT,
