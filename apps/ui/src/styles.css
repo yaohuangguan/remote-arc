@@ -8092,3 +8092,15 @@ body{font-size:18px;line-height:1.6}
   background:rgba(248,252,253,.92);
   border-color:#dce9ed;
 }
+
+/* Homepage product-fit section: editorial rows, intentionally not cards. */
+.fitSection{border-top:1px solid var(--border)}
+.fitRows{display:grid;margin-top:36px;border-top:1px solid var(--border)}
+.fitRows>div{display:grid;grid-template-columns:minmax(150px,.34fr) minmax(0,1fr);gap:42px;padding:25px 0;border-bottom:1px solid var(--border)}
+.fitRows strong{font-size:17px;letter-spacing:-.01em}
+.fitRows p{max-width:860px;margin:0;color:var(--muted);font-size:17px;line-height:1.72}
+:root[data-theme="light"] .fitRows p{color:#4f7079}
+@media(max-width:720px){
+  .fitRows>div{grid-template-columns:1fr;gap:8px;padding:21px 0}
+  .fitRows p{font-size:16px}
+}
