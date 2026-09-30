@@ -9149,3 +9149,88 @@ body{font-size:18px;line-height:1.6}
 :root[data-theme="light"] .readingLayout>aside>span{
   color:#4f6876;
 }
+
+/* --------------------------------------------------------------------------
+   Installation entry point — make the one-command start unmistakable.
+   -------------------------------------------------------------------------- */
+.heroPrimaryCommand,
+.installPrimaryCommand{
+  max-width:620px;
+  margin-top:24px;
+}
+.heroPrimaryCommand>span,
+.installPrimaryCommand>span{
+  display:block;
+  margin-bottom:8px;
+  color:var(--sky-light);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.11em;
+}
+.heroPrimaryCommand>div,
+.installHeroCommand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px;
+  border:1px solid #263744;
+  border-radius:13px;
+  background:#08121a;
+}
+.heroPrimaryCommand code,
+.installHeroCommand code{
+  flex:1;
+  min-width:0;
+  padding:8px 10px;
+  overflow:auto;
+  color:#b9eaff;
+  font-size:15px;
+  font-weight:700;
+  white-space:nowrap;
+}
+.heroPrimaryCommand>small,
+.installPrimaryCommand>small{
+  display:block;
+  margin-top:8px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+:root[data-theme="light"] .heroPrimaryCommand>div,
+:root[data-theme="light"] .installHeroCommand{
+  border-color:#cfe3ef;
+  background:#f5f8ff;
+}
+:root[data-theme="light"] .heroPrimaryCommand code,
+:root[data-theme="light"] .installHeroCommand code{
+  color:#075985;
+}
+:root[data-theme="light"] .heroPrimaryCommand>span,
+:root[data-theme="light"] .installPrimaryCommand>span{
+  color:#075985;
+}
+
+.clientInstallCopy .installPrimaryCommand{
+  margin-top:22px;
+}
+.clientInstallCopy .clientInstallActions{
+  margin-top:18px;
+}
+.installSetupMap>div:first-child strong{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  color:var(--sky-light);
+}
+:root[data-theme="light"] .installSetupMap>div:first-child strong{
+  color:#075985;
+}
+
+@media(max-width:620px){
+  .heroPrimaryCommand,
+  .installPrimaryCommand{
+    width:100%;
+  }
+  .heroPrimaryCommand code,
+  .installHeroCommand code{
+    font-size:14px;
+  }
+}

@@ -1000,28 +1000,6 @@ function ClientInstallPage({
   user?: User | null;
 }) {
   const { tr } = useI18n();
-  const [showAuth, setShowAuth] = useState(false);
-  const installPath = "/install/" + slug;
-  const installReturnTo = installPath + "?continue=1";
-
-  function scrollToInstallation() {
-    document.getElementById("installation")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function beginInstallation() {
-    if (!user) {
-      setShowAuth(true);
-      return;
-    }
-    scrollToInstallation();
-  }
-
-  useEffect(() => {
-    if (!user || new URLSearchParams(location.search).get("continue") !== "1") return;
-    window.requestAnimationFrame(() => scrollToInstallation());
-    history.replaceState({}, "", installPath);
-  }, [user?.id, slug]);
-
   const config = slug === "chatgpt"
     ? {
         name: "ChatGPT",
@@ -1205,16 +1183,22 @@ function ClientInstallPage({
             <h1>{config.title}</h1>
             <p>{config.intro}</p>
             <div className="installAvailability"><i />{config.availability}</div>
+            <div className="installPrimaryCommand">
+              <span>{tr("START ON THE COMPUTER", "先在电脑上运行")}</span>
+              <div className="installHeroCommand">
+                <code>npx remotelink</code>
+                <CopyButton value="npx remotelink" />
+              </div>
+              <small>{tr("Node.js 20+ · Windows, macOS or Linux · opens the secure pairing page automatically", "Node.js 20+ · Windows、macOS 或 Linux · 自动打开安全配对页面")}</small>
+            </div>
             <div className="clientInstallActions">
-              <button className="primaryButton" type="button" onClick={beginInstallation}>
-                {user ? tr("Continue installation", "继续安装") : tr("Start installation", "开始安装")} <span>→</span>
-              </button>
+              <a className="primaryButton" href="#installation">{tr("Continue setup", "继续配置")} <span>→</span></a>
               <a className="ghostButton" href={config.externalHref} target="_blank" rel="noreferrer">{config.externalLabel} ↗</a>
             </div>
             <div className="installQuickFacts">
-              <span>{tr("About 5 minutes", "约 5 分钟")}</span>
-              <span>Windows · macOS · Linux</span>
-              <span>{tr("OAuth account connection", "OAuth 账户连接")}</span>
+              <span>{tr("No repository clone", "无需 clone 仓库")}</span>
+              <span>{tr("No VPN or port forwarding", "无需 VPN 或端口映射")}</span>
+              <span>{tr("Browser-approved pairing", "浏览器确认配对")}</span>
             </div>
           </div>
         </div>
@@ -1232,73 +1216,34 @@ function ClientInstallPage({
         </div>
 
         <div className="installSetupMap">
-          <div><b>1</b><span><strong>{tr("Remote Arc account", "Remote Arc 账户")}</strong><small>{tr("Keeps devices, permissions and usage together.", "统一保存设备、权限与用量。")}</small></span></div>
-          <div><b>2</b><span><strong>{tr("Pair your computer", "配对电脑")}</strong><small>{tr("One local command; outbound connection only.", "一条本地命令，仅建立出站连接。")}</small></span></div>
-          <div><b>3</b><span><strong>{config.name}</strong><small>{tr("Connect the same account through OAuth.", "通过 OAuth 连接同一个账户。")}</small></span></div>
+          <div><b>1</b><span><strong>npx remotelink</strong><small>{tr("Run one command on the computer.", "在电脑上运行这一条命令。")}</small></span></div>
+          <div><b>2</b><span><strong>{tr("Sign in and approve", "登录并确认配对")}</strong><small>{tr("The CLI opens the browser and shows the same short code.", "CLI 自动打开浏览器，并显示相同的短配对码。")}</small></span></div>
+          <div><b>3</b><span><strong>{tr("Connect " + config.name, "连接 " + config.name)}</strong><small>{tr("Add Remote Arc through OAuth.", "通过 OAuth 添加 Remote Arc。")}</small></span></div>
         </div>
 
-        <div className={"installAccountGate" + (user ? " ready" : "")}>
-          <div>
-            <span className="eyebrow">{user ? tr("ACCOUNT READY", "账户已就绪") : tr("STEP 0 · SIGN IN", "步骤 0 · 登录")}</span>
-            <h3>{user ? tr("You're ready to pair a computer.", "现在可以开始配对电脑。") : tr("Start with your Remote Arc account.", "先登录 Remote Arc 账户。")}</h3>
-            <p>{user
-              ? tr("Signed in as " + (user.name || user.email) + ". Continue below; this account will own the paired device and its permissions.", "当前账户：" + (user.name || user.email) + "。继续下面的流程；这台设备及其权限会归属到此账户。")
-              : tr("Sign in before running the install command so the pairing flow has a clear account to attach the computer to.", "运行安装命令前先登录，这样后续配对流程会明确地把电脑绑定到你的 Remote Arc 账户。")}</p>
-          </div>
-          {user ? (
-            <span className="installAccountReady"><i />{tr("Signed in", "已登录")}</span>
-          ) : (
-            <button className="primaryButton" type="button" onClick={() => setShowAuth(true)}>
-              {tr("Sign in to continue", "登录后继续")} <span>→</span>
-            </button>
-          )}
+        <div className="clientInstallStepList">
+          {config.steps.map((step, index) => (
+            <article key={step.title}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+                {"code" in step && step.code && (
+                  <div className="clientInstallCode">
+                    <code>{step.code}</code>
+                    <CopyButton value={step.code} />
+                  </div>
+                )}
+              </div>
+            </article>
+          ))}
         </div>
-
-        {user ? (
-          <div className="clientInstallStepList">
-            {config.steps.map((step, index) => (
-              <article key={step.title}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <div>
-                  <h3>{step.title}</h3>
-                  <p>{step.body}</p>
-                  {"code" in step && step.code && (
-                    <div className="clientInstallCode">
-                      <code>{step.code}</code>
-                      <CopyButton value={step.code} />
-                    </div>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="installLockedSteps">
-            <strong>{tr("Installation steps unlock after sign-in.", "登录后显示完整安装步骤。")}</strong>
-            <span>{tr("You will pair the computer, connect " + config.name + ", and verify the first Remote Arc request.", "接下来会依次配对电脑、连接 " + config.name + "，并验证第一次 Remote Arc 请求。")}</span>
-          </div>
-        )}
 
         <div className="clientInstallSecurityNote">
           <strong>{tr("Your computer still controls the boundary.", "最终权限仍由你的电脑控制。")}</strong>
           <p>{tr("New devices start read-only. Workspace Scope, Sensitive Path Policy, Local Undo and per-device skills continue to apply no matter which supported AI client you connect.", "新设备默认只读。无论连接哪一个支持的 AI 客户端，Workspace Scope、Sensitive Path Policy、Local Undo 和逐设备 Skill 权限都会继续生效。")}</p>
         </div>
       </section>
-      {showAuth && (
-        <AuthProviderModal
-          returnTo={installReturnTo}
-          title={tr("Sign in before installing.", "登录后开始安装。")}
-          body={tr(
-            "Your Remote Arc account keeps your paired computers, device permissions and usage together. Sign in once, then continue the " + config.name + " setup.",
-            "Remote Arc 账户用于统一保存已配对电脑、设备权限和使用额度。登录一次后，即可继续 " + config.name + " 的安装流程。",
-          )}
-          note={tr(
-            "Authentication is separate from your AI client connection. More sign-in methods can be added without changing your paired devices.",
-            "Remote Arc 登录与 AI 客户端连接彼此独立；以后新增其他登录方式时，不会影响你已经配对的设备。",
-          )}
-          onClose={() => setShowAuth(false)}
-        />
-      )}
     </PublicLayout>
   );
 }
@@ -1362,8 +1307,16 @@ function Landing({ user }: { user?: User | null }) {
             "Turn ChatGPT, Claude and Cursor into real computer operators for the machines you already own. Let AI inspect files, edit code and run permitted workflows while Remote Arc keeps access explicit and under your control.",
             "让 ChatGPT、Claude 和 Cursor 不再只是聊天，而是真正连接你已有的电脑：检查文件、修改代码、执行被允许的工作流，同时由 Remote Arc 把访问范围和控制权留在你手里。"
           )}</p>
+          <div className="heroPrimaryCommand">
+            <span>{tr("START HERE · RUN ON YOUR COMPUTER", "从这里开始 · 在电脑上运行")}</span>
+            <div>
+              <code>{command}</code>
+              <CopyButton value={command} />
+            </div>
+            <small>{tr("Node.js 20+ · opens the browser pairing flow automatically", "Node.js 20+ · 自动打开浏览器配对流程")}</small>
+          </div>
           <div className="landingActions">
-            <a className="primaryButton goldButton" href="/install/chatgpt">{tr("Install Remote Arc", "安装 Remote Arc")}</a>
+            <a className="primaryButton goldButton" href="/install/chatgpt">{tr("Installation guide", "安装指南")}</a>
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
