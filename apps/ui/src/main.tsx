@@ -32,6 +32,10 @@ type Device = {
   undo_enabled?: boolean;
   policy_enforcement_available?: boolean;
   undo_history_available?: boolean;
+  background_agent_available?: boolean;
+  background_enabled?: boolean | null;
+  background_service?: string | null;
+  background_seen_at?: string | null;
 };
 
 type UndoAction = {
@@ -464,9 +468,16 @@ function PairDevice({
   const [code, setCode] = useState(initialCode);
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [message, setMessage] = useState("");
-  const [approved, setApproved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [approvedDeviceId, setApprovedDeviceId] = useState("");
+  const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
+  const [setupStep, setSetupStep] = useState<"permissions" | "workspace" | "done">("permissions");
+  const [directoryBrowser, setDirectoryBrowser] = useState<DirectoryBrowser | null>(null);
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [setupError, setSetupError] = useState("");
+  const [terminalConfirm, setTerminalConfirm] = useState(false);
+  const [backgroundRequested, setBackgroundRequested] = useState(true);
 
   async function lookup(targetCode = code) {
     if (!targetCode || !user) return;
@@ -489,6 +500,34 @@ function PairDevice({
     if (user && initialCode) void lookup(initialCode);
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!approvedDeviceId || setupStep === "done") return;
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const refreshPairedDevice = async () => {
+      try {
+        const response = await fetch("/api/devices");
+        if (!response.ok) return;
+        const devices = (await response.json()) as Device[];
+        const device = devices.find((item) => item.id === approvedDeviceId) || null;
+        if (!cancelled && device) {
+          setPairedDevice(device);
+        }
+      } finally {
+        if (!cancelled) {
+          timer = window.setTimeout(() => void refreshPairedDevice(), 1400);
+        }
+      }
+    };
+
+    void refreshPairedDevice();
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [approvedDeviceId, setupStep]);
+
   async function approve() {
     if (!pairing) return;
     setBusy(true);
@@ -499,15 +538,262 @@ function PairDevice({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ user_code: pairing.user_code }),
       });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(payload.error || tr("Could not approve device", "设备授权失败"));
-      setApproved(true);
+      const payload = (await response.json()) as {
+        error?: string;
+        device?: { id: string; name: string; platform: string; arch: string | null };
+      };
+      if (!response.ok || !payload.device?.id) {
+        throw new Error(payload.error || tr("Could not approve device", "设备授权失败"));
+      }
+      setApprovedDeviceId(payload.device.id);
+      setPairedDevice({
+        id: payload.device.id,
+        name: payload.device.name,
+        platform: payload.device.platform,
+        arch: payload.device.arch,
+        hostname: pairing.hostname,
+        created_at: new Date().toISOString(),
+        last_seen: null,
+        status: "offline",
+        tools: [],
+        available_tools: [],
+        allowed_tools: [...SAFE_DEVICE_TOOLS],
+        workspace_roots: [],
+        sensitive_paths: [],
+        sensitive_allow_paths: [],
+        protect_sensitive_paths: true,
+        undo_enabled: true,
+        background_agent_available: false,
+        background_enabled: null,
+        background_service: null,
+      });
+      setSetupStep("permissions");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
   }
+
+  async function browseWorkspace(path = "~") {
+    if (!approvedDeviceId) return;
+    setDirectoryLoading(true);
+    setSetupError("");
+    try {
+      const response = await fetch(
+        "/api/devices/" +
+          encodeURIComponent(approvedDeviceId) +
+          "/directories?path=" +
+          encodeURIComponent(path),
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        browser?: DirectoryBrowser;
+        error?: string;
+      };
+      if (!response.ok || !payload.browser) {
+        throw new Error(
+          payload.error ||
+            tr("Directory browsing is unavailable until the device is online.", "设备上线后才能浏览目录。"),
+        );
+      }
+      setDirectoryBrowser(payload.browser);
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setDirectoryLoading(false);
+    }
+  }
+
+  async function openWorkspacePicker() {
+    setSetupStep("workspace");
+    if (!directoryBrowser) await browseWorkspace("~");
+  }
+
+  async function saveTools(nextTools: readonly string[]) {
+    if (!approvedDeviceId) return false;
+    const available = pairedDevice?.available_tools || pairedDevice?.tools || [];
+    const supported =
+      available.length > 0
+        ? nextTools.filter((tool) => available.includes(tool))
+        : [...nextTools];
+
+    const response = await fetch(
+      "/api/devices/" + encodeURIComponent(approvedDeviceId) + "/tools",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ allowed_tools: supported }),
+      },
+    );
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(payload.error || tr("Could not save device permissions.", "无法保存设备权限。"));
+    }
+    setPairedDevice((current) =>
+      current ? { ...current, allowed_tools: supported } : current,
+    );
+    return true;
+  }
+
+  async function enableFileEditing() {
+    if (!approvedDeviceId) return;
+    setBusy(true);
+    setSetupError("");
+    try {
+      const current = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
+      await saveTools([
+        ...current,
+        "write_file",
+        "edit_block",
+        "undo_last_change",
+      ]);
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyWorkspaceScope() {
+    if (!directoryBrowser || !approvedDeviceId) return;
+    setBusy(true);
+    setSetupError("");
+    try {
+      const policyResponse = await fetch(
+        "/api/devices/" + encodeURIComponent(approvedDeviceId) + "/policy",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            workspace_roots: [directoryBrowser.path],
+            sensitive_paths: pairedDevice?.sensitive_paths || [],
+            sensitive_allow_paths: pairedDevice?.sensitive_allow_paths || [],
+            protect_sensitive_paths: pairedDevice?.protect_sensitive_paths ?? true,
+            undo_enabled: pairedDevice?.undo_enabled ?? true,
+          }),
+        },
+      );
+      if (!policyResponse.ok) {
+        const payload = (await policyResponse.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error || tr("Could not save Workspace Scope.", "无法保存 Workspace Scope。"));
+      }
+
+      setPairedDevice((current) =>
+        current ? { ...current, workspace_roots: [directoryBrowser.path] } : current,
+      );
+      setSetupStep("permissions");
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function enableTerminal() {
+    setBusy(true);
+    setSetupError("");
+    try {
+      const current = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
+      await saveTools([...current, "start_process"]);
+      setTerminalConfirm(false);
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function finishSetup() {
+    if (!approvedDeviceId) return;
+    if (pairedDevice?.status !== "online" || pairedDevice.background_agent_available !== true) {
+      setSetupError(
+        tr(
+          "Wait for the local Remote Arc agent to connect before finishing setup.",
+          "请等待本机 Remote Arc Agent 连接后再完成设置。",
+        ),
+      );
+      return;
+    }
+
+    setBusy(true);
+    setSetupError("");
+    try {
+      const response = await fetch(
+        "/api/devices/" + encodeURIComponent(approvedDeviceId) + "/background",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ enabled: backgroundRequested }),
+        },
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        enabled?: boolean;
+        status?: {
+          enabled?: boolean;
+          active?: boolean;
+          service?: string;
+          detail?: string;
+        };
+      };
+      if (!response.ok) {
+        throw new Error(
+          payload.error ||
+            tr(
+              "Could not apply the background connection setting.",
+              "无法应用后台连接设置。",
+            ),
+        );
+      }
+
+      const actualEnabled =
+        payload.enabled === true || payload.status?.enabled === true;
+      if (backgroundRequested && !actualEnabled) {
+        throw new Error(
+          payload.status?.detail ||
+            tr(
+              "Background service could not be installed. This terminal session is still connected.",
+              "后台服务安装失败，当前终端会话仍保持连接。",
+            ),
+        );
+      }
+
+      setPairedDevice((current) =>
+        current
+          ? {
+              ...current,
+              background_enabled: actualEnabled,
+              background_service:
+                payload.status?.service || current.background_service || null,
+              background_seen_at: new Date().toISOString(),
+            }
+          : current,
+      );
+      setSetupStep("done");
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+  const availableTools = pairedDevice?.available_tools || pairedDevice?.tools || [];
+  const fileEditingSupported =
+    pairedDevice?.status === "online" &&
+    ["write_file", "edit_block", "undo_last_change"].every((tool) =>
+      availableTools.includes(tool),
+    );
+  const terminalSupported =
+    pairedDevice?.status === "online" && availableTools.includes("start_process");
+  const enabledTools = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
+  const fileEditingEnabled =
+    enabledTools.includes("write_file") &&
+    enabledTools.includes("edit_block") &&
+    enabledTools.includes("undo_last_change");
+  const terminalEnabled = enabledTools.includes("start_process");
+  const backgroundCapabilityReady =
+    pairedDevice?.status === "online" &&
+    pairedDevice.background_agent_available === true;
+  const backgroundActuallyEnabled = pairedDevice?.background_enabled === true;
 
   if (user === undefined) {
     return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Checking your Remote Arc account.", "正在检查 Remote Arc 账户。")} />;
@@ -538,14 +824,280 @@ function PairDevice({
     );
   }
 
-  if (approved) {
+  if (approvedDeviceId && setupStep === "done") {
     return (
       <CenteredCard
-        title={tr("Device connected", "设备已连接")}
-        body={tr("Authorization is complete. Return to your terminal — Remote Arc will connect automatically.", "授权完成。返回终端，Remote Arc 会自动完成连接。")}
+        title={tr("Device ready", "设备已就绪")}
+        body={tr(
+          "Remote Arc will keep using the permissions you just chose. You can change them later from Devices.",
+          "Remote Arc 会继续使用你刚刚选择的权限；之后可以在设备页随时修改。",
+        )}
       >
         <div className="successMark">✓</div>
-        <a className="secondaryLink" href="/">{tr("Back to dashboard", "返回控制台")}</a>
+        <div className="pairSetupSummary">
+          <div>
+            <span>{tr("Background connection", "后台连接")}</span>
+            <strong>
+              {backgroundActuallyEnabled
+                ? tr("Enabled", "已开启")
+                : tr("Foreground only", "仅前台运行")}
+            </strong>
+          </div>
+          <div><span>{tr("Read access", "读取权限")}</span><strong>{tr("Enabled", "已开启")}</strong></div>
+          <div><span>{tr("File editing", "文件编辑")}</span><strong>{fileEditingEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
+          <div><span>{tr("Terminal", "终端")}</span><strong>{terminalEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
+        </div>
+        <a className="primaryButton pairSetupDone" href="/devices">{tr("Open Devices", "打开设备页")}</a>
+      </CenteredCard>
+    );
+  }
+
+  if (approvedDeviceId && setupStep === "workspace") {
+    return (
+      <CenteredCard
+        title={tr("Choose a workspace", "选择工作区")}
+        body={tr(
+          "Workspace Scope is optional. If you choose a folder, Remote Arc will limit normal file reads and edits to that folder while sensitive paths stay protected.",
+          "Workspace Scope 是可选的。选择目录后，Remote Arc 会把普通文件读取和编辑限制在该目录内，同时继续保护敏感路径。",
+        )}
+      >
+        <div className="pairWorkspacePath">
+          <code>{directoryBrowser?.path || tr("Waiting for device…", "等待设备上线…")}</code>
+          {directoryBrowser?.parent && (
+            <button className="ghostButton small" onClick={() => void browseWorkspace(directoryBrowser.parent!)}>
+              ↑ {tr("Parent", "上一级")}
+            </button>
+          )}
+        </div>
+
+        <div className="pairWorkspaceList">
+          {directoryLoading && <div className="pairSetupEmpty">{tr("Loading folders…", "正在加载目录…")}</div>}
+          {!directoryLoading && directoryBrowser?.directories.map((entry) => (
+            <button key={entry.path} onClick={() => void browseWorkspace(entry.path)}>
+              <span>{entry.type === "symlink" ? "↗" : "▣"}</span>
+              <strong>{entry.name}</strong>
+              <small>›</small>
+            </button>
+          ))}
+          {!directoryLoading && directoryBrowser && !directoryBrowser.directories.length && (
+            <div className="pairSetupEmpty">{tr("No visible child folders.", "没有可见的子目录。")}</div>
+          )}
+        </div>
+
+        {directoryBrowser && directoryBrowser.protected_entries_omitted > 0 && (
+          <p className="pairSetupNote">{tr(
+            directoryBrowser.protected_entries_omitted + " protected folder(s) are hidden.",
+            "有 " + directoryBrowser.protected_entries_omitted + " 个受保护目录已隐藏。",
+          )}</p>
+        )}
+        {setupError && <p className="errorText">{setupError}</p>}
+
+        <div className="pairSetupActions">
+          <button className="ghostButton" onClick={() => setSetupStep("permissions")}>
+            {tr("Back", "返回")}
+          </button>
+          <button
+            className="primaryButton"
+            disabled={!directoryBrowser || directoryLoading || busy}
+            onClick={() => void applyWorkspaceScope()}
+          >
+            {busy ? tr("Saving…", "正在保存…") : tr("Use this folder", "使用此目录")}
+          </button>
+        </div>
+      </CenteredCard>
+    );
+  }
+
+  if (approvedDeviceId) {
+    return (
+      <CenteredCard
+        title={tr("Choose what AI can do", "选择 AI 可以做什么")}
+        body={tr(
+          "Your computer is paired. Start with the safe default, then opt in to file editing or terminal execution when you need them.",
+          "电脑已经配对。默认从安全的只读权限开始，需要时再主动开启文件编辑或终端执行。",
+        )}
+      >
+        <div className="pairConnectedDevice">
+          <div className="deviceIcon large">{platformGlyph(pairedDevice?.platform)}</div>
+          <div>
+            <strong>{pairedDevice?.name || pairing?.device_name}</strong>
+            <span>
+              {pairedDevice?.status === "online"
+                ? tr("Connected and ready", "已连接，可以使用")
+                : tr("Waiting for the local agent to connect…", "正在等待本地 Agent 连接…")}
+            </span>
+          </div>
+          <i className={"pairStatusDot " + (pairedDevice?.status === "online" ? "online" : "")} />
+        </div>
+
+        <div className="pairPermissionStack">
+          <section className={"pairPermissionCard " + (backgroundActuallyEnabled ? "enabled" : "")}>
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">↻</span>
+                <div>
+                  <div className="labelWithHelp">
+                    <strong>{tr("Background connection", "后台连接")}</strong>
+                    <HelpTip
+                      label={tr("How background reconnect works", "后台重连如何工作")}
+                      text={tr(
+                        "macOS uses launchd, Windows uses Task Scheduler, and Linux uses systemd --user. Locking the screen does not stop the agent. During sleep the network is unavailable; after wake, Wi-Fi changes, or transient Relay disconnects, the agent reconnects automatically. Turning this off keeps the current npx session in the foreground and does not install login autostart.",
+                        "macOS 使用 launchd，Windows 使用 Task Scheduler，Linux 使用 systemd --user。锁屏不会停止 Agent。睡眠时网络不可用；唤醒、Wi-Fi 切换或 Relay 短暂断开后，Agent 会自动重连。关闭后会保持当前 npx 会话前台连接，不安装登录自启。",
+                      )}
+                    />
+                  </div>
+                  <small>
+                    {backgroundActuallyEnabled
+                      ? tr("Installed locally", "本机已安装")
+                      : backgroundRequested
+                        ? tr("Recommended · selected by default", "推荐 · 默认选中")
+                        : tr("Foreground only", "仅前台运行")}
+                  </small>
+                </div>
+              </div>
+              <label className="compactSwitch">
+                <input
+                  type="checkbox"
+                  checked={backgroundRequested}
+                  disabled={!backgroundCapabilityReady || busy}
+                  onChange={(event) => setBackgroundRequested(event.target.checked)}
+                />
+                <span />
+              </label>
+            </div>
+            <p>
+              {backgroundRequested
+                ? tr(
+                    "When you finish setup, Remote Arc will install the OS login service and verify the local result before showing it as enabled.",
+                    "完成设置时，Remote Arc 会安装系统登录后台服务，并在本机确认成功后才显示为已开启。",
+                  )
+                : tr(
+                    "No login autostart will be installed. Keep this terminal session open while you want the computer reachable.",
+                    "不会安装登录自启。需要电脑保持可连接时，请保持当前终端会话运行。",
+                  )}
+            </p>
+            {!backgroundCapabilityReady && (
+              <small className="pairSetupNote">
+                {tr(
+                  "Waiting for the local agent before this choice can be applied.",
+                  "正在等待本机 Agent 上线，上线后才能应用此选项。",
+                )}
+              </small>
+            )}
+          </section>
+          <section className="pairPermissionCard enabled">
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">R</span>
+                <div>
+                  <strong>{tr("Read access", "读取权限")}</strong>
+                  <small>{tr("Safe default", "安全默认")}</small>
+                </div>
+              </div>
+              <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>
+            </div>
+            <ul>
+              <li>{tr("Browse files and folders", "浏览文件和目录")}</li>
+              <li>{tr("Read file contents and metadata", "读取文件内容与元数据")}</li>
+              <li>{tr("View running processes", "查看运行中的进程")}</li>
+            </ul>
+          </section>
+
+          <section className={"pairPermissionCard " + (fileEditingEnabled ? "enabled" : "")}>
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">✎</span>
+                <div>
+                  <strong>{tr("File editing", "文件编辑")}</strong>
+                  <small>{tr("Recommended for coding, documents and data", "推荐用于开发、文档和数据任务")}</small>
+                </div>
+              </div>
+              {fileEditingEnabled && <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>}
+            </div>
+            <p>{tr(
+              "Create and edit files with Sensitive Path Protection and Local Undo. You can optionally add a Workspace Scope to limit normal file access to one folder.",
+              "开启文件创建与编辑，并继续使用 Sensitive Path Protection 和 Local Undo。你也可以选择添加 Workspace Scope，把普通文件访问限制在一个目录内。",
+            )}</p>
+            {!fileEditingEnabled ? (
+              <button
+                className="primaryButton"
+                disabled={!fileEditingSupported || busy}
+                onClick={() => void enableFileEditing()}
+              >
+                {fileEditingSupported
+                  ? (busy ? tr("Enabling…", "正在开启…") : tr("Enable file editing", "开启文件编辑"))
+                  : tr("Waiting for device capability…", "等待设备能力上线…")}
+              </button>
+            ) : (
+              <div className="pairWorkspaceControl">
+                <div>
+                  <span>{tr("Workspace Scope", "Workspace Scope")}</span>
+                  <code>
+                    {pairedDevice?.workspace_roots?.[0] ||
+                      tr("All non-sensitive paths", "所有非敏感路径")}
+                  </code>
+                </div>
+                <button className="ghostButton" onClick={() => void openWorkspacePicker()}>
+                  {pairedDevice?.workspace_roots?.length
+                    ? tr("Change workspace", "更改工作区")
+                    : tr("Limit to a workspace", "限制到工作区")}
+                </button>
+              </div>
+            )}
+          </section>
+
+          <section className={"pairPermissionCard terminal " + (terminalEnabled ? "enabled" : "")}>
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">›_</span>
+                <div>
+                  <strong>{tr("Terminal access", "终端权限")}</strong>
+                  <small>{tr("Advanced", "高级功能")}</small>
+                </div>
+              </div>
+              {terminalEnabled && <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>}
+            </div>
+            <p>{tr(
+              "Allow AI to run shell commands. Commands can modify local state or external services, and Workspace Scope is not a complete OS sandbox.",
+              "允许 AI 执行 Shell 命令。命令可能修改本地状态或外部服务，Workspace Scope 也不是完整的操作系统沙箱。",
+            )}</p>
+            {!terminalEnabled && !terminalConfirm && (
+              <button
+                className="ghostButton"
+                disabled={!terminalSupported}
+                onClick={() => setTerminalConfirm(true)}
+              >
+                {tr("Enable terminal access", "开启终端权限")}
+              </button>
+            )}
+            {!terminalEnabled && terminalConfirm && (
+              <div className="pairTerminalConfirm">
+                <span>{tr("Terminal commands can have effects that Local Undo cannot reverse.", "终端命令可能产生 Local Undo 无法撤销的影响。")}</span>
+                <div>
+                  <button className="ghostButton" onClick={() => setTerminalConfirm(false)}>{tr("Cancel", "取消")}</button>
+                  <button className="dangerConfirmButton" disabled={busy} onClick={() => void enableTerminal()}>
+                    {busy ? tr("Enabling…", "正在开启…") : tr("Confirm terminal access", "确认开启终端")}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+
+        {setupError && <p className="errorText">{setupError}</p>}
+
+        <div className="pairSetupFooter">
+          <span>{tr("You can change every permission later from Devices.", "之后可以在设备页随时修改所有权限。")}</span>
+          <button
+            className="primaryButton"
+            disabled={!backgroundCapabilityReady || busy}
+            onClick={() => void finishSetup()}
+          >
+            {busy
+              ? tr("Saving setup…", "正在保存设置…")
+              : tr("Finish setup", "完成设置")}
+          </button>
+        </div>
       </CenteredCard>
     );
   }
@@ -581,10 +1133,10 @@ function PairDevice({
           </div>
           <div className="permissionBox">
             <div>
-              <strong>{tr("Developer access", "开发者权限")}</strong>
-              <span>{tr("Files, processes and development commands", "文件、进程与开发命令")}</span>
+              <strong>{tr("Read-only access", "只读权限")}</strong>
+              <span>{tr("Files, folders, metadata and process visibility", "文件、目录、元数据与进程可见性")}</span>
             </div>
-            <span className="permissionBadge">{tr("Local policy enforced", "本机权限策略生效")}</span>
+            <span className="permissionBadge">{tr("Safe default", "安全默认")}</span>
           </div>
           <button className="approveButton" onClick={() => void approve()} disabled={busy}>
             {busy ? tr("Authorizing…", "授权中…") : tr("Authorize this device", "授权此设备")}
@@ -2873,6 +3425,51 @@ function Dashboard({
     return true;
   }
 
+  async function updateDeviceBackground(device: Device, enabled: boolean) {
+    if (device.status !== "online") {
+      await showNotice(
+        tr("Computer is offline", "电脑当前离线"),
+        tr(
+          "Background mode can only be changed while the local Remote Arc agent is online. If it was disabled previously, run npx remotelink once on that computer to reconnect it.",
+          "只有本机 Remote Arc Agent 在线时才能修改后台运行设置。如果之前已经关闭，请在那台电脑上运行一次 npx remotelink 重新连接。",
+        ),
+      );
+      return;
+    }
+    if (!device.background_agent_available) {
+      await showNotice(
+        tr("Update remotelink first", "请先更新 remotelink"),
+        tr(
+          "This computer is running an older Remote Arc client that does not support background-agent controls yet.",
+          "这台电脑正在运行旧版 Remote Arc 客户端，暂不支持后台 Agent 控制。",
+        ),
+      );
+      return;
+    }
+
+    const response = await fetch(
+      "/api/devices/" + encodeURIComponent(device.id) + "/background",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      },
+    );
+    const payload = await response.json().catch(() => ({})) as { error?: string };
+    if (!response.ok) {
+      await showNotice(
+        tr("Background setting was not updated", "后台设置未更新"),
+        payload.error ||
+          tr(
+            "Remote Arc could not update the background connection on this computer.",
+            "Remote Arc 无法更新这台电脑的后台连接设置。",
+          ),
+      );
+      return;
+    }
+    await refreshAll();
+  }
+
   async function updateDeviceTools(device: Device, tool: string, enabled: boolean) {
     if (enabled && tool === "start_process") {
       const confirmed = await askConfirm(
@@ -3374,6 +3971,50 @@ function Dashboard({
                       <div><span>{tr("Last seen", "最后在线")}</span><strong>{timeAgo(device.last_seen)}</strong></div>
                       <div><span>{tr("Enabled tools", "已启用工具")}</span><strong>{enabledTools.length} / {allTools.length}</strong></div>
                       <div><span>Device ID</span><strong>{device.id.slice(0,8)}</strong></div>
+                    </div>
+
+                    <div className="deviceBackgroundRow">
+                      <div>
+                        <div className="labelWithHelp">
+                          <strong>{tr("Background connection", "后台连接")}</strong>
+                          <HelpTip
+                            label={tr("About background connection", "了解后台连接")}
+                            text={tr(
+                              "macOS uses launchd, Windows uses Task Scheduler, and Linux uses systemd --user. Locking the screen does not stop the agent. During sleep the network is unavailable; after wake, Wi-Fi changes, or transient Relay disconnects, a WebSocket liveness watchdog detects stale connections and the agent reconnects with exponential backoff from 1 to 30 seconds. On Windows, the task starts at user logon, StartWhenAvailable is enabled, and task failures are retried. A powered-off or still-sleeping computer remains unavailable until the OS resumes. Turning this off removes login autostart; an offline device cannot be re-enabled from the cloud.",
+                              "macOS 使用 launchd，Windows 使用 Task Scheduler，Linux 使用 systemd --user。锁屏不会停止 Agent。电脑睡眠期间网络不可用；唤醒后、Wi-Fi 切换或 Relay 短暂断开时，WebSocket 存活检测会识别失效连接，并按 1 到 30 秒的指数退避自动重连。Windows 会在用户登录时启动任务，同时启用 StartWhenAvailable，并在任务异常失败后重试。电脑如果仍在睡眠或已经关机，则必须等操作系统恢复后才能重新在线。关闭此开关会移除登录自启动；设备已经离线时无法从云端重新开启。",
+                            )}
+                          />
+                        </div>
+                        <span>
+                          {!device.background_agent_available
+                            ? tr("Requires the next remotelink release", "需要新版 remotelink")
+                            : device.background_enabled === true
+                              ? tr(
+                                  "Starts at login · auto reconnect" +
+                                    (device.background_service ? " · " + device.background_service : ""),
+                                  "登录自启 · 自动重连" +
+                                    (device.background_service ? " · " + device.background_service : ""),
+                                )
+                              : device.background_enabled === false
+                                ? tr(
+                                    "Off · use npx remotelink locally to reconnect after this session ends",
+                                    "已关闭 · 当前会话结束后需在本机运行 npx remotelink 重新连接",
+                                  )
+                                : tr(
+                                    "Not configured · current session only",
+                                    "尚未配置 · 仅当前会话",
+                                  )}
+                        </span>
+                      </div>
+                      <label className="compactSwitch">
+                        <input
+                          type="checkbox"
+                          checked={device.background_enabled === true}
+                          disabled={device.status !== "online" || !device.background_agent_available}
+                          onChange={(event) => void updateDeviceBackground(device, event.target.checked)}
+                        />
+                        <span />
+                      </label>
                     </div>
 
                     <div className="deviceAccessSummary">
