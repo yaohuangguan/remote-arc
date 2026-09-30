@@ -8737,3 +8737,9 @@ body{font-size:18px;line-height:1.6}
     font-size:12px;
   }
 }
+
+:root[data-theme="light"] .securityFlow>div>span{
+  background:#e7f5fa;
+  color:#036b8d;
+  font-size:12px;
+}
