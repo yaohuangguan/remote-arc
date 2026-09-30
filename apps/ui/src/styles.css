@@ -10127,3 +10127,571 @@ body{font-size:18px;line-height:1.6}
     font-size:11px!important;
   }
 }
+
+/* ==========================================================================
+   Dashboard console UI — final layer.
+   Light is the default product surface; dark remains a fully supported option.
+   ========================================================================== */
+
+.appFrame{
+  grid-template-columns:248px minmax(0,1fr);
+}
+.appFrame .sidebar{
+  width:auto!important;
+  padding:22px 14px 16px;
+  border-right:1px solid #e3eef2;
+  background:rgba(248,252,253,.96);
+  backdrop-filter:blur(18px);
+}
+.appFrame .sidebar .brand{
+  min-height:38px;
+  padding:0 8px;
+}
+.appFrame .sideNav{
+  gap:5px;
+  margin-top:20px;
+}
+.appFrame .sideNav button{
+  position:relative;
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr);
+  gap:10px;
+  align-items:center;
+  min-height:44px;
+  padding:7px 10px;
+  border:1px solid transparent;
+  border-radius:11px;
+  background:transparent;
+  color:#4f6d78;
+  font-size:14px;
+  font-weight:560;
+  line-height:1;
+  text-align:left;
+  transition:background .15s ease,border-color .15s ease,color .15s ease,transform .15s ease;
+}
+.appFrame .sideNav button:hover{
+  border-color:#dcecf1;
+  background:#f0f7f9;
+  color:#173f4d;
+  transform:translateX(1px);
+}
+.appFrame .sideNav button.active{
+  border-color:#cce7ee;
+  background:#e5f4f8;
+  color:#123d4b;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.72);
+}
+.appFrame .sideNavIcon{
+  display:grid;
+  place-items:center;
+  width:30px!important;
+  height:30px;
+  border-radius:8px;
+  color:#2198bb!important;
+  transition:background .15s ease,color .15s ease;
+}
+.appFrame .sideNav button:hover .sideNavIcon{
+  background:#fff;
+  color:#087ea4!important;
+}
+.appFrame .sideNav button.active .sideNavIcon{
+  background:#fff;
+  color:#067a9f!important;
+  box-shadow:0 1px 3px rgba(13,85,106,.08);
+}
+.appFrame .sideNavLabel{
+  width:auto!important;
+  color:inherit!important;
+  text-align:left!important;
+}
+.appFrame .sidebarStatus{
+  margin-top:auto;
+  gap:10px;
+  padding:11px 12px;
+  border:1px solid #e0ecef;
+  border-radius:11px;
+  background:#fff;
+  box-shadow:0 1px 2px rgba(23,63,77,.03);
+}
+.appFrame .sidebarStatus strong{
+  color:#244b58;
+  font-size:12px;
+}
+.appFrame .sidebarStatus span{
+  color:#6d8891;
+  font-size:11px;
+}
+.appFrame .sidebarAccount{
+  margin-top:9px;
+  grid-template-columns:34px minmax(0,1fr) 28px;
+  padding:9px 10px;
+  border:1px solid transparent;
+  border-radius:11px;
+}
+.appFrame .sidebarAccount:hover{
+  border-color:#e3edf0;
+  background:#f5f9fa;
+}
+.appFrame .sidebarAccount strong{
+  color:#244b58;
+  font-size:12px;
+}
+.appFrame .sidebarAccount span{
+  color:#718992;
+  font-size:11px;
+}
+.appFrame .sidebarAccount button{
+  display:grid;
+  place-items:center;
+  width:28px;
+  height:28px;
+  border-radius:8px;
+  color:#718992;
+}
+.appFrame .sidebarAccount button:hover{
+  background:#eaf3f6;
+  color:#285867;
+}
+
+/* Compact control-panel headers: factual titles, never landing-page slogans. */
+.appFrame .overviewTopbar,
+.appFrame .securityTopbar,
+.appFrame .pageHeader{
+  align-items:center;
+  padding:26px 0 16px;
+}
+.appFrame .overviewTopbar h1,
+.appFrame .securityTopbar h1,
+.appFrame .pageHeader h1{
+  margin:5px 0 5px;
+  font-size:26px!important;
+  line-height:1.15;
+  letter-spacing:-.025em;
+}
+.appFrame .overviewTopbar p,
+.appFrame .securityTopbar p,
+.appFrame .pageHeader p{
+  max-width:720px;
+  margin:0;
+  color:#607b85;
+  font-size:13px;
+  line-height:1.55;
+}
+.appFrame .eyebrow{
+  color:#247f9d;
+  font-size:10px;
+  letter-spacing:.11em;
+}
+
+/* Connect AI is a launcher/reference view rather than another marketing page. */
+.appFrame .connectOverview{
+  gap:12px;
+  margin-bottom:18px;
+}
+.appFrame .connectEndpointPanel,
+.appFrame .connectHealthPanel{
+  border-color:#e1ebef;
+  background:#fff;
+  border-radius:14px;
+}
+.appFrame .connectEndpointPanel{
+  padding:18px 19px;
+}
+.appFrame .connectHealthPanel{
+  padding:18px;
+}
+.appFrame .connectPanelHeader h2{
+  margin:5px 0 6px;
+  font-size:17px;
+  letter-spacing:-.015em;
+}
+.appFrame .connectPanelHeader p{
+  font-size:13px;
+  line-height:1.55;
+}
+.appFrame .connectSectionHeading{
+  grid-template-columns:minmax(0,1fr) minmax(280px,.7fr);
+  gap:28px;
+  margin-bottom:12px;
+}
+.appFrame .connectSectionHeading h2{
+  margin:4px 0 0;
+  font-size:18px;
+  letter-spacing:-.015em;
+}
+.appFrame .connectSectionHeading>p{
+  font-size:13px;
+  line-height:1.55;
+}
+.appFrame .connectClientSection{
+  margin-top:22px;
+}
+.appFrame .connectClientGrid.connectAgentLaunchers{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.appFrame .connectAgentLaunchers .connectClientCard{
+  min-height:218px;
+  padding:18px;
+  border-color:#e0ebef;
+  border-radius:14px;
+  background:#fff;
+  color:#173b48;
+  text-decoration:none;
+  box-shadow:none;
+  cursor:pointer;
+  transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease,background .15s ease;
+}
+.appFrame .connectAgentLaunchers .connectClientCard.primary{
+  border-color:#cbe6ee;
+  background:#f7fcfd;
+  box-shadow:none;
+}
+.appFrame .connectAgentLaunchers .connectClientCard:hover{
+  transform:translateY(-2px);
+  border-color:#9ed3e0;
+  background:#fbfeff;
+  box-shadow:0 10px 28px rgba(20,93,116,.07);
+}
+.appFrame .connectAgentLaunchers .connectClientIdentity h3{
+  margin-top:2px;
+  color:#173b48;
+  font-size:18px;
+}
+.appFrame .connectAgentLaunchers .connectClientIdentity img.monoLogo{
+  filter:none;
+}
+.appFrame .connectAgentLaunchers .connectClientIdentity .protocolMark.large{
+  background:#eaf6f9;
+  color:#087ea4;
+}
+.appFrame .connectAgentLaunchers .clientState{
+  background:#eef5f7;
+  color:#55727d;
+  font-size:11px;
+}
+.appFrame .connectAgentLaunchers .clientState.recommended{
+  background:#e4f4f8;
+  color:#087ea4;
+}
+.appFrame .connectAgentLaunchers .connectClientCard>p{
+  color:#58747e;
+  font-size:13px;
+  line-height:1.58;
+}
+.connectAgentAction{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  margin-top:auto;
+  padding-top:14px;
+  border-top:1px solid #e7eff2;
+  color:#087ea4;
+  font-size:12px;
+  font-weight:750;
+}
+.connectAgentAction b{
+  font-size:14px;
+}
+.appFrame .connectGuide,
+.appFrame .connectTryPanel{
+  border-color:#e1ebef;
+  border-radius:14px;
+  background:#fff;
+}
+.appFrame .connectGuide{
+  margin-top:22px;
+}
+.appFrame .connectTryPanel{
+  margin-top:12px;
+}
+.appFrame .connectTryCopy h2{
+  font-size:18px;
+}
+.appFrame .connectTryCopy p{
+  font-size:13px;
+}
+
+/* Settings reads like system preferences, not a card gallery. */
+.appFrame .dashboardUtilityHeader{
+  padding-bottom:14px;
+}
+.appFrame .settingsGrid{
+  display:grid;
+  gap:0;
+  overflow:hidden;
+  border:1px solid #e0eaee;
+  border-radius:14px;
+  background:#fff;
+}
+.appFrame .settingsCard{
+  min-height:auto;
+  padding:18px 20px;
+  border:0;
+  border-bottom:1px solid #e8eff2;
+  border-radius:0;
+  background:transparent;
+}
+.appFrame .settingsCard:last-child{
+  border-bottom:0;
+}
+.appFrame .settingsCard h2{
+  margin:0 0 4px;
+  color:#173b48;
+  font-size:15px;
+}
+.appFrame .settingsCard p{
+  max-width:700px;
+  color:#637e87;
+  font-size:12px;
+  line-height:1.55;
+}
+.appFrame .settingsCard code{
+  color:#315c67;
+  font-size:12px;
+}
+.appFrame .languageSetting button,
+.appFrame .themeSetting button{
+  border-color:#dce8ec;
+  background:#f8fbfc;
+  color:#55717a;
+}
+.appFrame .languageSetting button:hover,
+.appFrame .themeSetting button:hover{
+  border-color:#b9dce5;
+  background:#eef7fa;
+  color:#214c59;
+}
+.appFrame .languageSetting button.active,
+.appFrame .themeSetting button.active{
+  border-color:#9fd4e0;
+  background:#e5f4f8!important;
+  color:#075f7a!important;
+}
+.appFrame .planValue{
+  color:#087ea4;
+}
+
+/* Mobile nav uses the same icon system. */
+.mobileBottomNav button>span{
+  display:grid;
+  place-items:center;
+  color:#63818b;
+}
+.mobileBottomNav button>span svg{
+  width:18px;
+  height:18px;
+}
+.mobileBottomNav button.active>span{
+  color:#087ea4;
+}
+
+/* Dark theme keeps the same geometry and states; it does not leak into Light. */
+:root[data-theme="dark"] .appFrame .sidebar{
+  border-right-color:#162936;
+  background:rgba(5,14,20,.97);
+}
+:root[data-theme="dark"] .appFrame .sideNav button{
+  color:#8da5ad;
+}
+:root[data-theme="dark"] .appFrame .sideNav button:hover{
+  border-color:#1b3543;
+  background:#0a1a23;
+  color:#d7e8ed;
+}
+:root[data-theme="dark"] .appFrame .sideNav button.active{
+  border-color:#21495a;
+  background:#102733;
+  color:#effafd;
+  box-shadow:none;
+}
+:root[data-theme="dark"] .appFrame .sideNav button:hover .sideNavIcon,
+:root[data-theme="dark"] .appFrame .sideNav button.active .sideNavIcon{
+  background:#0b1c25;
+  color:#67c8e7!important;
+  box-shadow:none;
+}
+:root[data-theme="dark"] .appFrame .sidebarStatus{
+  border-color:#18303d;
+  background:#07151d;
+}
+:root[data-theme="dark"] .appFrame .sidebarStatus strong,
+:root[data-theme="dark"] .appFrame .sidebarAccount strong{
+  color:#dcecf0;
+}
+:root[data-theme="dark"] .appFrame .sidebarStatus span,
+:root[data-theme="dark"] .appFrame .sidebarAccount span{
+  color:#7f9aa4;
+}
+:root[data-theme="dark"] .appFrame .sidebarAccount:hover{
+  border-color:#17303c;
+  background:#081720;
+}
+:root[data-theme="dark"] .appFrame .overviewTopbar p,
+:root[data-theme="dark"] .appFrame .securityTopbar p,
+:root[data-theme="dark"] .appFrame .pageHeader p{
+  color:#8da5ad;
+}
+:root[data-theme="dark"] .appFrame .connectEndpointPanel,
+:root[data-theme="dark"] .appFrame .connectHealthPanel,
+:root[data-theme="dark"] .appFrame .connectAgentLaunchers .connectClientCard,
+:root[data-theme="dark"] .appFrame .connectGuide,
+:root[data-theme="dark"] .appFrame .connectTryPanel,
+:root[data-theme="dark"] .appFrame .settingsGrid{
+  border-color:#1b3340;
+  background:#07141c;
+}
+:root[data-theme="dark"] .appFrame .connectAgentLaunchers .connectClientCard.primary{
+  border-color:#245064;
+  background:#0a1b24;
+}
+:root[data-theme="dark"] .appFrame .connectAgentLaunchers .connectClientCard:hover{
+  border-color:#33728a;
+  background:#0b1d27;
+  box-shadow:none;
+}
+:root[data-theme="dark"] .appFrame .connectAgentLaunchers .connectClientIdentity h3,
+:root[data-theme="dark"] .appFrame .settingsCard h2{
+  color:#e7f4f7;
+}
+:root[data-theme="dark"] .appFrame .connectAgentLaunchers .connectClientCard>p,
+:root[data-theme="dark"] .appFrame .settingsCard p{
+  color:#8da5ad;
+}
+:root[data-theme="dark"] .connectAgentAction,
+:root[data-theme="dark"] .appFrame .settingsCard{
+  border-color:#172e3a;
+}
+:root[data-theme="dark"] .appFrame .languageSetting button,
+:root[data-theme="dark"] .appFrame .themeSetting button{
+  border-color:#1e3947;
+  background:#081821;
+  color:#91aab2;
+}
+:root[data-theme="dark"] .appFrame .languageSetting button:hover,
+:root[data-theme="dark"] .appFrame .themeSetting button:hover{
+  border-color:#2b5a6d;
+  background:#0b202a;
+  color:#d9edf2;
+}
+:root[data-theme="dark"] .appFrame .languageSetting button.active,
+:root[data-theme="dark"] .appFrame .themeSetting button.active{
+  border-color:#2f7189;
+  background:#0d2935!important;
+  color:#8addf7!important;
+}
+
+@media(max-width:1100px){
+  .appFrame .connectClientGrid.connectAgentLaunchers{
+    grid-template-columns:1fr;
+  }
+}
+@media(max-width:900px){
+  .appFrame{
+    grid-template-columns:1fr;
+  }
+  .appFrame .overviewTopbar,
+  .appFrame .securityTopbar,
+  .appFrame .pageHeader{
+    padding-top:20px;
+  }
+}
+@media(max-width:620px){
+  .appFrame .overviewTopbar h1,
+  .appFrame .securityTopbar h1,
+  .appFrame .pageHeader h1{
+    font-size:23px!important;
+  }
+  .appFrame .settingsCard{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:12px;
+  }
+  .appFrame .connectSectionHeading{
+    grid-template-columns:1fr;
+    gap:6px;
+  }
+}
+
+/* Lock the Light sidebar interaction states above older theme layers. */
+:root[data-theme="light"] .appFrame .sideNav button:hover{
+  border-color:#d7e9ee!important;
+  background:#eef6f8!important;
+  color:#204654!important;
+}
+:root[data-theme="light"] .appFrame .sideNav button.active{
+  border-color:#c8e4eb!important;
+  background:#e3f3f7!important;
+  color:#123d4b!important;
+  box-shadow:inset 3px 0 0 #1599bd,inset 0 0 0 1px rgba(255,255,255,.76)!important;
+}
+:root[data-theme="light"] .appFrame .sideNav button.active .sideNavIcon{
+  background:#fff!important;
+  color:#067a9f!important;
+}
+
+/* Dashboard final readability pass. */
+.appFrame .eyebrow{
+  font-size:11px;
+}
+.appFrame .clientState{
+  font-size:12px;
+}
+
+/* Light: secondary information must still clear normal-text contrast. */
+:root[data-theme="light"] .appFrame .sidebarStatus span,
+:root[data-theme="light"] .appFrame .sidebarAccount span,
+:root[data-theme="light"] .appFrame .sidebarAccount button{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .appFrame .securityTopbar p{
+  color:#536b75!important;
+}
+:root[data-theme="light"] .appFrame .clientState.recommended{
+  color:#056887!important;
+}
+
+/* Dark: keep the optional theme first-class rather than preserving old faint microcopy. */
+:root[data-theme="dark"] .appFrame small{
+  color:#a1b7be;
+}
+:root[data-theme="dark"] .appFrame .privacyPill{
+  color:#b6d4dc;
+}
+:root[data-theme="dark"] .appFrame .dashboardFooter{
+  color:#98afb7;
+}
+:root[data-theme="dark"] .appFrame .activityItem span,
+:root[data-theme="dark"] .appFrame .overviewDeviceMeta span,
+:root[data-theme="dark"] .appFrame .overviewDeviceMeta small,
+:root[data-theme="dark"] .appFrame .deviceMetaGrid span,
+:root[data-theme="dark"] .appFrame .devicePresetRow>span,
+:root[data-theme="dark"] .appFrame .devicePresetRow button small,
+:root[data-theme="dark"] .appFrame .deviceToolDetails summary span,
+:root[data-theme="dark"] .appFrame .deviceSafetyDetails summary span,
+:root[data-theme="dark"] .appFrame .policyEmpty,
+:root[data-theme="dark"] .appFrame .policyPathChip button{
+  color:#9fb6bd;
+}
+:root[data-theme="dark"] .appFrame .connectAgentAction{
+  color:#8addf7;
+}
+:root[data-theme="dark"] .appFrame .clientState.recommended{
+  color:#8addf7;
+}
+:root[data-theme="dark"] .appFrame .settingsCard code{
+  color:#9ed9e8;
+}
+
+:root[data-theme="dark"] .appFrame .deviceStatusStrip span{
+  color:#9fb6bd;
+}
+:root[data-theme="dark"] .appFrame .connectAgentLaunchers .clientState{
+  background:#0b1d27;
+  color:#9eb6be;
+}
+:root[data-theme="dark"] .appFrame .connectAgentLaunchers .clientState.recommended{
+  background:#0d2935;
+  color:#8addf7;
+}

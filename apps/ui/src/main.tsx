@@ -188,6 +188,13 @@ type DashboardTab = "overview" | "devices" | "connect" | "security" | "monitor" 
 const MARKETING_ORIGIN = "https://remotearc.app";
 const APP_ORIGIN = "https://mcp.remotearc.app";
 const MCP_ENDPOINT = APP_ORIGIN + "/mcp";
+const CHATGPT_PLUGIN_DIRECTORY_URL = "https://chatgpt.com/plugins?q=Remote%20Arc";
+const CLAUDE_CONNECTORS_URL = "https://claude.ai/settings/connectors";
+
+function cursorMcpInstallUrl() {
+  const config = window.btoa(JSON.stringify({ url: MCP_ENDPOINT }));
+  return "cursor://anysphere.cursor-deeplink/mcp/install?name=remote-arc&config=" + encodeURIComponent(config);
+}
 const DASHBOARD_PATHS: Record<DashboardTab, string> = {
   overview: "/overview",
   devices: "/devices",
@@ -256,6 +263,26 @@ const platformGlyph = (platform?: string | null) => {
   if (platform === "win32") return "⊞";
   return "›_";
 };
+
+function DashboardNavIcon({ tab }: { tab: DashboardTab }) {
+  const common = {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+  if (tab === "overview") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
+  if (tab === "devices") return <svg {...common}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
+  if (tab === "connect") return <svg {...common}><path d="M8.5 12.5 12 9l3.5 3.5"/><path d="M12 9v9"/><path d="M5 6.5A4.5 4.5 0 0 1 9.5 2h5A4.5 4.5 0 0 1 19 6.5"/></svg>;
+  if (tab === "security") return <svg {...common}><path d="M12 3 5 6v5c0 4.7 2.7 7.8 7 10 4.3-2.2 7-5.3 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>;
+  if (tab === "monitor") return <svg {...common}><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>;
+  return <svg {...common}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-3v-.08a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.56-1.03H5v-3h.44A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.69 4.7V4h3v.7a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.78 8l-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.94 11H21v3h-.06A1.7 1.7 0 0 0 19.4 15Z"/></svg>;
+}
 
 const timeAgo = (value?: string | null) => {
   if (!value) return "—";
@@ -3835,13 +3862,13 @@ function Dashboard({
     return event.event_type;
   };
 
-  const navItems: Array<[DashboardTab, string, string]> = [
-    ["overview", "⌂", tr("Overview", "概览")],
-    ["devices", "▣", tr("Devices", "设备")],
-    ["connect", "↗", tr("Connect AI", "连接 AI")],
-    ["security", "◇", tr("Security", "安全")],
-    ...(user.isAdmin ? [["monitor", "◉", tr("Monitor", "监控")] as [DashboardTab, string, string]] : []),
-    ["settings", "⚙", tr("Settings", "设置")],
+  const navItems: Array<[DashboardTab, string]> = [
+    ["overview", tr("Overview", "概览")],
+    ["devices", tr("Devices", "设备")],
+    ["connect", tr("Connect AI", "连接 AI")],
+    ["security", tr("Security", "安全")],
+    ...(user.isAdmin ? [["monitor", tr("Monitor", "监控")] as [DashboardTab, string]] : []),
+    ["settings", tr("Settings", "设置")],
   ];
 
   return (
@@ -3849,9 +3876,10 @@ function Dashboard({
       <aside className="sidebar">
         <Brand />
         <nav className="sideNav">
-          {navItems.map(([id, icon, label]) => (
+          {navItems.map(([id, label]) => (
             <button key={id} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
-              <span>{icon}</span>{label}
+              <span className="sideNavIcon"><DashboardNavIcon tab={id} /></span>
+              <span className="sideNavLabel">{label}</span>
             </button>
           ))}
         </nav>
@@ -4440,7 +4468,7 @@ function Dashboard({
                 <div className="connectPanelHeader">
                   <div>
                     <span className="eyebrow">{tr("YOUR REMOTE MCP ENDPOINT", "你的 REMOTE MCP 地址")}</span>
-                    <h2>{tr("One endpoint. Every paired device.", "一个端点，连接全部已配对设备。")}</h2>
+                    <h2>{tr("Remote MCP endpoint", "Remote MCP 地址")}</h2>
                     <p>{tr("Your AI connects here. Remote Arc handles OAuth, device discovery and routing behind it.", "AI 只需要连接这个地址；OAuth、设备发现和请求路由都由 Remote Arc 处理。")}</p>
                   </div>
                   <span className="connectSecurityBadge">OAuth 2.1 + PKCE</span>
@@ -4462,48 +4490,64 @@ function Dashboard({
 
             <section className="connectClientSection">
               <div className="connectSectionHeading">
-                <div><span className="eyebrow">{tr("CHOOSE YOUR AI", "选择你的 AI")}</span><h2>{tr("Connect the client you actually use.", "连接你真正使用的客户端。")}</h2></div>
+                <div><span className="eyebrow">{tr("AI CLIENTS", "AI 客户端")}</span><h2>{tr("Clients", "客户端")}</h2></div>
                 <p>{tr("ChatGPT is the recommended path. Other Remote MCP clients can use the same production endpoint.", "推荐优先使用 ChatGPT；其他支持 Remote MCP 的客户端也可以使用同一个生产地址。")}</p>
               </div>
 
-              <div className="connectClientGrid">
-                <article className="connectClientCard primary">
+              <div className="connectClientGrid connectAgentLaunchers">
+                <a className="connectClientCard primary" href={CHATGPT_PLUGIN_DIRECTORY_URL} target="_blank" rel="noreferrer">
                   <div className="connectClientTop">
                     <div className="connectClientIdentity"><img className="monoLogo" src={aiClients[0].icon} alt="" /><div><span className="eyebrow">CHATGPT</span><h3>ChatGPT</h3></div></div>
-                    <span className="clientState recommended">{tr("Recommended", "推荐")}</span>
+                    <span className="clientState recommended">{tr("Plugins", "Plugins")}</span>
                   </div>
-                  <p>{tr("Remote Arc is prepared for the public Plugins flow. Until the public listing is live, use the manual MCP setup below for early access.", "Remote Arc 已按公开 Plugin 流程准备完成；正式上架前，可通过下方手动 MCP 流程进行 Early Access。")}</p>
-                  <div className="connectMiniSteps">
-                    <span><b>1</b>{tr("Open Settings → Apps", "打开 Settings → Apps")}</span>
-                    <span><b>2</b>{tr("Create a custom MCP app", "创建自定义 MCP App")}</span>
-                    <span><b>3</b>{tr("Paste endpoint → Scan Tools → OAuth", "粘贴地址 → Scan Tools → OAuth")}</span>
-                  </div>
-                  <div className="connectClientFooter"><span className="clientHint">{tr("Public listing pending", "公开上架准备中")}</span><CopyButton value={mcpEndpoint} label={tr("Copy MCP URL", "复制 MCP 地址")} /></div>
-                </article>
+                  <p>{tr("Open the ChatGPT Plugin directory and find Remote Arc. Installation continues through ChatGPT and Remote Arc OAuth.", "打开 ChatGPT Plugin Directory 并找到 Remote Arc；之后由 ChatGPT 与 Remote Arc OAuth 完成安装。")}</p>
+                  <div className="connectAgentAction"><span>{tr("Open ChatGPT Plugins", "打开 ChatGPT Plugins")}</span><b>↗</b></div>
+                </a>
 
-                <article className="connectClientCard">
+                <a
+                  className="connectClientCard"
+                  href={CLAUDE_CONNECTORS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => void navigator.clipboard?.writeText(mcpEndpoint).catch(() => undefined)}
+                >
                   <div className="connectClientTop">
                     <div className="connectClientIdentity"><img className="colorLogo" src={aiClients[1].icon} alt="" /><div><span className="eyebrow">CLAUDE</span><h3>Claude</h3></div></div>
-                    <span className="clientState">{tr("Remote MCP", "Remote MCP")}</span>
+                    <span className="clientState">{tr("Connectors", "Connectors")}</span>
                   </div>
-                  <p>{tr("If your Claude client exposes a Remote MCP / custom integration flow, use the same endpoint and complete Remote Arc OAuth.", "如果你的 Claude 客户端提供 Remote MCP / 自定义集成入口，使用同一个地址并完成 Remote Arc OAuth 即可。")}</p>
-                  <div className="connectClientFooter"><span className="clientHint">{tr("Same account · same devices", "同一账户 · 同一设备")}</span><CopyButton value={mcpEndpoint} label={tr("Copy endpoint", "复制地址")} /></div>
-                </article>
+                  <p>{tr("Open Claude Connectors. The Remote Arc endpoint is copied automatically so you can add it as a Remote MCP connector.", "打开 Claude Connectors；Remote Arc Endpoint 会自动复制，可直接添加为 Remote MCP Connector。")}</p>
+                  <div className="connectAgentAction"><span>{tr("Open Claude Connectors", "打开 Claude Connectors")}</span><b>↗</b></div>
+                </a>
 
-                <article className="connectClientCard">
+                <a className="connectClientCard" href={cursorMcpInstallUrl()}>
                   <div className="connectClientTop">
-                    <div className="connectClientIdentity"><span className="protocolMark large">M</span><div><span className="eyebrow">REMOTE MCP</span><h3>{tr("Any MCP client", "任意 MCP 客户端")}</h3></div></div>
-                    <span className="clientState">{tr("Standards-based", "标准协议")}</span>
+                    <div className="connectClientIdentity"><img className="colorLogo" src={aiClients[2].icon} alt="" /><div><span className="eyebrow">CURSOR</span><h3>Cursor</h3></div></div>
+                    <span className="clientState">{tr("One-click MCP", "一键 MCP")}</span>
                   </div>
-                  <p>{tr("Use Remote Arc anywhere the client supports remote MCP servers and OAuth. No separate endpoint is required per device.", "只要客户端支持 Remote MCP Server 与 OAuth，就可以直接接入 Remote Arc；每台设备不需要单独配置地址。")}</p>
-                  <div className="connectClientFooter"><span className="clientHint">OAuth 2.1 + PKCE</span><CopyButton value={mcpEndpoint} label={tr("Copy endpoint", "复制地址")} /></div>
-                </article>
+                  <p>{tr("Use Cursor's MCP install deeplink. Cursor reviews the Remote Arc configuration before installation and then completes OAuth.", "使用 Cursor 官方 MCP 安装 Deeplink；Cursor 会先确认 Remote Arc 配置，再完成 OAuth。")}</p>
+                  <div className="connectAgentAction"><span>{tr("Add to Cursor", "添加到 Cursor")}</span><b>↗</b></div>
+                </a>
+
+                <a
+                  className="connectClientCard"
+                  href={MARKETING_ORIGIN + "/docs/mcp"}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => void navigator.clipboard?.writeText(mcpEndpoint).catch(() => undefined)}
+                >
+                  <div className="connectClientTop">
+                    <div className="connectClientIdentity"><span className="protocolMark large">M</span><div><span className="eyebrow">REMOTE MCP</span><h3>{tr("Other MCP client", "其他 MCP 客户端")}</h3></div></div>
+                    <span className="clientState">{tr("Manual", "手动")}</span>
+                  </div>
+                  <p>{tr("Copy the production endpoint and open the Remote MCP reference for any compatible client.", "复制生产 Endpoint，并打开 Remote MCP 参考文档用于其他兼容客户端。")}</p>
+                  <div className="connectAgentAction"><span>{tr("Copy endpoint & open docs", "复制地址并打开文档")}</span><b>↗</b></div>
+                </a>
               </div>
             </section>
 
             <section className="connectGuide">
               <div className="connectSectionHeading compact">
-                <div><span className="eyebrow">{tr("SETUP FLOW", "连接流程")}</span><h2>{tr("Three steps from endpoint to real machine.", "三步从 MCP 地址连接到真实电脑。")}</h2></div>
+                <div><span className="eyebrow">{tr("SETUP", "配置")}</span><h2>{tr("Connection flow", "连接流程")}</h2></div>
               </div>
               <div className="connectTimeline">
                 <article><span className="timelineNumber">01</span><div><strong>{tr("Add Remote Arc", "添加 Remote Arc")}</strong><p>{tr("Install the public plugin when available, or add the Remote MCP endpoint manually during early access.", "公开插件上线后直接安装；Early Access 阶段则手动添加 Remote MCP 地址。")}</p></div></article>
@@ -4513,7 +4557,7 @@ function Dashboard({
             </section>
 
             <section className="connectTryPanel">
-              <div className="connectTryCopy"><span className="eyebrow">{tr("TRY IT NOW", "马上试试")}</span><h2>{tr("Start with a natural request.", "直接用自然语言开始。")}</h2><p>{tr("Once connected, you do not need MCP syntax. Just refer to the device and the task.", "连接后不需要记任何 MCP 语法，只需要说设备和任务。")}</p></div>
+              <div className="connectTryCopy"><span className="eyebrow">{tr("EXAMPLES", "示例")}</span><h2>{tr("Example prompts", "示例指令")}</h2><p>{tr("Once connected, refer to the device and the task. Remote Arc handles MCP routing.", "连接后只需要说明设备和任务，MCP 路由由 Remote Arc 处理。")}</p></div>
               <div className="connectPromptGrid">
                 {[
                   tr("Show me my connected computers.", "看看我已连接的电脑。"),
@@ -4784,7 +4828,7 @@ function Dashboard({
 
         {active === "settings" && (
           <>
-            <section className="pageHeader"><div><span className="eyebrow">{tr("SETTINGS", "设置")}</span><h1>{tr("Make Remote Arc yours.", "把 Remote Arc 调成你喜欢的样子。")}</h1><p>{tr("Language, plan information and account preferences.", "语言、套餐信息与账户偏好。")}</p></div></section>
+            <section className="pageHeader dashboardUtilityHeader"><div><span className="eyebrow">{tr("SETTINGS", "设置")}</span><h1>{tr("Settings", "设置")}</h1><p>{tr("Appearance, language, account, MCP and billing preferences.", "外观、语言、账号、MCP 与账单偏好。")}</p></div></section>
             <section className="settingsGrid">
               <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Choose Light, Dark or System. Your preference is saved in this browser.", "选择浅色、深色或跟随系统；偏好会保存在当前浏览器。")}</p></div><ThemeSwitcher /></article>
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
@@ -4799,14 +4843,14 @@ function Dashboard({
 
       <nav className="mobileBottomNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
         {([
-          ["overview", "⌂", tr("Home", "首页")],
-          ["devices", "▣", tr("Devices", "设备")],
-          ["connect", "↗", tr("Connect", "连接")],
-          ["security", "◇", tr("Security", "安全")],
-          ["settings", "⚙", tr("Settings", "设置")],
-        ] as Array<[DashboardTab, string, string]>).map(([id, icon, label]) => (
+          ["overview", tr("Home", "首页")],
+          ["devices", tr("Devices", "设备")],
+          ["connect", tr("Connect", "连接")],
+          ["security", tr("Security", "安全")],
+          ["settings", tr("Settings", "设置")],
+        ] as Array<[DashboardTab, string]>).map(([id, label]) => (
           <button key={id} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
-            <span aria-hidden="true">{icon}</span>
+            <span aria-hidden="true"><DashboardNavIcon tab={id} /></span>
             <small>{label}</small>
           </button>
         ))}

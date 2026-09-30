@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#020617" />
+    <meta name="theme-color" content="#f8fbff" />
     <meta name="application-name" content="Remote Arc" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -17,7 +17,7 @@
         const saved = localStorage.getItem("remote-arc-theme");
         const resolved = saved === "system"
           ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-          : (saved === "light" || saved === "dark" ? saved : "dark");
+          : (saved === "light" || saved === "dark" ? saved : "light");
         document.documentElement.dataset.theme = resolved;
         document.documentElement.style.colorScheme = resolved;
       } catch {}
