@@ -4,11 +4,22 @@ import { getDevicesForUser } from "./device.js";
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
 import { consumeToolCall } from "./usage.js";
+import {
+  cancelAutomation,
+  createAutomation,
+  getAutomation,
+  listAutomationRuns,
+  listAutomations,
+  pauseAutomation,
+  reapproveAutomation,
+  resumeAutomation,
+} from "./automations.js";
 
 type Env = {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   PUBLIC_ORIGIN: string;
+  APP_ORIGIN?: string;
   MONTHLY_TOOL_CALL_LIMIT?: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
 };
@@ -17,7 +28,9 @@ type Scope =
   | "devices:read"
   | "computer:read"
   | "computer:write"
-  | "browser:read";
+  | "browser:read"
+  | "automation:read"
+  | "automation:write";
 
 const hasScope = (identity: OAuthIdentity, scope: Scope) =>
   identity.scope.split(/\s+/).includes(scope);
@@ -623,6 +636,273 @@ export function createRemoteLinkMcp(
         await consume(env, identity);
         return textResult(
           await callDevice(env, identity, device_id, "undo_last_change", {}),
+        );
+      },
+    );
+
+
+    const automationMatchValue = z.union([
+      z.string(),
+      z.number(),
+      z.boolean(),
+      z.null(),
+    ]);
+
+    server.registerTool(
+      "create_automation",
+      {
+        title: "Create a persistent Remote Arc automation",
+        description:
+          "Create a durable Remote Arc task that continues after this chat tool call ends. Supports long-running commands, webhook condition watches, recurring schedules, and goal loops that retry until a verification command succeeds.",
+        inputSchema: z.object({
+          name: z.string().min(1).max(120),
+          kind: z.enum([
+            "long_task",
+            "condition_watch",
+            "schedule_watch",
+            "goal_loop",
+          ]),
+          device_id: z.string(),
+          command: z.string().max(4000).optional(),
+          cwd: z.string().max(500).optional(),
+          steps: z
+            .array(
+              z.object({
+                command: z.string().min(1).max(4000),
+                cwd: z.string().max(500).optional(),
+              }),
+            )
+            .min(1)
+            .max(8)
+            .optional(),
+          goal: z
+            .object({
+              command: z.string().min(1).max(4000),
+              cwd: z.string().max(500).optional(),
+              expected_exit_code: z.number().int().min(0).max(255).default(0),
+            })
+            .optional(),
+          condition: z
+            .object({
+              source: z.enum(["github", "generic"]).default("generic"),
+              event: z.string().max(160).optional(),
+              match: z
+                .record(z.string(), automationMatchValue)
+                .optional(),
+            })
+            .optional(),
+          schedule: z
+            .object({
+              at: z.string().optional(),
+              every_seconds: z
+                .number()
+                .int()
+                .min(60)
+                .max(2592000)
+                .optional(),
+              start_at: z.string().optional(),
+            })
+            .optional(),
+          interval_seconds: z
+            .number()
+            .int()
+            .min(60)
+            .max(2592000)
+            .default(300),
+          max_runs: z.number().int().min(0).max(10000).optional(),
+          expires_at: z.string().nullable().optional(),
+          recovery: z
+            .enum(["require_approval", "restart"])
+            .default("require_approval"),
+        }),
+        annotations: {
+          readOnlyHint: false,
+          openWorldHint: true,
+          destructiveHint: true,
+        },
+        _meta: oauthToolMeta("automation:write"),
+      },
+      async (input) => {
+        if (!identity || !hasScope(identity, "automation:write")) {
+          return authRequired(env, "automation:write");
+        }
+        await consume(env, identity);
+        const created = await createAutomation(env, identity.userId, input);
+        return textResult({
+          automation: created.automation
+            ? {
+                id: created.automation.id,
+                name: created.automation.name,
+                kind: created.automation.kind,
+                status: created.automation.status,
+                device_id: created.automation.device_id,
+                next_run_at: created.automation.next_run_at,
+                expires_at: created.automation.expires_at,
+                max_runs: created.automation.max_runs,
+              }
+            : null,
+          webhook: created.webhook
+            ? {
+                url: created.webhook.url,
+                note:
+                  "Treat this webhook URL as a secret bearer capability. It is returned only when the condition watch is created.",
+              }
+            : null,
+        });
+      },
+    );
+
+    server.registerTool(
+      "list_automations",
+      {
+        title: "List persistent Remote Arc automations",
+        description:
+          "List durable Remote Arc tasks and watches for this account without reading raw command output.",
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: false,
+          destructiveHint: false,
+        },
+        _meta: oauthToolMeta("automation:read"),
+      },
+      async () => {
+        if (!identity || !hasScope(identity, "automation:read")) {
+          return authRequired(env, "automation:read");
+        }
+        await consume(env, identity);
+        const rows = await listAutomations(env, identity.userId);
+        return textResult(
+          rows.map((row) => ({
+            id: row.id,
+            name: row.name,
+            kind: row.kind,
+            status: row.status,
+            device_id: row.device_id,
+            run_count: row.run_count,
+            max_runs: row.max_runs,
+            next_run_at: row.next_run_at,
+            expires_at: row.expires_at,
+            last_error: row.last_error,
+            updated_at: row.updated_at,
+          })),
+        );
+      },
+    );
+
+    server.registerTool(
+      "get_automation",
+      {
+        title: "Get a Remote Arc automation",
+        description:
+          "Inspect one durable Remote Arc automation, its frozen plan, trigger, goal condition and recent run metadata.",
+        inputSchema: z.object({
+          automation_id: z.string(),
+        }),
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: false,
+          destructiveHint: false,
+        },
+        _meta: oauthToolMeta("automation:read"),
+      },
+      async ({ automation_id }) => {
+        if (!identity || !hasScope(identity, "automation:read")) {
+          return authRequired(env, "automation:read");
+        }
+        await consume(env, identity);
+        const row = await getAutomation(env, identity.userId, automation_id);
+        if (!row) throw new Error("automation not found");
+        const runs = await listAutomationRuns(
+          env,
+          identity.userId,
+          automation_id,
+        );
+        const parse = (value: string | null) => {
+          if (!value) return null;
+          try {
+            return JSON.parse(value);
+          } catch {
+            return null;
+          }
+        };
+        return textResult({
+          automation: {
+            id: row.id,
+            name: row.name,
+            kind: row.kind,
+            status: row.status,
+            device_id: row.device_id,
+            trigger: parse(row.trigger_json),
+            plan: parse(row.action_json),
+            goal: parse(row.goal_json),
+            run_count: row.run_count,
+            max_runs: row.max_runs,
+            next_run_at: row.next_run_at,
+            expires_at: row.expires_at,
+            last_run_at: row.last_run_at,
+            last_error: row.last_error,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+          },
+          runs: runs.map((run) => ({
+            id: run.id,
+            attempt: run.attempt,
+            status: run.status,
+            process_id: run.process_id,
+            exit_code: run.exit_code,
+            error: run.error,
+            started_at: run.started_at,
+            finished_at: run.finished_at,
+          })),
+        });
+      },
+    );
+
+    server.registerTool(
+      "manage_automation",
+      {
+        title: "Pause, resume, cancel, or reapprove an automation",
+        description:
+          "Manage a durable Remote Arc automation. Reapprove is required after device permissions change; cancel also attempts to stop the currently managed process.",
+        inputSchema: z.object({
+          automation_id: z.string(),
+          action: z.enum(["pause", "resume", "cancel", "reapprove"]),
+        }),
+        annotations: {
+          readOnlyHint: false,
+          openWorldHint: false,
+          destructiveHint: true,
+        },
+        _meta: oauthToolMeta("automation:write"),
+      },
+      async ({ automation_id, action }) => {
+        if (!identity || !hasScope(identity, "automation:write")) {
+          return authRequired(env, "automation:write");
+        }
+        await consume(env, identity);
+        const row =
+          action === "pause"
+            ? await pauseAutomation(env, identity.userId, automation_id)
+            : action === "resume"
+              ? await resumeAutomation(env, identity.userId, automation_id)
+              : action === "cancel"
+                ? await cancelAutomation(env, identity.userId, automation_id)
+                : await reapproveAutomation(
+                    env,
+                    identity.userId,
+                    automation_id,
+                  );
+        return textResult(
+          row
+            ? {
+                id: row.id,
+                name: row.name,
+                status: row.status,
+                next_run_at: row.next_run_at,
+                last_error: row.last_error,
+                updated_at: row.updated_at,
+              }
+            : null,
         );
       },
     );

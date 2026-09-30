@@ -193,6 +193,30 @@ jobs and lets the user inspect output or stop a running process.
 Presets are shortcuts. The actual hosted policy is an individually editable
 per-device skill list.
 
+## Durable Automations
+
+Remote Arc can persist work independently of the chat session that created it. MCP clients need the separate `automation:read` / `automation:write` OAuth scopes to inspect or create persistent work; ordinary `computer:write` access does not grant that authority.
+
+Four automation modes share the same durable task engine:
+
+- **Long task** — start a command and keep tracking it after the MCP call/chat ends.
+- **Condition watch** — wait for a webhook event, then execute an approved plan.
+- **Schedule watch** — execute a plan on a recurring interval or at a future time.
+- **Goal loop** — run a work plan, execute a verification command, and retry until the verification command exits successfully, the task expires, the maximum run count is reached, or the user stops it.
+
+Automation state lives in D1 and is advanced by the Worker scheduler or webhook events. Device execution still goes through the same authenticated Durable Object route and the device's existing skill/path policy.
+
+Creating an automation snapshots the current device permission policy. If that policy changes later, Remote Arc moves the automation to `approval_required` instead of silently inheriting a different trust boundary.
+
+A device going offline moves eligible work to `waiting_for_device`; it does not automatically fail the automation. If the local agent restarts and loses an in-memory managed process handle, the default recovery policy requires explicit approval before rerunning that command to reduce duplicate side effects.
+
+The background agent and automation engine solve different problems:
+
+- the background agent keeps a paired device available and reconnecting without an open terminal window;
+- the automation engine preserves task state and triggers independently of an MCP request or chat lifetime.
+
+A sleeping, powered-off, or disconnected computer is not considered online. Device-backed work resumes only after the agent reconnects.
+
 Running:
 
 ```bash
@@ -379,11 +403,19 @@ not unnecessarily consume the Workers request quota.
 
 ## Remote MCP tools
 
-Hosted MCP currently exposes 19 user-facing tools. Availability is still filtered by the selected device's policy and live capabilities:
+Hosted MCP currently exposes 23 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
 
 ```text
 list_devices
 device_tools
+
+browser_list_tabs
+browser_get_current_tab
+browser_read_page
+browser_get_selected_text
+browser_extract_links
+browser_extract_table
+
 list_directory
 read_file
 get_file_info
@@ -395,7 +427,14 @@ stop_process
 write_file
 edit_block
 undo_last_change
+
+create_automation
+list_automations
+get_automation
+manage_automation
 ```
+
+The automation tools create and manage durable control-plane state. They do not grant new device capabilities: when an automation executes on a computer, the normal device ownership, skill policy, Workspace Scope and Sensitive Path Policy checks still apply.
 
 Before a device call is forwarded, the relay verifies:
 

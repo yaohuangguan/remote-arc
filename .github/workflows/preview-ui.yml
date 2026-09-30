@@ -71,6 +71,7 @@ jobs:
               '',
               `**Public site:** ${preview}`,
               `**Dashboard:** ${preview}/overview`,
+              `**Automations:** ${preview}/automations`,
               `**Connect AI:** ${preview}/connect`,
               `**Settings:** ${preview}/settings`,
               unique ? `**This deployment:** ${unique}` : '',

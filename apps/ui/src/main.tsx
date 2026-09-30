@@ -188,7 +188,50 @@ type MonitorState = {
   incidents: MonitorIncident[];
 };
 
-type DashboardTab = "overview" | "devices" | "connect" | "security" | "monitor" | "settings";
+type AutomationKind = "long_task" | "condition_watch" | "schedule_watch" | "goal_loop";
+type AutomationStatus =
+  | "waiting" | "running" | "waiting_for_device" | "waiting_for_event"
+  | "approval_required" | "paused" | "completed" | "failed"
+  | "cancelled" | "expired";
+
+type Automation = {
+  id: string;
+  user_id: string;
+  name: string;
+  kind: AutomationKind;
+  status: AutomationStatus;
+  device_id: string | null;
+  trigger_json: string | null;
+  action_json: string;
+  goal_json: string | null;
+  state_json: string | null;
+  interval_seconds: number;
+  next_run_at: string | null;
+  expires_at: string | null;
+  max_runs: number;
+  run_count: number;
+  last_run_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type AutomationDraft = {
+  name: string;
+  kind: AutomationKind;
+  device_id: string;
+  command: string;
+  cwd: string;
+  goal_command: string;
+  interval_minutes: string;
+  schedule_minutes: string;
+  max_runs: string;
+  condition_source: "github" | "generic";
+  condition_event: string;
+  condition_match: string;
+};
+
+type DashboardTab = "overview" | "devices" | "automations" | "connect" | "security" | "monitor" | "settings";
 
 const MARKETING_ORIGIN = "https://remotearc.app";
 const APP_ORIGIN = "https://mcp.remotearc.app";
@@ -205,6 +248,7 @@ function cursorMcpInstallUrl() {
 const DASHBOARD_PATHS: Record<DashboardTab, string> = {
   overview: "/overview",
   devices: "/devices",
+  automations: "/automations",
   connect: "/connect",
   security: "/security",
   monitor: "/monitor",
@@ -285,6 +329,7 @@ function DashboardNavIcon({ tab }: { tab: DashboardTab }) {
   };
   if (tab === "overview") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
   if (tab === "devices") return <svg {...common}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
+  if (tab === "automations") return <svg {...common}><path d="M4 12a8 8 0 0 1 14.6-4.5"/><path d="M18 3v5h-5"/><path d="M20 12a8 8 0 0 1-14.6 4.5"/><path d="M6 21v-5h5"/></svg>;
   if (tab === "connect") return <svg {...common}><path d="M8.5 12.5 12 9l3.5 3.5"/><path d="M12 9v9"/><path d="M5 6.5A4.5 4.5 0 0 1 9.5 2h5A4.5 4.5 0 0 1 19 6.5"/></svg>;
   if (tab === "security") return <svg {...common}><path d="M12 3 5 6v5c0 4.7 2.7 7.8 7 10 4.3-2.2 7-5.3 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>;
   if (tab === "monitor") return <svg {...common}><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>;
@@ -1324,7 +1369,13 @@ function OAuthConsent({ user }: { user: User | null | undefined }) {
                     ? tr("See linked computers and online state.", "查看已连接设备及在线状态。")
                     : scope === "computer:read"
                       ? tr("Read files, directories and process metadata.", "读取文件、目录与进程信息。")
-                      : tr("Edit files and run commands on devices that allow it.", "在允许的设备上编辑文件并运行命令。")}
+                      : scope === "computer:write"
+                        ? tr("Edit files and run commands on devices that allow it.", "在允许的设备上编辑文件并运行命令。")
+                        : scope === "browser:read"
+                          ? tr("Read content from browser tabs you explicitly share.", "读取你明确共享的浏览器标签页内容。")
+                          : scope === "automation:read"
+                            ? tr("View persistent tasks, watches and their run state.", "查看持久任务、监听及其运行状态。")
+                            : tr("Create and manage persistent tasks that can continue after this chat ends.", "创建和管理可在当前聊天结束后继续运行的持久任务。")}
                 </small>
               </span>
             </div>
@@ -2487,6 +2538,8 @@ function ConnectPage({ user }: { user?: User | null }) {
     ["computer:read", tr("Read files, directories and process metadata when the selected device allows it.", "在目标设备允许时读取文件、目录和进程元数据。")],
     ["computer:write", tr("Request edit and terminal tools; the selected device policy still decides whether they are available.", "请求编辑和终端工具；最终是否可用仍由目标设备策略决定。")],
     ["browser:read", tr("Read content from browser tabs explicitly shared by the user.", "读取用户明确共享的浏览器标签页内容。")],
+    ["automation:read", tr("View persistent tasks, watches and run state.", "查看持久任务、监听与运行状态。")],
+    ["automation:write", tr("Create and manage persistent work that can continue after the creating chat ends.", "创建和管理可在原聊天结束后继续运行的持久任务。")],
   ];
 
   return (
@@ -2578,6 +2631,7 @@ function DocsPage({ user }: { user?: User | null }) {
     ["Filesystem", "list_directory · read_file · get_file_info · write_file · edit_block · undo_last_change", tr("Read, inspect and optionally edit files under the selected device policy.", "在目标设备策略范围内读取、检查并按需编辑文件。")],
     ["Processes", "list_processes · start_process · process_status · process_output · stop_process", tr("Inspect processes, run commands and manage Remote Arc-started background processes.", "检查进程、运行命令并管理由 Remote Arc 启动的后台进程。")],
     ["Shared browser tab", "browser_list_tabs · browser_get_current_tab · browser_read_page · browser_get_selected_text · browser_extract_links · browser_extract_table", tr("Read-only context from tabs the user explicitly shares.", "读取用户明确共享标签页中的只读上下文。")],
+    ["Durable automations", "create_automation · list_automations · get_automation · manage_automation", tr("Create and manage persistent long tasks, watches, schedules and goal loops that outlive the creating chat.", "创建和管理可脱离原聊天持续存在的长任务、监听、定时任务和目标循环。")],
   ];
 
   return (
@@ -2606,6 +2660,7 @@ function DocsPage({ user }: { user?: User | null }) {
             <a href="#docs-policy">{tr("Permission model", "权限模型")}</a>
             <a href="#docs-files">{tr("Files & Undo", "文件与 Undo")}</a>
             <a href="#docs-processes">{tr("Processes", "进程")}</a>
+            <a href="#docs-automations">{tr("Automations", "自动化")}</a>
             <a href="#docs-browser">{tr("Browser", "浏览器")}</a>
             <a href="#docs-tools">{tr("Tool reference", "工具参考")}</a>
             <a href="#docs-data">{tr("Data handling", "数据处理")}</a>
@@ -2710,6 +2765,29 @@ function DocsPage({ user }: { user?: User | null }) {
               )}</p>
             </section>
 
+            <section id="docs-automations">
+              <h2>{tr("Durable automations", "持久自动化")}</h2>
+              <p>{tr(
+                "A normal MCP tool call ends when its result is returned. Durable Automations move the task lifecycle into Remote Arc's control plane so a long command, webhook watch, recurring schedule or goal loop can continue after the creating chat is gone. The Worker stores task state in D1 and advances due work from a one-minute scheduler or a matching webhook event.",
+                "普通 MCP Tool Call 在返回结果后就结束。Durable Automations 把任务生命周期放进 Remote Arc 控制面，因此长命令、Webhook 监听、周期任务或 Goal Loop 可以在创建它的聊天结束后继续存在。Worker 将任务状态保存在 D1，并通过每分钟调度器或匹配的 Webhook 事件推进任务。",
+              )}</p>
+              <p>{tr(
+                "Long Task runs an approved command until it exits. Condition Watch waits for a webhook before starting its plan. Schedule Watch runs a plan at a future time or recurring interval. Goal Loop runs the work plan, then a verification command; exit code 0 means the goal is reached, while a non-zero exit schedules another attempt until the run limit, expiry or user cancellation stops it.",
+                "Long Task 会持续跟踪已批准命令直到退出；Condition Watch 等待 Webhook 后启动计划；Schedule Watch 在未来时间或固定间隔执行；Goal Loop 先执行工作计划，再执行验证命令，退出码 0 表示目标达成，非 0 则继续安排下一轮，直到达到次数限制、过期或被用户取消。",
+              )}</p>
+              <p>{tr(
+                "Automation authority is frozen rather than inferred later. Creation stores the target device, trigger, command plan, optional goal check, expiry/run limits and a snapshot of the device permission policy. If the device policy changes afterward, the task moves to approval_required. If the device is offline it waits for the device instead of failing. A lost local managed-process handle also requires approval by default before Remote Arc reruns a command with potentially external side effects.",
+                "Automation 的权限不是未来再动态推断，而是在创建时冻结。系统会保存目标设备、Trigger、命令计划、可选目标验证、到期/次数限制以及设备权限快照。如果之后设备策略变化，任务会进入 approval_required；设备离线时会等待设备而不是直接失败；如果本地受管进程 Handle 丢失，默认也会先要求确认，再决定是否重跑可能产生外部副作用的命令。",
+              )}</p>
+              <div className="articleCallout">
+                <strong>{tr("24/7 means reconnectable, not magically awake", "24/7 指可持续重连，不代表电脑永不休眠")}</strong>
+                <p>{tr(
+                  "The background agent can start at login and maintain or re-establish the outbound connection without an open terminal window. A sleeping, powered-off or network-disconnected computer is still offline; device-backed automations resume only after the agent reconnects.",
+                  "Background Agent 可以在登录后自启，并在无需打开终端窗口的情况下维持或恢复出站连接。但休眠、关机或断网的电脑仍然是 Offline；依赖设备的 Automation 会等 Agent 重连后再继续。",
+                )}</p>
+              </div>
+            </section>
+
             <section id="docs-browser">
               <h2>{tr("Shared browser context", "共享浏览器上下文")}</h2>
               <p>{tr(
@@ -2720,7 +2798,7 @@ function DocsPage({ user }: { user?: User | null }) {
 
             <section id="docs-tools">
               <h2>{tr("Public MCP tool reference", "公开 MCP Tool 参考")}</h2>
-              <p>{tr("The current relay exposes 19 user-facing tools. Dashboard-only helpers are not part of this public surface.", "当前 Relay 公开 19 个面向用户的工具；仅供 Dashboard 使用的内部辅助能力不计入此公开 Surface。")}</p>
+              <p>{tr("The current relay exposes 23 user-facing tools. Dashboard-only helpers are not part of this public surface.", "当前 Relay 公开 23 个面向用户的工具；仅供 Dashboard 使用的内部辅助能力不计入此公开 Surface。")}</p>
               <div className="toolReferenceList">
                 {toolGroups.map(([title, tools, body]) => (
                   <div key={title}>
@@ -2796,6 +2874,7 @@ function SecurityModelPage({ user }: { user?: User | null }) {
             <a href="#security-tools">{tr("Skill policy", "Skill 策略")}</a>
             <a href="#security-transport">{tr("Transport & relay", "传输与 Relay")}</a>
             <a href="#security-recovery">{tr("Recovery", "恢复")}</a>
+            <a href="#security-automations">{tr("Persistent tasks", "持久任务")}</a>
             <a href="#security-revoke">{tr("Revocation", "撤销")}</a>
             <a href="#security-nonclaims">{tr("What we do not claim", "我们不声称什么")}</a>
           </aside>
@@ -2875,7 +2954,7 @@ function SecurityModelPage({ user }: { user?: User | null }) {
               <table className="articleTable">
                 <thead><tr><th>{tr("Location", "位置")}</th><th>{tr("Examples", "示例")}</th></tr></thead>
                 <tbody>
-                  <tr><td>D1</td><td>{tr("Account, device metadata, credential hashes, OAuth grants, policy, usage and audit metadata.", "账户、设备元数据、凭证 Hash、OAuth Grant、策略、用量与审计元数据。")}</td></tr>
+                  <tr><td>D1</td><td>{tr("Account, device metadata, credential hashes, OAuth grants, policy, usage, audit metadata, and durable automation state/trigger metadata.", "账户、设备元数据、凭证 Hash、OAuth Grant、策略、用量、审计元数据以及持久 Automation 的状态与 Trigger 元数据。")}</td></tr>
                   <tr><td>{tr("Live relay path", "实时 Relay 链路")}</td><td>{tr("Active file contents, directory listings, process output and command results required for the current call.", "当前调用所需的文件内容、目录列表、进程输出与命令结果。")}</td></tr>
                   <tr><td>{tr("Device only", "仅设备")}</td><td>{tr("Raw device credential, filesystem/process state and Local Undo snapshot contents.", "原始设备凭证、文件系统/进程状态与 Local Undo 快照内容。")}</td></tr>
                 </tbody>
@@ -2891,6 +2970,22 @@ function SecurityModelPage({ user }: { user?: User | null }) {
               <p>{tr(
                 "Local Undo only covers supported file edits. It cannot reverse a deployment, package publish, API request, database mutation or arbitrary shell side effect.",
                 "Local Undo 只覆盖受支持的文件编辑，无法撤销部署、包发布、API 请求、数据库修改或任意 Shell 副作用。",
+              )}</p>
+            </section>
+
+            <section id="security-automations">
+              <h2>{tr("Persistent tasks freeze authority at creation time", "持久任务在创建时冻结权限")}</h2>
+              <p>{tr(
+                "A durable automation may execute hours after the MCP request that created it has ended. Remote Arc therefore stores an explicit trigger, command plan, optional goal verification, run/expiry limits, target device and a snapshot of that device's permission policy instead of preserving a vague instruction for a future agent to reinterpret.",
+                "Durable Automation 可能在创建它的 MCP 请求结束数小时后才执行。因此 Remote Arc 会保存明确的 Trigger、命令计划、可选目标验证、次数/到期限制、目标设备以及该设备的权限快照，而不是保存一句模糊指令留给未来的 Agent 自由重新解释。",
+              )}</p>
+              <p>{tr(
+                "Every future device action still passes the normal ownership, revocation, allowed-tool and local path-policy checks. If the saved device policy changes, execution stops in approval_required. If an agent restart loses a local managed-process handle, the default recovery policy also requires approval before rerunning it so Remote Arc does not silently duplicate an external side effect.",
+                "未来每次设备执行仍然经过正常的 Ownership、Revocation、Allowed Tool 与本地路径策略检查。如果保存的设备策略发生变化，任务会停在 approval_required；如果 Agent 重启导致本地受管进程 Handle 丢失，默认恢复策略同样要求先确认，避免 Remote Arc 静默重复外部副作用。",
+              )}</p>
+              <p>{tr(
+                "Condition Watch callback URLs contain a high-entropy secret and act as bearer capabilities. Only a SHA-256 hash is stored. Delivery IDs can be deduplicated when supplied. The current MVP does not claim provider-specific GitHub HMAC verification; the callback URL itself must be protected as a credential.",
+                "Condition Watch 回调 URL 包含高熵 Secret，本身就是 Bearer Capability；云端只保存 SHA-256 Hash。提供 Delivery ID 时可以去重。当前 MVP 不声称已经提供 GitHub Provider-specific HMAC 校验，因此这个回调 URL 本身必须像凭证一样保护。",
               )}</p>
             </section>
 
@@ -2910,6 +3005,8 @@ function SecurityModelPage({ user }: { user?: User | null }) {
                 <li>{tr("Local Undo is not a general transaction rollback system.", "Local Undo 不是通用事务回滚系统。")}</li>
                 <li>{tr("Managed background processes are not a reboot-persistent service manager.", "受管后台进程不是跨重启持久化的服务管理器。")}</li>
                 <li>{tr("Browser context is currently read-only rather than full browser automation.", "浏览器上下文当前只读，而不是完整浏览器自动化。")}</li>
+                <li>{tr("Durable Automations persist an approved plan; they are not an unconstrained AI process that can invent new future actions outside that plan.", "Durable Automations 持久化的是已批准计划，并不是一个可以在未来脱离计划自行发明新操作的无限制 AI 进程。")}</li>
+                <li>{tr("24/7 background mode cannot keep a sleeping, powered-off or network-disconnected computer online.", "24/7 Background 模式无法让休眠、关机或断网的电脑继续保持在线。")}</li>
               </ul>
               <p>{tr(
                 "These are product boundaries, not footnotes. The safest deployment still depends on selecting an appropriate local OS user, granting only the skills a device needs, constraining paths where practical and revoking access when it is no longer required.",
@@ -3913,6 +4010,25 @@ function Dashboard({
   const [securityBusy, setSecurityBusy] = useState(false);
   const [monitorState, setMonitorState] = useState<MonitorState | null>(null);
   const [monitorLoading, setMonitorLoading] = useState(false);
+  const [automations, setAutomations] = useState<Automation[]>([]);
+  const [automationLoading, setAutomationLoading] = useState(false);
+  const [automationBusy, setAutomationBusy] = useState<string | null>(null);
+  const [showAutomationCreate, setShowAutomationCreate] = useState(false);
+  const [createdWebhook, setCreatedWebhook] = useState<string | null>(null);
+  const [automationDraft, setAutomationDraft] = useState<AutomationDraft>({
+    name: "",
+    kind: "long_task",
+    device_id: "",
+    command: "",
+    cwd: "",
+    goal_command: "",
+    interval_minutes: "5",
+    schedule_minutes: "60",
+    max_runs: "",
+    condition_source: "github",
+    condition_event: "workflow_run",
+    condition_match: '{"action":"completed","workflow_run.conclusion":"success"}',
+  });
   const [undoByDevice, setUndoByDevice] = useState<Record<string, UndoAction[]>>({});
   const [undoLoading, setUndoLoading] = useState<string | null>(null);
   const [undoErrors, setUndoErrors] = useState<Record<string, string>>({});
@@ -4043,6 +4159,168 @@ function Dashboard({
     const timer = window.setInterval(() => void refreshMonitor(), 30_000);
     return () => window.clearInterval(timer);
   }, [active, user.isAdmin]);
+
+  async function refreshAutomations() {
+    setAutomationLoading(true);
+    try {
+      const response = await fetch("/api/automations");
+      if (!response.ok) return;
+      const payload = await response.json() as { automations?: Automation[] };
+      setAutomations(Array.isArray(payload.automations) ? payload.automations : []);
+    } finally {
+      setAutomationLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (active !== "automations") return;
+    void refreshAutomations();
+    const timer = window.setInterval(() => void refreshAutomations(), 15_000);
+    return () => window.clearInterval(timer);
+  }, [active]);
+
+  useEffect(() => {
+    if (automationDraft.device_id || !devices.length) return;
+    const preferred = devices.find((device) => device.status === "online") || devices[0];
+    if (preferred) {
+      setAutomationDraft((current) => ({ ...current, device_id: preferred.id }));
+    }
+  }, [devices, automationDraft.device_id]);
+
+  async function createDashboardAutomation() {
+    if (UI_PREVIEW) return;
+    const name = automationDraft.name.trim();
+    const command = automationDraft.command.trim();
+    if (!name || !command || !automationDraft.device_id) {
+      await showNotice(
+        tr("Missing automation details", "自动化信息不完整"),
+        tr("Name, device and command are required.", "名称、设备和命令不能为空。"),
+      );
+      return;
+    }
+
+    const intervalMinutes = Number(automationDraft.interval_minutes || "5");
+    const scheduleMinutes = Number(automationDraft.schedule_minutes || "60");
+    const maxRunsRaw = automationDraft.max_runs.trim();
+    const body: Record<string, unknown> = {
+      name,
+      kind: automationDraft.kind,
+      device_id: automationDraft.device_id,
+      command,
+      ...(automationDraft.cwd.trim() ? { cwd: automationDraft.cwd.trim() } : {}),
+      interval_seconds: Math.max(60, Math.round((Number.isFinite(intervalMinutes) ? intervalMinutes : 5) * 60)),
+      ...(maxRunsRaw ? { max_runs: Math.max(0, Math.round(Number(maxRunsRaw))) } : {}),
+      recovery: "require_approval",
+    };
+
+    if (automationDraft.kind === "goal_loop") {
+      if (!automationDraft.goal_command.trim()) {
+        await showNotice(
+          tr("Goal check required", "需要目标验证"),
+          tr("Goal loops need a verification command. Exit code 0 means the goal has been reached.", "Goal Loop 需要验证命令；退出码 0 表示目标已经达成。"),
+        );
+        return;
+      }
+      body.goal = {
+        command: automationDraft.goal_command.trim(),
+        expected_exit_code: 0,
+        ...(automationDraft.cwd.trim() ? { cwd: automationDraft.cwd.trim() } : {}),
+      };
+    }
+
+    if (automationDraft.kind === "schedule_watch") {
+      body.schedule = {
+        every_seconds: Math.max(60, Math.round((Number.isFinite(scheduleMinutes) ? scheduleMinutes : 60) * 60)),
+      };
+    }
+
+    if (automationDraft.kind === "condition_watch") {
+      let match: Record<string, string | number | boolean | null> = {};
+      try {
+        const parsed = JSON.parse(automationDraft.condition_match || "{}") as unknown;
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not an object");
+        match = parsed as Record<string, string | number | boolean | null>;
+      } catch {
+        await showNotice(
+          tr("Invalid condition JSON", "条件 JSON 无效"),
+          tr("Match conditions must be a JSON object using dotted payload paths.", "Match 条件必须是一个使用点号路径的 JSON 对象。"),
+        );
+        return;
+      }
+      body.condition = {
+        source: automationDraft.condition_source,
+        ...(automationDraft.condition_event.trim() ? { event: automationDraft.condition_event.trim() } : {}),
+        match,
+      };
+    }
+
+    setAutomationBusy("create");
+    try {
+      const response = await fetch("/api/automations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const payload = await response.json().catch(() => ({})) as {
+        error?: string;
+        webhook?: { url?: string } | null;
+      };
+      if (!response.ok) {
+        await showNotice(
+          tr("Automation was not created", "自动化创建失败"),
+          payload.error || tr("The server rejected this automation.", "服务器拒绝了这条自动化。"),
+        );
+        return;
+      }
+      setCreatedWebhook(payload.webhook?.url || null);
+      setShowAutomationCreate(false);
+      setAutomationDraft((current) => ({
+        ...current,
+        name: "",
+        command: "",
+        goal_command: "",
+        max_runs: "",
+      }));
+      await refreshAutomations();
+    } finally {
+      setAutomationBusy(null);
+    }
+  }
+
+  async function manageDashboardAutomation(
+    automation: Automation,
+    action: "pause" | "resume" | "cancel" | "reapprove",
+  ) {
+    if (UI_PREVIEW) return;
+    if (
+      action === "cancel" &&
+      !(await askConfirm(
+        tr("Cancel automation?", "取消自动化？"),
+        tr("Remote Arc will stop orchestration and best-effort stop its currently managed process.", "Remote Arc 会停止编排，并尽力停止当前由它管理的进程。"),
+        tr("Cancel automation", "取消自动化"),
+        "danger",
+      ))
+    ) return;
+
+    setAutomationBusy(automation.id + ":" + action);
+    try {
+      const response = await fetch(
+        "/api/automations/" + encodeURIComponent(automation.id) + "/" + action,
+        { method: "POST" },
+      );
+      const payload = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) {
+        await showNotice(
+          tr("Automation was not updated", "自动化更新失败"),
+          payload.error || tr("The server rejected this change.", "服务器拒绝了这次修改。"),
+        );
+        return;
+      }
+      await refreshAutomations();
+    } finally {
+      setAutomationBusy(null);
+    }
+  }
 
   async function setMcpPaused(paused: boolean) {
     setSecurityBusy(true);
@@ -4549,9 +4827,59 @@ function Dashboard({
     return event.event_type;
   };
 
+  const automationTime = (value: string | null) => {
+    if (!value) return "—";
+    const delta = new Date(value).getTime() - Date.now();
+    if (delta <= 0) return timeAgo(value);
+    if (delta < 60_000) return tr("in <1m", "<1 分钟后");
+    if (delta < 3_600_000) return tr("in " + Math.ceil(delta / 60_000) + "m", Math.ceil(delta / 60_000) + " 分钟后");
+    if (delta < 86_400_000) return tr("in " + Math.ceil(delta / 3_600_000) + "h", Math.ceil(delta / 3_600_000) + " 小时后");
+    return tr("in " + Math.ceil(delta / 86_400_000) + "d", Math.ceil(delta / 86_400_000) + " 天后");
+  };
+
+  const automationKindLabel = (kind: AutomationKind) =>
+    kind === "long_task"
+      ? tr("Long task", "长任务")
+      : kind === "condition_watch"
+        ? tr("Condition watch", "条件监听")
+        : kind === "schedule_watch"
+          ? tr("Schedule", "定时任务")
+          : tr("Goal loop", "目标循环");
+
+  const automationStatusLabel = (value: AutomationStatus) =>
+    value === "waiting"
+      ? tr("Waiting", "等待中")
+      : value === "running"
+        ? tr("Running", "运行中")
+        : value === "waiting_for_device"
+          ? tr("Waiting for device", "等待设备")
+          : value === "waiting_for_event"
+            ? tr("Waiting for event", "等待事件")
+            : value === "approval_required"
+              ? tr("Approval required", "需要重新确认")
+              : value === "paused"
+                ? tr("Paused", "已暂停")
+                : value === "completed"
+                  ? tr("Completed", "已完成")
+                  : value === "failed"
+                    ? tr("Failed", "失败")
+                    : value === "cancelled"
+                      ? tr("Cancelled", "已取消")
+                      : tr("Expired", "已过期");
+
+  const automationTerminal = (value: AutomationStatus) =>
+    ["completed", "failed", "cancelled", "expired"].includes(value);
+
+  const automationActiveCount = automations.filter((item) =>
+    ["waiting", "running", "waiting_for_device", "waiting_for_event"].includes(item.status),
+  ).length;
+  const automationApprovalCount = automations.filter((item) => item.status === "approval_required").length;
+  const backgroundConfiguredCount = devices.filter((device) => device.background_enabled === true).length;
+
   const navItems: Array<[DashboardTab, string]> = [
     ["overview", tr("Overview", "概览")],
     ["devices", tr("Devices", "设备")],
+    ["automations", tr("Automations", "自动化")],
     ["connect", tr("Connect AI", "连接 AI")],
     ["security", tr("Security", "安全")],
     ...(user.isAdmin ? [["monitor", tr("Monitor", "监控")] as [DashboardTab, string]] : []),
@@ -5189,6 +5517,371 @@ function Dashboard({
           </>
         )}
 
+        {active === "automations" && (
+          <>
+            <section className="overviewTopbar automationPageHeader">
+              <div>
+                <span className="eyebrow">{tr("AUTOMATIONS", "自动化")}</span>
+                <h1>{tr("Automations", "自动化")}</h1>
+                <p>{tr(
+                  "Persistent tasks and watches keep running after the chat that created them has ended.",
+                  "持久任务与监听不会依赖创建它们的聊天会话；对话结束后仍会继续运行。",
+                )}</p>
+              </div>
+              <div className="automationHeaderActions">
+                <button className="ghostButton" disabled={automationLoading} onClick={() => void refreshAutomations()}>
+                  {automationLoading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}
+                </button>
+                <button
+                  className="addButton"
+                  onClick={() => {
+                    setCreatedWebhook(null);
+                    setShowAutomationCreate((value) => !value);
+                  }}
+                >
+                  {showAutomationCreate ? tr("Close", "关闭") : "+ " + tr("New automation", "新建自动化")}
+                </button>
+              </div>
+            </section>
+
+            <section className="automationStats">
+              <article>
+                <span>{tr("Active", "活动任务")}</span>
+                <strong>{automationActiveCount}</strong>
+                <small>{tr("Running or waiting", "运行中或等待触发")}</small>
+              </article>
+              <article>
+                <span>{tr("Waiting for event", "等待事件")}</span>
+                <strong>{automations.filter((item) => item.status === "waiting_for_event").length}</strong>
+                <small>{tr("Webhook-driven watches", "Webhook 条件监听")}</small>
+              </article>
+              <article>
+                <span>{tr("Online agents", "在线 Agent")}</span>
+                <strong>{devices.filter((device) => device.status === "online").length}</strong>
+                <small>{tr("Available right now", "当前可接受任务")}</small>
+              </article>
+              <article>
+                <span>{tr("24/7 configured", "24/7 已配置")}</span>
+                <strong>{backgroundConfiguredCount}</strong>
+                <small>{tr("Start at login + reconnect", "登录自启 + 自动重连")}</small>
+              </article>
+            </section>
+
+            {automationApprovalCount > 0 && (
+              <section className="automationAttention">
+                <div>
+                  <strong>{automationApprovalCount} {tr("automation(s) need approval", "条自动化需要重新确认")}</strong>
+                  <span>{tr(
+                    "A device permission changed or a managed process handle was lost. Remote Arc will not silently continue with a different trust boundary.",
+                    "设备权限发生变化，或受管进程句柄丢失。Remote Arc 不会在信任边界变化后静默继续执行。",
+                  )}</span>
+                </div>
+              </section>
+            )}
+
+            {createdWebhook && (
+              <section className="automationWebhookNotice">
+                <div>
+                  <span className="eyebrow">{tr("WEBHOOK CREATED", "WEBHOOK 已创建")}</span>
+                  <strong>{tr("Copy this URL now. It is shown only after creation.", "请现在复制这个 URL；它只会在创建后返回一次。")}</strong>
+                  <p>{tr(
+                    "Treat it like a secret bearer capability. For GitHub, add it as a repository webhook with JSON payloads and the workflow_run event.",
+                    "把它当作秘密 Bearer Capability。GitHub 中可将它添加为仓库 Webhook，Payload 使用 JSON，并监听 workflow_run 事件。",
+                  )}</p>
+                </div>
+                <div className="automationWebhookValue">
+                  <code>{createdWebhook}</code>
+                  <CopyButton value={createdWebhook} />
+                </div>
+                <button className="ghostButton small" onClick={() => setCreatedWebhook(null)}>{tr("Dismiss", "关闭")}</button>
+              </section>
+            )}
+
+            {showAutomationCreate && (
+              <section className="automationCreatePanel">
+                <div className="automationCreateIntro">
+                  <div>
+                    <span className="eyebrow">{tr("NEW AUTOMATION", "新建自动化")}</span>
+                    <h2>{tr("Persistent execution", "持久执行")}</h2>
+                  </div>
+                  <p>{tr(
+                    "The plan is frozen when you create it. Device permissions are snapshotted and must be explicitly reapproved if they change later.",
+                    "创建后执行计划会被冻结，同时保存设备权限快照；未来权限发生变化时必须明确重新批准。",
+                  )}</p>
+                </div>
+
+                <div className="automationKindTabs" role="tablist">
+                  {([
+                    ["long_task", tr("Long task", "长任务"), tr("Run once, even if it takes hours.", "运行一次，即使需要几个小时。")],
+                    ["condition_watch", tr("Condition", "条件监听"), tr("Wait for a webhook event, then run.", "等待 Webhook 事件后执行。")],
+                    ["schedule_watch", tr("Schedule", "定时任务"), tr("Run repeatedly on an interval.", "按固定间隔重复运行。")],
+                    ["goal_loop", tr("Goal loop", "目标循环"), tr("Work, verify, and retry until done.", "执行、验证，未达标就继续。")],
+                  ] as Array<[AutomationKind, string, string]>).map(([kind, label, detail]) => (
+                    <button
+                      type="button"
+                      key={kind}
+                      className={automationDraft.kind === kind ? "active" : ""}
+                      onClick={() => setAutomationDraft((current) => ({ ...current, kind }))}
+                    >
+                      <strong>{label}</strong>
+                      <small>{detail}</small>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="automationForm">
+                  <label className="automationField">
+                    <span>{tr("Name", "名称")}</span>
+                    <input
+                      value={automationDraft.name}
+                      maxLength={120}
+                      placeholder={tr("Nightly integration test", "夜间集成测试")}
+                      onChange={(event) => setAutomationDraft((current) => ({ ...current, name: event.target.value }))}
+                    />
+                  </label>
+
+                  <label className="automationField">
+                    <span>{tr("Device", "设备")}</span>
+                    <select
+                      value={automationDraft.device_id}
+                      onChange={(event) => setAutomationDraft((current) => ({ ...current, device_id: event.target.value }))}
+                    >
+                      <option value="">{tr("Choose a device", "选择设备")}</option>
+                      {devices.map((device) => (
+                        <option value={device.id} key={device.id}>
+                          {device.name} · {device.status}{device.background_enabled ? " · 24/7" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="automationField automationFieldWide">
+                    <span>{automationDraft.kind === "goal_loop" ? tr("Work command", "工作命令") : tr("Command", "命令")}</span>
+                    <textarea
+                      rows={3}
+                      value={automationDraft.command}
+                      maxLength={4000}
+                      placeholder={tr("pnpm test", "pnpm test")}
+                      onChange={(event) => setAutomationDraft((current) => ({ ...current, command: event.target.value }))}
+                    />
+                  </label>
+
+                  <label className="automationField">
+                    <span>{tr("Working directory", "工作目录")} <small>{tr("optional", "可选")}</small></span>
+                    <input
+                      value={automationDraft.cwd}
+                      maxLength={500}
+                      placeholder="/Users/sam/work/project"
+                      onChange={(event) => setAutomationDraft((current) => ({ ...current, cwd: event.target.value }))}
+                    />
+                  </label>
+
+                  {(automationDraft.kind === "long_task" || automationDraft.kind === "goal_loop") && (
+                    <label className="automationField">
+                      <span>{tr("Check / retry interval", "检查 / 重试间隔")}</span>
+                      <div className="automationInlineInput">
+                        <input
+                          inputMode="numeric"
+                          value={automationDraft.interval_minutes}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, interval_minutes: event.target.value.replace(/[^0-9]/g, "") }))}
+                        />
+                        <span>{tr("minutes", "分钟")}</span>
+                      </div>
+                    </label>
+                  )}
+
+                  {automationDraft.kind === "goal_loop" && (
+                    <>
+                      <label className="automationField automationFieldWide">
+                        <span>{tr("Goal verification command", "目标验证命令")}</span>
+                        <textarea
+                          rows={2}
+                          value={automationDraft.goal_command}
+                          maxLength={4000}
+                          placeholder={tr("pnpm test:e2e", "pnpm test:e2e")}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, goal_command: event.target.value }))}
+                        />
+                        <small>{tr("Exit code 0 means the goal is reached. Otherwise Remote Arc waits and starts the next attempt.", "退出码 0 表示目标达成；否则 Remote Arc 等待后开始下一轮。")}</small>
+                      </label>
+                      <label className="automationField">
+                        <span>{tr("Maximum attempts", "最大轮数")} <small>{tr("blank = unlimited until expiry", "留空 = 到期前不限轮数")}</small></span>
+                        <input
+                          inputMode="numeric"
+                          value={automationDraft.max_runs}
+                          placeholder={tr("Unlimited", "不限")}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, max_runs: event.target.value.replace(/[^0-9]/g, "") }))}
+                        />
+                      </label>
+                    </>
+                  )}
+
+                  {automationDraft.kind === "schedule_watch" && (
+                    <>
+                      <label className="automationField">
+                        <span>{tr("Run every", "执行间隔")}</span>
+                        <div className="automationInlineInput">
+                          <input
+                            inputMode="numeric"
+                            value={automationDraft.schedule_minutes}
+                            onChange={(event) => setAutomationDraft((current) => ({ ...current, schedule_minutes: event.target.value.replace(/[^0-9]/g, "") }))}
+                          />
+                          <span>{tr("minutes", "分钟")}</span>
+                        </div>
+                      </label>
+                      <label className="automationField">
+                        <span>{tr("Maximum runs", "最大执行次数")} <small>{tr("blank = unlimited", "留空 = 不限")}</small></span>
+                        <input
+                          inputMode="numeric"
+                          value={automationDraft.max_runs}
+                          placeholder={tr("Unlimited", "不限")}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, max_runs: event.target.value.replace(/[^0-9]/g, "") }))}
+                        />
+                      </label>
+                    </>
+                  )}
+
+                  {automationDraft.kind === "condition_watch" && (
+                    <>
+                      <label className="automationField">
+                        <span>{tr("Webhook source", "Webhook 来源")}</span>
+                        <select
+                          value={automationDraft.condition_source}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, condition_source: event.target.value as "github" | "generic" }))}
+                        >
+                          <option value="github">GitHub</option>
+                          <option value="generic">{tr("Generic webhook", "通用 Webhook")}</option>
+                        </select>
+                      </label>
+                      <label className="automationField">
+                        <span>{tr("Event", "事件")}</span>
+                        <input
+                          value={automationDraft.condition_event}
+                          placeholder="workflow_run"
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, condition_event: event.target.value }))}
+                        />
+                      </label>
+                      <label className="automationField automationFieldWide">
+                        <span>{tr("Match conditions", "匹配条件")} <small>JSON</small></span>
+                        <textarea
+                          rows={4}
+                          value={automationDraft.condition_match}
+                          spellCheck={false}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, condition_match: event.target.value }))}
+                        />
+                        <small>{tr(
+                          'Use dotted payload paths, for example {"workflow_run.name":"CI","workflow_run.conclusion":"success"}.',
+                          '使用点号 Payload 路径，例如 {"workflow_run.name":"CI","workflow_run.conclusion":"success"}。',
+                        )}</small>
+                      </label>
+                    </>
+                  )}
+                </div>
+
+                <div className="automationCreateFooter">
+                  <div>
+                    <strong>{tr("Recovery policy", "恢复策略")}</strong>
+                    <span>{tr(
+                      "If the local agent restarts and loses a process handle, Remote Arc asks for approval before rerunning it to avoid duplicate side effects.",
+                      "如果本地 Agent 重启导致进程句柄丢失，Remote Arc 会先要求确认再重跑，避免重复副作用。",
+                    )}</span>
+                  </div>
+                  <button
+                    className="primaryButton"
+                    disabled={automationBusy === "create" || UI_PREVIEW}
+                    onClick={() => void createDashboardAutomation()}
+                  >
+                    {automationBusy === "create" ? tr("Creating…", "创建中…") : tr("Create automation", "创建自动化")}
+                  </button>
+                </div>
+              </section>
+            )}
+
+            <section className="automationListPanel">
+              <div className="automationListHeader">
+                <div>
+                  <span className="eyebrow">{tr("TASKS & WATCHES", "任务与监听")}</span>
+                  <h2>{tr("Persistent work", "持久任务")}</h2>
+                </div>
+                <span>{automations.length} {tr("total", "条")}</span>
+              </div>
+
+              <div className="automationList">
+                {automations.map((automation) => {
+                  const device = devices.find((item) => item.id === automation.device_id);
+                  const busy = automationBusy?.startsWith(automation.id + ":");
+                  return (
+                    <article className={"automationRow status-" + automation.status} key={automation.id}>
+                      <div className="automationIdentity">
+                        <span className={"automationStatusDot " + automation.status} />
+                        <div>
+                          <strong>{automation.name}</strong>
+                          <span>{automationKindLabel(automation.kind)} · {device?.name || automation.device_id || tr("No device", "无设备")}</span>
+                        </div>
+                      </div>
+
+                      <div className="automationRunMeta">
+                        <span>{tr("Runs", "执行")}</span>
+                        <strong>{automation.run_count}{automation.max_runs > 0 ? " / " + automation.max_runs : ""}</strong>
+                      </div>
+
+                      <div className="automationRunMeta">
+                        <span>{tr("Next", "下次")}</span>
+                        <strong>{automation.next_run_at ? automationTime(automation.next_run_at) : "—"}</strong>
+                      </div>
+
+                      <span className={"automationStatusBadge " + automation.status}>{automationStatusLabel(automation.status)}</span>
+
+                      <div className="automationActions">
+                        {automation.status === "approval_required" && (
+                          <button disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "reapprove")}>{tr("Review & approve", "确认并继续")}</button>
+                        )}
+                        {automation.status === "paused" && (
+                          <button disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "resume")}>{tr("Resume", "恢复")}</button>
+                        )}
+                        {!automationTerminal(automation.status) && automation.status !== "paused" && automation.status !== "approval_required" && (
+                          <button disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "pause")}>{tr("Pause", "暂停")}</button>
+                        )}
+                        {!automationTerminal(automation.status) && (
+                          <button className="danger" disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "cancel")}>{tr("Cancel", "取消")}</button>
+                        )}
+                      </div>
+
+                      <details className="automationDetails">
+                        <summary>{tr("Details", "详情")}<span>›</span></summary>
+                        <div className="automationDetailGrid">
+                          <div><span>{tr("Created", "创建")}</span><strong>{timeAgo(automation.created_at)}</strong></div>
+                          <div><span>{tr("Last run", "上次执行")}</span><strong>{automation.last_run_at ? timeAgo(automation.last_run_at) : "—"}</strong></div>
+                          <div><span>{tr("Expires", "到期")}</span><strong>{automation.expires_at ? automationTime(automation.expires_at) : tr("No expiry", "不过期")}</strong></div>
+                          <div><span>{tr("Check interval", "检查间隔")}</span><strong>{Math.round(automation.interval_seconds / 60)}m</strong></div>
+                        </div>
+                        {automation.last_error && <p className="automationLastError">{automation.last_error}</p>}
+                        {automation.kind === "condition_watch" && (
+                          <p className="automationDetailNote">{tr(
+                            "The webhook secret is not stored in recoverable form. If you lose the URL, create a new condition watch.",
+                            "Webhook Secret 不会以可恢复形式保存；如果 URL 丢失，请创建新的 Condition Watch。",
+                          )}</p>
+                        )}
+                      </details>
+                    </article>
+                  );
+                })}
+
+                {!automationLoading && !automations.length && (
+                  <div className="automationEmpty">
+                    <strong>{tr("No persistent work yet", "还没有持久任务")}</strong>
+                    <span>{tr(
+                      "Create one here, or ask an MCP-connected AI to create a long task, watch, schedule, or goal loop.",
+                      "可以在这里创建，也可以让已连接 MCP 的 AI 创建长任务、监听、定时任务或目标循环。",
+                    )}</span>
+                    {!UI_PREVIEW && <button onClick={() => setShowAutomationCreate(true)}>+ {tr("New automation", "新建自动化")}</button>}
+                  </div>
+                )}
+                {automationLoading && !automations.length && <div className="automationEmpty">{tr("Loading automations…", "正在加载自动化…")}</div>}
+              </div>
+            </section>
+          </>
+        )}
+
         {active === "connect" && (
           <>
             <section className="overviewTopbar connectPageHeader">
@@ -5582,6 +6275,7 @@ function Dashboard({
         {([
           ["overview", tr("Home", "首页")],
           ["devices", tr("Devices", "设备")],
+          ["automations", tr("Automate", "自动化")],
           ["connect", tr("Connect", "连接")],
           ["security", tr("Security", "安全")],
           ["settings", tr("Settings", "设置")],
@@ -5741,6 +6435,7 @@ function LegalPage({
         [tr("Account data", "账户数据"), tr("We use your Google account identity to create and secure your Remote Arc account. We store identifiers, display name, email address, session records and authorization metadata needed to operate the service.", "我们使用你的 Google 账户身份来创建并保护 Remote Arc 账户，并保存服务运行所需的标识符、显示名称、邮箱、会话记录和授权元数据。")],
         [tr("Device data", "设备数据"), tr("For paired computers we store device identifiers, device names, platform metadata, credential hashes and connection timestamps. Raw device credentials are not stored in the hosted database.", "对于已配对电脑，我们保存设备标识、设备名称、平台信息、凭证哈希和连接时间。托管数据库不会保存原始设备凭证。")],
         [tr("Remote actions and tool results", "远程操作与工具结果"), tr("Remote Arc relays authorized MCP tool requests between your selected AI client and your connected device. Requested file contents, directory listings, process output and command results may pass through the hosted relay and be returned to the AI client to fulfill your request. Remote Arc audit records are designed to retain only operational metadata such as tool name, device, success state and time, not file contents, command arguments, OAuth tokens or device credentials.", "Remote Arc 会在你选择的 AI 客户端与已连接设备之间转发已授权的 MCP 工具请求。为完成你的请求，被读取的文件内容、目录列表、进程输出和命令结果可能经过托管 Relay 并返回给 AI 客户端。Remote Arc 的审计记录仅设计为保存工具名称、设备、成功状态和时间等运行元数据，不保存文件内容、命令参数、OAuth Token 或设备凭证。")],
+        [tr("Durable automation data", "持久自动化数据"), tr("When you create a Durable Automation, Remote Arc stores the approved trigger, command plan, optional goal verification command, target device, run and expiry limits, permission snapshot and task state so that the plan can continue after the original chat or MCP request has ended. Automation records are not designed to retain managed-process stdout or stderr.", "当你创建 Durable Automation 时，Remote Arc 会保存已批准的 Trigger、命令计划、可选目标验证命令、目标设备、运行与到期限制、权限快照和任务状态，使计划能够在原聊天或 MCP 请求结束后继续。Automation 记录不会设计为持久化受管进程的 stdout 或 stderr。")],
         [tr("AI platforms", "AI 平台"), tr("When you connect Remote Arc to ChatGPT, Codex or another compatible MCP client, tool requests and results are also processed by that provider under the account, product settings, terms and privacy policy you use with that provider.", "当你将 Remote Arc 连接到 ChatGPT、Codex 或其他兼容 MCP 客户端时，工具请求与结果也会由该服务商按照你所使用账户和产品的设置、条款及隐私政策进行处理。")],
         [tr("Infrastructure", "基础设施"), tr("The hosted service uses Cloudflare infrastructure and Google OAuth. Their processing is governed by their respective terms and privacy policies.", "托管服务使用 Cloudflare 基础设施和 Google OAuth；相关处理同时受这些服务各自的条款和隐私政策约束。")],
         [tr("Control and deletion", "控制与删除"), tr("You can revoke individual devices from the Remote Arc dashboard. For account or hosted-data deletion requests, use the support contact below.", "你可以在 Remote Arc 控制台撤销单台设备。如需删除账户或托管数据，请通过下方支持渠道联系。")],
@@ -5755,7 +6450,7 @@ function LegalPage({
       ),
       sections: [
         [tr("Authorized use", "授权使用"), tr("You must have permission to access every computer, file, account and service you control through Remote Arc. Do not use Remote Arc to bypass access controls or interfere with systems you do not own or administer.", "你必须有权访问通过 Remote Arc 控制的每台电脑、文件、账户和服务。不得使用 Remote Arc 绕过访问控制或干扰你无权管理的系统。")],
-        [tr("Your responsibility", "你的责任"), tr("Remote computer control can read or modify files, execute commands, affect running software and, when commands access network services, cause changes outside the local computer. You are responsible for reviewing device permissions, AI prompts and consequential actions before approving or enabling high-impact access.", "远程电脑控制可能读取或修改文件、执行命令、影响运行中的软件；当命令访问网络服务时，也可能对本机之外的系统产生影响。你有责任在批准或启用高影响访问前检查设备权限、AI 提示与相关操作。")],
+        [tr("Your responsibility", "你的责任"), tr("Remote computer control can read or modify files, execute commands, affect running software and, when commands access network services, cause changes outside the local computer. Durable Automations may continue after the chat that created them has ended. You are responsible for reviewing device permissions, persistent task plans, expiry and run limits, AI prompts and consequential actions before approving or enabling high-impact access.", "远程电脑控制可能读取或修改文件、执行命令、影响运行中的软件；当命令访问网络服务时，也可能对本机之外的系统产生影响。Durable Automations 可能在创建它的聊天结束后继续运行。你有责任在批准或启用高影响访问前检查设备权限、持久任务计划、到期与次数限制、AI 提示与相关操作。")],
         [tr("Service availability", "服务可用性"), tr("The hosted service is provided without a guarantee of uninterrupted availability. Features, quotas and supported integrations may change as Remote Arc develops.", "托管服务不保证持续无中断可用。随着 Remote Arc 的发展，功能、额度和支持的集成可能发生变化。")],
         [tr("Third-party software", "第三方软件"), tr("Third-party components used by Remote Arc are governed by their respective licenses and terms. The Remote Arc product is provided as a managed hosted service.", "Remote Arc 使用的第三方组件受各自许可证与条款约束；Remote Arc 产品以托管服务方式提供。")],
         [tr("Suspension", "暂停服务"), tr("Access may be limited or suspended for abuse, security risks, legal requirements or material violations of these terms.", "如存在滥用、安全风险、法律要求或重大违反本条款的情况，访问可能会被限制或暂停。")],

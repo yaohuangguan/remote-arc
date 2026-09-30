@@ -32,6 +32,12 @@ import {
 import { readAudit } from "./audit.js";
 import { getMonthlyUsage } from "./usage.js";
 import {
+  handleAutomationCollection,
+  handleAutomationItem,
+  handleAutomationWebhook,
+  runAutomationTick,
+} from "./automations.js";
+import {
   handleGrantRevoke,
   handleMcpPause,
   handleSecurityState,
@@ -139,6 +145,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       url.pathname === "/dashboard" ||
       url.pathname === "/overview" ||
       url.pathname === "/devices" ||
+      url.pathname === "/automations" ||
       url.pathname === "/connect" ||
       url.pathname === "/security" ||
       url.pathname === "/settings" ||
@@ -247,6 +254,16 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return handleLogout(request, env);
     }
 
+    const automationHook = url.pathname.match(/^\/hooks\/automations\/([^/]+)\/([^/]+)$/);
+    if (automationHook) {
+      return handleAutomationWebhook(
+        request,
+        env,
+        decodeURIComponent(automationHook[1]!),
+        decodeURIComponent(automationHook[2]!),
+      );
+    }
+
     if (url.pathname === "/api/me" && request.method === "GET") {
       const user = await getSessionUser(request, env);
       return user
@@ -273,6 +290,20 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
 
     if (url.pathname === "/api/monitor" && request.method === "GET") {
       return handleMonitorState(request, env);
+    }
+
+    if (url.pathname === "/api/automations") {
+      return handleAutomationCollection(request, env);
+    }
+
+    const automationApi = url.pathname.match(/^\/api\/automations\/([^/]+)(?:\/([^/]+))?$/);
+    if (automationApi) {
+      return handleAutomationItem(
+        request,
+        env,
+        decodeURIComponent(automationApi[1]!),
+        automationApi[2] ? decodeURIComponent(automationApi[2]) : undefined,
+      );
     }
 
     if (url.pathname === "/api/activity" && request.method === "GET") {
@@ -603,10 +634,15 @@ export default {
   },
 
   async scheduled(
-    _controller: ScheduledController,
+    controller: ScheduledController,
     env: Env,
     ctx: ExecutionContext,
   ) {
-    ctx.waitUntil(runSyntheticMonitor(env));
+    if (controller.cron === "* * * * *") {
+      ctx.waitUntil(runAutomationTick(env));
+    }
+    if (controller.cron === "*/5 * * * *") {
+      ctx.waitUntil(runSyntheticMonitor(env));
+    }
   },
 };

@@ -14,6 +14,7 @@
     "dev:ui": "pnpm --filter @remotearc/ui dev",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @remotearc/execution-core test:integration && pnpm --filter @remotearc/mcp test:smoke",
+    "test:automations": "node apps/relay/scripts/automation-e2e.mjs",
     "ci": "pnpm typecheck && pnpm test",
     "build:ui": "pnpm --filter @remotearc/ui build",
     "deploy:relay": "pnpm build:ui && pnpm --filter @remotearc/relay run deploy",

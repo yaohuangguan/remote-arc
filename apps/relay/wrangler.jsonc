@@ -17,6 +17,7 @@
   },
   "triggers": {
     "crons": [
+      "* * * * *",
       "*/5 * * * *"
     ]
   },
@@ -71,6 +72,7 @@
       "/use-cases",
       "/chatgpt-computer-access",
       "/api/*",
+      "/hooks/*",
       "/mcp",
       "/mcp/*",
       "/agent",
@@ -81,6 +83,7 @@
       "/dashboard",
       "/overview",
       "/devices",
+      "/automations",
       "/connect",
       "/security",
       "/settings",

@@ -66,6 +66,20 @@ history and snapshot contents are not persisted in the cloud. Per-device
 workspace roots and protected-path strings are stored as explicit control-plane
 policy metadata.
 
+## Durable automation security
+
+Persistent automations outlive the MCP request or chat that creates them, so their authority is intentionally narrower than "let the agent decide later." They use separate `automation:read` and `automation:write` OAuth scopes; holding `computer:write` alone does not authorize a client to leave persistent work behind.
+
+At creation time Remote Arc stores an explicit trigger, command plan, optional goal verification command, run/expiry limits, target device, and a snapshot of that device's permission policy. Each future device execution still passes through device ownership, revocation, allowed-tool and local path-policy checks.
+
+If the saved device policy changes after approval, execution stops in `approval_required` until the user explicitly approves the new snapshot. A temporarily offline device moves the task to `waiting_for_device`. If an agent restart loses a managed-process handle, the default behavior also requires approval before rerunning the command, because silently restarting an unknown side effect could duplicate a deployment, publish, payment, mutation or other external action.
+
+Condition watches use a high-entropy secret URL. Only a SHA-256 hash of that secret is stored. The URL is a bearer capability and must be protected like a credential. Delivery IDs are used to reject duplicate webhook deliveries when present. The current MVP does not claim GitHub webhook HMAC validation; native provider integrations can add stronger provider-specific verification later.
+
+Automation state, trigger metadata, run status and error summaries are cloud control-plane data. Raw command stdout/stderr is not intentionally persisted in the automation tables; managed process output remains on the device.
+
+A background agent configured to start at login can keep reconnecting while the computer is awake. Remote Arc does not claim that a sleeping, powered-off or network-disconnected computer remains online.
+
 ## Before public multi-user release
 
 The project still needs:
