@@ -326,30 +326,30 @@ function PublicHeader({ user }: { user?: User | null }) {
       <header className="landingNav publicNav">
         <Brand />
         <nav className="publicNavLinks">
-          <a href={MARKETING_ORIGIN + "/use-cases"}>{tr("Use cases", "使用场景")}</a>
-          <a href={MARKETING_ORIGIN + "/connect-ai"}>{tr("Connect", "连接")}</a>
-          <a href={MARKETING_ORIGIN + "/security-model"}>{tr("Security", "安全")}</a>
-          <a href={MARKETING_ORIGIN + "/docs"}>{tr("Docs", "文档")}</a>
-          <a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a>
+          <a href="/use-cases">{tr("Use cases", "使用场景")}</a>
+          <a href="/connect-ai">{tr("Connect", "连接")}</a>
+          <a href="/security-model">{tr("Security", "安全")}</a>
+          <a href="/docs">{tr("Docs", "文档")}</a>
+          <a href="/pricing">{tr("Pricing", "价格")}</a>
 
           <div className="publicNavMenu">
             <button type="button" className="publicNavMenuTrigger">
               {tr("More", "更多")} <span aria-hidden="true">⌄</span>
             </button>
             <div className="publicNavDropdown resourceDropdown">
-              <a href={MARKETING_ORIGIN + "/#how-it-works"}>
+              <a href="/#how-it-works">
                 <strong>{tr("How it works", "工作原理")}</strong>
                 <small>{tr("From AI client to one paired computer", "从 AI 客户端到一台已配对电脑")}</small>
               </a>
-              <a href={MARKETING_ORIGIN + "/demo"}>
+              <a href="/demo">
                 <strong>{tr("Real demo", "真实演示")}</strong>
                 <small>{tr("ChatGPT reads a project and runs its tests", "ChatGPT 读取项目并运行测试")}</small>
               </a>
-              <a href={MARKETING_ORIGIN + "/resources"}>
+              <a href="/resources">
                 <strong>{tr("Architecture", "架构")}</strong>
                 <small>{tr("Worker, D1, Durable Objects and local execution", "Worker、D1、Durable Objects 与本机执行")}</small>
               </a>
-              <a href={MARKETING_ORIGIN + "/blogs"}>
+              <a href="/blogs">
                 <strong>{tr("Blog", "博客")}</strong>
                 <small>{tr("Design decisions and product notes", "设计决策与产品记录")}</small>
               </a>
