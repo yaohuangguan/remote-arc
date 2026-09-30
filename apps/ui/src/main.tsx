@@ -858,7 +858,16 @@ function PairDevice({
               <div>
                 <span className="pairPermissionIcon">↻</span>
                 <div>
-                  <strong>{tr("Background connection", "后台连接")}</strong>
+                  <div className="labelWithHelp">
+                    <strong>{tr("Background connection", "后台连接")}</strong>
+                    <HelpTip
+                      label={tr("How background reconnect works", "后台重连如何工作")}
+                      text={tr(
+                        "macOS uses launchd, Windows uses Task Scheduler, and Linux uses systemd --user. Locking the screen does not stop the agent. During sleep the network is unavailable; after wake, Wi-Fi changes, or transient Relay disconnects, a WebSocket liveness watchdog detects stale connections and the agent reconnects with exponential backoff from 1 to 30 seconds. On Windows, the task starts at user logon, StartWhenAvailable is enabled, and task failures are retried. A powered-off or still-sleeping computer remains unavailable until the OS resumes. Turning this off removes login autostart; an offline device cannot be re-enabled from the cloud.",
+                        "macOS 使用 launchd，Windows 使用 Task Scheduler，Linux 使用 systemd --user。锁屏不会停止 Agent。电脑睡眠期间网络不可用；唤醒后、Wi-Fi 切换或 Relay 短暂断开时，WebSocket 存活检测会识别失效连接，并按 1 到 30 秒的指数退避自动重连。Windows 会在用户登录时启动任务，同时启用 StartWhenAvailable，并在任务异常失败后重试。电脑如果仍在睡眠或已经关机，则必须等操作系统恢复后才能重新在线。关闭此开关会移除登录自启动；设备已经离线时无法从云端重新开启。",
+                      )}
+                    />
+                  </div>
                   <small>{tr("Recommended · on by default", "推荐 · 默认开启")}</small>
                 </div>
               </div>
@@ -3859,8 +3868,8 @@ function Dashboard({
                           <HelpTip
                             label={tr("About background connection", "了解后台连接")}
                             text={tr(
-                              "When enabled, Remote Arc starts for your user at login and keeps reconnecting after sleep, Wi-Fi changes or transient relay disconnects. Turning it off removes login autostart. An offline computer cannot be re-enabled remotely; run npx remotelink once on that computer if needed.",
-                              "开启后，Remote Arc 会在用户登录时自动后台启动，并在睡眠唤醒、Wi-Fi 变化或临时断线后持续重连。关闭后会移除登录自启动。离线电脑无法被云端重新开启；如需恢复，请在那台电脑上运行一次 npx remotelink。",
+                              "macOS uses launchd, Windows uses Task Scheduler, and Linux uses systemd --user. Locking the screen does not stop the agent. During sleep the network is unavailable; after wake, Wi-Fi changes, or transient Relay disconnects, a WebSocket liveness watchdog detects stale connections and the agent reconnects with exponential backoff from 1 to 30 seconds. On Windows, the task starts at user logon, StartWhenAvailable is enabled, and task failures are retried. A powered-off or still-sleeping computer remains unavailable until the OS resumes. Turning this off removes login autostart; an offline device cannot be re-enabled from the cloud.",
+                              "macOS 使用 launchd，Windows 使用 Task Scheduler，Linux 使用 systemd --user。锁屏不会停止 Agent。电脑睡眠期间网络不可用；唤醒后、Wi-Fi 切换或 Relay 短暂断开时，WebSocket 存活检测会识别失效连接，并按 1 到 30 秒的指数退避自动重连。Windows 会在用户登录时启动任务，同时启用 StartWhenAvailable，并在任务异常失败后重试。电脑如果仍在睡眠或已经关机，则必须等操作系统恢复后才能重新在线。关闭此开关会移除登录自启动；设备已经离线时无法从云端重新开启。",
                             )}
                           />
                         </div>

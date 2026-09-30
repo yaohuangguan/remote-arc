@@ -428,8 +428,32 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
         15 * 60_000,
       );
 
+      // Sleep/resume and network transitions can occasionally leave the local
+      // socket in OPEN state even though the remote path is no longer usable.
+      // A protocol ping/pong watchdog makes that stale state bounded: after
+      // wake, a stale socket is terminated and the normal exponential-backoff
+      // reconnect loop takes over on macOS, Windows and Linux.
+      let lastSocketActivity = Date.now();
+      ws.on("pong", () => {
+        lastSocketActivity = Date.now();
+      });
+      const livenessTimer = setInterval(() => {
+        if (ws.readyState !== WebSocket.OPEN) return;
+        if (Date.now() - lastSocketActivity > 75_000) {
+          logLine("warn", "Relay connection became stale · reconnecting…");
+          ws.terminate();
+          return;
+        }
+        try {
+          ws.ping();
+        } catch {
+          ws.terminate();
+        }
+      }, 30_000);
+
       await new Promise<void>((resolve) => {
         ws.on("message", async (raw) => {
+          lastSocketActivity = Date.now();
           let message: {
             type?: string;
             id?: string;
@@ -527,6 +551,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
         ws.once("error", resolve);
       });
       clearInterval(heartbeatTimer);
+      clearInterval(livenessTimer);
     } catch (error) {
       if (error instanceof RevokedDeviceCredentialError) {
         logLine("warn", error.message);
