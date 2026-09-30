@@ -94,9 +94,12 @@ const pages: Record<string, SeoPage> = {
   "/install/cursor": { title: "Install Remote Arc for Cursor", description: "Use Remote Arc to give Cursor controlled access to paired Windows, macOS and Linux computers through MCP.", canonical: SITE + "/install/cursor" },
   "/pricing": { title: "Remote Arc Pricing — Hosted remote MCP for AI", description: "Start Remote Arc free with hosted MCP usage and add capacity when you need more.", canonical: SITE + "/pricing" },
   "/demo": { title: "Remote Arc Plugin Demo — ChatGPT to a real computer", description: "Watch a real Remote Arc demo showing ChatGPT connecting to a paired Mac, inspecting a Node.js project and running its tests.", canonical: SITE + "/demo" },
-  "/docs/mcp": { title: "Remote Arc MCP — Connect AI clients to your computers", description: "Remote Arc Remote MCP documentation for ChatGPT, Claude, Cursor and compatible AI clients.", canonical: SITE + "/docs/mcp" },
-  "/resources": { title: "Remote Arc Resources — Architecture, security and MCP", description: "Technical resources for Remote Arc: architecture, OAuth, device permissions, edge protection and privacy-preserving audit.", canonical: SITE + "/resources" },
-  "/blogs": { title: "Remote Arc Blog — MCP, remote AI and computer access", description: "Product thinking, engineering decisions, architecture and security lessons from building Remote Arc.", canonical: SITE + "/blogs" },
+  "/docs": { title: "Remote Arc Documentation", description: "Install Remote Arc, connect an AI client, understand the permission model, public MCP tools, background jobs, Local Undo, architecture and data handling.", canonical: SITE + "/docs" },
+  "/docs/mcp": { title: "Remote Arc MCP Reference", description: "Remote MCP reference for ChatGPT, Claude, Cursor and compatible AI clients.", canonical: SITE + "/docs/mcp" },
+  "/connect-ai": { title: "Connect an AI client to Remote Arc", description: "Pair a computer, choose its device permissions, then connect ChatGPT, Claude, Cursor or another compatible MCP client through OAuth.", canonical: SITE + "/connect-ai" },
+  "/security-model": { title: "Remote Arc Security and Trust Model", description: "Remote Arc trust boundaries, per-device skills, directory and sensitive-path controls, encrypted transport, data handling, Local Undo and revocation.", canonical: SITE + "/security-model" },
+  "/resources": { title: "Remote Arc Resources — Architecture, security and MCP", description: "Technical resources for Remote Arc: architecture, OAuth, device permissions, edge protection and operational audit.", canonical: SITE + "/resources" },
+  "/blogs": { title: "Remote Arc Blog", description: "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.", canonical: SITE + "/blogs" },
   "/use-cases": { title: "Remote Arc Use Cases — Let AI work on your real computer", description: "Use Remote Arc for remote coding, file work, terminal workflows, device inspection and mobile-to-computer AI tasks.", canonical: SITE + "/use-cases" },
   "/chatgpt-computer-access": { title: "Give ChatGPT access to your computer with Remote Arc", description: "Connect ChatGPT to a real Windows, macOS or Linux computer with Remote Arc, Remote MCP, OAuth and per-device permissions.", canonical: SITE + "/chatgpt-computer-access" },
   "/privacy": { title: "Remote Arc Privacy Policy", description: "How Remote Arc handles account, device, usage and operational data.", canonical: SITE + "/privacy" },
@@ -108,7 +111,7 @@ function blogIndexHtml() {
   const items = Object.entries(articles).map(function(entry) {
     return '<li><a href="' + entry[0] + '">' + esc(entry[1].title) + '</a> — Sam Yao</li>';
   }).join("");
-  return '<main class="seo-blog-shell"><section><p class="seo-eyebrow">REMOTE ARC BLOG</p><h1>Notes from building the bridge between AI and real computers.</h1><p>Product thinking, engineering decisions, security trade-offs and lessons from building Remote Arc in public.</p><ol>' + items + '</ol></section></main>';
+  return '<main class="seo-blog-shell"><section><p class="seo-eyebrow">BLOG</p><h1>Remote Arc blog</h1><p>Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.</p><ol>' + items + '</ol></section></main>';
 }
 
 function articleHtml(page: SeoPage) {
@@ -173,7 +176,7 @@ export function renderMarketingHtml(html: string, pathname: string) {
 }
 
 export function sitemapXml() {
-  const paths = ["/","/install/chatgpt","/install/claude","/install/cursor","/pricing","/demo","/docs/mcp","/resources","/blogs","/blogs/why-i-built-remote-arc","/blogs/remote-arc-vs-openclaw","/blogs/powerful-ai-access-without-exposing-your-computer","/blogs/how-remote-arc-works","/use-cases","/chatgpt-computer-access","/privacy","/terms","/support"];
+  const paths = ["/","/install/chatgpt","/install/claude","/install/cursor","/connect-ai","/docs","/security-model","/pricing","/demo","/docs/mcp","/resources","/blogs","/blogs/why-i-built-remote-arc","/blogs/remote-arc-vs-openclaw","/blogs/powerful-ai-access-without-exposing-your-computer","/blogs/how-remote-arc-works","/use-cases","/chatgpt-computer-access","/privacy","/terms","/support"];
   return '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
     paths.map(function(path) {
       return '<url><loc>' + SITE + path + '</loc><lastmod>2026-09-27</lastmod><changefreq>' + (path === "/" ? "weekly" : "monthly") + '</changefreq><priority>' + (path === "/" ? "1.0" : "0.8") + '</priority></url>';

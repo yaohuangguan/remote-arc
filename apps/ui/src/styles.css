@@ -1412,7 +1412,7 @@ html,body { max-width:100%; overflow-x:hidden; }
 
 
 /* Public legal and support pages */
-.publicPageShell { min-height:100vh; background:var(--page-bg, #0b1020); color:var(--text, #f5f7fb); }
+.publicPageShell { min-height:100vh; background:var(--bg); color:var(--text); }
 .legalPage { width:min(980px, calc(100% - 32px)); margin:0 auto; padding:110px 0 72px; }
 .legalPage h1 { margin:10px 0 14px; font-size:clamp(34px, 6vw, 64px); letter-spacing:-.045em; }
 .legalIntro { max-width:760px; color:var(--muted, #9aa5b1); font-size:18px; line-height:1.7; }
@@ -8091,4 +8091,2039 @@ body{font-size:18px;line-height:1.6}
 :root[data-theme="light"] .mobileTopbar{
   background:rgba(248,252,253,.92);
   border-color:#dce9ed;
+}
+
+/* Homepage product-fit section: editorial rows, intentionally not cards. */
+.fitSection{border-top:1px solid var(--border)}
+.fitRows{display:grid;margin-top:36px;border-top:1px solid var(--border)}
+.fitRows>div{display:grid;grid-template-columns:minmax(150px,.34fr) minmax(0,1fr);gap:42px;padding:25px 0;border-bottom:1px solid var(--border)}
+.fitRows strong{font-size:17px;letter-spacing:-.01em}
+.fitRows p{max-width:860px;margin:0;color:var(--muted);font-size:17px;line-height:1.72}
+:root[data-theme="light"] .fitRows p{color:#4f7079}
+@media(max-width:720px){
+  .fitRows>div{grid-template-columns:1fr;gap:8px;padding:21px 0}
+  .fitRows p{font-size:16px}
+}
+
+/* --------------------------------------------------------------------------
+   Product-first public pages
+   -------------------------------------------------------------------------- */
+.contentSection{padding:72px 0;border-top:1px solid var(--line)}
+.contentSection .sectionIntro{max-width:none}
+.splitIntro{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(320px,.72fr);gap:64px;align-items:end}
+.splitIntro>p{margin:0;color:var(--muted);font-size:18px;line-height:1.72}
+.editorialPageHero{max-width:1000px}
+.editorialPageHero h1{max-width:960px}
+.textAction{display:inline-flex;margin-top:24px;color:var(--sky-light);font-size:14px;font-weight:700}
+.inlineReference{display:flex;flex-wrap:wrap;gap:22px;margin-top:24px}
+.inlineReference a{color:var(--sky-light);font-size:14px;font-weight:650}
+
+.editorialHero{grid-template-columns:minmax(0,1.08fr) minmax(400px,.82fr);gap:64px;min-height:680px}
+.heroFactLine{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:26px;color:#6f8790;font-size:12px}
+.heroFactLine span{position:relative}
+.heroFactLine span+span::before{content:"·";position:absolute;left:-11px;color:#38515b}
+.heroTerminalProof{overflow:hidden;border:1px solid var(--line);border-radius:20px;background:#06101a;box-shadow:0 32px 90px rgba(0,0,0,.28)}
+.proofHeader{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #172638;background:#08131f}
+.proofHeader span{color:var(--sky-light);font:800 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em}
+.proofHeader small{color:#5d7480;font-size:11px}
+.proofChat,.proofResult{padding:18px}
+.proofChat b,.proofResult b{display:block;margin-bottom:7px;color:#6f8790;font-size:10px;letter-spacing:.12em}
+.proofChat p,.proofResult p{margin:0;color:#dcebf0;font-size:15px;line-height:1.6}
+.proofCall{display:grid;grid-template-columns:30px minmax(0,1fr);gap:9px;padding:13px 18px;border-top:1px solid #142334}
+.proofCall>span{color:#4b6874;font:700 11px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}
+.proofCall code{min-width:0;color:#8bdff5;font-size:12px;overflow-wrap:anywhere}
+.proofCall small{grid-column:2;color:#617784;font-size:11px}
+.proofResult{border-top:1px solid #142334;background:#091722}
+.proofResult b{color:#5ee0a4}
+
+.howStepsPlain{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:34px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.howStepsPlain>div{padding:28px 30px 30px 0}
+.howStepsPlain>div+div{padding-left:30px;border-left:1px solid var(--line)}
+.howStepsPlain>div>span{color:var(--sky);font:800 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.howStepsPlain h3{margin:18px 0 9px;font-size:22px;letter-spacing:-.025em}
+.howStepsPlain p{min-height:84px;margin:0 0 18px;color:var(--muted);font-size:15px;line-height:1.7}
+.howStepsPlain code{display:block;max-width:100%;overflow:auto;color:#8ddff5;font-size:12px;white-space:nowrap}
+.howStepsPlain a{color:var(--sky-light);font-size:13px;font-weight:700}
+.clientLinkRow{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.clientLinkRow>a{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#07111f}
+.clientLinkRow>a:hover{border-color:var(--sky-line)}
+.clientLinkRow img{width:22px;height:22px;object-fit:contain}
+.clientLinkRow strong{font-size:13px}
+.clientLinkRow>a>span:last-child{margin-left:6px;color:#5b7c87}
+.miniMcp{display:grid;place-items:center;width:22px;height:22px;border-radius:7px;background:var(--sky-soft);color:var(--sky);font-size:11px;font-weight:900}
+
+.workflowRows{display:grid;border-top:1px solid var(--line);margin-top:34px}
+.workflowRow{display:grid;grid-template-columns:54px minmax(0,1fr) 24px;gap:20px;align-items:start;padding:26px 0;border-bottom:1px solid var(--line)}
+.workflowRow>span{padding-top:5px;color:#607a84;font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.workflowRow h3{margin:0 0 9px;font-size:24px;letter-spacing:-.025em}
+.workflowRow blockquote{margin:0;color:#c7d8de;font-size:16px;line-height:1.6}
+.workflowRow p{margin:8px 0 0;color:var(--muted);font-size:14px}
+.workflowRow>b{color:var(--sky);font-size:19px}
+.workflowRow:hover h3{color:#c8f1ff}
+
+.capabilityTable{display:grid;border-top:1px solid var(--line);margin-top:34px}
+.capabilityRow{display:grid;grid-template-columns:minmax(190px,.72fr) minmax(0,1.2fr) minmax(260px,.88fr);gap:28px;align-items:start;padding:23px 0;border-bottom:1px solid var(--line)}
+.capabilityRow>div{display:grid;gap:6px}
+.capabilityRow strong{font-size:16px}
+.capabilityRow>div span{width:fit-content;color:var(--sky);font-size:11px;font-weight:750;text-transform:uppercase}
+.capabilityRow p{margin:0;color:var(--muted);font-size:15px;line-height:1.65}
+.capabilityRow code{color:#7699a5;font-size:11px;line-height:1.65;overflow-wrap:anywhere}
+
+.truthRows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:34px;border-top:1px solid var(--line)}
+.truthRows>div{padding:24px 28px 24px 0;border-bottom:1px solid var(--line)}
+.truthRows>div:nth-child(even){padding-left:28px;border-left:1px solid var(--line)}
+.truthRows strong{font-size:15px}
+.truthRows p{margin:7px 0 0;color:var(--muted);font-size:14px;line-height:1.72}
+.compactTruth{grid-template-columns:1fr}
+.compactTruth>div,.compactTruth>div:nth-child(even){padding:18px 0;border-left:0}
+
+/* Connect/reference pages */
+.referenceSection{padding:58px 0;border-top:1px solid var(--line)}
+.referenceLead{max-width:800px}
+.referenceLead h2{margin:9px 0 12px;font-size:clamp(28px,3.2vw,42px);line-height:1.08;letter-spacing:-.04em}
+.referenceLead p{margin:0;color:var(--muted);font-size:16px;line-height:1.72}
+.largeCodeLine{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:26px;padding:15px 16px;border:1px solid var(--line);border-radius:12px;background:#06101a}
+.largeCodeLine code{min-width:0;overflow:auto;color:#8ddff5;font-size:14px;white-space:nowrap}
+.referenceFacts{display:flex;flex-wrap:wrap;gap:9px 18px;margin-top:17px;color:#6f8790;font-size:12px}
+.permissionLadder{display:grid;margin-top:28px;border-top:1px solid var(--line)}
+.permissionLadder>div{display:grid;grid-template-columns:130px minmax(0,1fr) 120px;gap:22px;align-items:center;padding:18px 0;border-bottom:1px solid var(--line)}
+.permissionLadder strong{font-size:15px}
+.permissionLadder span{color:var(--muted);font-size:14px}
+.permissionLadder small{justify-self:end;color:var(--sky);font-size:11px;font-weight:750}
+.clientGuideRows,.referenceLinkRows{display:grid;margin-top:25px;border-top:1px solid var(--line)}
+.clientGuideRows>a,.referenceLinkRows>a{display:grid;grid-template-columns:36px minmax(0,1fr) 20px;gap:14px;align-items:center;padding:17px 0;border-bottom:1px solid var(--line)}
+.clientGuideRows img{width:28px;height:28px;object-fit:contain}
+.clientGuideRows>a>div,.referenceLinkRows>a{min-width:0}
+.clientGuideRows strong,.referenceLinkRows strong{font-size:14px}
+.clientGuideRows div span,.referenceLinkRows span{display:block;margin-top:3px;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.clientGuideRows b,.referenceLinkRows b{color:var(--sky)}
+.referenceTable{display:grid;margin-top:26px;border-top:1px solid var(--line)}
+.referenceTable>div{display:grid;grid-template-columns:minmax(160px,.42fr) minmax(0,1fr);gap:26px;padding:18px 0;border-bottom:1px solid var(--line)}
+.referenceTable strong,.referenceTable code{color:#bfefff;font-size:13px}
+.referenceTable p{margin:0;color:var(--muted);font-size:14px;line-height:1.7}
+.referenceNote{margin:18px 0 0;color:#768c95;font-size:13px;line-height:1.68}
+
+/* Docs + security */
+.docsIndex,.securityModelLayout{display:grid;grid-template-columns:210px minmax(0,1fr);gap:60px;padding:30px 0 74px}
+.docsIndex>aside,.securityModelLayout>aside{position:sticky;top:100px;align-self:start;display:grid;gap:9px;padding-top:6px}
+.docsIndex>aside>span{margin-bottom:7px;color:#58727c;font-size:10px;font-weight:800;letter-spacing:.12em}
+.docsIndex>aside a,.securityModelLayout>aside a{color:#738b94;font-size:12px;line-height:1.45}
+.docsIndex>aside a:hover,.securityModelLayout>aside a:hover{color:var(--sky-light)}
+.docsBody,.securityModelBody{min-width:0}
+.docsBody>article,.securityModelBody>article{padding:0 0 52px;margin-bottom:52px;border-bottom:1px solid var(--line);scroll-margin-top:110px}
+.docsBody h2,.securityModelBody h2{margin:10px 0 14px;font-size:clamp(27px,3vw,39px);line-height:1.12;letter-spacing:-.035em}
+.docsBody>article>p,.securityModelBody>article>p{margin:0;color:var(--muted);font-size:16px;line-height:1.76}
+.docsToolGroups{display:grid;margin-top:26px;border-top:1px solid var(--line)}
+.docsToolGroups>div{padding:20px 0;border-bottom:1px solid var(--line)}
+.docsToolGroups h3{margin:0 0 7px;font-size:17px}
+.docsToolGroups code{color:#89dff5;font-size:12px;overflow-wrap:anywhere}
+.docsToolGroups p{margin:7px 0 0;color:var(--muted);font-size:14px;line-height:1.65}
+.securityPermissionRows,.dataBoundaryTable{display:grid;margin-top:24px;border-top:1px solid var(--line)}
+.securityPermissionRows>div,.dataBoundaryTable>div{display:grid;grid-template-columns:130px minmax(0,1fr) 120px;gap:22px;align-items:start;padding:18px 0;border-bottom:1px solid var(--line)}
+.dataBoundaryTable>div{grid-template-columns:220px minmax(0,1fr)}
+.securityPermissionRows p,.dataBoundaryTable p{margin:0;color:var(--muted);font-size:14px;line-height:1.65}
+.securityPermissionRows small{justify-self:end;color:var(--sky);font-size:11px}
+
+/* Use cases */
+.useCaseEditorialList{display:grid;margin:10px 0 78px;border-top:1px solid var(--line)}
+.useCaseEditorialList>a{display:grid;grid-template-columns:56px minmax(0,1fr) 28px;gap:20px;align-items:start;padding:28px 0;border-bottom:1px solid var(--line)}
+.caseIndex{padding-top:6px;color:#5b7782;font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.caseMain small{color:var(--sky);font-size:10px;font-weight:800;letter-spacing:.12em}
+.caseMain h2{margin:7px 0 8px;font-size:27px;line-height:1.16;letter-spacing:-.03em}
+.caseMain p{max-width:820px;margin:0;color:var(--muted);font-size:15px;line-height:1.7}
+.caseMain code{display:block;margin-top:10px;color:#6f939f;font-size:11px;overflow-wrap:anywhere}
+.useCaseEditorialList>a>b{padding-top:8px;color:var(--sky);font-size:18px}
+.useCaseEditorialList>a:hover h2{color:#c9f1ff}
+.useCaseMeta{display:grid;gap:9px;margin-top:24px;padding-top:19px;border-top:1px solid var(--line)}
+.useCaseMeta span{color:#8398a0;font-size:13px}
+.useCaseMeta code{color:#6f939f;font-size:11px;overflow-wrap:anywhere}
+.useCaseNarrative{display:grid;grid-template-columns:1.25fr .9fr .9fr;gap:1px;margin:18px 0 50px;border:1px solid var(--line);background:var(--line)}
+.useCaseNarrative article{padding:26px;background:#07111f}
+.useCaseNarrative blockquote{margin:18px 0 0;color:#d6e8ed;font-size:19px;line-height:1.65}
+.useCaseNarrative ul{margin:18px 0 0;padding-left:20px;color:var(--muted);font-size:14px;line-height:1.8}
+.useCaseNarrative .honestLimit{background:#09131f}
+.honestLimit p{margin:18px 0 0;color:#9aadb4;font-size:14px;line-height:1.75}
+.useCaseBottomNav{display:flex;justify-content:space-between;gap:20px;padding:22px 0 50px;border-top:1px solid var(--line)}
+.useCaseBottomNav a{color:var(--sky-light);font-size:13px;font-weight:700}
+
+.editorialCta{border-radius:16px}
+.editorialCta>div{max-width:800px}
+
+/* Light surfaces */
+:root[data-theme="light"] .heroTerminalProof,
+:root[data-theme="light"] .largeCodeLine,
+:root[data-theme="light"] .clientLinkRow>a,
+:root[data-theme="light"] .useCaseNarrative article{background:#fff}
+:root[data-theme="light"] .proofHeader,
+:root[data-theme="light"] .proofResult{background:#f5fafc}
+:root[data-theme="light"] .proofChat p,
+:root[data-theme="light"] .proofResult p,
+:root[data-theme="light"] .workflowRow blockquote,
+:root[data-theme="light"] .useCaseNarrative blockquote{color:#173c49}
+:root[data-theme="light"] .proofHeader,
+:root[data-theme="light"] .proofCall,
+:root[data-theme="light"] .proofResult{border-color:#dce9ed}
+:root[data-theme="light"] .howStepsPlain,
+:root[data-theme="light"] .howStepsPlain>div+div,
+:root[data-theme="light"] .workflowRows,
+:root[data-theme="light"] .workflowRow,
+:root[data-theme="light"] .capabilityTable,
+:root[data-theme="light"] .capabilityRow,
+:root[data-theme="light"] .truthRows,
+:root[data-theme="light"] .truthRows>div,
+:root[data-theme="light"] .referenceSection,
+:root[data-theme="light"] .permissionLadder,
+:root[data-theme="light"] .permissionLadder>div,
+:root[data-theme="light"] .clientGuideRows,
+:root[data-theme="light"] .clientGuideRows>a,
+:root[data-theme="light"] .referenceTable,
+:root[data-theme="light"] .referenceTable>div,
+:root[data-theme="light"] .docsBody>article,
+:root[data-theme="light"] .securityModelBody>article,
+:root[data-theme="light"] .docsToolGroups,
+:root[data-theme="light"] .docsToolGroups>div,
+:root[data-theme="light"] .useCaseEditorialList,
+:root[data-theme="light"] .useCaseEditorialList>a,
+:root[data-theme="light"] .useCaseBottomNav{border-color:#dce9ed}
+
+/* Responsive public editorial pages */
+@media(max-width:980px){
+  .editorialHero{grid-template-columns:1fr;min-height:0}
+  .heroTerminalProof{max-width:760px}
+  .splitIntro{grid-template-columns:1fr;gap:14px}
+  .howStepsPlain{grid-template-columns:1fr}
+  .howStepsPlain>div,.howStepsPlain>div+div{padding:22px 0;border-left:0;border-bottom:1px solid var(--line)}
+  .howStepsPlain>div:last-child{border-bottom:0}
+  .howStepsPlain p{min-height:0}
+  .capabilityRow{grid-template-columns:190px minmax(0,1fr)}
+  .capabilityRow code{grid-column:2}
+  .docsIndex,.securityModelLayout{grid-template-columns:1fr;gap:28px}
+  .docsIndex>aside,.securityModelLayout>aside{position:static;display:flex;flex-wrap:wrap;gap:10px 18px;border-bottom:1px solid var(--line);padding-bottom:18px}
+  .docsIndex>aside>span{width:100%}
+  .useCaseNarrative{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  .contentSection{padding:52px 0}
+  .editorialHero{gap:34px;padding-top:56px}
+  .heroFactLine span+span::before{display:none}
+  .heroFactLine{gap:7px 14px}
+  .proofCall{grid-template-columns:25px minmax(0,1fr)}
+  .clientLinkRow{display:grid;grid-template-columns:1fr 1fr}
+  .workflowRow{grid-template-columns:36px minmax(0,1fr) 18px;gap:12px;padding:22px 0}
+  .workflowRow h3{font-size:21px}
+  .workflowRow blockquote{font-size:15px}
+  .capabilityRow{grid-template-columns:1fr;gap:8px}
+  .capabilityRow code{grid-column:auto}
+  .truthRows{grid-template-columns:1fr}
+  .truthRows>div,.truthRows>div:nth-child(even){padding:19px 0;border-left:0}
+  .permissionLadder>div,.securityPermissionRows>div,.dataBoundaryTable>div,.referenceTable>div{grid-template-columns:1fr;gap:6px}
+  .permissionLadder small,.securityPermissionRows small{justify-self:start}
+  .clientGuideRows>a{grid-template-columns:30px minmax(0,1fr) 18px}
+  .useCaseEditorialList>a{grid-template-columns:34px minmax(0,1fr) 18px;gap:11px}
+  .caseMain h2{font-size:22px}
+  .useCaseBottomNav{align-items:flex-start;flex-direction:column}
+}
+
+/* Keep the established homepage composition on the product-first branch. */
+.splitIntro{max-width:none;display:grid;grid-template-columns:1.05fr .95fr;align-items:end;gap:80px}
+.splitIntro>p{margin:0 0 8px;color:#91a6ad;font-size:18px;line-height:1.75}
+.miniMcp{display:grid;place-items:center;width:25px;height:25px;border:1px solid var(--sky);border-radius:8px;background:transparent;color:var(--sky-light);font:800 12px/1 ui-monospace,monospace}
+@media(max-width:980px) and (min-width:821px){
+  .splitIntro{grid-template-columns:1.05fr .95fr;gap:80px}
+}
+@media(max-width:820px){
+  .splitIntro{grid-template-columns:1fr;gap:26px}
+}
+
+/* --------------------------------------------------------------------------
+   Light theme QA pass — accessible contrast and no dark-theme text leakage.
+   Keep this at the end so future light-as-default can rely on one final layer.
+   -------------------------------------------------------------------------- */
+:root[data-theme="light"]{
+  --sky:#036b8d;
+  --sky-light:#075985;
+  --sky-deep:#0b5267;
+  --accent:#036b8d;
+  --gold:#036b8d;
+  --gold-2:#075985;
+  --green:#047857;
+  --muted:#536b8a;
+  --muted-2:#5f7487;
+}
+
+/* Primary actions need light text once the accessible light accent is darker. */
+:root[data-theme="light"] .primaryButton,
+:root[data-theme="light"] .addButton,
+:root[data-theme="light"] .approveButton,
+:root[data-theme="light"] .goldButton,
+:root[data-theme="light"] .pairLookup button,
+:root[data-theme="light"] .languageSetting button.active,
+:root[data-theme="light"] .themeSetting button.active{
+  background:var(--sky)!important;
+  color:#fff!important;
+}
+:root[data-theme="light"] .primaryButton:hover,
+:root[data-theme="light"] .addButton:hover,
+:root[data-theme="light"] .approveButton:hover,
+:root[data-theme="light"] .goldButton:hover,
+:root[data-theme="light"] .pairLookup button:hover{
+  background:var(--sky-deep)!important;
+  color:#fff!important;
+}
+
+/* Header dropdown buttons previously kept the warm dark-theme colour. */
+:root[data-theme="light"] .publicNavMenuTrigger{
+  color:#365d68!important;
+}
+:root[data-theme="light"] .publicNavMenuTrigger span{
+  color:#55717a!important;
+}
+:root[data-theme="light"] .publicNavMenu:hover .publicNavMenuTrigger,
+:root[data-theme="light"] .publicNavMenu:focus-within .publicNavMenuTrigger,
+:root[data-theme="light"] .publicNavMenu:hover .publicNavMenuTrigger span,
+:root[data-theme="light"] .publicNavMenu:focus-within .publicNavMenuTrigger span{
+  color:var(--sky)!important;
+}
+
+/* Small accent text must meet contrast on white / ice surfaces. */
+:root[data-theme="light"] .brandWords b:last-child,
+:root[data-theme="light"] .eyebrow,
+:root[data-theme="light"] .journeyIcon,
+:root[data-theme="light"] .journeyGrid code,
+:root[data-theme="light"] .journeyGrid blockquote,
+:root[data-theme="light"] .mobileScenarioNode span,
+:root[data-theme="light"] .mobileScenarioFlow>b,
+:root[data-theme="light"] .blogReadLink,
+:root[data-theme="light"] .textAction,
+:root[data-theme="light"] .inlineReference a,
+:root[data-theme="light"] .howStepsPlain a,
+:root[data-theme="light"] .permissionLadder small,
+:root[data-theme="light"] .securityPermissionRows small,
+:root[data-theme="light"] .clientGuideRows b,
+:root[data-theme="light"] .referenceLinkRows b,
+:root[data-theme="light"] .caseMain small,
+:root[data-theme="light"] .useCaseEditorialList>a>b,
+:root[data-theme="light"] .useCaseBottomNav a,
+:root[data-theme="light"] .planTag,
+:root[data-theme="light"] .resourceMetricRow strong{
+  color:var(--sky)!important;
+}
+
+/* Muted copy: keep it visually secondary without dropping below readable contrast. */
+:root[data-theme="light"] .publicFooter,
+:root[data-theme="light"] .publicFooter a,
+:root[data-theme="light"] .resourceArticleTag,
+:root[data-theme="light"] .referenceFacts,
+:root[data-theme="light"] .referenceNote,
+:root[data-theme="light"] .docsIndex>aside a,
+:root[data-theme="light"] .securityModelLayout>aside a,
+:root[data-theme="light"] .workflowRow>span,
+:root[data-theme="light"] .capabilityRow code,
+:root[data-theme="light"] .caseMain code,
+:root[data-theme="light"] .useCaseMeta span,
+:root[data-theme="light"] .useCaseMeta code,
+:root[data-theme="light"] .honestLimit p,
+:root[data-theme="light"] .resourceArticles p,
+:root[data-theme="light"] .resourceMetricRow span,
+:root[data-theme="light"] .resourceAuditMatrix span{
+  color:#4f6876!important;
+}
+
+/* These reference/code values were still using dark-theme cyan. */
+:root[data-theme="light"] .referenceTable strong,
+:root[data-theme="light"] .referenceTable code,
+:root[data-theme="light"] .docsToolGroups code,
+:root[data-theme="light"] .resourceCodeRail code,
+:root[data-theme="light"] .largeCodeLine code{
+  color:#315c67!important;
+}
+
+/* Product/resource headings leaked pale dark-theme colours into white mode. */
+:root[data-theme="light"] .platformCapabilityGrid strong,
+:root[data-theme="light"] .resourceArticles h2,
+:root[data-theme="light"] .techResourceCard h3{
+  color:#173944!important;
+}
+
+/* Keep subtle badges readable after the accent token changes. */
+:root[data-theme="light"] .heroBadges span,
+:root[data-theme="light"] .architectureLabel,
+:root[data-theme="light"] .architectureCompatibility,
+:root[data-theme="light"] .architectureArrow small,
+:root[data-theme="light"] .trustRail>span,
+:root[data-theme="light"] .trustRail small{
+  color:#456c76!important;
+}
+
+/* Light theme QA pass 2 — legacy public pages and intentional dark islands. */
+:root[data-theme="light"] .ctaStrip p{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .comparisonHead strong:last-child{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .platformFootnote code{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .platformFootnote a{
+  color:var(--sky)!important;
+}
+
+/* Demo/code surfaces intentionally remain dark in light mode. */
+:root[data-theme="light"] .demoBadge,
+:root[data-theme="light"] .demoEndpoint,
+:root[data-theme="light"] .installGrid .endpointRow code{
+  color:#7dd3fc!important;
+}
+.pluginDemoVideo{
+  color:#eaf8fb;
+}
+
+/* Resources table of contents. */
+:root[data-theme="light"] .resourceToc nav a span,
+:root[data-theme="light"] .resourceToc nav a small,
+:root[data-theme="light"] .resourceTocLinks>span{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .resourceToc nav a strong{
+  color:#315c67!important;
+}
+:root[data-theme="light"] .resourceToc nav a:hover strong{
+  color:var(--sky)!important;
+}
+:root[data-theme="light"] .resourceTocLinks a{
+  color:#456c76!important;
+}
+:root[data-theme="light"] .resourceTocLinks a:hover,
+:root[data-theme="light"] .resourceTocLinks em{
+  color:var(--sky)!important;
+}
+
+/* Blog metadata needs to remain secondary, not faint. */
+:root[data-theme="light"] .blogLeadMeta{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .blogLeadPost:hover h2,
+:root[data-theme="light"] .blogPostRow:hover h2{
+  color:var(--sky)!important;
+}
+
+/* Client-install live session mixes a dark terminal with a light chat surface. */
+:root[data-theme="light"] .sessionPanelLabel>small,
+:root[data-theme="light"] .sessionTerminalBar small{
+  color:#8fb0b9!important;
+}
+:root[data-theme="light"] .sessionTerminalIdle{
+  color:#86a5ae!important;
+}
+:root[data-theme="light"] .sessionBridge span{
+  color:#456c76!important;
+}
+:root[data-theme="light"] .sessionChatHeader>span{
+  color:#047857!important;
+}
+:root[data-theme="light"] .sessionChatHint span,
+:root[data-theme="light"] .sessionComposer>span{
+  color:#5f6770!important;
+}
+:root[data-theme="light"] .installSetupMap b{
+  color:var(--sky)!important;
+}
+
+/* Legacy MCP docs. */
+:root[data-theme="light"] .mcpHeroClients small{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .endpointCopy code,
+:root[data-theme="light"] .mcpSystemGrid code,
+:root[data-theme="light"] .scopeChips code{
+  color:#315c67!important;
+}
+:root[data-theme="light"] .clientGuideCard header span{
+  color:#456c76!important;
+}
+:root[data-theme="light"] .clientGuideCard li b,
+:root[data-theme="light"] .clientGuideCard>a,
+:root[data-theme="light"] .browserInstallSteps li>b{
+  color:var(--sky)!important;
+}
+
+/* Remove real mobile min-content overflow instead of clipping it. */
+.installGrid article,
+.resourceDocsLayout,
+.resourceDocsLayout>*{
+  min-width:0;
+}
+@media(max-width:900px){
+  .installGrid article{width:100%}
+}
+@media(max-width:620px){
+  .resourceDocsLayout{width:100%;max-width:100%}
+  .resourceToc,
+  .resourceTocInner,
+  .resourceToc nav,
+  .resourceArticles{min-width:0;max-width:100%}
+}
+
+/* Docs reference links have no leading icon; do not reuse client-link icon columns. */
+.referenceLinkRows>a{
+  grid-template-columns:minmax(180px,.62fr) minmax(0,1.38fr) 20px;
+}
+@media(max-width:700px){
+  .referenceLinkRows>a{
+    grid-template-columns:minmax(0,1fr) 18px;
+    gap:5px 10px;
+  }
+  .referenceLinkRows>a>strong,
+  .referenceLinkRows>a>span{grid-column:1}
+  .referenceLinkRows>a>b{
+    grid-column:2;
+    grid-row:1 / span 2;
+    align-self:center;
+  }
+  .resourceCodeRail{
+    width:100%!important;
+    flex-wrap:wrap;
+    overflow:visible;
+  }
+}
+
+:root[data-theme="light"] .publicNavDropdown small{color:#55717a!important}
+
+/* --------------------------------------------------------------------------
+   Dashboard light-theme QA — semantic status colours + readable typography.
+   -------------------------------------------------------------------------- */
+:root[data-theme="light"] .dashboardFooter a{
+  color:#4f6876;
+}
+:root[data-theme="light"] .sideNav button span,
+:root[data-theme="light"] .securityIcon,
+:root[data-theme="light"] .connectIcon,
+:root[data-theme="light"] .deviceIcon{
+  color:#036b8d!important;
+}
+
+/* Status colours must stay semantic but readable on light surfaces. */
+:root[data-theme="light"] .eventIcon.success{
+  color:#047857;
+  background:#ecfdf5;
+}
+:root[data-theme="light"] .eventIcon.failed{
+  color:#b42318;
+  background:#fef2f2;
+}
+:root[data-theme="light"] .badge.online{
+  border-color:#a7d7bd;
+  background:#edf9f1;
+  color:#047857;
+}
+:root[data-theme="light"] .badge.online i{
+  background:#047857;
+}
+:root[data-theme="light"] .badge:not(.online){
+  border-color:#cbd5e1;
+  background:#f1f5f9;
+  color:#475569;
+}
+:root[data-theme="light"] .attentionIcon.idle{
+  background:#eef2f6;
+  color:#475569;
+}
+:root[data-theme="light"] .attentionClear>i,
+:root[data-theme="light"] .privacyBoundaryGrid .kept>span{
+  background:#eaf8ef;
+  color:#047857;
+}
+:root[data-theme="light"] .privacyBoundaryGrid .notKept>span{
+  background:#eef2f6;
+  color:#475569;
+}
+
+/* Device permission controls. */
+:root[data-theme="light"] .devicePresetRow button small{
+  color:#4f6876;
+}
+:root[data-theme="light"] .policyPathChip button{
+  color:#475569;
+}
+:root[data-theme="light"] .policyPathChip button:hover{
+  color:#b42318;
+}
+
+/* Security flow + audit semantics. */
+:root[data-theme="light"] .securityExposureMeta strong,
+:root[data-theme="light"] .securityFlow>div>span,
+:root[data-theme="light"] .securityFlow>i{
+  color:#036b8d;
+}
+:root[data-theme="light"] .securityAuditRow>.eventIcon.success~b{
+  color:#047857;
+}
+:root[data-theme="light"] .securityAuditRow>.eventIcon.failed~b{
+  color:#b42318;
+}
+
+/* Monitor metadata and alert destination. */
+:root[data-theme="light"] .monitorIncidentBody code{
+  color:#4f6876;
+}
+:root[data-theme="light"] .monitorAlertState span{
+  color:#036b8d;
+}
+
+/* Dashboard text should be comfortably readable, not merely technically visible. */
+.appFrame .sidebarStatus strong,
+.appFrame .sidebarAccount strong{
+  font-size:13px;
+}
+.appFrame .sidebarStatus span,
+.appFrame .sidebarAccount span{
+  font-size:12px;
+}
+.appFrame .dashboardFooter{
+  font-size:12px;
+}
+.appFrame .statusCardHead,
+.appFrame .overviewStatusCard>small,
+.appFrame .overviewDeviceRow span,
+.appFrame .overviewDeviceMeta span,
+.appFrame .overviewDeviceMeta small,
+.appFrame .quickActionList small,
+.appFrame .attentionList small,
+.appFrame .attentionClear small{
+  font-size:12px;
+}
+.appFrame .deviceIdentity span,
+.appFrame .badge,
+.appFrame .deviceStatusStrip span,
+.appFrame .deviceToolChips span,
+.appFrame .devicePresetRow>span,
+.appFrame .devicePresetRow button small,
+.appFrame .deviceToolDetails summary span{
+  font-size:12px;
+}
+.appFrame .securityStatusCard>div,
+.appFrame .securityStatusCard>small,
+.appFrame .securityDeviceRow span,
+.appFrame .securityExposureMeta span,
+.appFrame .securityFlow small,
+.appFrame .securityAuditRow span,
+.appFrame .securityAuditRow>b,
+.appFrame .privacyBoundaryGrid small{
+  font-size:12px;
+}
+.appFrame .monitorIncidentBody code,
+.appFrame .monitorIncidentRow time,
+.appFrame .monitorCheck strong,
+.appFrame .monitorAlertState small{
+  font-size:12px;
+}
+.appFrame .monitorIncidentBody small,
+.appFrame .monitorCheck span,
+.appFrame .monitorAlertState span{
+  font-size:13px;
+}
+
+@media(max-width:820px){
+  .mobileBottomNav button small{
+    font-size:11px!important;
+  }
+  .appFrame .overviewDeviceRow span,
+  .appFrame .overviewDeviceMeta span,
+  .appFrame .overviewDeviceMeta small,
+  .appFrame .deviceToolChips span,
+  .appFrame .securityFlow small,
+  .appFrame .privacyBoundaryGrid small{
+    font-size:12px;
+  }
+}
+
+:root[data-theme="light"] .securityFlow>div>span{
+  background:#e7f5fa;
+  color:#036b8d;
+  font-size:12px;
+}
+
+/* Final dashboard typography floor for commonly read UI. */
+.appFrame .addButton.compact,
+.appFrame .dangerButton,
+.appFrame .clientState,
+.appFrame .timelineNumber,
+.appFrame .securityGrantIcon,
+.appFrame .overviewStatusCard.endpoint code,
+.appFrame .deviceSafetyDetails summary span,
+.appFrame .connectMiniSteps b{
+  font-size:12px;
+}
+@media(max-width:820px){
+  .mobileBottomNav button small{
+    font-size:12px!important;
+  }
+}
+@media(max-width:560px){
+  .appFrame .deviceStatsGrid span{
+    font-size:11px;
+  }
+}
+
+:root[data-theme="light"] .appDialog>p{
+  color:#4f6876;
+  font-size:12px;
+}
+
+@media(max-width:560px){
+  .appFrame .deviceStatsGrid span{
+    font-size:12px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   PR39 content pass — reading-first docs/security/blogs + factual homepage.
+   -------------------------------------------------------------------------- */
+
+/* Homepage command rows should look like the same component. */
+.installGrid .commandBox,
+.installGrid .endpointRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:18px;
+  padding:7px;
+  border:1px solid #252d36;
+  border-radius:11px;
+  background:#090c10;
+}
+.installGrid .commandBox code,
+.installGrid .endpointRow code{
+  flex:1;
+  min-width:0;
+  margin:0;
+  padding:8px;
+  border:0;
+  background:transparent;
+  color:#bae6fd;
+  font-size:13px;
+  white-space:nowrap;
+  overflow:auto;
+}
+.installGrid .commandBox .ghostButton,
+.installGrid .endpointRow .ghostButton{
+  flex:0 0 auto;
+}
+:root[data-theme="light"] .installGrid .commandBox,
+:root[data-theme="light"] .installGrid .endpointRow{
+  border-color:#cfe3ef;
+  background:#f5f8ff;
+}
+:root[data-theme="light"] .installGrid .commandBox code,
+:root[data-theme="light"] .installGrid .endpointRow code{
+  border:0!important;
+  background:transparent!important;
+  color:#075985!important;
+}
+
+/* Capability copy on the homepage should be concrete and easy to scan. */
+.capabilityFacts article h2{font-size:22px}
+.capabilityFacts article p{font-size:15px}
+.platformCapabilityGrid article>div p{max-width:660px}
+
+/* Small, factual page header. No marketing hero treatment. */
+.readingPageIntro{
+  display:grid;
+  grid-template-columns:minmax(210px,.42fr) minmax(0,1fr);
+  gap:18px 56px;
+  align-items:end;
+  padding:52px 0 28px;
+  border-bottom:1px solid var(--border);
+}
+.readingPageIntro>div{min-width:0}
+.readingPageIntro .eyebrow{display:block;margin-bottom:7px}
+.readingPageIntro h1{
+  margin:0;
+  font-size:clamp(30px,3vw,40px);
+  line-height:1.08;
+  letter-spacing:-.04em;
+}
+.readingPageIntro>p{
+  max-width:760px;
+  margin:0;
+  color:var(--muted);
+  font-size:16px;
+  line-height:1.72;
+}
+.readingPageLinks{
+  grid-column:2;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px 20px;
+  margin-top:2px;
+}
+.readingPageLinks a{
+  color:var(--sky-light);
+  font-size:13px;
+  font-weight:700;
+}
+
+/* Reading shell */
+.readingLayout{
+  padding-top:28px;
+}
+.readingLayout>aside{
+  top:88px;
+}
+.readingLayout>aside>span{
+  margin-bottom:6px;
+  color:#617d87;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.1em;
+}
+.readingLayout>aside a{
+  font-size:13px;
+  line-height:1.5;
+}
+.readingBody{
+  max-width:900px;
+}
+.readingBody>article{
+  padding-bottom:42px;
+  margin-bottom:42px;
+}
+.readingBody h2{
+  max-width:780px;
+  margin:8px 0 14px;
+  font-size:clamp(24px,2.4vw,31px);
+  line-height:1.2;
+  letter-spacing:-.03em;
+}
+.readingBody h3{
+  margin:27px 0 9px;
+  font-size:18px;
+  line-height:1.35;
+}
+.readingBody>article>p,
+.readingBody li p{
+  max-width:800px;
+  color:var(--muted);
+  font-size:16px;
+  line-height:1.78;
+}
+.readingBody .resourceArticleTag{
+  font-size:11px;
+  letter-spacing:.08em;
+}
+.readingBody .referenceNote{
+  max-width:800px;
+  font-size:14px;
+  line-height:1.72;
+}
+
+/* Docs quick start */
+.docSteps{
+  counter-reset:none;
+  list-style:none;
+  margin:24px 0 0;
+  padding:0;
+  border-top:1px solid var(--border);
+}
+.docSteps>li{
+  display:grid;
+  grid-template-columns:minmax(170px,.42fr) minmax(0,1fr);
+  gap:8px 34px;
+  padding:22px 0;
+  border-bottom:1px solid var(--border);
+}
+.docSteps>li>strong{
+  grid-column:1;
+  font-size:15px;
+  line-height:1.5;
+}
+.docSteps>li>p,
+.docSteps>li>.docsCodeLine{
+  grid-column:2;
+}
+.docSteps>li>p{
+  margin:0;
+}
+.docsCodeLine{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  max-width:680px;
+  margin-top:9px;
+  padding:7px;
+  border:1px solid #263744;
+  border-radius:11px;
+  background:#08121a;
+}
+.docsCodeLine code{
+  flex:1;
+  min-width:0;
+  overflow:auto;
+  padding:7px 9px;
+  color:#8ddff5;
+  font-size:13px;
+  white-space:nowrap;
+}
+:root[data-theme="light"] .docsCodeLine{
+  border-color:#cfe3ef;
+  background:#f5f8ff;
+}
+:root[data-theme="light"] .docsCodeLine code{
+  color:#075985;
+}
+
+/* Plain rows instead of cards. */
+.policyLayers,
+.securitySummaryRows,
+.concernList{
+  display:grid;
+  margin-top:23px;
+  border-top:1px solid var(--border);
+}
+.policyLayers>div,
+.securitySummaryRows>div,
+.concernList>div{
+  display:grid;
+  grid-template-columns:minmax(175px,.34fr) minmax(0,1fr);
+  gap:24px;
+  padding:18px 0;
+  border-bottom:1px solid var(--border);
+}
+.policyLayers strong,
+.securitySummaryRows strong,
+.concernList strong{
+  font-size:15px;
+  line-height:1.45;
+}
+.policyLayers p,
+.securitySummaryRows p,
+.concernList p{
+  margin:0;
+  color:var(--muted);
+  font-size:15px;
+  line-height:1.72;
+}
+.docTaskTable{
+  margin-top:20px;
+}
+.readingBody .docsToolGroups h3{
+  margin-top:0;
+}
+
+/* Blog index: a publication list, not a landing hero. */
+.blogReadingIntro{
+  grid-template-columns:minmax(180px,.32fr) minmax(0,1fr);
+}
+.blogListPlain{
+  max-width:1000px;
+  padding-top:0;
+  padding-bottom:88px;
+  border-top:0;
+}
+.blogListPlain .blogPostRow{
+  max-width:none;
+  padding:25px 0 29px;
+  border-top:1px solid var(--border);
+}
+.blogListPlain .blogPostRow:first-child{
+  border-top:0;
+}
+.blogListPlain .blogLeadMeta{
+  margin-bottom:10px;
+  font-size:11px;
+}
+.blogListPlain .blogPostRow h2{
+  max-width:820px;
+  margin-bottom:9px;
+  font-size:clamp(21px,2vw,28px);
+  line-height:1.2;
+  letter-spacing:-.025em;
+}
+.blogListPlain .blogPostRow p{
+  max-width:780px;
+  margin-bottom:12px;
+  font-size:15px;
+  line-height:1.7;
+}
+.blogListPlain .blogReadLink{
+  font-size:13px;
+}
+
+/* Article pages should read like articles, not campaign landing pages. */
+.blogArticle{
+  max-width:960px;
+  padding-top:44px;
+}
+.blogArticleHeader{
+  max-width:780px;
+  padding-bottom:34px;
+}
+.blogBack{margin-bottom:26px}
+.blogArticleHeader h1{
+  margin:9px 0 16px;
+  font-size:clamp(32px,4vw,46px);
+  line-height:1.08;
+  letter-spacing:-.045em;
+}
+.blogDeck{
+  max-width:740px;
+  font-size:17px;
+  line-height:1.7;
+}
+.blogByline{margin-top:22px}
+.blogArticleBody{
+  max-width:760px;
+  padding-top:38px;
+}
+.blogArticleBody>p{
+  font-size:17px;
+  line-height:1.82;
+}
+.blogArticleBody h2{
+  margin-top:45px;
+  font-size:26px;
+}
+.blogArticleBody blockquote{
+  margin:34px 0;
+  font-size:20px;
+}
+
+/* Light-mode reading surfaces */
+:root[data-theme="light"] .readingPageIntro,
+:root[data-theme="light"] .docSteps,
+:root[data-theme="light"] .docSteps>li,
+:root[data-theme="light"] .policyLayers,
+:root[data-theme="light"] .policyLayers>div,
+:root[data-theme="light"] .securitySummaryRows,
+:root[data-theme="light"] .securitySummaryRows>div,
+:root[data-theme="light"] .concernList,
+:root[data-theme="light"] .concernList>div,
+:root[data-theme="light"] .blogListPlain .blogPostRow{
+  border-color:#dce9ed;
+}
+:root[data-theme="light"] .readingPageLinks a,
+:root[data-theme="light"] .blogListPlain .blogReadLink{
+  color:#075985;
+}
+
+@media(max-width:900px){
+  .readingPageIntro{
+    grid-template-columns:1fr;
+    gap:10px;
+    padding-top:42px;
+  }
+  .readingPageLinks{grid-column:1;margin-top:7px}
+  .readingLayout{padding-top:22px}
+  .docSteps>li{grid-template-columns:1fr;gap:8px}
+  .docSteps>li>strong,
+  .docSteps>li>p,
+  .docSteps>li>.docsCodeLine{grid-column:1}
+  .policyLayers>div,
+  .securitySummaryRows>div,
+  .concernList>div{
+    grid-template-columns:1fr;
+    gap:5px;
+  }
+}
+@media(max-width:620px){
+  .readingPageIntro h1{font-size:29px}
+  .readingPageIntro>p{font-size:15px}
+  .readingPageLinks{gap:8px 15px}
+  .readingBody h2{font-size:23px}
+  .readingBody>article>p,
+  .readingBody li p{font-size:15px}
+  .docsCodeLine{width:100%}
+  .blogArticleHeader h1{font-size:31px}
+  .blogArticleBody>p{font-size:16px}
+}
+
+.platformCapabilityGrid article>small{
+  font-size:12px;
+}
+.architectureArrow small,
+.architectureCore small{
+  font-size:11px;
+}
+
+:root[data-theme="light"] .readingLayout>aside>span{
+  color:#4f6876;
+}
+
+/* --------------------------------------------------------------------------
+   Installation entry point — make the one-command start unmistakable.
+   -------------------------------------------------------------------------- */
+.heroPrimaryCommand,
+.installPrimaryCommand{
+  max-width:620px;
+  margin-top:24px;
+}
+.heroPrimaryCommand>span,
+.installPrimaryCommand>span{
+  display:block;
+  margin-bottom:8px;
+  color:var(--sky-light);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.11em;
+}
+.heroPrimaryCommand>div,
+.installHeroCommand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px;
+  border:1px solid #263744;
+  border-radius:13px;
+  background:#08121a;
+}
+.heroPrimaryCommand code,
+.installHeroCommand code{
+  flex:1;
+  min-width:0;
+  padding:8px 10px;
+  overflow:auto;
+  color:#b9eaff;
+  font-size:15px;
+  font-weight:700;
+  white-space:nowrap;
+}
+.heroPrimaryCommand>small,
+.installPrimaryCommand>small{
+  display:block;
+  margin-top:8px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+:root[data-theme="light"] .heroPrimaryCommand>div,
+:root[data-theme="light"] .installHeroCommand{
+  border-color:#cfe3ef;
+  background:#f5f8ff;
+}
+:root[data-theme="light"] .heroPrimaryCommand code,
+:root[data-theme="light"] .installHeroCommand code{
+  color:#075985;
+}
+:root[data-theme="light"] .heroPrimaryCommand>span,
+:root[data-theme="light"] .installPrimaryCommand>span{
+  color:#075985;
+}
+
+.clientInstallCopy .installPrimaryCommand{
+  margin-top:22px;
+}
+.clientInstallCopy .clientInstallActions{
+  margin-top:18px;
+}
+.installSetupMap>div:first-child strong{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+  color:var(--sky-light);
+}
+:root[data-theme="light"] .installSetupMap>div:first-child strong{
+  color:#075985;
+}
+
+@media(max-width:620px){
+  .heroPrimaryCommand,
+  .installPrimaryCommand{
+    width:100%;
+  }
+  .heroPrimaryCommand code,
+  .installHeroCommand code{
+    font-size:14px;
+  }
+}
+
+/* ==========================================================================
+   PR39 public content system: manual / article / catalog, not landing pages.
+   ========================================================================== */
+
+/* Shorter homepage statement. */
+.landingHero .heroCopy h1{
+  max-width:780px;
+  font-size:clamp(42px,5.2vw,72px);
+  line-height:1.01;
+}
+.landingHero .heroCopy>p{
+  max-width:690px;
+}
+
+/* Shared utility-page header: compact, factual, no marketing hero. */
+.toolPageHeader,
+.articleHeader,
+.caseNoteHeader{
+  padding:42px 0 26px;
+  border-bottom:1px solid var(--line);
+}
+.toolPageHeader>.eyebrow,
+.articleHeader>.eyebrow,
+.caseNoteHeader>.eyebrow{
+  display:block;
+  margin-bottom:8px;
+}
+.toolPageHeader>h1,
+.articleHeader>h1,
+.caseNoteHeader>h1{
+  max-width:820px;
+  margin:0;
+  font-size:clamp(28px,3vw,36px);
+  line-height:1.12;
+  letter-spacing:-.035em;
+}
+.toolPageHeader>p,
+.articleHeader>p,
+.caseNoteHeader>p{
+  max-width:800px;
+  margin:12px 0 0;
+  color:var(--muted);
+  font-size:16px;
+  line-height:1.75;
+}
+.articleMetaLinks{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px 20px;
+  margin-top:17px;
+}
+.articleMetaLinks a{
+  color:var(--sky-light);
+  font-size:13px;
+  font-weight:700;
+}
+
+/* --------------------------------------------------------------------------
+   Installation manuals
+   -------------------------------------------------------------------------- */
+.installManual{
+  padding-bottom:82px;
+}
+.installManualHeader{
+  padding-top:30px;
+}
+.installManualHeader .installClientSwitcher{
+  margin:0 0 28px;
+}
+.toolPageTitleRow{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(340px,.72fr);
+  gap:48px;
+  align-items:start;
+}
+.toolPageTitleRow>div:first-child h1{
+  margin:0;
+  font-size:clamp(28px,3vw,36px);
+  line-height:1.12;
+  letter-spacing:-.035em;
+}
+.toolPageTitleRow>div:first-child p{
+  max-width:690px;
+  margin:11px 0 0;
+  color:var(--muted);
+  font-size:15px;
+  line-height:1.72;
+}
+.compactCommand{
+  width:100%;
+  max-width:none;
+  margin:0;
+}
+.compactCommand>span{
+  font-size:11px;
+}
+.compactCommand .installHeroCommand{
+  min-height:52px;
+}
+.compactCommand .installHeroCommand code{
+  font-size:15px;
+}
+.toolPageStatusLine{
+  display:flex;
+  justify-content:space-between;
+  gap:18px;
+  align-items:center;
+  margin-top:20px;
+  padding-top:15px;
+  border-top:1px solid var(--line);
+  color:var(--muted);
+  font-size:12px;
+}
+.toolPageStatusLine>span{
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  max-width:780px;
+  line-height:1.55;
+}
+.statusDot{
+  flex:0 0 auto;
+  width:7px;
+  height:7px;
+  margin-top:5px;
+  border-radius:50%;
+  background:var(--green);
+}
+.toolPageStatusLine>a{
+  flex:0 0 auto;
+  color:var(--sky-light);
+  font-weight:700;
+}
+
+/* --------------------------------------------------------------------------
+   Shared manual layout: Connect + Install
+   -------------------------------------------------------------------------- */
+.manualLayout,
+.technicalDocLayout{
+  display:grid;
+  grid-template-columns:190px minmax(0,1fr);
+  gap:52px;
+  align-items:start;
+  padding:30px 0 0;
+}
+.manualToc,
+.articleToc{
+  position:sticky;
+  top:92px;
+  display:grid;
+  gap:9px;
+  align-self:start;
+}
+.manualToc>strong,
+.articleToc>strong{
+  margin-bottom:5px;
+  color:#607984;
+  font-size:11px;
+  letter-spacing:.1em;
+}
+.manualToc>a,
+.articleToc>a{
+  color:#6e8791;
+  font-size:12px;
+  line-height:1.45;
+}
+.manualToc>a:hover,
+.articleToc>a:hover{
+  color:var(--sky-light);
+}
+.manualArticle,
+.technicalArticle{
+  min-width:0;
+  max-width:860px;
+}
+.manualArticle>section,
+.technicalArticle>section{
+  scroll-margin-top:96px;
+}
+.manualArticle>section+section{
+  margin-top:44px;
+  padding-top:38px;
+  border-top:1px solid var(--line);
+}
+.manualArticle h2{
+  margin:0 0 10px;
+  font-size:21px;
+  line-height:1.3;
+  letter-spacing:-.02em;
+}
+.manualArticle>section>p{
+  max-width:760px;
+  margin:0 0 16px;
+  color:var(--muted);
+  font-size:15px;
+  line-height:1.78;
+}
+.manualFinePrint{
+  margin-top:10px!important;
+  font-size:13px!important;
+}
+.manualSteps{
+  list-style:none;
+  margin:24px 0 0;
+  padding:0;
+  border-top:1px solid var(--line);
+}
+.manualSteps>li{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr);
+  gap:16px;
+  padding:21px 0;
+  border-bottom:1px solid var(--line);
+}
+.manualSteps>li>span{
+  padding-top:3px;
+  color:#68838d;
+  font:700 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.manualSteps h3{
+  margin:0 0 6px;
+  font-size:16px;
+  line-height:1.4;
+}
+.manualSteps p{
+  max-width:720px;
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.7;
+}
+.manualSteps .docsCodeLine{
+  margin-top:11px;
+}
+.manualNote,
+.articleCallout{
+  max-width:760px;
+  margin-top:18px;
+  padding:14px 16px;
+  border-left:3px solid var(--sky);
+  background:var(--sky-soft);
+}
+.manualNote strong,
+.articleCallout strong{
+  font-size:13px;
+}
+.manualNote p,
+.articleCallout p{
+  margin:4px 0 0;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.68;
+}
+.articleCallout.warning{
+  border-left-color:#b7791f;
+  background:rgba(183,121,31,.07);
+}
+.manualFooterLinks,
+.articleEndLinks{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px 22px;
+  margin-top:28px;
+  padding-top:18px;
+  border-top:1px solid var(--line);
+}
+.manualFooterLinks a,
+.articleEndLinks a{
+  color:var(--sky-light);
+  font-size:13px;
+  font-weight:700;
+}
+
+/* Keep installation examples subordinate to instructions. */
+.manualArticle .pluginDemoVideo,
+.manualArticle .installLiveSession,
+.manualArticle .installExample,
+.manualArticle .clientInstallDemo{
+  margin-top:18px;
+}
+
+/* --------------------------------------------------------------------------
+   Connect reference
+   -------------------------------------------------------------------------- */
+.referenceManual{
+  padding-bottom:82px;
+}
+.compactReferenceTable{
+  display:grid;
+  margin-top:18px;
+  border-top:1px solid var(--line);
+}
+.compactReferenceTable>div{
+  display:grid;
+  grid-template-columns:minmax(140px,.32fr) minmax(0,1fr);
+  gap:22px;
+  padding:15px 0;
+  border-bottom:1px solid var(--line);
+}
+.compactReferenceTable strong,
+.compactReferenceTable code{
+  color:#b8eafa;
+  font-size:13px;
+}
+.compactReferenceTable span{
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.62;
+}
+.compactClientRows{
+  margin-top:18px;
+}
+.compactClientRows>a{
+  padding:14px 0;
+}
+
+/* --------------------------------------------------------------------------
+   Long-form docs/security
+   -------------------------------------------------------------------------- */
+.technicalDoc{
+  padding-bottom:96px;
+}
+.articleHeader{
+  max-width:900px;
+}
+.technicalArticle>section{
+  margin:0;
+  padding:0 0 34px;
+}
+.technicalArticle>section+section{
+  padding-top:34px;
+  border-top:1px solid var(--line);
+}
+.technicalArticle h2{
+  max-width:760px;
+  margin:0 0 13px;
+  font-size:21px;
+  line-height:1.3;
+  letter-spacing:-.02em;
+}
+.technicalArticle h3{
+  margin:22px 0 7px;
+  font-size:16px;
+  line-height:1.4;
+}
+.technicalArticle p{
+  max-width:780px;
+  margin:0 0 15px;
+  color:var(--muted);
+  font-size:15.5px;
+  line-height:1.82;
+}
+.technicalArticle code{
+  overflow-wrap:anywhere;
+}
+.articleFlow{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 11px;
+  align-items:center;
+  max-width:800px;
+  margin:19px 0;
+  padding:12px 14px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#08121a;
+}
+.articleFlow code{
+  color:#91def5;
+  font-size:12px;
+}
+.articleFlow span{
+  color:#58727c;
+  font-size:11px;
+}
+.articleTable{
+  width:100%;
+  max-width:800px;
+  margin:20px 0;
+  border-collapse:collapse;
+  font-size:14px;
+}
+.articleTable th,
+.articleTable td{
+  padding:12px 14px;
+  border-bottom:1px solid var(--line);
+  text-align:left;
+  vertical-align:top;
+  line-height:1.62;
+}
+.articleTable th{
+  color:#9cb1b8;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.06em;
+}
+.articleTable td:first-child{
+  width:190px;
+  color:#d7e8ed;
+  font-weight:700;
+}
+.articleTable td:last-child{
+  color:var(--muted);
+}
+.toolReferenceList{
+  display:grid;
+  max-width:800px;
+  border-top:1px solid var(--line);
+}
+.toolReferenceList>div{
+  padding:17px 0;
+  border-bottom:1px solid var(--line);
+}
+.toolReferenceList h3{
+  margin:0 0 5px;
+}
+.toolReferenceList code{
+  display:block;
+  color:#7fd2ed;
+  font-size:12px;
+  line-height:1.6;
+}
+.toolReferenceList p{
+  margin:6px 0 0;
+  font-size:14px;
+  line-height:1.68;
+}
+.articleBulletList{
+  max-width:760px;
+  margin:12px 0 18px;
+  padding-left:20px;
+  color:var(--muted);
+  font-size:15px;
+  line-height:1.76;
+}
+.articleBulletList li+li{
+  margin-top:7px;
+}
+
+/* --------------------------------------------------------------------------
+   Use case catalog + case notes
+   -------------------------------------------------------------------------- */
+.useCaseCatalog{
+  padding-bottom:86px;
+}
+.catalogList{
+  max-width:960px;
+  margin-top:8px;
+  border-top:1px solid var(--line);
+}
+.catalogList>a{
+  display:grid;
+  grid-template-columns:120px minmax(0,1fr) 22px;
+  gap:22px;
+  align-items:start;
+  padding:22px 0;
+  border-bottom:1px solid var(--line);
+}
+.catalogLabel span{
+  color:#63818c;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.1em;
+}
+.catalogMain h2{
+  margin:0 0 6px;
+  font-size:19px;
+  line-height:1.32;
+  letter-spacing:-.015em;
+}
+.catalogMain p{
+  max-width:720px;
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.68;
+}
+.catalogMain code{
+  display:block;
+  margin-top:8px;
+  color:#668894;
+  font-size:11px;
+}
+.catalogList>a>b{
+  color:var(--sky);
+  font-size:17px;
+}
+.catalogFooter{
+  display:flex;
+  justify-content:space-between;
+  gap:30px;
+  max-width:960px;
+  padding:23px 0;
+  border-bottom:1px solid var(--line);
+}
+.catalogFooter p{
+  max-width:690px;
+  margin:0;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.65;
+}
+.catalogFooter a{
+  color:var(--sky-light);
+  font-size:13px;
+  font-weight:700;
+}
+
+.caseNote{
+  max-width:930px;
+  padding-bottom:90px;
+}
+.caseBack{
+  display:inline-flex;
+  margin-bottom:22px;
+  color:#718b95;
+  font-size:12px;
+}
+.caseNoteHeader{
+  padding-top:36px;
+}
+.caseMeta{
+  display:grid;
+  grid-template-columns:1fr 1.5fr;
+  gap:1px;
+  max-width:820px;
+  margin:20px 0 0;
+  border:1px solid var(--line);
+  background:var(--line);
+}
+.caseMeta>div{
+  min-width:0;
+  padding:12px 14px;
+  background:#07111f;
+}
+.caseMeta dt{
+  color:#607984;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+.caseMeta dd{
+  margin:5px 0 0;
+  color:#dbe8ec;
+  font-size:13px;
+  line-height:1.5;
+}
+.caseMeta code{
+  color:#78cee8;
+  overflow-wrap:anywhere;
+}
+.caseNoteBody{
+  max-width:800px;
+  padding-top:30px;
+}
+.caseNoteBody>section{
+  padding:0 0 28px;
+}
+.caseNoteBody>section+section{
+  padding-top:28px;
+  border-top:1px solid var(--line);
+}
+.caseNoteBody h2{
+  margin:0 0 10px;
+  font-size:19px;
+  line-height:1.35;
+}
+.caseNoteBody p,
+.caseNoteBody li{
+  color:var(--muted);
+  font-size:15px;
+  line-height:1.75;
+}
+.caseNoteBody p{
+  margin:0 0 13px;
+}
+.caseNoteBody ul{
+  margin:10px 0 0;
+  padding-left:20px;
+}
+.caseNoteBody blockquote{
+  margin:0;
+  padding:15px 18px;
+  border-left:3px solid var(--sky);
+  background:var(--sky-soft);
+  color:#d8e9ee;
+  font-size:16px;
+  line-height:1.7;
+}
+
+/* --------------------------------------------------------------------------
+   Light theme
+   -------------------------------------------------------------------------- */
+:root[data-theme="light"] .toolPageHeader,
+:root[data-theme="light"] .articleHeader,
+:root[data-theme="light"] .caseNoteHeader,
+:root[data-theme="light"] .manualArticle>section+section,
+:root[data-theme="light"] .technicalArticle>section+section,
+:root[data-theme="light"] .manualSteps,
+:root[data-theme="light"] .manualSteps>li,
+:root[data-theme="light"] .compactReferenceTable,
+:root[data-theme="light"] .compactReferenceTable>div,
+:root[data-theme="light"] .articleTable th,
+:root[data-theme="light"] .articleTable td,
+:root[data-theme="light"] .toolReferenceList,
+:root[data-theme="light"] .toolReferenceList>div,
+:root[data-theme="light"] .catalogList,
+:root[data-theme="light"] .catalogList>a,
+:root[data-theme="light"] .catalogFooter,
+:root[data-theme="light"] .caseNoteBody>section+section,
+:root[data-theme="light"] .manualFooterLinks,
+:root[data-theme="light"] .articleEndLinks,
+:root[data-theme="light"] .toolPageStatusLine{
+  border-color:#dce9ed;
+}
+:root[data-theme="light"] .articleFlow{
+  border-color:#d5e6ec;
+  background:#f5fafc;
+}
+:root[data-theme="light"] .articleFlow code{
+  color:#315c67;
+}
+:root[data-theme="light"] .articleTable td:first-child,
+:root[data-theme="light"] .compactReferenceTable strong,
+:root[data-theme="light"] .compactReferenceTable code{
+  color:#254f5d;
+}
+:root[data-theme="light"] .toolReferenceList code,
+:root[data-theme="light"] .catalogMain code{
+  color:#456d79;
+}
+:root[data-theme="light"] .caseMeta{
+  border-color:#dce9ed;
+  background:#dce9ed;
+}
+:root[data-theme="light"] .caseMeta>div{
+  background:#fff;
+}
+:root[data-theme="light"] .caseMeta dd{
+  color:#234a57;
+}
+:root[data-theme="light"] .caseMeta code{
+  color:#315c67;
+}
+:root[data-theme="light"] .caseNoteBody blockquote{
+  color:#244d59;
+}
+:root[data-theme="light"] .manualNote,
+:root[data-theme="light"] .articleCallout,
+:root[data-theme="light"] .caseNoteBody blockquote{
+  background:#f1f8fb;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media(max-width:900px){
+  .toolPageTitleRow{
+    grid-template-columns:1fr;
+    gap:22px;
+  }
+  .manualLayout,
+  .technicalDocLayout{
+    grid-template-columns:1fr;
+    gap:24px;
+  }
+  .manualToc,
+  .articleToc{
+    position:static;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 16px;
+    padding-bottom:16px;
+    border-bottom:1px solid var(--line);
+  }
+  .manualToc>strong,
+  .articleToc>strong{
+    width:100%;
+  }
+  .manualArticle,
+  .technicalArticle{
+    max-width:none;
+  }
+}
+@media(max-width:700px){
+  .toolPageHeader,
+  .articleHeader,
+  .caseNoteHeader{
+    padding-top:32px;
+  }
+  .toolPageHeader>h1,
+  .articleHeader>h1,
+  .caseNoteHeader>h1,
+  .toolPageTitleRow>div:first-child h1{
+    font-size:28px;
+  }
+  .toolPageStatusLine{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  .compactReferenceTable>div{
+    grid-template-columns:1fr;
+    gap:5px;
+  }
+  .catalogList>a{
+    grid-template-columns:1fr 18px;
+    gap:8px 12px;
+  }
+  .catalogLabel{
+    grid-column:1;
+  }
+  .catalogMain{
+    grid-column:1;
+  }
+  .catalogList>a>b{
+    grid-column:2;
+    grid-row:1 / span 2;
+    align-self:center;
+  }
+  .catalogFooter{
+    flex-direction:column;
+    gap:12px;
+  }
+  .caseMeta{
+    grid-template-columns:1fr;
+  }
+  .technicalArticle p,
+  .caseNoteBody p,
+  .caseNoteBody li{
+    font-size:15px;
+  }
+  .articleTable{
+    display:block;
+    overflow-x:auto;
+  }
+}
+
+/* Final typography restraint: these are reference/manual pages, not campaign heroes. */
+.toolPageHeader>h1,
+.articleHeader>h1{
+  font-size:clamp(27px,2.5vw,32px);
+}
+.caseNoteHeader>h1{
+  max-width:760px;
+  font-size:clamp(26px,2.3vw,30px);
+}
+.toolPageTitleRow>div:first-child h1{
+  font-size:clamp(27px,2.5vw,32px);
+}
+@media(max-width:700px){
+  .toolPageHeader>h1,
+  .articleHeader>h1,
+  .caseNoteHeader>h1,
+  .toolPageTitleRow>div:first-child h1{
+    font-size:27px;
+  }
+}
+
+/* Readability pass for the new reference/manual pages. */
+.manualToc>strong,
+.articleToc>strong{
+  color:#7f99a3;
+}
+.manualToc>a,
+.articleToc>a{
+  color:#8ba2ab;
+}
+.manualSteps>li>span{
+  color:#8aa4ad;
+  font-size:12px;
+}
+.catalogLabel span{
+  color:#7f9aa4;
+  font-size:11px;
+}
+.caseBack{
+  color:#8ba2ab;
+  font-size:12px;
+}
+.caseMeta dt{
+  color:#819aa4;
+  font-size:11px;
+}
+.articleTable th{
+  color:#819aa4;
+  font-size:12px;
+}
+.articleFlow span{
+  color:#76919b;
+}
+
+:root[data-theme="light"] .manualToc>strong,
+:root[data-theme="light"] .articleToc>strong,
+:root[data-theme="light"] .manualToc>a,
+:root[data-theme="light"] .articleToc>a,
+:root[data-theme="light"] .manualSteps>li>span,
+:root[data-theme="light"] .catalogLabel span,
+:root[data-theme="light"] .caseBack,
+:root[data-theme="light"] .caseMeta dt,
+:root[data-theme="light"] .articleTable th{
+  color:#4f6876;
+}
+:root[data-theme="light"] .articleFlow span{
+  color:#55717a;
+}
+
+/* Installation example: retain the dark/light split, but do not hide information in tiny low-contrast type. */
+.remoteSessionHeader small,
+.sessionPanelLabel>span,
+.sessionPanelLabel>small,
+.sessionTerminalBar small,
+.sessionBridge span,
+.sessionChatHeader>span,
+.remoteSessionFooter{
+  font-size:11px;
+}
+.sessionPanelLabel>span{
+  color:#8bb2be;
+}
+.sessionPanelLabel>small{
+  color:#86a6af;
+}
+.sessionTerminalBar small{
+  color:#86a7b0;
+}
+.sessionTerminalIdle{
+  color:#86a5ae;
+}
+.sessionBridge span{
+  color:#8bb1bd;
+}
+.sessionTerminalLine.muted span{
+  color:#85a5ae;
+}
+.remoteSessionFooter{
+  color:#86a6af;
+}
+.sessionChatHeader>span{
+  color:#047857;
+}
+.sessionChatHint span{
+  color:#5f6770;
+}
+.sessionComposer>span{
+  color:#5f6770;
+}
+.sessionComposer>div{
+  color:#626970;
+}
+.sessionAssistantState{
+  color:#5f6770;
+}
+
+/* Homepage legacy micro-copy: keep the shortened hero but clean old low-contrast remnants. */
+.architectureClients>a .agentCardArrow{
+  color:#7999a4;
+}
+.journeyGrid .stepNumber,
+.stepNumber{
+  color:#7f98a1;
+}
+.architectureCore small,
+.architectureArrow small,
+.platformFootnote span,
+.trustRail small{
+  color:#8199a2;
+}
+
+/* Final public-site contrast cleanup after the reference-page rewrite. */
+.remoteSessionHeader small{
+  color:#7b98a3;
+  font-size:11px;
+}
+.comparisonHead strong:last-child{
+  color:#8092a8;
+}
+.architectureArrow small,
+.architectureCore small,
+.architectureCompatibility small{
+  font-size:11px;
+}
+:root[data-theme="light"] .architectureClients>a .agentCardArrow,
+:root[data-theme="light"] .stepNumber{
+  color:#456c76;
+}
+
+@media(max-width:1027px){
+  .architectureCore small,
+  .architectureArrow small{
+    font-size:11px!important;
+  }
 }
