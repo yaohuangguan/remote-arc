@@ -32,6 +32,10 @@ type Device = {
   undo_enabled?: boolean;
   policy_enforcement_available?: boolean;
   undo_history_available?: boolean;
+  background_agent_available?: boolean;
+  background_enabled?: boolean | null;
+  background_service?: string | null;
+  background_seen_at?: string | null;
 };
 
 type UndoAction = {
@@ -558,6 +562,16 @@ function PairDevice({
         sensitive_allow_paths: [],
         protect_sensitive_paths: true,
         undo_enabled: true,
+        background_agent_available: true,
+        background_enabled: true,
+        background_service:
+          payload.device.platform === "darwin"
+            ? "launchd"
+            : payload.device.platform === "win32"
+              ? "task-scheduler"
+              : payload.device.platform === "linux"
+                ? "systemd-user"
+                : null,
       });
       setSetupStep("permissions");
     } catch (error) {
@@ -750,6 +764,7 @@ function PairDevice({
       >
         <div className="successMark">✓</div>
         <div className="pairSetupSummary">
+          <div><span>{tr("Background connection", "后台连接")}</span><strong>{tr("Enabled", "已开启")}</strong></div>
           <div><span>{tr("Read access", "读取权限")}</span><strong>{tr("Enabled", "已开启")}</strong></div>
           <div><span>{tr("File editing", "文件编辑")}</span><strong>{fileEditingEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
           <div><span>{tr("Terminal", "终端")}</span><strong>{terminalEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
@@ -838,6 +853,23 @@ function PairDevice({
         </div>
 
         <div className="pairPermissionStack">
+          <section className="pairPermissionCard enabled">
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">↻</span>
+                <div>
+                  <strong>{tr("Background connection", "后台连接")}</strong>
+                  <small>{tr("Recommended · on by default", "推荐 · 默认开启")}</small>
+                </div>
+              </div>
+              <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>
+            </div>
+            <p>{tr(
+              "Remote Arc starts automatically when you sign in to this computer and reconnects after sleep or network changes. You can turn this off later from Devices.",
+              "登录这台电脑后 Remote Arc 会自动后台启动，并在睡眠唤醒或网络变化后自动重连。之后可以在设备页关闭。",
+            )}</p>
+          </section>
+
           <section className="pairPermissionCard enabled">
             <div className="pairPermissionHead">
               <div>
@@ -3272,6 +3304,51 @@ function Dashboard({
     return true;
   }
 
+  async function updateDeviceBackground(device: Device, enabled: boolean) {
+    if (device.status !== "online") {
+      await showNotice(
+        tr("Computer is offline", "电脑当前离线"),
+        tr(
+          "Background mode can only be changed while the local Remote Arc agent is online. If it was disabled previously, run npx remotelink once on that computer to reconnect it.",
+          "只有本机 Remote Arc Agent 在线时才能修改后台运行设置。如果之前已经关闭，请在那台电脑上运行一次 npx remotelink 重新连接。",
+        ),
+      );
+      return;
+    }
+    if (!device.background_agent_available) {
+      await showNotice(
+        tr("Update remotelink first", "请先更新 remotelink"),
+        tr(
+          "This computer is running an older Remote Arc client that does not support background-agent controls yet.",
+          "这台电脑正在运行旧版 Remote Arc 客户端，暂不支持后台 Agent 控制。",
+        ),
+      );
+      return;
+    }
+
+    const response = await fetch(
+      "/api/devices/" + encodeURIComponent(device.id) + "/background",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      },
+    );
+    const payload = await response.json().catch(() => ({})) as { error?: string };
+    if (!response.ok) {
+      await showNotice(
+        tr("Background setting was not updated", "后台设置未更新"),
+        payload.error ||
+          tr(
+            "Remote Arc could not update the background connection on this computer.",
+            "Remote Arc 无法更新这台电脑的后台连接设置。",
+          ),
+      );
+      return;
+    }
+    await refreshAll();
+  }
+
   async function updateDeviceTools(device: Device, tool: string, enabled: boolean) {
     if (enabled && tool === "start_process") {
       const confirmed = await askConfirm(
@@ -3773,6 +3850,42 @@ function Dashboard({
                       <div><span>{tr("Last seen", "最后在线")}</span><strong>{timeAgo(device.last_seen)}</strong></div>
                       <div><span>{tr("Enabled tools", "已启用工具")}</span><strong>{enabledTools.length} / {allTools.length}</strong></div>
                       <div><span>Device ID</span><strong>{device.id.slice(0,8)}</strong></div>
+                    </div>
+
+                    <div className="deviceBackgroundRow">
+                      <div>
+                        <div className="labelWithHelp">
+                          <strong>{tr("Background connection", "后台连接")}</strong>
+                          <HelpTip
+                            label={tr("About background connection", "了解后台连接")}
+                            text={tr(
+                              "When enabled, Remote Arc starts for your user at login and keeps reconnecting after sleep, Wi-Fi changes or transient relay disconnects. Turning it off removes login autostart. An offline computer cannot be re-enabled remotely; run npx remotelink once on that computer if needed.",
+                              "开启后，Remote Arc 会在用户登录时自动后台启动，并在睡眠唤醒、Wi-Fi 变化或临时断线后持续重连。关闭后会移除登录自启动。离线电脑无法被云端重新开启；如需恢复，请在那台电脑上运行一次 npx remotelink。",
+                            )}
+                          />
+                        </div>
+                        <span>
+                          {!device.background_agent_available
+                            ? tr("Requires the next remotelink release", "需要新版 remotelink")
+                            : (device.background_enabled ?? true)
+                              ? tr(
+                                  "Starts at login · auto reconnect" +
+                                    (device.background_service ? " · " + device.background_service : ""),
+                                  "登录自启 · 自动重连" +
+                                    (device.background_service ? " · " + device.background_service : ""),
+                                )
+                              : tr("Off · use npx remotelink locally to reconnect after this session ends", "已关闭 · 当前会话结束后需在本机运行 npx remotelink 才能重新连接")}
+                        </span>
+                      </div>
+                      <label className="compactSwitch">
+                        <input
+                          type="checkbox"
+                          checked={device.background_enabled ?? !!device.background_agent_available}
+                          disabled={device.status !== "online" || !device.background_agent_available}
+                          onChange={(event) => void updateDeviceBackground(device, event.target.checked)}
+                        />
+                        <span />
+                      </label>
                     </div>
 
                     <div className="deviceAccessSummary">

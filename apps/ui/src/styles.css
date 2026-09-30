@@ -8383,3 +8383,34 @@ body{font-size:18px;line-height:1.6}
 }
 :root[data-theme="light"] .pairWorkspaceControl span { color:#68818a; }
 :root[data-theme="light"] .pairWorkspaceControl code { color:#087ea4; }
+
+.deviceBackgroundRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:13px 14px;
+  border:1px solid rgba(148,163,184,.10);
+  border-radius:13px;
+  background:rgba(6,16,24,.62);
+}
+.deviceBackgroundRow>div{
+  min-width:0;
+  display:grid;
+  gap:4px;
+}
+.deviceBackgroundRow strong{
+  color:#dceff3;
+  font-size:12px;
+}
+.deviceBackgroundRow>div>span{
+  color:#6f8892;
+  font-size:10px;
+  line-height:1.5;
+}
+:root[data-theme="light"] .deviceBackgroundRow{
+  border-color:#dcebf2;
+  background:#f8fbfd;
+}
+:root[data-theme="light"] .deviceBackgroundRow strong{color:#153640}
+:root[data-theme="light"] .deviceBackgroundRow>div>span{color:#5d7b84}
