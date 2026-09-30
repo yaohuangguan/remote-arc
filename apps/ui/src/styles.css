@@ -8587,3 +8587,5 @@ body{font-size:18px;line-height:1.6}
     overflow:visible;
   }
 }
+
+:root[data-theme="light"] .publicNavDropdown small{color:#55717a!important}
