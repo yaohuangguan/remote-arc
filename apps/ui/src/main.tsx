@@ -477,6 +477,7 @@ function PairDevice({
   const [directoryLoading, setDirectoryLoading] = useState(false);
   const [setupError, setSetupError] = useState("");
   const [terminalConfirm, setTerminalConfirm] = useState(false);
+  const [backgroundRequested, setBackgroundRequested] = useState(true);
 
   async function lookup(targetCode = code) {
     if (!targetCode || !user) return;
@@ -562,16 +563,9 @@ function PairDevice({
         sensitive_allow_paths: [],
         protect_sensitive_paths: true,
         undo_enabled: true,
-        background_agent_available: true,
-        background_enabled: true,
-        background_service:
-          payload.device.platform === "darwin"
-            ? "launchd"
-            : payload.device.platform === "win32"
-              ? "task-scheduler"
-              : payload.device.platform === "linux"
-                ? "systemd-user"
-                : null,
+        background_agent_available: false,
+        background_enabled: null,
+        background_service: null,
       });
       setSetupStep("permissions");
     } catch (error) {
@@ -709,6 +703,79 @@ function PairDevice({
     }
   }
 
+  async function finishSetup() {
+    if (!approvedDeviceId) return;
+    if (pairedDevice?.status !== "online" || pairedDevice.background_agent_available !== true) {
+      setSetupError(
+        tr(
+          "Wait for the local Remote Arc agent to connect before finishing setup.",
+          "请等待本机 Remote Arc Agent 连接后再完成设置。",
+        ),
+      );
+      return;
+    }
+
+    setBusy(true);
+    setSetupError("");
+    try {
+      const response = await fetch(
+        "/api/devices/" + encodeURIComponent(approvedDeviceId) + "/background",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ enabled: backgroundRequested }),
+        },
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        enabled?: boolean;
+        status?: {
+          enabled?: boolean;
+          active?: boolean;
+          service?: string;
+          detail?: string;
+        };
+      };
+      if (!response.ok) {
+        throw new Error(
+          payload.error ||
+            tr(
+              "Could not apply the background connection setting.",
+              "无法应用后台连接设置。",
+            ),
+        );
+      }
+
+      const actualEnabled =
+        payload.enabled === true || payload.status?.enabled === true;
+      if (backgroundRequested && !actualEnabled) {
+        throw new Error(
+          payload.status?.detail ||
+            tr(
+              "Background service could not be installed. This terminal session is still connected.",
+              "后台服务安装失败，当前终端会话仍保持连接。",
+            ),
+        );
+      }
+
+      setPairedDevice((current) =>
+        current
+          ? {
+              ...current,
+              background_enabled: actualEnabled,
+              background_service:
+                payload.status?.service || current.background_service || null,
+              background_seen_at: new Date().toISOString(),
+            }
+          : current,
+      );
+      setSetupStep("done");
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
   const availableTools = pairedDevice?.available_tools || pairedDevice?.tools || [];
   const fileEditingSupported =
     pairedDevice?.status === "online" &&
@@ -723,6 +790,10 @@ function PairDevice({
     enabledTools.includes("edit_block") &&
     enabledTools.includes("undo_last_change");
   const terminalEnabled = enabledTools.includes("start_process");
+  const backgroundCapabilityReady =
+    pairedDevice?.status === "online" &&
+    pairedDevice.background_agent_available === true;
+  const backgroundActuallyEnabled = pairedDevice?.background_enabled === true;
 
   if (user === undefined) {
     return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Checking your Remote Arc account.", "正在检查 Remote Arc 账户。")} />;
@@ -764,7 +835,14 @@ function PairDevice({
       >
         <div className="successMark">✓</div>
         <div className="pairSetupSummary">
-          <div><span>{tr("Background connection", "后台连接")}</span><strong>{tr("Enabled", "已开启")}</strong></div>
+          <div>
+            <span>{tr("Background connection", "后台连接")}</span>
+            <strong>
+              {backgroundActuallyEnabled
+                ? tr("Enabled", "已开启")
+                : tr("Foreground only", "仅前台运行")}
+            </strong>
+          </div>
           <div><span>{tr("Read access", "读取权限")}</span><strong>{tr("Enabled", "已开启")}</strong></div>
           <div><span>{tr("File editing", "文件编辑")}</span><strong>{fileEditingEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
           <div><span>{tr("Terminal", "终端")}</span><strong>{terminalEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
@@ -853,7 +931,7 @@ function PairDevice({
         </div>
 
         <div className="pairPermissionStack">
-          <section className="pairPermissionCard enabled">
+          <section className={"pairPermissionCard " + (backgroundActuallyEnabled ? "enabled" : "")}>
             <div className="pairPermissionHead">
               <div>
                 <span className="pairPermissionIcon">↻</span>
@@ -863,22 +941,50 @@ function PairDevice({
                     <HelpTip
                       label={tr("How background reconnect works", "后台重连如何工作")}
                       text={tr(
-                        "macOS uses launchd, Windows uses Task Scheduler, and Linux uses systemd --user. Locking the screen does not stop the agent. During sleep the network is unavailable; after wake, Wi-Fi changes, or transient Relay disconnects, a WebSocket liveness watchdog detects stale connections and the agent reconnects with exponential backoff from 1 to 30 seconds. On Windows, the task starts at user logon, StartWhenAvailable is enabled, and task failures are retried. A powered-off or still-sleeping computer remains unavailable until the OS resumes. Turning this off removes login autostart; an offline device cannot be re-enabled from the cloud.",
-                        "macOS 使用 launchd，Windows 使用 Task Scheduler，Linux 使用 systemd --user。锁屏不会停止 Agent。电脑睡眠期间网络不可用；唤醒后、Wi-Fi 切换或 Relay 短暂断开时，WebSocket 存活检测会识别失效连接，并按 1 到 30 秒的指数退避自动重连。Windows 会在用户登录时启动任务，同时启用 StartWhenAvailable，并在任务异常失败后重试。电脑如果仍在睡眠或已经关机，则必须等操作系统恢复后才能重新在线。关闭此开关会移除登录自启动；设备已经离线时无法从云端重新开启。",
+                        "macOS uses launchd, Windows uses Task Scheduler, and Linux uses systemd --user. Locking the screen does not stop the agent. During sleep the network is unavailable; after wake, Wi-Fi changes, or transient Relay disconnects, the agent reconnects automatically. Turning this off keeps the current npx session in the foreground and does not install login autostart.",
+                        "macOS 使用 launchd，Windows 使用 Task Scheduler，Linux 使用 systemd --user。锁屏不会停止 Agent。睡眠时网络不可用；唤醒、Wi-Fi 切换或 Relay 短暂断开后，Agent 会自动重连。关闭后会保持当前 npx 会话前台连接，不安装登录自启。",
                       )}
                     />
                   </div>
-                  <small>{tr("Recommended · on by default", "推荐 · 默认开启")}</small>
+                  <small>
+                    {backgroundActuallyEnabled
+                      ? tr("Installed locally", "本机已安装")
+                      : backgroundRequested
+                        ? tr("Recommended · selected by default", "推荐 · 默认选中")
+                        : tr("Foreground only", "仅前台运行")}
+                  </small>
                 </div>
               </div>
-              <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>
+              <label className="compactSwitch">
+                <input
+                  type="checkbox"
+                  checked={backgroundRequested}
+                  disabled={!backgroundCapabilityReady || busy}
+                  onChange={(event) => setBackgroundRequested(event.target.checked)}
+                />
+                <span />
+              </label>
             </div>
-            <p>{tr(
-              "Remote Arc starts automatically when you sign in to this computer and reconnects after sleep or network changes. You can turn this off later from Devices.",
-              "登录这台电脑后 Remote Arc 会自动后台启动，并在睡眠唤醒或网络变化后自动重连。之后可以在设备页关闭。",
-            )}</p>
+            <p>
+              {backgroundRequested
+                ? tr(
+                    "When you finish setup, Remote Arc will install the OS login service and verify the local result before showing it as enabled.",
+                    "完成设置时，Remote Arc 会安装系统登录后台服务，并在本机确认成功后才显示为已开启。",
+                  )
+                : tr(
+                    "No login autostart will be installed. Keep this terminal session open while you want the computer reachable.",
+                    "不会安装登录自启。需要电脑保持可连接时，请保持当前终端会话运行。",
+                  )}
+            </p>
+            {!backgroundCapabilityReady && (
+              <small className="pairSetupNote">
+                {tr(
+                  "Waiting for the local agent before this choice can be applied.",
+                  "正在等待本机 Agent 上线，上线后才能应用此选项。",
+                )}
+              </small>
+            )}
           </section>
-
           <section className="pairPermissionCard enabled">
             <div className="pairPermissionHead">
               <div>
@@ -982,8 +1088,14 @@ function PairDevice({
 
         <div className="pairSetupFooter">
           <span>{tr("You can change every permission later from Devices.", "之后可以在设备页随时修改所有权限。")}</span>
-          <button className="primaryButton" onClick={() => setSetupStep("done")}>
-            {tr("Finish setup", "完成设置")}
+          <button
+            className="primaryButton"
+            disabled={!backgroundCapabilityReady || busy}
+            onClick={() => void finishSetup()}
+          >
+            {busy
+              ? tr("Saving setup…", "正在保存设置…")
+              : tr("Finish setup", "完成设置")}
           </button>
         </div>
       </CenteredCard>
@@ -3876,20 +3988,28 @@ function Dashboard({
                         <span>
                           {!device.background_agent_available
                             ? tr("Requires the next remotelink release", "需要新版 remotelink")
-                            : (device.background_enabled ?? true)
+                            : device.background_enabled === true
                               ? tr(
                                   "Starts at login · auto reconnect" +
                                     (device.background_service ? " · " + device.background_service : ""),
                                   "登录自启 · 自动重连" +
                                     (device.background_service ? " · " + device.background_service : ""),
                                 )
-                              : tr("Off · use npx remotelink locally to reconnect after this session ends", "已关闭 · 当前会话结束后需在本机运行 npx remotelink 才能重新连接")}
+                              : device.background_enabled === false
+                                ? tr(
+                                    "Off · use npx remotelink locally to reconnect after this session ends",
+                                    "已关闭 · 当前会话结束后需在本机运行 npx remotelink 重新连接",
+                                  )
+                                : tr(
+                                    "Not configured · current session only",
+                                    "尚未配置 · 仅当前会话",
+                                  )}
                         </span>
                       </div>
                       <label className="compactSwitch">
                         <input
                           type="checkbox"
-                          checked={device.background_enabled ?? !!device.background_agent_available}
+                          checked={device.background_enabled === true}
                           disabled={device.status !== "online" || !device.background_agent_available}
                           onChange={(event) => void updateDeviceBackground(device, event.target.checked)}
                         />
