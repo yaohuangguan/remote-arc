@@ -47,8 +47,9 @@ jobs:
           set -euo pipefail
           output="$(pnpm --filter @remotearc/relay exec wrangler preview             --config ../../apps/ui/wrangler.preview.jsonc             --name "pr-${{ github.event.pull_request.number }}"             --message "PR #${{ github.event.pull_request.number }} @ ${{ github.sha }}"             --json)"
           printf '%s\n' "$output"
-          preview_url="$(printf '%s' "$output" | jq -er '.preview.urls[0]')"
-          unique_url="$(printf '%s' "$output" | jq -er '.deployment.urls[0] // empty' || true)"
+          json="$(printf '%s\n' "$output" | sed -n '/^{/,$p')"
+          preview_url="$(printf '%s' "$json" | jq -er '.preview.urls[0]')"
+          unique_url="$(printf '%s' "$json" | jq -r '.deployment.urls[0] // empty')"
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
           echo "unique_url=$unique_url" >> "$GITHUB_OUTPUT"
 
