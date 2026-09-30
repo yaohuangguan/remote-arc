@@ -8589,3 +8589,151 @@ body{font-size:18px;line-height:1.6}
 }
 
 :root[data-theme="light"] .publicNavDropdown small{color:#55717a!important}
+
+/* --------------------------------------------------------------------------
+   Dashboard light-theme QA — semantic status colours + readable typography.
+   -------------------------------------------------------------------------- */
+:root[data-theme="light"] .dashboardFooter a{
+  color:#4f6876;
+}
+:root[data-theme="light"] .sideNav button span,
+:root[data-theme="light"] .securityIcon,
+:root[data-theme="light"] .connectIcon,
+:root[data-theme="light"] .deviceIcon{
+  color:#036b8d!important;
+}
+
+/* Status colours must stay semantic but readable on light surfaces. */
+:root[data-theme="light"] .eventIcon.success{
+  color:#047857;
+  background:#ecfdf5;
+}
+:root[data-theme="light"] .eventIcon.failed{
+  color:#b42318;
+  background:#fef2f2;
+}
+:root[data-theme="light"] .badge.online{
+  border-color:#a7d7bd;
+  background:#edf9f1;
+  color:#047857;
+}
+:root[data-theme="light"] .badge.online i{
+  background:#047857;
+}
+:root[data-theme="light"] .badge:not(.online){
+  border-color:#cbd5e1;
+  background:#f1f5f9;
+  color:#475569;
+}
+:root[data-theme="light"] .attentionIcon.idle{
+  background:#eef2f6;
+  color:#475569;
+}
+:root[data-theme="light"] .attentionClear>i,
+:root[data-theme="light"] .privacyBoundaryGrid .kept>span{
+  background:#eaf8ef;
+  color:#047857;
+}
+:root[data-theme="light"] .privacyBoundaryGrid .notKept>span{
+  background:#eef2f6;
+  color:#475569;
+}
+
+/* Device permission controls. */
+:root[data-theme="light"] .devicePresetRow button small{
+  color:#4f6876;
+}
+:root[data-theme="light"] .policyPathChip button{
+  color:#475569;
+}
+:root[data-theme="light"] .policyPathChip button:hover{
+  color:#b42318;
+}
+
+/* Security flow + audit semantics. */
+:root[data-theme="light"] .securityExposureMeta strong,
+:root[data-theme="light"] .securityFlow>div>span,
+:root[data-theme="light"] .securityFlow>i{
+  color:#036b8d;
+}
+:root[data-theme="light"] .securityAuditRow>.eventIcon.success~b{
+  color:#047857;
+}
+:root[data-theme="light"] .securityAuditRow>.eventIcon.failed~b{
+  color:#b42318;
+}
+
+/* Monitor metadata and alert destination. */
+:root[data-theme="light"] .monitorIncidentBody code{
+  color:#4f6876;
+}
+:root[data-theme="light"] .monitorAlertState span{
+  color:#036b8d;
+}
+
+/* Dashboard text should be comfortably readable, not merely technically visible. */
+.appFrame .sidebarStatus strong,
+.appFrame .sidebarAccount strong{
+  font-size:13px;
+}
+.appFrame .sidebarStatus span,
+.appFrame .sidebarAccount span{
+  font-size:12px;
+}
+.appFrame .dashboardFooter{
+  font-size:12px;
+}
+.appFrame .statusCardHead,
+.appFrame .overviewStatusCard>small,
+.appFrame .overviewDeviceRow span,
+.appFrame .overviewDeviceMeta span,
+.appFrame .overviewDeviceMeta small,
+.appFrame .quickActionList small,
+.appFrame .attentionList small,
+.appFrame .attentionClear small{
+  font-size:12px;
+}
+.appFrame .deviceIdentity span,
+.appFrame .badge,
+.appFrame .deviceStatusStrip span,
+.appFrame .deviceToolChips span,
+.appFrame .devicePresetRow>span,
+.appFrame .devicePresetRow button small,
+.appFrame .deviceToolDetails summary span{
+  font-size:12px;
+}
+.appFrame .securityStatusCard>div,
+.appFrame .securityStatusCard>small,
+.appFrame .securityDeviceRow span,
+.appFrame .securityExposureMeta span,
+.appFrame .securityFlow small,
+.appFrame .securityAuditRow span,
+.appFrame .securityAuditRow>b,
+.appFrame .privacyBoundaryGrid small{
+  font-size:12px;
+}
+.appFrame .monitorIncidentBody code,
+.appFrame .monitorIncidentRow time,
+.appFrame .monitorCheck strong,
+.appFrame .monitorAlertState small{
+  font-size:12px;
+}
+.appFrame .monitorIncidentBody small,
+.appFrame .monitorCheck span,
+.appFrame .monitorAlertState span{
+  font-size:13px;
+}
+
+@media(max-width:820px){
+  .mobileBottomNav button small{
+    font-size:11px!important;
+  }
+  .appFrame .overviewDeviceRow span,
+  .appFrame .overviewDeviceMeta span,
+  .appFrame .overviewDeviceMeta small,
+  .appFrame .deviceToolChips span,
+  .appFrame .securityFlow small,
+  .appFrame .privacyBoundaryGrid small{
+    font-size:12px;
+  }
+}
