@@ -139,6 +139,270 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .successDetails strong { font-size:12px; }
 .successDetails span { color:#747d8a; font-size:10px; }
 
+.pairConnectedDevice {
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr) auto;
+  gap:11px;
+  align-items:center;
+  margin:0 0 18px;
+  padding:12px 0 16px;
+  border-bottom:1px solid #1d2530;
+}
+.pairConnectedDevice > div:nth-child(2) { display:grid; gap:3px; }
+.pairConnectedDevice strong { font-size:12px; }
+.pairConnectedDevice span { color:#74808e; font-size:10px; }
+.pairStatusDot {
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#49525f;
+  box-shadow:0 0 0 4px rgba(73,82,95,.1);
+}
+.pairStatusDot.online {
+  background:#56d99a;
+  box-shadow:0 0 0 4px rgba(86,217,154,.1);
+}
+.pairPermissionStack { display:grid; gap:10px; }
+.pairPermissionCard {
+  display:grid;
+  gap:12px;
+  padding:16px;
+  border:1px solid #27303b;
+  border-radius:14px;
+  background:#0b1016;
+  transition:border-color .16s ease, background .16s ease;
+}
+.pairPermissionCard.enabled {
+  border-color:rgba(86,217,154,.28);
+  background:linear-gradient(135deg,rgba(86,217,154,.055),#0b1016 58%);
+}
+.pairPermissionCard.terminal { border-style:dashed; }
+.pairPermissionHead {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.pairPermissionHead > div {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.pairPermissionHead > div > div { display:grid; gap:3px; }
+.pairPermissionHead strong { font-size:12px; }
+.pairPermissionHead small { color:#6f7a88; font-size:9px; line-height:1.4; }
+.pairPermissionIcon {
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  flex:0 0 30px;
+  border:1px solid #2b3541;
+  border-radius:9px;
+  background:#101720;
+  color:#8bdcff;
+  font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.pairPermissionState {
+  white-space:nowrap;
+  color:#70dca8;
+  font-size:9px;
+  font-weight:730;
+}
+.pairPermissionCard p {
+  margin:0;
+  color:#7d8896;
+  font-size:10px;
+  line-height:1.58;
+}
+.pairPermissionCard ul {
+  display:grid;
+  gap:5px;
+  margin:0;
+  padding:0;
+  list-style:none;
+  color:#7d8896;
+  font-size:10px;
+}
+.pairPermissionCard li::before {
+  content:"✓";
+  margin-right:7px;
+  color:#64d59d;
+}
+.pairPermissionCard .primaryButton,
+.pairPermissionCard .ghostButton { justify-self:start; }
+.pairWorkspaceEnabled {
+  width:fit-content;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  padding:6px 8px;
+  border:1px solid #24303a;
+  border-radius:7px;
+  background:#080c11;
+  color:#8dddfd;
+  font-size:9px;
+}
+.pairTerminalConfirm {
+  display:grid;
+  gap:10px;
+  padding:11px;
+  border:1px solid rgba(223,136,136,.2);
+  border-radius:10px;
+  background:rgba(223,136,136,.045);
+}
+.pairTerminalConfirm > span {
+  color:#a88787;
+  font-size:9px;
+  line-height:1.5;
+}
+.pairTerminalConfirm > div {
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+}
+.dangerConfirmButton {
+  border:1px solid rgba(223,136,136,.34);
+  border-radius:9px;
+  background:rgba(223,136,136,.12);
+  color:#efb0b0;
+  padding:8px 11px;
+  font-size:10px;
+  font-weight:700;
+}
+.pairSetupFooter {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-top:18px;
+  padding-top:16px;
+  border-top:1px solid #1d2530;
+}
+.pairSetupFooter > span {
+  color:#65717e;
+  font-size:9px;
+  line-height:1.45;
+}
+.pairSetupSummary {
+  display:grid;
+  margin:2px 0 18px;
+  border:1px solid #26303a;
+  border-radius:12px;
+  overflow:hidden;
+}
+.pairSetupSummary > div {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:11px 12px;
+  border-bottom:1px solid #202832;
+  font-size:10px;
+}
+.pairSetupSummary > div:last-child { border-bottom:0; }
+.pairSetupSummary span { color:#77828f; }
+.pairSetupSummary strong { color:#dce2e9; }
+.pairSetupDone { width:100%; }
+.pairWorkspacePath {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:9px;
+  margin-bottom:10px;
+}
+.pairWorkspacePath code {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#93ddfa;
+  font-size:10px;
+}
+.pairWorkspaceList {
+  max-height:300px;
+  overflow:auto;
+  display:grid;
+  gap:4px;
+  padding:5px;
+  border:1px solid #26303a;
+  border-radius:12px;
+  background:#080c11;
+}
+.pairWorkspaceList > button {
+  display:grid;
+  grid-template-columns:22px minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+  width:100%;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:#cbd2da;
+  padding:9px;
+  text-align:left;
+}
+.pairWorkspaceList > button:hover { background:#111821; }
+.pairWorkspaceList > button span { color:#73cdee; }
+.pairWorkspaceList > button strong {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:10px;
+}
+.pairWorkspaceList > button small { color:#596675; }
+.pairSetupEmpty {
+  padding:22px 12px;
+  color:#65717e;
+  font-size:10px;
+  text-align:center;
+}
+.pairSetupNote {
+  margin:10px 0 0 !important;
+  color:#65717e !important;
+  font-size:9px !important;
+}
+.pairSetupActions {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:18px;
+}
+
+:root[data-theme="light"] .pairConnectedDevice { border-color:#e2edf2; }
+:root[data-theme="light"] .pairPermissionCard,
+:root[data-theme="light"] .pairWorkspaceList,
+:root[data-theme="light"] .pairSetupSummary {
+  border-color:#dcebf2;
+  background:#f8fbfd;
+}
+:root[data-theme="light"] .pairPermissionCard.enabled {
+  border-color:#b7e7d0;
+  background:linear-gradient(135deg,rgba(42,177,116,.08),#fff 60%);
+}
+:root[data-theme="light"] .pairPermissionIcon {
+  border-color:#d7e8ef;
+  background:#eff7fa;
+  color:#087ea4;
+}
+:root[data-theme="light"] .pairPermissionHead strong,
+:root[data-theme="light"] .pairSetupSummary strong { color:#143742; }
+:root[data-theme="light"] .pairPermissionCard p,
+:root[data-theme="light"] .pairPermissionCard ul,
+:root[data-theme="light"] .pairPermissionHead small,
+:root[data-theme="light"] .pairConnectedDevice span,
+:root[data-theme="light"] .pairSetupFooter > span,
+:root[data-theme="light"] .pairSetupSummary span { color:#5b7881; }
+:root[data-theme="light"] .pairWorkspaceEnabled,
+:root[data-theme="light"] .pairWorkspaceList {
+  background:#f5fafc;
+  color:#087ea4;
+}
+:root[data-theme="light"] .pairSetupFooter { border-color:#e2edf2; }
+
+
 .appFrame { min-height:100vh; display:grid; grid-template-columns:238px minmax(0,1fr); }
 .sidebar {
   position:sticky; top:0; height:100vh; padding:22px 16px 16px; border-right:1px solid #1a2028;
@@ -8092,3 +8356,237 @@ body{font-size:18px;line-height:1.6}
   background:rgba(248,252,253,.92);
   border-color:#dce9ed;
 }
+
+
+.pairWorkspaceControl {
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+}
+.pairWorkspaceControl > div {
+  min-width:0;
+  display:grid;
+  gap:4px;
+}
+.pairWorkspaceControl span {
+  color:#667381;
+  font-size:9px;
+}
+.pairWorkspaceControl code {
+  max-width:280px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#8dddfd;
+  font-size:9px;
+}
+:root[data-theme="light"] .pairWorkspaceControl span { color:#68818a; }
+:root[data-theme="light"] .pairWorkspaceControl code { color:#087ea4; }
+
+.deviceBackgroundRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:13px 14px;
+  border:1px solid rgba(148,163,184,.10);
+  border-radius:13px;
+  background:rgba(6,16,24,.62);
+}
+.deviceBackgroundRow>div{
+  min-width:0;
+  display:grid;
+  gap:4px;
+}
+.deviceBackgroundRow strong{
+  color:#dceff3;
+  font-size:12px;
+}
+.deviceBackgroundRow>div>span{
+  color:#6f8892;
+  font-size:10px;
+  line-height:1.5;
+}
+:root[data-theme="light"] .deviceBackgroundRow{
+  border-color:#dcebf2;
+  background:#f8fbfd;
+}
+:root[data-theme="light"] .deviceBackgroundRow strong{color:#153640}
+:root[data-theme="light"] .deviceBackgroundRow>div>span{color:#5d7b84}
+
+.pairAgentConnect {
+  display:grid;
+  gap:14px;
+  margin-top:18px;
+  padding-top:18px;
+  border-top:1px solid #1d2530;
+}
+.pairAgentConnectIntro { display:grid; gap:6px; }
+.pairAgentConnectIntro .eyebrow {
+  color:#65c8eb;
+  font-size:10px;
+  letter-spacing:.1em;
+}
+.pairAgentConnectIntro h3 {
+  margin:0;
+  color:#edf3f7;
+  font-size:15px;
+  line-height:1.35;
+}
+.pairAgentConnectIntro p {
+  margin:0;
+  color:#7b8793;
+  font-size:12px;
+  line-height:1.55;
+}
+.pairAgentGrid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.pairAgentOption {
+  min-width:0;
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr);
+  gap:9px 10px;
+  align-items:center;
+  padding:12px;
+  border:1px solid #26313c;
+  border-radius:12px;
+  background:#0b1016;
+  color:#dfe8ed;
+  transition:border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.pairAgentOption:hover {
+  border-color:#3f8198;
+  background:#0f1820;
+  transform:translateY(-1px);
+}
+.pairAgentOption img {
+  width:30px;
+  height:30px;
+  object-fit:contain;
+}
+.pairMcpIcon {
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  border:1px solid #315c6d;
+  border-radius:9px;
+  color:#7dd3fc;
+  font:800 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.pairAgentOption>div {
+  min-width:0;
+  display:grid;
+  gap:3px;
+}
+.pairAgentOption strong {
+  font-size:13px;
+  line-height:1.3;
+}
+.pairAgentOption small {
+  color:#74818d;
+  font-size:11px;
+  line-height:1.4;
+}
+.pairAgentOption>b {
+  grid-column:1 / -1;
+  color:#78d4f2;
+  font-size:11px;
+  font-weight:700;
+}
+.pairAgentEndpoint {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:6px 8px;
+  align-items:center;
+  padding:10px;
+  border:1px solid #253441;
+  border-radius:11px;
+  background:#08121a;
+}
+.pairAgentEndpoint>span {
+  grid-column:1 / -1;
+  color:#778692;
+  font-size:11px;
+}
+.pairAgentEndpoint code {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#9fe4fb;
+  font-size:11px;
+}
+.pairDoneSecondary {
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:14px;
+  padding-top:13px;
+  border-top:1px solid #1d2530;
+}
+.pairDoneSecondary a {
+  color:#7f96a0;
+  font-size:11px;
+  font-weight:650;
+}
+.pairDoneSecondary a:hover { color:#8addf7; }
+
+:root[data-theme="light"] .pairAgentConnect,
+:root[data-theme="light"] .pairDoneSecondary {
+  border-color:#e2edf2;
+}
+:root[data-theme="light"] .pairAgentConnectIntro .eyebrow,
+:root[data-theme="light"] .pairAgentOption>b {
+  color:#087ea4;
+}
+:root[data-theme="light"] .pairAgentConnectIntro h3,
+:root[data-theme="light"] .pairAgentOption strong {
+  color:#143742;
+}
+:root[data-theme="light"] .pairAgentConnectIntro p,
+:root[data-theme="light"] .pairAgentOption small,
+:root[data-theme="light"] .pairAgentEndpoint>span,
+:root[data-theme="light"] .pairDoneSecondary a {
+  color:#5b7881;
+}
+:root[data-theme="light"] .pairAgentOption {
+  border-color:#dcebf2;
+  background:#f8fbfd;
+}
+:root[data-theme="light"] .pairAgentOption:hover {
+  border-color:#9dcedd;
+  background:#f1f9fc;
+}
+:root[data-theme="light"] .pairMcpIcon {
+  border-color:#bcdce7;
+  color:#087ea4;
+}
+:root[data-theme="light"] .pairAgentEndpoint {
+  border-color:#d6e7ee;
+  background:#f5fafc;
+}
+:root[data-theme="light"] .pairAgentEndpoint code {
+  color:#075985;
+}
+:root[data-theme="light"] .pairDoneSecondary a:hover {
+  color:#087ea4;
+}
+
+@media(max-width:620px) {
+  .pairAgentGrid { grid-template-columns:1fr; }
+  .pairDoneSecondary { flex-direction:column; }
+}
+
+/* Pairing completion should be comfortably readable on desktop and mobile. */
+.pairSetupSummary>div{font-size:12px}
+.pairAgentConnectIntro .eyebrow{font-size:11px}
+.pairAgentOption small,
+.pairAgentOption>b,
+.pairAgentEndpoint>span,
+.pairAgentEndpoint code,
+.pairDoneSecondary a{font-size:12px}

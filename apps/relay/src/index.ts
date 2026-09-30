@@ -22,6 +22,7 @@ import {
   handleDeviceUndoList,
   handleDeviceUndoAction,
   handleDeviceDirectoryBrowse,
+  handleDeviceBackgroundUpdate,
   handleDeviceManagedProcesses,
   handleDeviceManagedProcessOutput,
   handleDeviceManagedProcessStop,
@@ -299,9 +300,37 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
     if (url.pathname === "/api/device/heartbeat" && request.method === "POST") {
       const identity = await authenticateDevice(request, env);
       if (!identity) return Response.json({ error: "unauthorized" }, { status: 401 });
+      const heartbeat = (await request.json().catch(() => ({}))) as {
+        background_enabled?: unknown;
+        background_process?: unknown;
+        background_service?: unknown;
+      };
+      const backgroundEnabled =
+        typeof heartbeat.background_enabled === "boolean"
+          ? heartbeat.background_enabled
+          : null;
+      const backgroundService =
+        typeof heartbeat.background_service === "string" &&
+        heartbeat.background_service.length <= 40
+          ? heartbeat.background_service
+          : null;
+      const now = new Date().toISOString();
       await env.DB.prepare(
-        "UPDATE devices SET last_seen = ?1 WHERE id = ?2 AND user_id = ?3 AND revoked_at IS NULL",
-      ).bind(new Date().toISOString(), identity.id, identity.user_id).run();
+        `UPDATE devices
+         SET last_seen = ?1,
+             background_enabled = COALESCE(?2, background_enabled),
+             background_service = COALESCE(?3, background_service),
+             background_seen_at = CASE WHEN ?2 IS NULL THEN background_seen_at ELSE ?1 END
+         WHERE id = ?4 AND user_id = ?5 AND revoked_at IS NULL`,
+      )
+        .bind(
+          now,
+          backgroundEnabled === null ? null : backgroundEnabled ? 1 : 0,
+          backgroundService,
+          identity.id,
+          identity.user_id,
+        )
+        .run();
       return new Response(null, { status: 204 });
     }
 
@@ -358,6 +387,13 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       request.method === "GET"
     ) {
       return handleDeviceDirectoryBrowse(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/background$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDeviceBackgroundUpdate(request, env);
     }
 
     if (
