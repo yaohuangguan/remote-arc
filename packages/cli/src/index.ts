@@ -245,7 +245,6 @@ async function pair(origin: string, mode: Mode): Promise<SavedConfig> {
       deviceName,
       origin,
       mode,
-      backgroundEnabled: true,
     };
     await writeConfig(config);
     return config;
@@ -399,6 +398,10 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
 
       const sendHeartbeat = async () => {
         try {
+          const background =
+            config.backgroundEnabled === undefined
+              ? null
+              : await backgroundAgentStatus().catch(() => null);
           await fetch(new URL("/api/device/heartbeat", config.origin), {
             method: "POST",
             headers: {
@@ -406,16 +409,9 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
               "content-type": "application/json",
             },
             body: JSON.stringify({
-              background_enabled: config.backgroundEnabled !== false,
+              background_enabled: background?.enabled,
               background_process: argFlag("--agent"),
-              background_service:
-                process.platform === "darwin"
-                  ? "launchd"
-                  : process.platform === "win32"
-                    ? "task-scheduler"
-                    : process.platform === "linux"
-                      ? "systemd-user"
-                      : "unsupported",
+              background_service: background?.service,
             }),
           });
         } catch {
@@ -486,8 +482,8 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
               const status = await backgroundAgentStatus();
               result = {
                 ...status,
-                enabled: config.backgroundEnabled !== false && status.enabled,
-                desired_enabled: config.backgroundEnabled !== false,
+                enabled: status.enabled,
+                desired_enabled: config.backgroundEnabled ?? null,
               };
             } else if (message.tool === "set_background_agent") {
               const enabled = message.arguments?.enabled;
@@ -666,21 +662,18 @@ async function main() {
     } else if (enableBackground) {
       config.backgroundEnabled = true;
       await writeConfig(config);
-    } else if (config.backgroundEnabled === undefined) {
-      config.backgroundEnabled = true;
-      await writeConfig(config);
     }
 
     logLine("info", `Using paired device identity ${dim(config.deviceId.slice(0, 8))}…`);
 
     if (agentMode) {
-      if (config.backgroundEnabled === false) return;
+      if (config.backgroundEnabled !== true) return;
       const result = await connectAgent(config);
       if (result !== "rePair") return;
       return;
     }
 
-    if (!foregroundMode && config.backgroundEnabled !== false) {
+    if (!foregroundMode && config.backgroundEnabled === true) {
       try {
         const status = await enableBackgroundAgent(SELF_PATH);
         if (status.supported && status.enabled) {
@@ -706,6 +699,12 @@ async function main() {
       }
     }
 
+    if (config.backgroundEnabled === undefined) {
+      logLine(
+        "info",
+        "Background connection is not configured yet · finish setup in the browser or Devices.",
+      );
+    }
     const result = await connectAgent(config);
     if (result !== "rePair") return;
 
