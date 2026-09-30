@@ -8454,3 +8454,113 @@ body{font-size:18px;line-height:1.6}
 :root[data-theme="light"] .trustRail small{
   color:#456c76!important;
 }
+
+/* Light theme QA pass 2 — legacy public pages and intentional dark islands. */
+:root[data-theme="light"] .ctaStrip p{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .comparisonHead strong:last-child{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .platformFootnote code{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .platformFootnote a{
+  color:var(--sky)!important;
+}
+
+/* Demo/code surfaces intentionally remain dark in light mode. */
+:root[data-theme="light"] .demoBadge,
+:root[data-theme="light"] .demoEndpoint,
+:root[data-theme="light"] .installGrid .endpointRow code{
+  color:#7dd3fc!important;
+}
+.pluginDemoVideo{
+  color:#eaf8fb;
+}
+
+/* Resources table of contents. */
+:root[data-theme="light"] .resourceToc nav a span,
+:root[data-theme="light"] .resourceToc nav a small,
+:root[data-theme="light"] .resourceTocLinks>span{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .resourceToc nav a strong{
+  color:#315c67!important;
+}
+:root[data-theme="light"] .resourceToc nav a:hover strong{
+  color:var(--sky)!important;
+}
+:root[data-theme="light"] .resourceTocLinks a{
+  color:#456c76!important;
+}
+:root[data-theme="light"] .resourceTocLinks a:hover,
+:root[data-theme="light"] .resourceTocLinks em{
+  color:var(--sky)!important;
+}
+
+/* Blog metadata needs to remain secondary, not faint. */
+:root[data-theme="light"] .blogLeadMeta{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .blogLeadPost:hover h2,
+:root[data-theme="light"] .blogPostRow:hover h2{
+  color:var(--sky)!important;
+}
+
+/* Client-install live session mixes a dark terminal with a light chat surface. */
+:root[data-theme="light"] .sessionPanelLabel>small,
+:root[data-theme="light"] .sessionTerminalBar small{
+  color:#8fb0b9!important;
+}
+:root[data-theme="light"] .sessionTerminalIdle{
+  color:#86a5ae!important;
+}
+:root[data-theme="light"] .sessionBridge span{
+  color:#456c76!important;
+}
+:root[data-theme="light"] .sessionChatHeader>span{
+  color:#047857!important;
+}
+:root[data-theme="light"] .sessionChatHint span,
+:root[data-theme="light"] .sessionComposer>span{
+  color:#5f6770!important;
+}
+:root[data-theme="light"] .installSetupMap b{
+  color:var(--sky)!important;
+}
+
+/* Legacy MCP docs. */
+:root[data-theme="light"] .mcpHeroClients small{
+  color:#4f6876!important;
+}
+:root[data-theme="light"] .endpointCopy code,
+:root[data-theme="light"] .mcpSystemGrid code,
+:root[data-theme="light"] .scopeChips code{
+  color:#315c67!important;
+}
+:root[data-theme="light"] .clientGuideCard header span{
+  color:#456c76!important;
+}
+:root[data-theme="light"] .clientGuideCard li b,
+:root[data-theme="light"] .clientGuideCard>a,
+:root[data-theme="light"] .browserInstallSteps li>b{
+  color:var(--sky)!important;
+}
+
+/* Remove real mobile min-content overflow instead of clipping it. */
+.installGrid article,
+.resourceDocsLayout,
+.resourceDocsLayout>*{
+  min-width:0;
+}
+@media(max-width:900px){
+  .installGrid article{width:100%}
+}
+@media(max-width:620px){
+  .resourceDocsLayout{width:100%;max-width:100%}
+  .resourceToc,
+  .resourceTocInner,
+  .resourceToc nav,
+  .resourceArticles{min-width:0;max-width:100%}
+}
