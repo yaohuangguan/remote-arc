@@ -851,27 +851,61 @@ export async function handleDeviceBackgroundUpdate(
     );
   }
 
+  const status =
+    call.result && typeof call.result === "object"
+      ? (call.result as {
+          enabled?: unknown;
+          active?: unknown;
+          service?: unknown;
+          detail?: unknown;
+        })
+      : {};
+  const actualEnabled =
+    typeof status.enabled === "boolean" ? status.enabled : body.enabled;
+  const service =
+    typeof status.service === "string" ? status.service : null;
+
   const now = nowIso();
   await env.DB.prepare(
     `UPDATE devices
      SET background_enabled = ?1,
-         background_seen_at = ?2
-     WHERE id = ?3 AND user_id = ?4 AND revoked_at IS NULL`,
+         background_service = COALESCE(?2, background_service),
+         background_seen_at = ?3
+     WHERE id = ?4 AND user_id = ?5 AND revoked_at IS NULL`,
   )
-    .bind(body.enabled ? 1 : 0, now, deviceId, user.id)
+    .bind(actualEnabled ? 1 : 0, service, now, deviceId, user.id)
     .run();
 
+  const applied = actualEnabled === body.enabled;
   await writeAudit(env, {
     userId: user.id,
     deviceId,
-    eventType: body.enabled
-      ? "device.background_enabled"
-      : "device.background_disabled",
+    eventType: applied
+      ? actualEnabled
+        ? "device.background_enabled"
+        : "device.background_disabled"
+      : "device.background_update_failed",
   });
+
+  if (!applied) {
+    return Response.json(
+      {
+        error:
+          typeof status.detail === "string" && status.detail
+            ? status.detail
+            : body.enabled
+              ? "Background service could not be enabled on this computer."
+              : "Background service could not be disabled on this computer.",
+        enabled: actualEnabled,
+        status: call.result,
+      },
+      { status: 409 },
+    );
+  }
 
   return Response.json({
     ok: true,
-    enabled: body.enabled,
+    enabled: actualEnabled,
     status: call.result,
   });
 }
