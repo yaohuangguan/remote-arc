@@ -8765,3 +8765,8 @@ body{font-size:18px;line-height:1.6}
     font-size:11px;
   }
 }
+
+:root[data-theme="light"] .appDialog>p{
+  color:#4f6876;
+  font-size:12px;
+}
