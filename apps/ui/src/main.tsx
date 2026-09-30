@@ -1367,9 +1367,9 @@ function Landing({ user }: { user?: User | null }) {
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
-            <span>{tr("Read-only by default", "默认只读")}</span>
-            <span>{tr("Zero content retention", "不留存操作内容")}</span>
-            <span>{tr("Per-device skill controls", "逐设备技能控制")}</span>
+            <span>{tr("Folder-scoped access", "目录级访问边界")}</span>
+            <span>{tr("Local Undo", "本机 Undo")}</span>
+            <span>{tr("Remote kill switch", "远程总开关")}</span>
           </div>
         </div>
         <div className="heroArchitecture" aria-label={tr("How Remote Arc connects AI clients to your devices", "Remote Arc 如何连接 AI 客户端与设备")}>
@@ -1530,65 +1530,69 @@ function Landing({ user }: { user?: User | null }) {
 
       <section className="valueSection">
         <div className="sectionIntro">
-          <span className="eyebrow">{tr("WHY REMOTE ARC", "为什么选择 REMOTE ARC")}</span>
-          <h2>{tr("Powerful remote access without handing over the machine.", "给 AI 强大的远程能力，但不是把整台电脑交出去。")}</h2>
+          <span className="eyebrow">{tr("WHAT REMOTE ARC ACTUALLY EXPOSES", "REMOTE ARC 实际开放什么")}</span>
+          <h2>{tr("Useful computer capabilities, exposed as explicit tools.", "把真正有用的电脑能力拆成明确的工具。")}</h2>
+          <p>{tr(
+            "Remote Arc is not a screen-sharing product and it does not hand an AI one giant computer permission. The public MCP surface is a set of named tools whose availability is filtered by the selected device.",
+            "Remote Arc 不是屏幕共享，也不是给 AI 一个笼统的“整机权限”。公开 MCP 能力由一组具名工具组成，并继续受到目标设备策略过滤。",
+          )}</p>
         </div>
-        <div className="landingFeatures">
-          <article><span>01</span><h2>{tr("Read-only by default", "默认只读")}</h2><p>{tr("Every newly paired computer starts with only read-oriented skills enabled. Writing files and terminal execution stay off until you choose otherwise.", "每台新配对电脑默认只开启读取类技能；写文件和终端执行只有在你主动开启后才可用。")}</p></article>
-          <article><span>02</span><h2>{tr("Skills, not blanket access", "管理技能，而不是整机放权")}</h2><p>{tr("Use Safe, Developer or Full as quick presets, then enable or disable individual tools per device whenever you want.", "可以用 Safe、Developer、Full 快捷预设，也可以随时逐项开启或关闭每台设备的工具。")}</p></article>
-          <article><span>03</span><h2>{tr("Zero content retention", "不留存操作内容")}</h2><p>{tr("The hosted relay processes tool payloads transiently to deliver requests, while audit storage keeps operational metadata rather than file contents, command arguments or tool results.", "托管 Relay 仅在完成请求所需期间短暂处理工具数据；审计存储只保留运行元数据，不保存文件内容、命令参数或工具结果。")}</p></article>
-          <article><span>04</span><h2>{tr("Local Undo", "本机可撤销")}</h2><p>{tr("Before supported file edits, Remote Arc keeps the previous state on your own device. Ask your AI to undo the last change without uploading the snapshot to our cloud.", "对支持的文件修改，Remote Arc 会先在你的电脑本地保存旧状态。你可以直接让 AI 撤销上一次修改，快照不会上传到我们的云端。")}</p></article>
-          <article><span>05</span><h2>{tr("Safety Guard", "高风险操作防护")}</h2><p>{tr("Normal development commands run without repeated prompts. A narrow local guard blocks catastrophic actions such as root deletion, disk formatting and machine shutdown.", "正常开发命令不会反复弹确认；只有删除根目录、格式化磁盘、关机等灾难级操作会被本机 Safety Guard 拦截。")}</p></article>
-          <article><span>06</span><h2>{tr("No inbound ports", "无需暴露入站端口")}</h2><p>{tr("Each machine creates an outbound encrypted connection. No public IP, port forwarding or always-on VPN.", "每台设备主动建立加密出站连接，无需公网 IP、端口映射或常驻 VPN。")}</p></article>
+        <div className="landingFeatures capabilityFacts">
+          <article><span>01</span><h2>{tr("Files and directories", "文件与目录")}</h2><p>{tr("List directories, read files and inspect metadata. Workspace Scope can limit file tools to the folders you choose.", "列目录、读文件、查看元数据；Workspace Scope 可以把文件工具限制在你选择的目录内。")}</p></article>
+          <article><span>02</span><h2>{tr("Targeted file editing", "定向文件编辑")}</h2><p>{tr("Enable write_file or edit_block independently. Supported edits can create a conflict-safe Local Undo snapshot before changing the file.", "write_file 与 edit_block 可以独立开启；受支持的编辑会在修改前创建可冲突检测的 Local Undo 快照。")}</p></article>
+          <article><span>03</span><h2>{tr("Processes and terminal", "进程与终端")}</h2><p>{tr("Inspect processes without granting shell access. start_process is a separate high-impact skill and runs under the local OS user's permissions.", "查看进程并不等于开放 Shell；start_process 是独立的高权限 Skill，并继承本机 OS 用户权限。")}</p></article>
+          <article><span>04</span><h2>{tr("Managed background jobs", "受管后台任务")}</h2><p>{tr("When terminal access is enabled, a task can run as a Remote Arc-managed background process with a local handle for status, output and stop.", "开启终端权限后，任务可以作为 Remote Arc 受管后台进程运行，并通过本地 Handle 查询状态、读取输出或停止。")}</p></article>
+          <article><span>05</span><h2>{tr("Explicitly shared browser context", "明确共享的浏览器上下文")}</h2><p>{tr("The Chrome companion exposes read-only tools for tabs you explicitly share: readable text, selections, links and tables.", "Chrome Companion 只对你明确共享的标签页开放只读能力：正文、选中文本、链接和表格。")}</p></article>
+          <article><span>06</span><h2>{tr("One device can differ from another", "每台设备可以完全不同")}</h2><p>{tr("A workstation can allow editing and terminal while another computer stays read-only. Policy belongs to the device, not to a global agent mode.", "开发机可以开放编辑和终端，而另一台电脑保持只读；策略属于每台设备，而不是一个全局 Agent 模式。")}</p></article>
         </div>
       </section>
 
       <section className="platformSection">
         <div className="sectionIntro splitIntro">
           <div>
-            <span className="eyebrow">{tr("PLATFORM SECURITY & RELIABILITY", "平台安全与可靠性")}</span>
-            <h2>{tr("Built to stay controllable when AI gets powerful.", "AI 越强，控制边界越要清楚。")}</h2>
+            <span className="eyebrow">{tr("CONTROL MODEL", "控制模型")}</span>
+            <h2>{tr("Six controls that matter when AI can act on a real computer.", "AI 能操作真实电脑时，真正重要的六个控制点。")}</h2>
           </div>
           <p>{tr(
-            "Remote Arc now combines account-level emergency controls, revocable OAuth grants, Cloudflare edge protection and persistent device heartbeat into the hosted control plane.",
-            "Remote Arc 现在把账户级紧急控制、可撤销 OAuth 授权、Cloudflare 边缘保护与持续设备心跳整合进托管控制面。"
+            "These are enforced by the current implementation: path boundaries, local recovery, managed jobs, per-skill policy, encrypted transport with minimized retention, and revocation at the account, client and device layers.",
+            "这些都来自当前实现：路径边界、本机恢复、受管任务、逐 Skill 策略、加密传输与最小化留存，以及账户、AI 客户端和设备三层撤销能力。",
           )}</p>
         </div>
         <div className="platformCapabilityGrid">
           <article>
-            <span className="platformCapabilityIcon">Ⅱ</span>
-            <div><strong>{tr("Emergency MCP pause", "紧急暂停 MCP")}</strong><p>{tr("Pause every authenticated Remote MCP call for your account with one control, then resume when you are ready.", "一个开关即可暂停账户下所有已认证 Remote MCP 调用，需要时再恢复。")}</p></div>
-            <small>{tr("Server enforced", "服务端强制执行")}</small>
+            <span className="platformCapabilityIcon">⌂</span>
+            <div><strong>{tr("Directory and path boundaries", "目录与路径级边界")}</strong><p>{tr("Workspace Scope limits normal file tools to configured roots. Sensitive Path Policy protects credential locations and supports narrow file or directory exceptions; canonical paths are checked again on the device.", "Workspace Scope 把普通文件工具限制在指定 Root；Sensitive Path Policy 保护凭证目录，并支持精确到文件或目录的窄范围例外；真实路径还会在本机再次校验。")}</p></div>
+            <small>Workspace Scope · Sensitive Paths</small>
           </article>
           <article>
-            <span className="platformCapabilityIcon">↺</span>
-            <div><strong>{tr("Revocable AI access", "可撤销 AI 授权")}</strong><p>{tr("See active OAuth clients and scopes, then revoke access and refresh tokens per AI client.", "查看活跃 OAuth 客户端与 Scope，并可按 AI 客户端撤销访问权限和 Refresh Token。")}</p></div>
-            <small>OAuth 2.1 + PKCE</small>
+            <span className="platformCapabilityIcon">↶</span>
+            <div><strong>{tr("Local Undo before supported edits", "受支持编辑前保留本机 Undo")}</strong><p>{tr("Remote Arc snapshots the previous file state under ~/.remotearc/undo before supported writes. Snapshots stay local, and restore is refused if the file changed again.", "Remote Arc 会在受支持写入前把旧状态保存到 ~/.remotearc/undo；快照只留在本机，如果文件之后又被修改，自动恢复会拒绝覆盖新内容。")}</p></div>
+            <small>{tr("Local-only snapshot", "快照仅在本机")}</small>
           </article>
           <article>
-            <span className="platformCapabilityIcon">⌁</span>
-            <div><strong>{tr("Cloudflare edge rate limits", "Cloudflare 边缘限流")}</strong><p>{tr("Authenticated MCP traffic and sensitive auth/pairing endpoints are protected by separate edge limits before application execution.", "已认证 MCP 流量与敏感认证/配对入口使用独立边缘限流，在应用执行前先拦截异常流量。")}</p></div>
-            <small>120/min MCP · 30/min auth</small>
-          </article>
-          <article>
-            <span className="platformCapabilityIcon">♥</span>
-            <div><strong>{tr("Persistent device heartbeat", "持续设备心跳")}</strong><p>{tr("The local agent periodically refreshes last-seen state so presence and device history stay useful after disconnects.", "本地 Agent 会周期性刷新 last-seen，让设备断开后仍能准确看到最近在线时间。")}</p></div>
-            <small>60s heartbeat</small>
-          </article>
-          <article>
-            <span className="platformCapabilityIcon">◇</span>
-            <div><strong>{tr("Per-device policy", "每设备权限策略")}</strong><p>{tr("Tool access is enforced by the relay and constrained again by what each local agent actually exposes.", "工具权限先由 Relay 强制执行，再受每台本机 Agent 实际开放能力约束。")}</p></div>
-            <small>{tr("Defense in depth", "纵深防御")}</small>
+            <span className="platformCapabilityIcon">▶</span>
+            <div><strong>{tr("Optional managed background processes", "可选的受管后台进程")}</strong><p>{tr("A permitted start_process call can return a local process handle instead of blocking the request. The AI can check status, read captured output or stop that managed process later.", "允许 start_process 后，可以返回本地 Process Handle 而不是阻塞当前请求；之后 AI 可以查询状态、读取捕获输出或停止该受管进程。")}</p></div>
+            <small>start · status · output · stop</small>
           </article>
           <article>
             <span className="platformCapabilityIcon">≡</span>
-            <div><strong>{tr("Privacy-preserving audit", "隐私友好审计")}</strong><p>{tr("Track device, tool, result and time without intentionally storing file contents, command arguments or credentials in the audit feed.", "记录设备、工具、结果与时间，同时不会有意在审计记录中保存文件内容、命令参数或凭证。")}</p></div>
-            <small>{tr("Operational metadata only", "仅运行元数据")}</small>
+            <div><strong>{tr("Atomic control over individual skills", "逐 Skill 原子级控制")}</strong><p>{tr("Safe, Developer and Full are shortcuts only. The stored policy is an individually editable per-device skill list, and npx remotelink --safe can add a local read-only ceiling the dashboard cannot expand.", "Safe、Developer、Full 只是快捷预设；真正保存的是每台设备可逐项编辑的 Skill 列表。npx remotelink --safe 还能建立 Dashboard 无法远程放大的本机只读上限。")}</p></div>
+            <small>{tr("Per device · per skill", "逐设备 · 逐 Skill")}</small>
+          </article>
+          <article>
+            <span className="platformCapabilityIcon">⇄</span>
+            <div><strong>{tr("Encrypted transport, least-knowledge storage", "加密传输，尽量少知道")}</strong><p>{tr("HTTPS/WSS encrypts transport. The hosted relay must see the active tool payload to route it, so Remote Arc does not claim zero-knowledge E2EE; instead it avoids intentionally persisting file contents, raw command arguments or tool results in the audit store.", "HTTPS/WSS 负责传输加密。托管 Relay 为了路由必须看到当前 Tool Payload，因此 Remote Arc 不声称 zero-knowledge E2EE；我们的做法是尽量不在审计存储中持久化文件内容、原始命令参数或 Tool Result。")}</p></div>
+            <small>{tr("Encrypted in transit · minimized retention", "传输加密 · 最小化留存")}</small>
+          </article>
+          <article>
+            <span className="platformCapabilityIcon">Ⅱ</span>
+            <div><strong>{tr("Pause or revoke access at any time", "随时暂停或撤销连接")}</strong><p>{tr("The dashboard can pause all authenticated Remote MCP calls for the account immediately. Individual OAuth grants and individual paired devices can also be revoked independently.", "Dashboard 可以立即暂停账户下全部已认证 Remote MCP 调用；单个 OAuth Grant 和单台已配对设备也可以分别撤销。")}</p></div>
+            <small>{tr("Account · AI grant · device", "账户 · AI Grant · 设备")}</small>
           </article>
         </div>
         <div className="platformFootnote">
-          <code>edge → oauth → relay policy → local agent</code>
-          <a href="/resources#security-control-plane">{tr("Read the security architecture →", "阅读安全架构 →")}</a>
+          <code>OAuth → account pause → device skill policy → local path policy → execution core</code>
+          <a href="/security-model">{tr("Read the full security model →", "阅读完整安全模型 →")}</a>
         </div>
       </section>
 
@@ -1932,61 +1936,113 @@ function DocsPage({ user }: { user?: User | null }) {
     {
       title: tr("Device discovery", "设备发现"),
       tools: "list_devices · device_tools",
-      body: tr("Resolve the target computer, online state and the capabilities that computer actually exposes.", "确定目标电脑、在线状态，以及那台电脑实际开放的能力。"),
+      body: tr("Find the target computer, its online state and the exact skills it currently exposes.", "找到目标电脑、在线状态，以及它当前实际开放的 Skill。"),
     },
     {
       title: tr("Filesystem", "文件系统"),
       tools: "list_directory · read_file · get_file_info · write_file · edit_block · undo_last_change",
-      body: tr("Read-oriented tools are part of the default device profile. File writes and targeted edits are opt-in; supported writes can use Local Undo.", "只读工具属于默认设备配置；文件写入与定向编辑需要主动开启，支持的写入可以使用 Local Undo。"),
+      body: tr("Reading can stay enabled while editing is disabled. Workspace Scope and Sensitive Path Policy are checked again locally before filesystem execution.", "可以保留读取而关闭编辑；文件系统执行前还会在本机再次检查 Workspace Scope 与 Sensitive Path Policy。"),
     },
     {
-      title: tr("Processes & terminal", "进程与终端"),
+      title: tr("Processes and terminal", "进程与终端"),
       tools: "list_processes · start_process · process_status · process_output · stop_process",
-      body: tr("Process visibility can stay read-oriented. Shell execution and managed background processes require terminal permission.", "进程查看可以保持只读；Shell 执行和受管后台进程需要终端权限。"),
+      body: tr("Process inspection is separate from terminal execution. start_process can run synchronously or return a managed background-process handle.", "进程查看与终端执行彼此独立；start_process 可以同步执行，也可以返回受管后台进程 Handle。"),
     },
     {
       title: tr("Shared browser tab", "共享浏览器标签页"),
       tools: "browser_list_tabs · browser_get_current_tab · browser_read_page · browser_get_selected_text · browser_extract_links · browser_extract_table",
-      body: tr("Browser access is read-only and limited to tabs the user explicitly shares through the Chrome companion.", "浏览器访问是只读的，并且只限用户通过 Chrome Companion 明确共享的标签页。"),
+      body: tr("Read-only browser context from Chrome tabs the user explicitly shares.", "从用户明确共享的 Chrome 标签页读取只读浏览器上下文。"),
     },
   ];
 
   return (
     <PublicLayout user={user}>
-      <section className="publicHero compactHero editorialPageHero">
-        <span className="eyebrow">{tr("DOCUMENTATION", "文档")}</span>
-        <h1>{tr("Technical reference for the Remote Arc control plane and local agent.", "Remote Arc 控制面与本地 Agent 的技术参考。")}</h1>
+      <section className="readingPageIntro">
+        <div>
+          <span className="eyebrow">{tr("DOCS", "文档")}</span>
+          <h1>{tr("Remote Arc documentation", "Remote Arc 文档")}</h1>
+        </div>
         <p>{tr(
-          "Start here when you want the exact model: what runs locally, what the relay stores, what each tool does, how OAuth and device policy interact, and where the security boundary ends.",
-          "当你想了解准确模型时从这里开始：哪些东西在本机运行、Relay 保存什么、每组工具做什么、OAuth 与设备策略如何配合，以及安全边界在哪里结束。",
+          "Install the local agent, connect an AI client, understand the permission model, and see exactly what crosses the hosted relay.",
+          "从安装本地 Agent、连接 AI 客户端开始，再看权限模型、工具能力，以及究竟有哪些数据会经过托管 Relay。",
         )}</p>
+        <nav className="readingPageLinks">
+          <a href="/connect-ai">{tr("Connect AI", "连接 AI")} →</a>
+          <a href="/security-model">{tr("Security model", "安全模型")} →</a>
+          <a href="/use-cases">{tr("Use cases", "使用场景")} →</a>
+          <a href="https://github.com/yaohuangguan/remote-arc">GitHub ↗</a>
+        </nav>
       </section>
 
-      <section className="docsIndex">
+      <section className="docsIndex readingLayout">
         <aside>
           <span>{tr("ON THIS PAGE", "本页目录")}</span>
-          <a href="#docs-overview">{tr("Overview", "概览")}</a>
-          <a href="#docs-tools">{tr("19 MCP tools", "19 个 MCP 工具")}</a>
-          <a href="#docs-policy">{tr("Permission enforcement", "权限执行")}</a>
-          <a href="#docs-data">{tr("State & data", "状态与数据")}</a>
-          <a href="#docs-reference">{tr("Reference links", "参考链接")}</a>
+          <a href="#docs-start">{tr("Quick start", "快速开始")}</a>
+          <a href="#docs-use">{tr("How to use it", "怎么使用")}</a>
+          <a href="#docs-architecture">{tr("How it works", "工作原理")}</a>
+          <a href="#docs-policy">{tr("Permissions", "权限模型")}</a>
+          <a href="#docs-tools">{tr("19 public tools", "19 个公开工具")}</a>
+          <a href="#docs-jobs">{tr("Background jobs & Undo", "后台任务与 Undo")}</a>
+          <a href="#docs-data">{tr("Data handling", "数据处理")}</a>
+          <a href="#docs-concerns">{tr("Concerns & limits", "Concern 与限制")}</a>
+          <a href="#docs-reference">{tr("Reference", "参考")}</a>
         </aside>
 
-        <div className="docsBody">
-          <article id="docs-overview">
-            <span className="resourceArticleTag">OVERVIEW / 01</span>
-            <h2>{tr("Control plane in the cloud. Execution on the paired computer.", "控制面在云端，执行发生在已配对电脑。")}</h2>
-            <p>{tr(
-              "An AI client connects to Remote Arc over Remote MCP. OAuth identifies the account and scopes the client. A Cloudflare Worker authenticates and checks policy. D1 stores durable identity and policy. A per-user Durable Object owns live WebSocket routing. The local Remote Arc agent receives the routed call and executes it through the native execution core.",
-              "AI 客户端通过 Remote MCP 连接 Remote Arc。OAuth 确认账户身份并限制客户端 Scope；Cloudflare Worker 完成认证和策略检查；D1 保存持久身份与策略；每用户 Durable Object 负责实时 WebSocket 路由；本地 Remote Arc Agent 最终通过原生执行核心处理请求。",
+        <div className="docsBody readingBody">
+          <article id="docs-start">
+            <span className="resourceArticleTag">01 / QUICK START</span>
+            <h2>{tr("Start with one computer and one AI client.", "先连接一台电脑和一个 AI 客户端。")}</h2>
+            <ol className="docSteps">
+              <li><strong>{tr("Install and pair the computer.", "安装并配对电脑。")}</strong><p>{tr("Requires Node.js 20+. Run the command locally; the CLI opens a browser pairing page and shows a short code to approve.", "需要 Node.js 20+。在本机运行命令，CLI 会打开浏览器配对页，并显示短码供确认。")}</p><div className="docsCodeLine"><code>npx remotelink</code><CopyButton value="npx remotelink" /></div></li>
+              <li><strong>{tr("Choose the device boundary.", "选择设备边界。")}</strong><p>{tr("A new device starts read-oriented. Use Safe, Developer or Full as a shortcut, then edit individual skills. Optionally configure Workspace Scope and extra protected paths.", "新设备以读取能力为主。可以先选 Safe、Developer 或 Full，再逐项调整 Skill；也可以配置 Workspace Scope 和额外受保护路径。")}</p></li>
+              <li><strong>{tr("Connect the AI client.", "连接 AI 客户端。")}</strong><p>{tr("Add the Remote MCP endpoint and complete OAuth. The AI authorization is separate from the paired-device credential.", "添加 Remote MCP Endpoint 并完成 OAuth。AI 授权与电脑的设备凭证是两条独立信任关系。")}</p><div className="docsCodeLine"><code>{MCP_ENDPOINT}</code><CopyButton value={MCP_ENDPOINT} /></div></li>
+              <li><strong>{tr("Address the computer by name.", "按设备名称使用。")}</strong><p>{tr("Ask the AI to list devices if needed, then name the target computer in the task: “On Personal Mac, read package.json and run the tests.”", "需要时先让 AI 列出设备，然后在任务里明确目标电脑，例如：“在 Personal Mac 上读取 package.json 并运行测试。”")}</p></li>
+            </ol>
+            <p className="referenceNote">{tr(
+              "For a local hard read-only ceiling, run npx remotelink --safe. The dashboard cannot remotely expand that device beyond the local cap.",
+              "如果希望建立本机硬只读上限，可运行 npx remotelink --safe；Dashboard 无法远程把这台设备扩展到更高权限。",
             )}</p>
-            <div className="resourceCodeRail"><code>AI client</code><span>→</span><code>Worker</code><span>→</span><code>Durable Object</code><span>→</span><code>Local agent</code></div>
+          </article>
+
+          <article id="docs-use">
+            <span className="resourceArticleTag">02 / USING REMOTE ARC</span>
+            <h2>{tr("Typical tasks and the permission they actually require.", "常见任务真正需要哪些权限。")}</h2>
+            <div className="referenceTable docTaskTable">
+              <div><strong>{tr("Inspect a project", "检查项目")}</strong><p>{tr("list_directory, read_file and get_file_info. No write or terminal permission is required.", "使用 list_directory、read_file、get_file_info；不需要写入或终端权限。")}</p></div>
+              <div><strong>{tr("Patch a file", "修改文件")}</strong><p>{tr("Enable write_file and/or edit_block. undo_last_change can restore the newest supported Remote Arc edit when the file has not changed again.", "开启 write_file 和/或 edit_block；如果文件之后没有再次变化，undo_last_change 可以恢复最近一次受支持的 Remote Arc 编辑。")}</p></div>
+              <div><strong>{tr("Run tests or a command", "运行测试或命令")}</strong><p>{tr("Enable start_process. Terminal execution is real shell access under the local OS user, so treat it as a high-impact skill.", "开启 start_process。终端执行是真实 Shell 权限，继承本机 OS 用户，因此应当视为高影响 Skill。")}</p></div>
+              <div><strong>{tr("Keep a dev server running", "保持开发服务器运行")}</strong><p>{tr("Start a managed background process, keep its process_id, then use process_status, process_output or stop_process later.", "启动受管后台进程，保留 process_id，之后通过 process_status、process_output 或 stop_process 管理。")}</p></div>
+              <div><strong>{tr("Read a web page you already opened", "读取你已经打开的网页")}</strong><p>{tr("Share the Chrome tab explicitly, then use the browser read tools. The current browser companion does not grant generic click or form-fill control.", "明确共享 Chrome 标签页，再使用浏览器读取工具；当前 Browser Companion 不开放通用点击或表单填写能力。")}</p></div>
+            </div>
+          </article>
+
+          <article id="docs-architecture">
+            <span className="resourceArticleTag">03 / ARCHITECTURE</span>
+            <h2>{tr("How a tool call reaches one paired computer.", "一次 Tool Call 如何抵达指定电脑。")}</h2>
+            <p>{tr(
+              "The AI client talks to the Remote MCP endpoint over OAuth. The Cloudflare Worker authenticates the user and checks hosted policy. D1 holds durable account, device and policy state. A per-user Durable Object routes the live request to the outbound WebSocket maintained by the local agent. The native execution core performs the final operation on the computer.",
+              "AI 客户端通过 OAuth 访问 Remote MCP Endpoint；Cloudflare Worker 负责认证并检查托管策略；D1 保存账户、设备和策略等持久状态；每用户 Durable Object 把实时请求路由到本地 Agent 主动维持的 WebSocket；最后由电脑上的原生执行核心完成操作。",
+            )}</p>
+            <div className="resourceCodeRail"><code>AI client</code><span>→</span><code>OAuth / MCP</code><span>→</span><code>Worker</code><span>→</span><code>Durable Object</code><span>→</span><code>outbound WSS</code><span>→</span><code>local execution core</code></div>
+            <p className="referenceNote">{tr("Remote Arc does not require a public inbound port, router forwarding or an always-on VPN.", "Remote Arc 不要求公网入站端口、路由器端口映射或常驻 VPN。")}</p>
+          </article>
+
+          <article id="docs-policy">
+            <span className="resourceArticleTag">04 / PERMISSIONS</span>
+            <h2>{tr("There is no single “full computer access” switch.", "不存在一个笼统的“整机访问”开关。")}</h2>
+            <div className="policyLayers">
+              <div><strong>OAuth scope</strong><p>{tr("Constrains what an AI client is authorized to request from the account.", "限制 AI 客户端被授权向账户请求哪些能力。")}</p></div>
+              <div><strong>{tr("Per-device skill list", "逐设备 Skill 列表")}</strong><p>{tr("The relay checks the selected computer's allowed tools before routing. Presets are only shortcuts over the editable list.", "Relay 在路由前检查目标电脑的 Allowed Tools；预设只是逐项 Skill 列表上的快捷方式。")}</p></div>
+              <div><strong>Workspace Scope</strong><p>{tr("Normal filesystem tools can be restricted to one or more canonical directory roots.", "普通文件系统工具可以被限制在一个或多个规范化目录 Root 内。")}</p></div>
+              <div><strong>Sensitive Path Policy</strong><p>{tr("Common credential locations are protected by default; custom protected paths and narrow exceptions can be configured per device.", "常见凭证位置默认受保护；每台设备还可以配置自定义保护路径与窄范围例外。")}</p></div>
+              <div><strong>{tr("Local enforcement", "本机再次执行")}</strong><p>{tr("The native core re-checks path boundaries and only executes tools that the local agent actually exposes.", "原生执行核心会重新检查路径边界，并且只执行本地 Agent 实际开放的工具。")}</p></div>
+            </div>
           </article>
 
           <article id="docs-tools">
-            <span className="resourceArticleTag">TOOLS / 02</span>
-            <h2>{tr("The current MCP surface", "当前 MCP 工具面")}</h2>
-            <p>{tr("Remote Arc exposes 19 tools. Internal dashboard helpers are not part of the public MCP tool surface.", "Remote Arc 当前公开 19 个 MCP 工具；Dashboard 内部辅助能力不属于公开 MCP Tool Surface。")}</p>
+            <span className="resourceArticleTag">05 / TOOLS</span>
+            <h2>{tr("The current public MCP surface: 19 tools.", "当前公开 MCP Tool Surface：19 个工具。")}</h2>
+            <p>{tr("These names come from the current relay implementation; dashboard-only helpers are intentionally excluded.", "以下名称直接来自当前 Relay 实现；仅供 Dashboard 使用的内部辅助能力不计入公开 Tool Surface。")}</p>
             <div className="docsToolGroups">
               {toolGroups.map((group) => (
                 <div key={group.title}><h3>{group.title}</h3><code>{group.tools}</code><p>{group.body}</p></div>
@@ -1994,36 +2050,59 @@ function DocsPage({ user }: { user?: User | null }) {
             </div>
           </article>
 
-          <article id="docs-policy">
-            <span className="resourceArticleTag">POLICY / 03</span>
-            <h2>{tr("A request has to pass more than one permission check.", "一次请求必须通过不止一层权限检查。")}</h2>
+          <article id="docs-jobs">
+            <span className="resourceArticleTag">06 / BACKGROUND JOBS & UNDO</span>
+            <h2>{tr("Long-running work is managed locally; recovery stays local too.", "长任务在本机管理，恢复数据也留在本机。")}</h2>
+            <h3>{tr("Managed background processes", "受管后台进程")}</h3>
             <p>{tr(
-              "OAuth scopes constrain the AI client. The hosted relay checks account and per-device allowed tools before routing. The local agent only accepts tools it actually advertises, and filesystem operations can additionally apply Workspace Scope, Sensitive Path Policy and canonical path checks.",
-              "OAuth Scope 限制 AI 客户端；托管 Relay 在路由前检查账户和逐设备 Allowed Tools；本地 Agent 只接受自己实际声明的能力；文件操作还可以继续应用 Workspace Scope、Sensitive Path Policy 与规范化路径检查。",
+              "start_process can run normally or create a managed background process. Remote Arc keeps an in-memory local record with the command, cwd, PID, captured stdout/stderr and lifecycle state. Up to 32 managed process records are kept; finished records are retained for a limited local window. This is process management, not a reboot-persistent job scheduler.",
+              "start_process 可以普通执行，也可以创建受管后台进程。Remote Arc 会在本机内存中记录 command、cwd、PID、捕获的 stdout/stderr 与生命周期状态；最多管理 32 条记录，已结束记录只保留有限时间。这是进程管理，不是跨重启持久化的任务调度器。",
             )}</p>
-            <div className="resourceCodeRail"><code>OAuth</code><span>→</span><code>relay policy</code><span>→</span><code>device capability</code><span>→</span><code>local policy</code></div>
+            <h3>{tr("Local Undo", "Local Undo")}</h3>
+            <p>{tr(
+              "Before supported write_file and edit_block changes, the previous file state is stored under ~/.remotearc/undo. The snapshot is not uploaded to Remote Arc Cloud. Before restore, the current file hash is checked so newer work is not silently overwritten.",
+              "在受支持的 write_file 与 edit_block 修改前，旧文件状态会保存在 ~/.remotearc/undo；快照不会上传到 Remote Arc Cloud。恢复前还会校验当前文件 Hash，避免静默覆盖更新后的工作。",
+            )}</p>
+            <p className="referenceNote">{tr("Undo does not reverse deployments, package publishing, network requests, database mutations or arbitrary shell side effects.", "Undo 无法撤销部署、包发布、网络请求、数据库变更或任意 Shell 副作用。")}</p>
           </article>
 
           <article id="docs-data">
-            <span className="resourceArticleTag">STATE / 04</span>
-            <h2>{tr("What is durable, what is live, and what stays local.", "哪些状态持久化、哪些是实时状态、哪些只留在本机。")}</h2>
+            <span className="resourceArticleTag">07 / DATA</span>
+            <h2>{tr("What Remote Arc stores, what only transits, and what stays on the device.", "Remote Arc 保存什么、只转发什么、什么只留在设备上。")}</h2>
             <div className="referenceTable">
-              <div><strong>D1</strong><p>{tr("Users, paired-device metadata, credential hashes, sessions, OAuth grants, per-device policy, usage counters and audit metadata.", "用户、设备元数据、凭证哈希、Session、OAuth Grant、逐设备策略、使用量和审计元数据。")}</p></div>
-              <div><strong>Durable Object</strong><p>{tr("Live WebSocket presence and routing for currently connected devices.", "当前在线设备的 WebSocket Presence 与实时路由。")}</p></div>
-              <div><strong>{tr("Local computer", "本机")}</strong><p>{tr("Raw device credential, filesystem state, process state and Local Undo snapshot contents.", "原始设备凭证、文件系统状态、进程状态以及 Local Undo 快照内容。")}</p></div>
-              <div><strong>{tr("Relay transit", "Relay 传输")}</strong><p>{tr("Requested tool payloads and results pass through while the request is being fulfilled; Remote Arc does not claim zero-knowledge transport.", "完成请求所需的 Tool Payload 与结果会经过 Relay；Remote Arc 不声称是 zero-knowledge 传输。")}</p></div>
+              <div><strong>D1</strong><p>{tr("Account identity, paired-device metadata, device credential hashes, sessions, OAuth grants, per-device policy, usage counters and audit metadata.", "账户身份、设备元数据、设备凭证 Hash、Session、OAuth Grant、逐设备策略、使用量与审计元数据。")}</p></div>
+              <div><strong>Durable Object</strong><p>{tr("Live device presence and request routing while a computer is connected.", "设备在线时的实时 Presence 与请求路由。")}</p></div>
+              <div><strong>{tr("Relay transit", "Relay 传输")}</strong><p>{tr("The active file content, directory listing, process output or command result needed to fulfill the current request passes through the hosted relay.", "完成当前请求所需的文件内容、目录列表、进程输出或命令结果会经过托管 Relay。")}</p></div>
+              <div><strong>{tr("Local only", "仅本机")}</strong><p>{tr("Filesystem state, process state, raw local device credential and Local Undo snapshot contents.", "文件系统状态、进程状态、本机原始设备凭证与 Local Undo 快照内容。")}</p></div>
+              <div><strong>{tr("Audit design", "审计设计")}</strong><p>{tr("Audit records keep operational metadata such as device, tool, result and time rather than intentionally storing file contents, raw command arguments or tool results.", "审计记录保存设备、工具、结果、时间等运行元数据，而不是有意保存文件内容、原始命令参数或 Tool Result。")}</p></div>
+            </div>
+          </article>
+
+          <article id="docs-concerns">
+            <span className="resourceArticleTag">08 / CONCERNS & LIMITS</span>
+            <h2>{tr("Important things Remote Arc does not pretend away.", "Remote Arc 不会回避的几个重要限制。")}</h2>
+            <div className="concernList">
+              <div><strong>{tr("The relay is not zero-knowledge.", "Relay 不是 zero-knowledge。")}</strong><p>{tr("Transport is encrypted, but the hosted relay has to process the active tool payload to route it. Remote Arc minimizes retention instead of claiming an E2EE property it does not have.", "传输会加密，但托管 Relay 为了路由必须处理当前 Tool Payload。Remote Arc 选择最小化留存，而不是声称并不存在的 E2EE 属性。")}</p></div>
+              <div><strong>{tr("Terminal access is real shell access.", "终端权限是真实 Shell 权限。")}</strong><p>{tr("Full terminal runs under the local OS user's permissions. Workspace Scope constrains Remote Arc file tools and the start_process cwd, but it is not a VM or OS sandbox for arbitrary shell commands.", "Full Terminal 继承本机 OS 用户权限。Workspace Scope 会约束 Remote Arc 文件工具和 start_process 的 cwd，但它不是任意 Shell 命令的 VM 或 OS 沙箱。")}</p></div>
+              <div><strong>{tr("Undo has a defined boundary.", "Undo 有明确边界。")}</strong><p>{tr("It protects supported Remote Arc file edits, not external side effects.", "它保护受支持的 Remote Arc 文件编辑，而不是外部副作用。")}</p></div>
+              <div><strong>{tr("Managed jobs are not reboot-persistent.", "受管任务不是跨重启持久化任务。")}</strong><p>{tr("Their management record lives in the running local agent. Use a real service manager if a workload must survive agent or machine restarts.", "它们的管理记录存在于正在运行的本地 Agent 中；如果任务必须跨 Agent 或机器重启，请使用真正的系统服务管理器。")}</p></div>
+            </div>
+            <div className="inlineReference">
+              <a href="/security-model">{tr("Security and trust model", "安全与信任模型")} →</a>
+              <a href="/privacy">{tr("Privacy policy", "隐私政策")} →</a>
             </div>
           </article>
 
           <article id="docs-reference">
-            <span className="resourceArticleTag">REFERENCE / 05</span>
+            <span className="resourceArticleTag">09 / REFERENCE</span>
             <h2>{tr("Reference", "参考")}</h2>
             <div className="referenceLinkRows">
               <a href="/docs/mcp"><strong>{tr("Remote MCP reference", "Remote MCP 参考")}</strong><span>{MCP_ENDPOINT}</span><b>→</b></a>
               <a href="/connect-ai"><strong>{tr("Connect a client", "连接客户端")}</strong><span>ChatGPT · Claude · Cursor · Remote MCP</span><b>→</b></a>
-              <a href="/security-model"><strong>{tr("Security & trust model", "安全与信任模型")}</strong><span>{tr("Boundaries, data handling, revocation and limits", "边界、数据处理、撤销与限制")}</span><b>→</b></a>
+              <a href="/security-model"><strong>{tr("Security & trust model", "安全与信任模型")}</strong><span>{tr("Identity, path boundaries, data handling, revocation and limits", "身份、路径边界、数据处理、撤销与限制")}</span><b>→</b></a>
               <a href="/resources"><strong>{tr("Architecture notes", "架构说明")}</strong><span>Worker · D1 · Durable Objects · OAuth</span><b>→</b></a>
-              <a href="https://github.com/yaohuangguan/remote-arc"><strong>{tr("Source", "源码")}</strong><span>GitHub</span><b>↗</b></a>
+              <a href="https://github.com/yaohuangguan/remote-arc/blob/master/README.md"><strong>README</strong><span>{tr("Implementation notes and development setup", "实现说明与开发环境")}</span><b>↗</b></a>
+              <a href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md"><strong>SECURITY.md</strong><span>{tr("Public security notes", "公开安全说明")}</span><b>↗</b></a>
             </div>
           </article>
         </div>
@@ -2036,93 +2115,128 @@ function SecurityModelPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   return (
     <PublicLayout user={user}>
-      <section className="publicHero compactHero editorialPageHero">
-        <span className="eyebrow">{tr("SECURITY & TRUST", "安全与信任")}</span>
-        <h1>{tr("Remote Arc gives AI real computer access. This page states exactly where that trust begins and ends.", "Remote Arc 给 AI 的是真实电脑访问能力。这一页把信任从哪里开始、在哪里结束说清楚。")}</h1>
+      <section className="readingPageIntro">
+        <div>
+          <span className="eyebrow">{tr("SECURITY", "安全")}</span>
+          <h1>{tr("Security and trust model", "安全与信任模型")}</h1>
+        </div>
         <p>{tr(
-          "The design goal is least necessary access and explicit user control. It is not a claim that remote execution can be made risk-free.",
-          "设计目标是最小必要访问和明确的用户控制，而不是声称远程执行可以变得没有风险。",
+          "Remote Arc lets an AI act on a real computer. This page documents the actual trust boundaries, what can be revoked, what the hosted service can see, and where protection stops.",
+          "Remote Arc 让 AI 能在真实电脑上执行操作。本页只说明真实的信任边界：哪些权限可以撤销、托管服务能看到什么，以及保护在哪里停止。",
         )}</p>
+        <nav className="readingPageLinks">
+          <a href="/docs#docs-policy">{tr("Permission docs", "权限文档")} →</a>
+          <a href="/docs#docs-data">{tr("Data handling", "数据处理")} →</a>
+          <a href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md">SECURITY.md ↗</a>
+        </nav>
       </section>
 
-      <section className="securityModelLayout">
+      <section className="securityModelLayout readingLayout">
         <aside>
-          <a href="#connection">{tr("Connection model", "连接模型")}</a>
-          <a href="#identity">{tr("Identity & revocation", "身份与撤销")}</a>
-          <a href="#permissions">{tr("Device permissions", "设备权限")}</a>
-          <a href="#data">{tr("Data handling", "数据处理")}</a>
-          <a href="#local">{tr("Local protections", "本机保护")}</a>
-          <a href="#limits">{tr("Important limits", "重要限制")}</a>
+          <span>{tr("ON THIS PAGE", "本页目录")}</span>
+          <a href="#summary">{tr("Summary", "摘要")}</a>
+          <a href="#identity">{tr("Identity & transport", "身份与传输")}</a>
+          <a href="#paths">{tr("Files & directories", "文件与目录")}</a>
+          <a href="#skills">{tr("Skills & terminal", "Skill 与终端")}</a>
+          <a href="#undo">{tr("Undo & managed jobs", "Undo 与后台任务")}</a>
+          <a href="#data">{tr("Hosted knowledge", "托管服务知道什么")}</a>
+          <a href="#revocation">{tr("Pause & revoke", "暂停与撤销")}</a>
+          <a href="#limits">{tr("Limits", "限制")}</a>
         </aside>
 
-        <div className="securityModelBody">
-          <article id="connection">
-            <span className="resourceArticleTag">01 / CONNECTION</span>
-            <h2>{tr("Nothing on your computer needs to accept an inbound internet connection.", "你的电脑不需要接受任何来自互联网的入站连接。")}</h2>
-            <p>{tr(
-              "The local agent establishes an outbound encrypted WebSocket to the hosted relay. That means no router port forwarding, public IP, inbound SSH exposure or VPN membership is required for Remote Arc itself.",
-              "本地 Agent 主动建立到托管 Relay 的加密 WebSocket。因此 Remote Arc 本身不要求路由器端口转发、公网 IP、暴露入站 SSH 或加入 VPN。",
-            )}</p>
+        <div className="securityModelBody readingBody">
+          <article id="summary">
+            <span className="resourceArticleTag">01 / SUMMARY</span>
+            <h2>{tr("The current security model in plain terms.", "用直接的话概括当前安全模型。")}</h2>
+            <div className="securitySummaryRows">
+              <div><strong>{tr("Default posture", "默认状态")}</strong><p>{tr("Newly paired devices expose read-oriented skills first. Editing and terminal are separate opt-ins.", "新配对设备首先开放读取类 Skill；编辑和终端是独立的主动开启项。")}</p></div>
+              <div><strong>{tr("Final execution boundary", "最终执行边界")}</strong><p>{tr("The hosted relay checks account/device policy, then the local agent checks what it actually exposes and the native core re-checks local path rules.", "托管 Relay 先检查账户/设备策略；本地 Agent 再检查实际开放能力，原生执行核心还会重新检查本机路径规则。")}</p></div>
+              <div><strong>{tr("Transport", "传输")}</strong><p>{tr("HTTPS/WSS is encrypted in transit. The relay is not zero-knowledge because it must process active tool payloads to route them.", "HTTPS/WSS 在传输中加密。Relay 不是 zero-knowledge，因为它必须处理当前 Tool Payload 才能完成路由。")}</p></div>
+              <div><strong>{tr("Emergency control", "紧急控制")}</strong><p>{tr("Account-wide MCP pause, per-client OAuth revocation and per-device revocation are independent controls.", "账户级 MCP Pause、逐 AI 客户端 OAuth 撤销和逐设备撤销是三套独立控制。")}</p></div>
+            </div>
           </article>
 
           <article id="identity">
-            <span className="resourceArticleTag">02 / IDENTITY</span>
-            <h2>{tr("The computer credential and the AI authorization are separate.", "电脑凭证和 AI 授权是两条独立的信任关系。")}</h2>
+            <span className="resourceArticleTag">02 / IDENTITY & TRANSPORT</span>
+            <h2>{tr("The AI client, the account and the computer have separate credentials.", "AI 客户端、账户与电脑使用分离的凭证。")}</h2>
             <p>{tr(
-              "Each paired computer receives its own revocable device credential; the hosted database stores its hash rather than the raw credential. AI clients authorize separately through OAuth 2.1 + PKCE. You can revoke an AI grant without re-pairing a computer, or revoke a computer without replacing every AI authorization.",
-              "每台已配对电脑获得独立可撤销的设备凭证，托管数据库保存的是凭证哈希而不是原文。AI 客户端则通过 OAuth 2.1 + PKCE 单独授权。你可以撤销某个 AI Grant 而无需重新配对电脑，也可以撤销某台电脑而无需替换所有 AI 授权。",
+              "The dashboard user signs in separately from the MCP client. AI clients use OAuth 2.1 authorization code flow with PKCE. Every paired computer receives its own revocable device credential; D1 stores a SHA-256 hash rather than the raw device credential. The local agent opens an outbound encrypted WebSocket to Remote Arc, so the computer does not need to expose an inbound port.",
+              "Dashboard 用户登录与 MCP 客户端授权彼此分离。AI 客户端使用 OAuth 2.1 Authorization Code + PKCE；每台配对电脑拥有独立可撤销的 Device Credential，D1 保存 SHA-256 Hash 而不是原始凭证。本地 Agent 主动建立加密出站 WebSocket，因此电脑无需暴露入站端口。",
             )}</p>
           </article>
 
-          <article id="permissions">
-            <span className="resourceArticleTag">03 / PERMISSIONS</span>
-            <h2>{tr("New devices start read-only. Higher-impact tools are per-device choices.", "新设备默认只读；高影响工具必须逐设备选择。")}</h2>
-            <div className="securityPermissionRows">
-              <div><strong>{tr("Read", "读取")}</strong><p>{tr("Directory listing, file reading, file metadata and process listing.", "目录列表、文件读取、文件元数据和进程列表。")}</p><small>{tr("Default", "默认")}</small></div>
-              <div><strong>{tr("Edit", "编辑")}</strong><p>{tr("File writes, targeted edits and AI-invoked Local Undo.", "文件写入、定向编辑以及由 AI 调用的 Local Undo。")}</p><small>{tr("Opt-in", "主动开启")}</small></div>
-              <div><strong>{tr("Execute", "执行")}</strong><p>{tr("Shell commands and managed background process lifecycle.", "Shell 命令和受管后台进程生命周期。")}</p><small>{tr("Advanced opt-in", "高级权限")}</small></div>
-              <div><strong>{tr("Browser", "浏览器")}</strong><p>{tr("Read-only content extraction from explicitly shared Chrome tabs.", "从明确共享的 Chrome 标签页只读提取内容。")}</p><small>{tr("Explicit share", "明确共享")}</small></div>
+          <article id="paths">
+            <span className="resourceArticleTag">03 / FILES & DIRECTORIES</span>
+            <h2>{tr("Filesystem access can be constrained below the device level.", "文件系统访问可以继续细化到设备以下。")}</h2>
+            <div className="securitySummaryRows">
+              <div><strong>Workspace Scope</strong><p>{tr("Configure one or more allowed directory roots. Normal Remote Arc filesystem tools must stay under those canonical roots.", "配置一个或多个允许的目录 Root；普通 Remote Arc 文件工具必须停留在这些规范化 Root 下。")}</p></div>
+              <div><strong>Sensitive Path Policy</strong><p>{tr("Common credential locations such as .ssh, .aws, .gnupg, browser profiles and .env files are protected by default.", "常见凭证位置如 .ssh、.aws、.gnupg、浏览器 Profile 与 .env 默认受保护。")}</p></div>
+              <div><strong>{tr("Narrow exceptions", "窄范围例外")}</strong><p>{tr("If a project genuinely needs one protected file or directory, add an explicit exception without disabling protection globally.", "如果项目确实需要一个受保护文件或目录，可以添加明确例外，而不必全局关闭保护。")}</p></div>
+              <div><strong>{tr("Local canonical-path check", "本机规范化路径检查")}</strong><p>{tr("Existing path ancestors are resolved again on the computer so a symlink inside an allowed workspace cannot trivially escape the boundary.", "路径 Ancestor 会在电脑本机再次规范化解析，避免 Allowed Workspace 内的符号链接轻易逃逸边界。")}</p></div>
+            </div>
+          </article>
+
+          <article id="skills">
+            <span className="resourceArticleTag">04 / SKILLS & TERMINAL</span>
+            <h2>{tr("Skills are individually controllable; presets are convenience only.", "Skill 可以逐项控制；预设只是方便操作。")}</h2>
+            <p>{tr(
+              "Safe, Developer and Full map to an editable per-device allowed-tool list. Reading files does not imply permission to edit them; process listing does not imply permission to start a shell. The CLI can also add a local --safe ceiling that the dashboard cannot expand remotely.",
+              "Safe、Developer、Full 最终都会落到每台设备可编辑的 Allowed Tool 列表。能读文件不代表能编辑；能看进程不代表能启动 Shell。CLI 还可以通过 --safe 加一个 Dashboard 无法远程放大的本机上限。",
+            )}</p>
+            <p className="referenceNote">{tr(
+              "When start_process is enabled, it is real shell access under the local OS user. Safety Guard blocks a narrow set of catastrophic patterns, but it is defense in depth, not an operating-system sandbox.",
+              "一旦开启 start_process，它就是真实的本机用户 Shell 权限。Safety Guard 会拦截一小类灾难性模式，但它只是纵深防御，不是操作系统沙箱。",
+            )}</p>
+          </article>
+
+          <article id="undo">
+            <span className="resourceArticleTag">05 / RECOVERY & JOBS</span>
+            <h2>{tr("File recovery and long-running jobs are managed on the computer.", "文件恢复与长任务都由电脑本机管理。")}</h2>
+            <div className="securitySummaryRows">
+              <div><strong>Local Undo</strong><p>{tr("Supported write_file/edit_block operations snapshot the previous file under ~/.remotearc/undo. Snapshot contents are not uploaded.", "受支持的 write_file/edit_block 会把旧状态保存到 ~/.remotearc/undo；快照内容不会上传。")}</p></div>
+              <div><strong>{tr("Conflict-safe restore", "冲突安全恢复")}</strong><p>{tr("Undo checks the post-edit file hash before restoring. If the file changed again, automatic restore is refused.", "Undo 会在恢复前检查修改后的文件 Hash；如果文件又被改变，自动恢复会拒绝覆盖。")}</p></div>
+              <div><strong>{tr("Managed background process", "受管后台进程")}</strong><p>{tr("A permitted start_process call can create a local managed process with captured stdout/stderr and a handle for status, output and stop.", "允许的 start_process 可以创建本机受管进程，捕获 stdout/stderr，并提供 Handle 用于状态、输出与停止。")}</p></div>
+              <div><strong>{tr("No reboot-persistence claim", "不声称跨重启持久化")}</strong><p>{tr("Managed-process tracking belongs to the running local agent. It is not a replacement for launchd, systemd, Windows Services or another persistent service manager.", "受管进程的追踪属于当前运行的本地 Agent；它不替代 launchd、systemd、Windows Services 等持久服务管理器。")}</p></div>
             </div>
           </article>
 
           <article id="data">
-            <span className="resourceArticleTag">04 / DATA</span>
-            <h2>{tr("The relay routes content; the audit log is designed not to become a content archive.", "Relay 负责路由内容；Audit Log 的设计目标不是变成内容档案库。")}</h2>
+            <span className="resourceArticleTag">06 / HOSTED KNOWLEDGE</span>
+            <h2>{tr("Encrypted transport does not mean the hosted relay is blind.", "传输加密并不意味着托管 Relay 看不到当前请求。")}</h2>
             <div className="dataBoundaryTable">
-              <div><strong>{tr("Stored as operational state", "作为运行状态保存")}</strong><p>{tr("Account identity, paired-device metadata, credential hashes, OAuth grants, per-device policy, usage counters, timestamps and audit metadata such as tool/device/result/time.", "账户身份、设备元数据、凭证哈希、OAuth Grant、逐设备策略、使用量、时间戳，以及工具/设备/结果/时间等审计元数据。")}</p></div>
-              <div><strong>{tr("Not intentionally stored in audit records", "不会主动写入审计记录")}</strong><p>{tr("File contents, raw command arguments, OAuth tokens and raw device credentials.", "文件内容、原始命令参数、OAuth Token 和原始设备凭证。")}</p></div>
-              <div><strong>{tr("Passes through the relay", "会经过 Relay")}</strong><p>{tr("The file content, command result, directory listing or process output needed to fulfill the active tool request.", "完成当前 Tool Request 所需的文件内容、命令结果、目录列表或进程输出。")}</p></div>
+              <div><strong>{tr("Stored control-plane state", "保存的控制面状态")}</strong><p>{tr("Account identity, device metadata, credential hashes, OAuth grants, per-device policy, usage counters and operational audit metadata.", "账户身份、设备元数据、凭证 Hash、OAuth Grant、逐设备策略、使用量与运行审计元数据。")}</p></div>
+              <div><strong>{tr("Passes through while active", "请求期间会经过")}</strong><p>{tr("The file content, directory listing, process output, command result or other tool payload needed to fulfill the current call.", "完成当前调用所需的文件内容、目录列表、进程输出、命令结果或其他 Tool Payload。")}</p></div>
+              <div><strong>{tr("Not intentionally retained in audit records", "不会有意写入审计记录")}</strong><p>{tr("File contents, raw command arguments, OAuth tokens, raw device credentials and tool results.", "文件内容、原始命令参数、OAuth Token、原始设备凭证与 Tool Result。")}</p></div>
+              <div><strong>{tr("Local-only recovery data", "仅本机恢复数据")}</strong><p>{tr("Undo snapshot contents remain on the paired computer.", "Undo 快照内容留在已配对电脑本机。")}</p></div>
             </div>
-            <p className="referenceNote">{tr(
-              "Because the hosted relay has to route tool payloads, Remote Arc does not describe this transport as zero-knowledge end-to-end encryption.",
-              "由于托管 Relay 必须参与 Tool Payload 的路由，Remote Arc 不把这条传输链路描述为 zero-knowledge 端到端加密。",
-            )}</p>
           </article>
 
-          <article id="local">
-            <span className="resourceArticleTag">05 / LOCAL BOUNDARY</span>
-            <h2>{tr("Important checks happen again on the computer.", "重要检查会在电脑本机再次执行。")}</h2>
-            <div className="truthRows compactTruth">
-              <div><strong>Workspace Scope</strong><p>{tr("Optional roots can constrain normal Remote Arc file operations to selected folders.", "可选工作区根目录可以把普通 Remote Arc 文件操作限制在指定目录。")}</p></div>
-              <div><strong>Sensitive Path Policy</strong><p>{tr("Built-in credential locations such as .ssh, .aws, browser profiles and .env files are protected before execution unless narrowly excepted.", "执行前保护 .ssh、.aws、浏览器配置和 .env 等内置敏感位置，除非用户明确添加窄范围例外。")}</p></div>
-              <div><strong>{tr("Canonical path checks", "规范化路径检查")}</strong><p>{tr("Filesystem paths are resolved locally so a symlink cannot trivially escape the configured file boundary.", "文件路径在本机规范化解析，避免符号链接轻易绕过已配置的文件边界。")}</p></div>
-              <div><strong>Local Undo</strong><p>{tr("Supported file writes can snapshot the previous state locally without uploading snapshot contents to the hosted service.", "受支持的文件写入可以在本机保存修改前快照，而无需把快照内容上传到托管服务。")}</p></div>
+          <article id="revocation">
+            <span className="resourceArticleTag">07 / PAUSE & REVOKE</span>
+            <h2>{tr("There is more than one way to cut access.", "关闭访问不依赖单一开关。")}</h2>
+            <div className="securitySummaryRows">
+              <div><strong>{tr("Pause Remote MCP", "暂停 Remote MCP")}</strong><p>{tr("The account-level switch blocks authenticated MCP calls server-side until you explicitly resume them.", "账户级开关会在服务端阻止已认证 MCP 调用，直到你明确恢复。")}</p></div>
+              <div><strong>{tr("Revoke one AI client grant", "撤销一个 AI 客户端授权")}</strong><p>{tr("Invalidate that OAuth authorization without re-pairing every computer.", "只使该 OAuth 授权失效，不需要重新配对所有电脑。")}</p></div>
+              <div><strong>{tr("Revoke one computer", "撤销一台电脑")}</strong><p>{tr("Invalidate that device credential; the computer must be paired again before any AI can use it.", "使该设备凭证失效；在任何 AI 再次使用它之前必须重新配对。")}</p></div>
+              <div><strong>{tr("Stop the local agent", "停止本地 Agent")}</strong><p>{tr("Because the computer maintains the outbound connection, stopping the local agent also removes that machine from live routing.", "由于连接由电脑本地主动维持，停止本地 Agent 也会让该机器退出实时路由。")}</p></div>
             </div>
           </article>
 
           <article id="limits">
-            <span className="resourceArticleTag">06 / LIMITS</span>
-            <h2>{tr("Where Remote Arc protection stops.", "Remote Arc 的保护在哪里停止。")}</h2>
-            <p>{tr(
-              "Full terminal access is real shell access under the permissions of the local operating-system user. Safety Guard blocks a narrow set of catastrophic commands, but terminal execution is not a VM, container or OS sandbox. A command can modify software, files and external services. Local Undo only covers supported Remote Arc file writes and cannot reverse arbitrary shell side effects, deployments, API calls or remote database mutations.",
-              "完整终端权限是真实的 Shell 访问，继承本地操作系统用户权限。Safety Guard 会拦截一小类灾难性命令，但终端执行不是 VM、容器或操作系统沙箱。命令可能修改软件、文件和外部服务。Local Undo 只覆盖受支持的 Remote Arc 文件写入，无法撤销任意 Shell 副作用、部署、API 调用或远程数据库变更。",
-            )}</p>
+            <span className="resourceArticleTag">08 / LIMITS</span>
+            <h2>{tr("What these controls do not guarantee.", "这些控制不保证什么。")}</h2>
+            <div className="concernList">
+              <div><strong>{tr("No zero-knowledge claim", "不声称 zero-knowledge")}</strong><p>{tr("The relay processes active tool payloads in order to route them.", "Relay 为完成路由会处理当前 Tool Payload。")}</p></div>
+              <div><strong>{tr("No shell sandbox claim", "不声称 Shell 是沙箱")}</strong><p>{tr("An allowed terminal command can use the local user's OS permissions and can reach external services.", "允许的终端命令可以使用本机用户的 OS 权限，也可能访问外部服务。")}</p></div>
+              <div><strong>{tr("Undo is not transaction rollback", "Undo 不是事务回滚")}</strong><p>{tr("Deployments, publishes, API calls and remote database changes are outside Local Undo.", "部署、发布、API 调用和远程数据库修改不在 Local Undo 范围内。")}</p></div>
+              <div><strong>{tr("Public security work continues", "公开安全工作仍在继续")}</strong><p>{tr("See SECURITY.md for the current pre-public hardening list, including CSRF protection, installer signing and ongoing OAuth/DCR review.", "当前公开前加固清单见 SECURITY.md，包括 CSRF 防护、安装包签名与持续 OAuth/DCR 审查。")}</p></div>
+            </div>
           </article>
 
           <div className="inlineReference">
-            <a href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md">{tr("Public SECURITY.md", "公开 SECURITY.md")} ↗</a>
+            <a href="/docs">{tr("Documentation", "文档")} →</a>
             <a href="/privacy">{tr("Privacy policy", "隐私政策")} →</a>
-            <a href="/docs">{tr("Technical reference", "技术参考")} →</a>
+            <a href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md">SECURITY.md ↗</a>
           </div>
         </div>
       </section>
@@ -2453,27 +2567,33 @@ function BlogsPage({ user }: { user?: User | null }) {
 
   return (
     <PublicLayout user={user}>
-      <section className="blogIndexHero">
-        <span className="eyebrow">{tr("REMOTE ARC BLOG", "REMOTE ARC 博客")}</span>
-        <h1>{tr("Notes from building the bridge between AI and real computers.", "记录我们如何把 AI 真正连接到现实中的电脑。")}</h1>
+      <section className="readingPageIntro blogReadingIntro">
+        <div>
+          <span className="eyebrow">{tr("BLOG", "博客")}</span>
+          <h1>{tr("Remote Arc blog", "Remote Arc 博客")}</h1>
+        </div>
         <p>{tr(
-          "Product thinking, engineering decisions, security trade-offs and lessons from building Remote Arc in public.",
-          "这里分享 Remote Arc 的产品思考、工程决策、安全取舍，以及公开构建过程中的经验。",
+          "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.",
+          "记录 Remote Arc 的工程实现、架构决策、安全取舍和产品思考。",
         )}</p>
+        <nav className="readingPageLinks">
+          <a href="/docs">{tr("Docs", "文档")} →</a>
+          <a href="/security-model">{tr("Security", "安全")} →</a>
+          <a href="/resources">{tr("Architecture notes", "架构说明")} →</a>
+        </nav>
       </section>
 
-      <section className="blogIndex">
-        {posts.map((post, index) => (
-          <a className={index === 0 ? "blogLeadPost" : "blogPostRow"} href={"/blogs/" + post.slug} key={post.slug}>
+      <section className="blogIndex blogListPlain">
+        {posts.map((post) => (
+          <a className="blogPostRow" href={"/blogs/" + post.slug} key={post.slug}>
             <div className="blogLeadMeta">
               <span>{post.tag}</span>
               <span>{post.date}</span>
               <span>{post.readTime}</span>
-              <span>{post.author}</span>
             </div>
             <h2>{post.title}</h2>
             <p>{post.summary}</p>
-            <span className="blogReadLink">{tr("Read the article", "阅读文章")} →</span>
+            <span className="blogReadLink">{tr("Read", "阅读")} →</span>
           </a>
         ))}
       </section>

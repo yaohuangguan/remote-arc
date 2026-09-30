@@ -379,7 +379,7 @@ not unnecessarily consume the Workers request quota.
 
 ## Remote MCP tools
 
-Hosted MCP currently exposes 13 user-facing tools. Availability is still filtered by the selected device's policy and live capabilities:
+Hosted MCP currently exposes 19 user-facing tools. Availability is still filtered by the selected device's policy and live capabilities:
 
 ```text
 list_devices
