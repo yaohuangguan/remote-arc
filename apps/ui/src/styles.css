@@ -8414,3 +8414,179 @@ body{font-size:18px;line-height:1.6}
 }
 :root[data-theme="light"] .deviceBackgroundRow strong{color:#153640}
 :root[data-theme="light"] .deviceBackgroundRow>div>span{color:#5d7b84}
+
+.pairAgentConnect {
+  display:grid;
+  gap:14px;
+  margin-top:18px;
+  padding-top:18px;
+  border-top:1px solid #1d2530;
+}
+.pairAgentConnectIntro { display:grid; gap:6px; }
+.pairAgentConnectIntro .eyebrow {
+  color:#65c8eb;
+  font-size:10px;
+  letter-spacing:.1em;
+}
+.pairAgentConnectIntro h3 {
+  margin:0;
+  color:#edf3f7;
+  font-size:15px;
+  line-height:1.35;
+}
+.pairAgentConnectIntro p {
+  margin:0;
+  color:#7b8793;
+  font-size:12px;
+  line-height:1.55;
+}
+.pairAgentGrid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.pairAgentOption {
+  min-width:0;
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr);
+  gap:9px 10px;
+  align-items:center;
+  padding:12px;
+  border:1px solid #26313c;
+  border-radius:12px;
+  background:#0b1016;
+  color:#dfe8ed;
+  transition:border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.pairAgentOption:hover {
+  border-color:#3f8198;
+  background:#0f1820;
+  transform:translateY(-1px);
+}
+.pairAgentOption img {
+  width:30px;
+  height:30px;
+  object-fit:contain;
+}
+.pairMcpIcon {
+  display:grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  border:1px solid #315c6d;
+  border-radius:9px;
+  color:#7dd3fc;
+  font:800 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.pairAgentOption>div {
+  min-width:0;
+  display:grid;
+  gap:3px;
+}
+.pairAgentOption strong {
+  font-size:13px;
+  line-height:1.3;
+}
+.pairAgentOption small {
+  color:#74818d;
+  font-size:11px;
+  line-height:1.4;
+}
+.pairAgentOption>b {
+  grid-column:1 / -1;
+  color:#78d4f2;
+  font-size:11px;
+  font-weight:700;
+}
+.pairAgentEndpoint {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:6px 8px;
+  align-items:center;
+  padding:10px;
+  border:1px solid #253441;
+  border-radius:11px;
+  background:#08121a;
+}
+.pairAgentEndpoint>span {
+  grid-column:1 / -1;
+  color:#778692;
+  font-size:11px;
+}
+.pairAgentEndpoint code {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#9fe4fb;
+  font-size:11px;
+}
+.pairDoneSecondary {
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:14px;
+  padding-top:13px;
+  border-top:1px solid #1d2530;
+}
+.pairDoneSecondary a {
+  color:#7f96a0;
+  font-size:11px;
+  font-weight:650;
+}
+.pairDoneSecondary a:hover { color:#8addf7; }
+
+:root[data-theme="light"] .pairAgentConnect,
+:root[data-theme="light"] .pairDoneSecondary {
+  border-color:#e2edf2;
+}
+:root[data-theme="light"] .pairAgentConnectIntro .eyebrow,
+:root[data-theme="light"] .pairAgentOption>b {
+  color:#087ea4;
+}
+:root[data-theme="light"] .pairAgentConnectIntro h3,
+:root[data-theme="light"] .pairAgentOption strong {
+  color:#143742;
+}
+:root[data-theme="light"] .pairAgentConnectIntro p,
+:root[data-theme="light"] .pairAgentOption small,
+:root[data-theme="light"] .pairAgentEndpoint>span,
+:root[data-theme="light"] .pairDoneSecondary a {
+  color:#5b7881;
+}
+:root[data-theme="light"] .pairAgentOption {
+  border-color:#dcebf2;
+  background:#f8fbfd;
+}
+:root[data-theme="light"] .pairAgentOption:hover {
+  border-color:#9dcedd;
+  background:#f1f9fc;
+}
+:root[data-theme="light"] .pairMcpIcon {
+  border-color:#bcdce7;
+  color:#087ea4;
+}
+:root[data-theme="light"] .pairAgentEndpoint {
+  border-color:#d6e7ee;
+  background:#f5fafc;
+}
+:root[data-theme="light"] .pairAgentEndpoint code {
+  color:#075985;
+}
+:root[data-theme="light"] .pairDoneSecondary a:hover {
+  color:#087ea4;
+}
+
+@media(max-width:620px) {
+  .pairAgentGrid { grid-template-columns:1fr; }
+  .pairDoneSecondary { flex-direction:column; }
+}
+
+/* Pairing completion should be comfortably readable on desktop and mobile. */
+.pairSetupSummary>div{font-size:12px}
+.pairAgentConnectIntro .eyebrow{font-size:11px}
+.pairAgentOption small,
+.pairAgentOption>b,
+.pairAgentEndpoint>span,
+.pairAgentEndpoint code,
+.pairDoneSecondary a{font-size:12px}

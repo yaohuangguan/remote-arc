@@ -192,6 +192,16 @@ type DashboardTab = "overview" | "devices" | "connect" | "security" | "monitor" 
 const MARKETING_ORIGIN = "https://remotearc.app";
 const APP_ORIGIN = "https://mcp.remotearc.app";
 const MCP_ENDPOINT = APP_ORIGIN + "/mcp";
+const CHATGPT_PLUGIN_DIRECTORY_URL = "https://chatgpt.com/plugins?q=Remote%20Arc";
+const CLAUDE_CONNECTORS_URL = "https://claude.ai/settings/connectors";
+
+function cursorMcpInstallUrl() {
+  const config = window.btoa(JSON.stringify({ url: MCP_ENDPOINT }));
+  return (
+    "https://cursor.com/install-mcp?name=remote-arc&config=" +
+    encodeURIComponent(config)
+  );
+}
 const DASHBOARD_PATHS: Record<DashboardTab, string> = {
   overview: "/overview",
   devices: "/devices",
@@ -825,12 +835,54 @@ function PairDevice({
   }
 
   if (approvedDeviceId && setupStep === "done") {
+    const copyEndpoint = () => {
+      void navigator.clipboard?.writeText(MCP_ENDPOINT).catch(() => undefined);
+    };
+    const agentTargets = [
+      {
+        id: "chatgpt",
+        name: "ChatGPT",
+        icon: "/ai-openai.svg",
+        href: CHATGPT_PLUGIN_DIRECTORY_URL,
+        detail: tr("Find Remote Arc in the Plugin Directory", "在 Plugin Directory 中找到 Remote Arc"),
+        action: tr("Open Plugins", "打开 Plugins"),
+        copyEndpoint: false,
+      },
+      {
+        id: "claude",
+        name: "Claude",
+        icon: "/ai-claude.svg",
+        href: CLAUDE_CONNECTORS_URL,
+        detail: tr("Remote MCP endpoint will be copied for you", "会自动复制 Remote MCP 地址"),
+        action: tr("Open Connectors", "打开 Connectors"),
+        copyEndpoint: true,
+      },
+      {
+        id: "cursor",
+        name: "Cursor",
+        icon: "/ai-cursor.svg",
+        href: cursorMcpInstallUrl(),
+        detail: tr("One-click MCP install, then complete OAuth", "一键添加 MCP，然后完成 OAuth"),
+        action: tr("Add to Cursor", "添加到 Cursor"),
+        copyEndpoint: false,
+      },
+      {
+        id: "other",
+        name: tr("Other MCP", "其他 MCP"),
+        icon: "",
+        href: MARKETING_ORIGIN + "/docs/mcp",
+        detail: tr("Copy the endpoint and use your client's MCP setup", "复制 Endpoint，并在客户端的 MCP 设置中添加"),
+        action: tr("Copy & open docs", "复制并打开文档"),
+        copyEndpoint: true,
+      },
+    ];
+
     return (
       <CenteredCard
-        title={tr("Device ready", "设备已就绪")}
+        title={tr("Computer ready", "电脑已就绪")}
         body={tr(
-          "Remote Arc will keep using the permissions you just chose. You can change them later from Devices.",
-          "Remote Arc 会继续使用你刚刚选择的权限；之后可以在设备页随时修改。",
+          "The computer is paired and the permissions below are active. Connect the AI you want to use next; you can add more clients later.",
+          "电脑已经配对，下面的权限已经生效。接下来连接你要使用的 AI；之后还可以继续添加其他客户端。",
         )}
       >
         <div className="successMark">✓</div>
@@ -847,7 +899,52 @@ function PairDevice({
           <div><span>{tr("File editing", "文件编辑")}</span><strong>{fileEditingEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
           <div><span>{tr("Terminal", "终端")}</span><strong>{terminalEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
         </div>
-        <a className="primaryButton pairSetupDone" href="/devices">{tr("Open Devices", "打开设备页")}</a>
+
+        <section className="pairAgentConnect">
+          <div className="pairAgentConnectIntro">
+            <span className="eyebrow">{tr("NEXT · CONNECT YOUR AI", "下一步 · 连接你的 AI")}</span>
+            <h3>{tr("Use this computer from the agent you already work with.", "从你正在使用的 AI 里开始操作这台电脑。")}</h3>
+            <p>{tr(
+              "Pairing the computer and authorizing an AI client are separate. Choose one now, or connect more later from Dashboard → Connect AI.",
+              "电脑配对与 AI 客户端授权是两条独立关系。现在选择一个，之后也可以从 Dashboard → Connect AI 继续添加。",
+            )}</p>
+          </div>
+
+          <div className="pairAgentGrid">
+            {agentTargets.map((agent) => (
+              <a
+                className="pairAgentOption"
+                href={agent.href}
+                key={agent.id}
+                target="_blank"
+                rel="noreferrer"
+                onClick={agent.copyEndpoint ? copyEndpoint : undefined}
+              >
+                {agent.icon ? (
+                  <img src={agent.icon} alt="" />
+                ) : (
+                  <span className="pairMcpIcon">MCP</span>
+                )}
+                <div>
+                  <strong>{agent.name}</strong>
+                  <small>{agent.detail}</small>
+                </div>
+                <b>{agent.action} →</b>
+              </a>
+            ))}
+          </div>
+
+          <div className="pairAgentEndpoint">
+            <span>{tr("Remote MCP endpoint", "Remote MCP 地址")}</span>
+            <code>{MCP_ENDPOINT}</code>
+            <CopyButton value={MCP_ENDPOINT} />
+          </div>
+        </section>
+
+        <div className="pairDoneSecondary">
+          <a href="/connect">{tr("Connect another AI later", "之后连接其他 AI")} →</a>
+          <a href="/devices">{tr("Open Devices", "打开设备页")} →</a>
+        </div>
       </CenteredCard>
     );
   }
