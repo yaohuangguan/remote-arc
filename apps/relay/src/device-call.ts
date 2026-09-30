@@ -1,0 +1,118 @@
+import type { OAuthIdentity } from "./auth.js";
+import { writeAudit } from "./audit.js";
+import { REVIEWER_DEMO_TOOLS, reviewerDemoResult } from "./reviewer-fixture.js";
+
+export type DeviceCallEnv = {
+  DB: D1Database;
+  REGISTRY: DurableObjectNamespace;
+  REVIEWER_DEMO_DEVICE_ID?: string;
+};
+
+const parseStoredStringArray = (value: string | null) => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const registry = (env: DeviceCallEnv, userId: string) =>
+  env.REGISTRY.getByName("user:" + userId);
+
+export async function callDevice(
+  env: DeviceCallEnv,
+  identity: OAuthIdentity,
+  deviceId: string,
+  tool: string,
+  args: Record<string, unknown>,
+) {
+  const ownedDevice = await env.DB.prepare(
+    `SELECT id, allowed_tools, workspace_roots, sensitive_paths, sensitive_allow_paths,
+            protect_sensitive_paths, undo_enabled
+     FROM devices
+     WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
+  )
+    .bind(deviceId, identity.userId)
+    .first<{
+      id: string;
+      allowed_tools: string | null;
+      workspace_roots: string | null;
+      sensitive_paths: string | null;
+      sensitive_allow_paths: string | null;
+      protect_sensitive_paths: number;
+      undo_enabled: number;
+    }>();
+
+  if (!ownedDevice) {
+    throw new Error("device not found or revoked");
+  }
+
+  if (env.REVIEWER_DEMO_DEVICE_ID && deviceId === env.REVIEWER_DEMO_DEVICE_ID) {
+    if (!REVIEWER_DEMO_TOOLS.includes(tool as (typeof REVIEWER_DEMO_TOOLS)[number])) {
+      throw new Error('tool "' + tool + '" is disabled for the OpenAI review fixture');
+    }
+    return reviewerDemoResult(env, identity.userId, tool, args);
+  }
+
+  if (ownedDevice.allowed_tools) {
+    let allowedTools: string[] = [];
+    try {
+      const parsed = JSON.parse(ownedDevice.allowed_tools);
+      if (Array.isArray(parsed)) {
+        allowedTools = parsed.filter((item): item is string => typeof item === "string");
+      }
+    } catch {
+      allowedTools = [];
+    }
+    if (!allowedTools.includes(tool)) {
+      throw new Error('tool "' + tool + '" is disabled for this device');
+    }
+  }
+
+  const registryRequest = () =>
+    new Request("https://registry/call", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-remote-link-user-id": identity.userId,
+      },
+      body: JSON.stringify({
+        deviceId,
+        tool,
+        arguments: args,
+        policy: {
+          workspaceRoots: parseStoredStringArray(ownedDevice.workspace_roots),
+          sensitivePaths: parseStoredStringArray(ownedDevice.sensitive_paths),
+          sensitiveAllowPaths: parseStoredStringArray(ownedDevice.sensitive_allow_paths),
+          protectSensitivePaths: ownedDevice.protect_sensitive_paths !== 0,
+          undoEnabled: ownedDevice.undo_enabled !== 0,
+        },
+      }),
+    });
+
+  let response = await registry(env, identity.userId).fetch(registryRequest());
+  if (response.status === 404) {
+    response = await env.REGISTRY.getByName("global").fetch(registryRequest());
+  }
+
+  const payload = (await response.json()) as { result?: unknown; error?: string };
+  const success = response.ok && !payload.error;
+
+  await writeAudit(env, {
+    userId: identity.userId,
+    deviceId,
+    eventType: "mcp.tool_call",
+    toolName: tool,
+    success,
+  }).catch(() => undefined);
+
+  if (!success) {
+    throw new Error(payload.error || `device call failed: ${response.status}`);
+  }
+
+  return payload.result;
+}
