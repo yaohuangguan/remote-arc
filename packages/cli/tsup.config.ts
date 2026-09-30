@@ -6,5 +6,5 @@ export default defineConfig({
   platform: "node",
   target: "node20",
   sourcemap: true,
-  noExternal: ["@remotearc/execution-core", "ws"],
+  noExternal: ["@remotearc/execution-core"],
 });

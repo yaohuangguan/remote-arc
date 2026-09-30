@@ -17,8 +17,7 @@ On first run, `remotelink`:
 2. opens the Remote Arc pairing page in your browser;
 3. asks you to sign in and approve the device;
 4. stores a device credential locally in `~/.remotearc/config.json`;
-5. connects in the foreground while you choose device permissions;
-6. if Background connection remains selected, installs a user-level login service only after you finish browser setup.
+5. connects the computer to Remote Arc over an outbound WebSocket.
 
 No public IP, VPN, router port forwarding, repository clone, or manual token
 copy is required.
@@ -40,15 +39,12 @@ https://remotearc.app
 ## Commands
 
 ```text
-npx remotelink                 Pair, reconnect, or ensure the configured connection mode
-npx remotelink --safe          Hard local read-only cap
-npx remotelink --developer     Legacy alias for dashboard-managed capabilities
-npx remotelink --foreground    Keep this run attached to the terminal
-npx remotelink --background    Enable/repair login background mode
-npx remotelink --no-background Disable login background mode and stay foreground
-npx remotelink --reset         Remove local pairing and background registration
-npx remotelink --version       Show the CLI version
-npx remotelink --help          Show help
+npx remotelink             Connect with dashboard-managed skills
+npx remotelink --safe      Hard local read-only cap
+npx remotelink --developer Legacy alias for dashboard-managed capabilities
+npx remotelink --reset     Remove local pairing credentials
+npx remotelink --version   Show the CLI version
+npx remotelink --help      Show help
 ```
 
 The package also exposes the aliases `remote-link` and `remote-arc`.
@@ -75,17 +71,6 @@ By default the local CLI exposes the capabilities that the dashboard may grant,
 while the relay enforces the saved per-device policy before forwarding a call.
 Use `--safe` when you want an additional local hard cap that prevents write
 skills from running even if they are enabled in the dashboard.
-
-Device permissions, Workspace Scope, Sensitive Path settings, and Undo policy are
-managed from Remote Arc Cloud and enforced again by the local execution core. The
-CLI does not keep a second editable copy of those policies. Local options such as
-`--safe` may only make access stricter; they cannot silently broaden Dashboard
-permissions.
-
-Background mode is different because it is operating-system state. The Dashboard
-can request a change while the device is online, but the local agent reports the
-actual launchd, Task Scheduler, or systemd-user result back before the Dashboard
-shows the setting as enabled.
 
 ## Local Undo
 
