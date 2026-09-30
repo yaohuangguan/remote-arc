@@ -3,9 +3,11 @@
   "account_id": "6b1d0dd4e6f7f30df92753cd1e2ee12d",
   "compatibility_date": "2026-09-30",
   "preview_urls": true,
+  "main": "src/preview-worker.ts",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "run_worker_first": ["/*"]
   },
   "previews": {}
 }
