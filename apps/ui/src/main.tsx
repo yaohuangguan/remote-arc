@@ -628,6 +628,25 @@ function PairDevice({
   }
 
   async function enableFileEditing() {
+    if (!approvedDeviceId) return;
+    setBusy(true);
+    setSetupError("");
+    try {
+      const current = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
+      await saveTools([
+        ...current,
+        "write_file",
+        "edit_block",
+        "undo_last_change",
+      ]);
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyWorkspaceScope() {
     if (!directoryBrowser || !approvedDeviceId) return;
     setBusy(true);
     setSetupError("");
@@ -639,10 +658,10 @@ function PairDevice({
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             workspace_roots: [directoryBrowser.path],
-            sensitive_paths: [],
-            sensitive_allow_paths: [],
-            protect_sensitive_paths: true,
-            undo_enabled: true,
+            sensitive_paths: pairedDevice?.sensitive_paths || [],
+            sensitive_allow_paths: pairedDevice?.sensitive_allow_paths || [],
+            protect_sensitive_paths: pairedDevice?.protect_sensitive_paths ?? true,
+            undo_enabled: pairedDevice?.undo_enabled ?? true,
           }),
         },
       );
@@ -651,16 +670,8 @@ function PairDevice({
         throw new Error(payload.error || tr("Could not save Workspace Scope.", "无法保存 Workspace Scope。"));
       }
 
-      await saveTools(DEVELOPER_DEVICE_TOOLS);
       setPairedDevice((current) =>
-        current
-          ? {
-              ...current,
-              workspace_roots: [directoryBrowser.path],
-              protect_sensitive_paths: true,
-              undo_enabled: true,
-            }
-          : current,
+        current ? { ...current, workspace_roots: [directoryBrowser.path] } : current,
       );
       setSetupStep("permissions");
     } catch (error) {
@@ -671,11 +682,10 @@ function PairDevice({
   }
 
   async function enableTerminal() {
-    if (!pairedDevice?.workspace_roots?.length) return;
     setBusy(true);
     setSetupError("");
     try {
-      const current = pairedDevice.allowed_tools || [...DEVELOPER_DEVICE_TOOLS];
+      const current = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
       await saveTools([...current, "start_process"]);
       setTerminalConfirm(false);
     } catch (error) {
@@ -697,8 +707,7 @@ function PairDevice({
   const fileEditingEnabled =
     enabledTools.includes("write_file") &&
     enabledTools.includes("edit_block") &&
-    enabledTools.includes("undo_last_change") &&
-    !!pairedDevice?.workspace_roots?.length;
+    enabledTools.includes("undo_last_change");
   const terminalEnabled = enabledTools.includes("start_process");
 
   if (user === undefined) {
@@ -755,8 +764,8 @@ function PairDevice({
       <CenteredCard
         title={tr("Choose a workspace", "选择工作区")}
         body={tr(
-          "File editing will be limited to this folder. Read access to files will also be scoped to the same workspace, while sensitive paths stay protected.",
-          "开启文件编辑后，文件读写都会限制在这个目录内，同时继续保护敏感路径。",
+          "Workspace Scope is optional. If you choose a folder, Remote Arc will limit normal file reads and edits to that folder while sensitive paths stay protected.",
+          "Workspace Scope 是可选的。选择目录后，Remote Arc 会把普通文件读取和编辑限制在该目录内，同时继续保护敏感路径。",
         )}
       >
         <div className="pairWorkspacePath">
@@ -797,9 +806,9 @@ function PairDevice({
           <button
             className="primaryButton"
             disabled={!directoryBrowser || directoryLoading || busy}
-            onClick={() => void enableFileEditing()}
+            onClick={() => void applyWorkspaceScope()}
           >
-            {busy ? tr("Enabling…", "正在开启…") : tr("Use this folder & enable editing", "使用此目录并开启编辑")}
+            {busy ? tr("Saving…", "正在保存…") : tr("Use this folder", "使用此目录")}
           </button>
         </div>
       </CenteredCard>
@@ -859,21 +868,34 @@ function PairDevice({
               {fileEditingEnabled && <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>}
             </div>
             <p>{tr(
-              "Create and edit files only inside workspace folders you choose. Sensitive paths stay protected and supported changes keep local undo snapshots.",
-              "只允许 AI 在你选择的工作区内创建和编辑文件。敏感路径继续受保护，并为支持的修改保留本地 Undo 快照。",
+              "Create and edit files with Sensitive Path Protection and Local Undo. You can optionally add a Workspace Scope to limit normal file access to one folder.",
+              "开启文件创建与编辑，并继续使用 Sensitive Path Protection 和 Local Undo。你也可以选择添加 Workspace Scope，把普通文件访问限制在一个目录内。",
             )}</p>
-            {fileEditingEnabled ? (
-              <code className="pairWorkspaceEnabled">{pairedDevice?.workspace_roots?.[0]}</code>
-            ) : (
+            {!fileEditingEnabled ? (
               <button
                 className="primaryButton"
                 disabled={!fileEditingSupported || busy}
-                onClick={() => void openWorkspacePicker()}
+                onClick={() => void enableFileEditing()}
               >
                 {fileEditingSupported
-                  ? tr("Enable file editing", "开启文件编辑")
+                  ? (busy ? tr("Enabling…", "正在开启…") : tr("Enable file editing", "开启文件编辑"))
                   : tr("Waiting for device capability…", "等待设备能力上线…")}
               </button>
+            ) : (
+              <div className="pairWorkspaceControl">
+                <div>
+                  <span>{tr("Workspace Scope", "Workspace Scope")}</span>
+                  <code>
+                    {pairedDevice?.workspace_roots?.[0] ||
+                      tr("All non-sensitive paths", "所有非敏感路径")}
+                  </code>
+                </div>
+                <button className="ghostButton" onClick={() => void openWorkspacePicker()}>
+                  {pairedDevice?.workspace_roots?.length
+                    ? tr("Change workspace", "更改工作区")
+                    : tr("Limit to a workspace", "限制到工作区")}
+                </button>
+              </div>
             )}
           </section>
 
@@ -895,12 +917,10 @@ function PairDevice({
             {!terminalEnabled && !terminalConfirm && (
               <button
                 className="ghostButton"
-                disabled={!terminalSupported || !fileEditingEnabled}
+                disabled={!terminalSupported}
                 onClick={() => setTerminalConfirm(true)}
               >
-                {!fileEditingEnabled
-                  ? tr("Configure a workspace first", "请先配置工作区")
-                  : tr("Enable terminal access", "开启终端权限")}
+                {tr("Enable terminal access", "开启终端权限")}
               </button>
             )}
             {!terminalEnabled && terminalConfirm && (
