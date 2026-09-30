@@ -309,8 +309,7 @@ export async function getDevicesForUser(
 ) {
   const rows = await env.DB.prepare(
     `SELECT id, name, platform, arch, hostname, created_at, last_seen, allowed_tools,
-            workspace_roots, sensitive_paths, sensitive_allow_paths, protect_sensitive_paths, undo_enabled,
-            background_enabled, background_service, background_seen_at
+            workspace_roots, sensitive_paths, sensitive_allow_paths, protect_sensitive_paths, undo_enabled
      FROM devices
      WHERE user_id = ?1 AND revoked_at IS NULL
      ORDER BY created_at DESC`,
@@ -330,9 +329,6 @@ export async function getDevicesForUser(
       sensitive_allow_paths: string | null;
       protect_sensitive_paths: number;
       undo_enabled: number;
-      background_enabled: number | null;
-      background_service: string | null;
-      background_seen_at: string | null;
     }>();
 
   type OnlineDevice = {
@@ -390,8 +386,6 @@ export async function getDevicesForUser(
       "undo_change",
       "browse_directories",
       "list_managed_processes",
-      "background_agent_status",
-      "set_background_agent",
     ]);
     const availableTools = rawAvailableTools.filter((tool) => !internalTools.has(tool));
     let allowedTools: string[] | null = reviewerFixture
@@ -430,15 +424,6 @@ export async function getDevicesForUser(
         capabilities.includes("undo_history_v1") &&
         rawAvailableTools.includes("list_undo_actions") &&
         rawAvailableTools.includes("undo_change"),
-      background_agent_available:
-        capabilities.includes("background_agent_v1") ||
-        device.background_seen_at !== null,
-      background_enabled:
-        device.background_enabled === null
-          ? null
-          : device.background_enabled !== 0,
-      background_service: device.background_service,
-      background_seen_at: device.background_seen_at,
       status: live ? "online" : "offline",
       tools,
     };
@@ -808,106 +793,6 @@ export async function handleDeviceUndoAction(
   });
 
   return Response.json({ ok: true, result: call.result });
-}
-
-
-export async function handleDeviceBackgroundUpdate(
-  request: Request,
-  env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
-) {
-  const user = await getSessionUser(request, env);
-  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
-
-  const url = new URL(request.url);
-  const match = url.pathname.match(/^\/api\/devices\/([^/]+)\/background$/);
-  const deviceId = match?.[1];
-  if (!deviceId) return new Response("Not found", { status: 404 });
-
-  const body = (await request.json().catch(() => ({}))) as {
-    enabled?: unknown;
-  };
-  if (typeof body.enabled !== "boolean") {
-    return Response.json({ error: "enabled must be a boolean" }, { status: 400 });
-  }
-
-  const device = await loadOwnedDevicePolicy(env, user.id, deviceId);
-  if (!device) return Response.json({ error: "device not found" }, { status: 404 });
-
-  const call = await callInternalDeviceTool(
-    env,
-    user.id,
-    device,
-    "set_background_agent",
-    { enabled: body.enabled },
-  );
-
-  if (!call.ok) {
-    return Response.json(
-      {
-        error: call.error,
-        available: false,
-      },
-      { status: call.status === 403 || call.status === 404 ? 409 : call.status },
-    );
-  }
-
-  const status =
-    call.result && typeof call.result === "object"
-      ? (call.result as {
-          enabled?: unknown;
-          active?: unknown;
-          service?: unknown;
-          detail?: unknown;
-        })
-      : {};
-  const actualEnabled =
-    typeof status.enabled === "boolean" ? status.enabled : body.enabled;
-  const service =
-    typeof status.service === "string" ? status.service : null;
-
-  const now = nowIso();
-  await env.DB.prepare(
-    `UPDATE devices
-     SET background_enabled = ?1,
-         background_service = COALESCE(?2, background_service),
-         background_seen_at = ?3
-     WHERE id = ?4 AND user_id = ?5 AND revoked_at IS NULL`,
-  )
-    .bind(actualEnabled ? 1 : 0, service, now, deviceId, user.id)
-    .run();
-
-  const applied = actualEnabled === body.enabled;
-  await writeAudit(env, {
-    userId: user.id,
-    deviceId,
-    eventType: applied
-      ? actualEnabled
-        ? "device.background_enabled"
-        : "device.background_disabled"
-      : "device.background_update_failed",
-  });
-
-  if (!applied) {
-    return Response.json(
-      {
-        error:
-          typeof status.detail === "string" && status.detail
-            ? status.detail
-            : body.enabled
-              ? "Background service could not be enabled on this computer."
-              : "Background service could not be disabled on this computer.",
-        enabled: actualEnabled,
-        status: call.result,
-      },
-      { status: 409 },
-    );
-  }
-
-  return Response.json({
-    ok: true,
-    enabled: actualEnabled,
-    status: call.result,
-  });
 }
 
 
