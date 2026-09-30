@@ -11364,7 +11364,7 @@ body{font-size:18px;line-height:1.6}
 }
 .automationKindTabs{
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(5,minmax(0,1fr));
   gap:7px;
   margin:14px 0 17px;
 }
@@ -11971,5 +11971,295 @@ body{font-size:18px;line-height:1.6}
   }
   .automationDetailGrid{
     grid-template-columns:1fr 1fr;
+  }
+}
+
+.automationAgentNotice{
+  display:grid;
+  gap:4px;
+  padding:11px 12px;
+  border:1px solid #cce5eb;
+  border-radius:9px;
+  background:#f3fafc;
+}
+.automationAgentNotice strong{
+  color:#16566b;
+  font-size:12px;
+}
+.automationAgentNotice span{
+  color:#607c86;
+  font-size:11px;
+  line-height:1.5;
+}
+:root[data-theme="dark"] .automationAgentNotice{
+  border-color:#245366;
+  background:#0a2029;
+}
+:root[data-theme="dark"] .automationAgentNotice strong{
+  color:#8addf7;
+}
+:root[data-theme="dark"] .automationAgentNotice span{
+  color:#9bb2b9;
+}
+@media(max-width:1120px){
+  .automationKindTabs{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+
+@media(max-width:760px){
+  .automationKindTabs{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:460px){
+  .automationKindTabs{grid-template-columns:1fr;}
+}
+
+/* ==========================================================================
+   Releases — reading-first product history
+   ========================================================================== */
+.releasesPage{
+  width:min(1120px,calc(100% - 44px));
+  margin:0 auto;
+  padding:92px 0 96px;
+}
+.releaseHeader{
+  max-width:900px;
+}
+.releaseLatestLine{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 12px;
+  align-items:center;
+  margin-top:22px;
+  color:#67818b;
+  font-size:12px;
+}
+.releaseLatestLine>span{
+  color:#0d7897;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.11em;
+}
+.releaseLatestLine strong{
+  color:#173f4d;
+  font-size:15px;
+}
+.releaseLatestLine em{
+  padding:4px 8px;
+  border:1px solid #bcdce5;
+  border-radius:999px;
+  background:#eff9fb;
+  color:#16677f;
+  font-style:normal;
+  font-weight:700;
+}
+.releaseLatestLine time{
+  color:#738b93;
+}
+.releaseIntro{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:36px;
+  margin:30px 0 8px;
+  padding:22px 0 28px;
+  border-top:1px solid #dfeaec;
+  border-bottom:1px solid #dfeaec;
+}
+.releaseIntro>div{
+  display:grid;
+  gap:6px;
+}
+.releaseIntro strong{
+  color:#214957;
+  font-size:13px;
+}
+.releaseIntro p{
+  max-width:520px;
+  margin:0;
+  color:#627d87;
+  font-size:12px;
+  line-height:1.65;
+}
+.releaseTimeline{
+  display:grid;
+}
+.releaseEntry{
+  display:grid;
+  grid-template-columns:180px minmax(0,1fr);
+  gap:42px;
+  position:relative;
+  padding:34px 0 38px;
+  border-bottom:1px solid #e3edef;
+}
+.releaseEntry:last-child{
+  border-bottom:0;
+}
+.releaseVersionRail{
+  display:grid;
+  grid-template-columns:14px minmax(0,1fr);
+  align-content:start;
+  gap:3px 10px;
+  position:relative;
+}
+.releaseVersionRail:before{
+  content:"";
+  position:absolute;
+  top:15px;
+  bottom:-53px;
+  left:5px;
+  width:1px;
+  background:#d7e6e9;
+}
+.releaseEntry:last-child .releaseVersionRail:before{
+  display:none;
+}
+.releaseRailDot{
+  grid-row:1 / span 4;
+  width:11px;
+  height:11px;
+  margin-top:4px;
+  border:2px solid #79b7c7;
+  border-radius:50%;
+  background:#fff;
+  z-index:1;
+}
+.releaseEntry.latest .releaseRailDot{
+  border-color:#0e94b7;
+  background:#0e94b7;
+  box-shadow:0 0 0 4px rgba(14,148,183,.1);
+}
+.releaseVersionRail strong{
+  color:#173e4b;
+  font-size:15px;
+}
+.releaseVersionRail time{
+  color:#7c9198;
+  font-size:11px;
+}
+.releaseState{
+  justify-self:start;
+  margin-top:5px;
+  padding:3px 7px;
+  border-radius:999px;
+  background:#f0f4f5;
+  color:#657b83;
+  font-size:10px;
+  font-weight:700;
+}
+.releaseState.release-candidate{
+  background:#eaf7fa;
+  color:#0e6e89;
+}
+.releaseBody{
+  min-width:0;
+}
+.releaseBody h2{
+  margin:0 0 8px;
+  color:#173e4b;
+  font-size:20px;
+  letter-spacing:-.015em;
+}
+.releaseSummary{
+  max-width:760px;
+  margin:0 0 14px;
+  color:#5f7983;
+  font-size:13px;
+  line-height:1.7;
+}
+.releaseBody ul{
+  display:grid;
+  gap:7px;
+  margin:0;
+  padding:0;
+  list-style:none;
+}
+.releaseBody li{
+  position:relative;
+  padding-left:18px;
+  color:#355a67;
+  font-size:12px;
+  line-height:1.65;
+}
+.releaseBody li:before{
+  content:"";
+  position:absolute;
+  top:.72em;
+  left:2px;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:#72aebd;
+}
+.releaseEntry.latest .releaseBody{
+  padding:2px 0 2px 18px;
+  border-left:3px solid #98d8e7;
+}
+:root[data-theme="dark"] .releaseLatestLine strong,
+:root[data-theme="dark"] .releaseIntro strong,
+:root[data-theme="dark"] .releaseVersionRail strong,
+:root[data-theme="dark"] .releaseBody h2{
+  color:#e1f0f4;
+}
+:root[data-theme="dark"] .releaseLatestLine,
+:root[data-theme="dark"] .releaseLatestLine time,
+:root[data-theme="dark"] .releaseIntro p,
+:root[data-theme="dark"] .releaseVersionRail time,
+:root[data-theme="dark"] .releaseSummary{
+  color:#9bb0b7;
+}
+:root[data-theme="dark"] .releaseIntro,
+:root[data-theme="dark"] .releaseEntry{
+  border-color:#17303a;
+}
+:root[data-theme="dark"] .releaseVersionRail:before{
+  background:#18343f;
+}
+:root[data-theme="dark"] .releaseRailDot{
+  border-color:#426f7d;
+  background:#06121a;
+}
+:root[data-theme="dark"] .releaseEntry.latest .releaseRailDot{
+  border-color:#35b7d8;
+  background:#35b7d8;
+}
+:root[data-theme="dark"] .releaseLatestLine em,
+:root[data-theme="dark"] .releaseState.release-candidate{
+  border-color:#245567;
+  background:#0b222c;
+  color:#8bdcf1;
+}
+:root[data-theme="dark"] .releaseState{
+  background:#101d23;
+  color:#93a8af;
+}
+:root[data-theme="dark"] .releaseBody li{
+  color:#b2c7cd;
+}
+:root[data-theme="dark"] .releaseBody li:before{
+  background:#4d8797;
+}
+:root[data-theme="dark"] .releaseEntry.latest .releaseBody{
+  border-color:#2d7489;
+}
+@media(max-width:760px){
+  .releasesPage{
+    width:min(100% - 28px,1120px);
+    padding:74px 0 72px;
+  }
+  .releaseIntro{
+    grid-template-columns:1fr;
+    gap:16px;
+  }
+  .releaseEntry{
+    grid-template-columns:1fr;
+    gap:16px;
+    padding:28px 0 32px;
+  }
+  .releaseVersionRail{
+    grid-template-columns:14px minmax(0,1fr);
+  }
+  .releaseVersionRail:before{
+    display:none;
+  }
+  .releaseEntry.latest .releaseBody{
+    padding-left:12px;
   }
 }

@@ -195,14 +195,14 @@ per-device skill list.
 
 ## Durable Automations
 
-Remote Arc can persist work independently of the chat session that created it. MCP clients need the separate `automation:read` / `automation:write` OAuth scopes to inspect or create persistent work; ordinary `computer:write` access does not grant that authority.
+Remote Arc can persist work independently of the chat session that created it. MCP clients need the separate `automation:read` / `automation:write` OAuth scopes to inspect or create persistent work; ordinary `computer:write` access does not grant that authority. Adaptive Agent Goals require the additional `agent:write` scope because they can inspect each result and choose a different next approved action over time.
 
-Four automation modes share the same durable task engine:
+Five persistent modes share the same durable task engine:
 
 - **Long task** — start a command and keep tracking it after the MCP call/chat ends.
 - **Condition watch** — wait for a webhook event, then execute an approved plan.
 - **Schedule watch** — execute a plan on a recurring interval or at a future time.
-- **Goal loop** — run a work plan, execute a verification command, and retry until the verification command exits successfully, the task expires, the maximum run count is reached, or the user stops it.
+- **Goal loop** — repeat a fixed work plan, execute a verification command, and retry until verification succeeds, the task expires, the run limit is reached, or the user stops it.\n- **Agent Goal** — after each bounded tool result, a hosted planner updates compact working memory, rethinks the strategy and chooses a different next action from the user-approved tool set. An optional deterministic verification command can prevent model-only completion.\n\nCondition watches may also use a cloud-side GitHub App merge action. A matching CI webhook can therefore merge an explicitly configured pull request without depending on a paired computer being online.
 
 Automation state lives in D1 and is advanced by the Worker scheduler or webhook events. Device execution still goes through the same authenticated Durable Object route and the device's existing skill/path policy.
 
@@ -403,7 +403,7 @@ not unnecessarily consume the Workers request quota.
 
 ## Remote MCP tools
 
-Hosted MCP currently exposes 23 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
+Hosted MCP currently exposes 24 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
 
 ```text
 list_devices
@@ -429,6 +429,7 @@ edit_block
 undo_last_change
 
 create_automation
+create_agent_goal
 list_automations
 get_automation
 manage_automation

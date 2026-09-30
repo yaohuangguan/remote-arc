@@ -21,6 +21,9 @@
       "*/5 * * * *"
     ]
   },
+  "ai": {
+    "binding": "AI"
+  },
   "durable_objects": {
     "bindings": [
       {
@@ -59,6 +62,7 @@
       "/install",
       "/install/*",
       "/pricing",
+      "/releases",
       "/demo",
       "/resources",
       "/blogs",
@@ -106,6 +110,7 @@
     "MARKETING_ORIGIN": "https://remotearc.app",
     "ALLOW_SIGNUPS": "1",
     "MONTHLY_TOOL_CALL_LIMIT": "10000",
+    "WORKERS_AI_MODEL": "@cf/openai/gpt-oss-120b",
     "REVIEWER_DEMO_DEVICE_ID": "review-desktop-v1",
     "REVIEWER_EMAIL": "openai-reviewer@remotearc.app",
     "ALERT_EMAIL": "moviegoer24@gmail.com",

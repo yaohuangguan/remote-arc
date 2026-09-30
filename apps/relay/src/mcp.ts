@@ -30,7 +30,8 @@ type Scope =
   | "computer:write"
   | "browser:read"
   | "automation:read"
-  | "automation:write";
+  | "automation:write"
+  | "agent:write";
 
 const hasScope = (identity: OAuthIdentity, scope: Scope) =>
   identity.scope.split(/\s+/).includes(scope);
@@ -137,7 +138,7 @@ export function createRemoteLinkMcp(
 ) {
   return createMcpHandler(() => {
     const server = new McpServer(
-      { name: "remotearc", version: "0.3.1" },
+      { name: "remotearc", version: "0.4.0" },
       { capabilities: { tools: {} } },
     );
 
@@ -662,7 +663,7 @@ export function createRemoteLinkMcp(
             "schedule_watch",
             "goal_loop",
           ]),
-          device_id: z.string(),
+          device_id: z.string().optional(),
           command: z.string().max(4000).optional(),
           cwd: z.string().max(500).optional(),
           steps: z
@@ -680,6 +681,16 @@ export function createRemoteLinkMcp(
               command: z.string().min(1).max(4000),
               cwd: z.string().max(500).optional(),
               expected_exit_code: z.number().int().min(0).max(255).default(0),
+            })
+            .optional(),
+          github_merge: z
+            .object({
+              owner: z.string().min(1).max(100),
+              repo: z.string().min(1).max(100),
+              pull_number: z.number().int().min(1),
+              installation_id: z.string().regex(/^\d+$/).optional(),
+              merge_method: z.enum(["merge", "squash", "rebase"]).default("merge"),
+              expected_head_sha: z.string().regex(/^[a-f0-9]{7,64}$/i).optional(),
             })
             .optional(),
           condition: z
@@ -748,6 +759,96 @@ export function createRemoteLinkMcp(
                   "Treat this webhook URL as a secret bearer capability. It is returned only when the condition watch is created.",
               }
             : null,
+        });
+      },
+    );
+
+
+    server.registerTool(
+      "create_agent_goal",
+      {
+        title: "Create a self-directed durable Agent Goal",
+        description:
+          "Create a persistent coding/work goal whose hosted planner can inspect tool results, choose a different next action, and continue until the goal is verified, paused, expired, cancelled, or its iteration limit is reached. This is more powerful than a deterministic goal loop and requires the separate agent:write scope.",
+        inputSchema: z.object({
+          name: z.string().min(1).max(120),
+          device_id: z.string(),
+          objective: z.string().min(1).max(6000),
+          success_criteria: z.string().min(1).max(4000),
+          workspace: z.string().max(500).optional(),
+          verify_command: z.string().max(4000).optional(),
+          verify_cwd: z.string().max(500).optional(),
+          allowed_tools: z
+            .array(
+              z.enum([
+                "list_directory",
+                "read_file",
+                "get_file_info",
+                "write_file",
+                "edit_block",
+                "start_process",
+              ]),
+            )
+            .min(1)
+            .max(6),
+          max_iterations: z.number().int().min(1).max(100).default(30),
+          interval_seconds: z.number().int().min(60).max(3600).default(60),
+          expires_at: z.string().nullable().optional(),
+        }),
+        annotations: {
+          readOnlyHint: false,
+          openWorldHint: true,
+          destructiveHint: true,
+        },
+        _meta: {
+          securitySchemes: [
+            {
+              type: "oauth2",
+              scopes: ["automation:write", "agent:write"],
+            },
+          ],
+        },
+      },
+      async (input) => {
+        if (
+          !identity ||
+          !hasScope(identity, "automation:write") ||
+          !hasScope(identity, "agent:write")
+        ) {
+          return authRequired(env, "agent:write");
+        }
+        await consume(env, identity);
+        const created = await createAutomation(env, identity.userId, {
+          name: input.name,
+          kind: "agent_goal",
+          device_id: input.device_id,
+          interval_seconds: input.interval_seconds,
+          expires_at: input.expires_at,
+          agent_goal: {
+            objective: input.objective,
+            success_criteria: input.success_criteria,
+            workspace: input.workspace,
+            verify_command: input.verify_command,
+            verify_cwd: input.verify_cwd,
+            allowed_tools: input.allowed_tools,
+            max_iterations: input.max_iterations,
+          },
+        });
+        return textResult({
+          automation: created.automation
+            ? {
+                id: created.automation.id,
+                name: created.automation.name,
+                kind: "agent_goal",
+                stored_kind: created.automation.kind,
+                status: created.automation.status,
+                device_id: created.automation.device_id,
+                next_run_at: created.automation.next_run_at,
+                expires_at: created.automation.expires_at,
+              }
+            : null,
+          note:
+            "The goal plan is durable. Each planner turn sees bounded tool observations and compact working memory; raw managed-process output is not stored in the automation table.",
         });
       },
     );

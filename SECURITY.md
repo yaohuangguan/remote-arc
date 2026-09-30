@@ -68,15 +68,15 @@ policy metadata.
 
 ## Durable automation security
 
-Persistent automations outlive the MCP request or chat that creates them, so their authority is intentionally narrower than "let the agent decide later." They use separate `automation:read` and `automation:write` OAuth scopes; holding `computer:write` alone does not authorize a client to leave persistent work behind.
+Persistent automations outlive the MCP request or chat that creates them, so their authority is separated from ordinary request-time computer access. Deterministic automations use `automation:read` / `automation:write`; adaptive Agent Goals additionally require `agent:write`. Holding `computer:write` alone does not authorize a client to leave persistent or self-directed work behind.
 
-At creation time Remote Arc stores an explicit trigger, command plan, optional goal verification command, run/expiry limits, target device, and a snapshot of that device's permission policy. Each future device execution still passes through device ownership, revocation, allowed-tool and local path-policy checks.
+At creation time a deterministic automation stores its explicit trigger and action plan. An Agent Goal instead stores the objective, success criteria, approved tool set, optional deterministic verification command, iteration/expiry limits, target device, and a snapshot of that device's permission policy. The planner may choose different next actions only inside that frozen tool/policy boundary. Each future device execution still passes through device ownership, revocation, allowed-tool and local path-policy checks.
 
 If the saved device policy changes after approval, execution stops in `approval_required` until the user explicitly approves the new snapshot. A temporarily offline device moves the task to `waiting_for_device`. If an agent restart loses a managed-process handle, the default behavior also requires approval before rerunning the command, because silently restarting an unknown side effect could duplicate a deployment, publish, payment, mutation or other external action.
 
-Condition watches use a high-entropy secret URL. Only a SHA-256 hash of that secret is stored. The URL is a bearer capability and must be protected like a credential. Delivery IDs are used to reject duplicate webhook deliveries when present. The current MVP does not claim GitHub webhook HMAC validation; native provider integrations can add stronger provider-specific verification later.
+Condition watches use a high-entropy secret URL. Only a SHA-256 hash of that secret is stored. The URL is a bearer capability and must be protected like a credential. Delivery IDs are used to reject duplicate webhook deliveries when present. A GitHub condition may execute a cloud-side pull-request merge through a GitHub App installation token scoped to the configured repository; the current webhook transport still relies on the secret callback URL rather than claiming provider-specific HMAC verification.
 
-Automation state, trigger metadata, run status and error summaries are cloud control-plane data. Raw command stdout/stderr is not intentionally persisted in the automation tables; managed process output remains on the device.
+Automation state, trigger metadata, run status and bounded error/decision summaries are cloud control-plane data. Agent Goals also persist compact planner working memory so a later turn can continue without the original chat. Raw command stdout/stderr is not intentionally persisted in the automation tables; process output is fetched from the device when needed, sent to the planner as a bounded observation, then reduced to compact memory/summary.
 
 A background agent configured to start at login can keep reconnecting while the computer is awake. Remote Arc does not claim that a sleeping, powered-off or network-disconnected computer remains online.
 

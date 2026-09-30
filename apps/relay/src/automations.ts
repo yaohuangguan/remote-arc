@@ -6,12 +6,26 @@ import {
   type OAuthIdentity,
 } from "./auth.js";
 import { callDevice, type DeviceCallEnv } from "./device-call.js";
+import {
+  agentPlannerConfigured,
+  planAgentTurn,
+  type AgentPlannerEnv,
+  type AgentToolName,
+} from "./agent-planner.js";
+import {
+  githubAutomationConfigured,
+  mergeGitHubPullRequest,
+  type GitHubAutomationEnv,
+  type GitHubMergeSpec,
+} from "./github-automation.js";
 
 export type AutomationKind =
   | "long_task"
   | "condition_watch"
   | "schedule_watch"
   | "goal_loop";
+
+export type AutomationCreateKind = AutomationKind | "agent_goal";
 
 export type AutomationStatus =
   | "waiting"
@@ -25,10 +39,12 @@ export type AutomationStatus =
   | "cancelled"
   | "expired";
 
-type AutomationEnv = DeviceCallEnv & {
-  PUBLIC_ORIGIN: string;
-  APP_ORIGIN?: string;
-};
+type AutomationEnv = DeviceCallEnv &
+  AgentPlannerEnv &
+  GitHubAutomationEnv & {
+    PUBLIC_ORIGIN: string;
+    APP_ORIGIN?: string;
+  };
 
 type JsonPrimitive = string | number | boolean | null;
 
@@ -38,17 +54,35 @@ type DeviceCommandStep = {
   cwd?: string;
 };
 
+type AutomationStep = DeviceCommandStep | GitHubMergeSpec;
+
 type ActionPlan = {
-  steps: DeviceCommandStep[];
+  steps: AutomationStep[];
   recovery?: "require_approval" | "restart";
 };
 
-type GoalSpec = {
+type CommandGoalSpec = {
   type: "command_exit";
   command: string;
   cwd?: string;
   expected_exit_code: number;
 };
+
+type AgentGoalSpec = {
+  type: "agent_goal";
+  objective: string;
+  success_criteria: string;
+  workspace?: string;
+  verify?: {
+    command: string;
+    cwd?: string;
+    expected_exit_code: number;
+  };
+  allowed_tools: AgentToolName[];
+  max_iterations: number;
+};
+
+type GoalSpec = CommandGoalSpec | AgentGoalSpec;
 
 type TriggerSpec =
   | { type: "immediate" }
@@ -62,7 +96,12 @@ type TriggerSpec =
     };
 
 type RuntimeState = {
-  phase?: "idle" | "step_running" | "goal_running";
+  phase?:
+    | "idle"
+    | "step_running"
+    | "goal_running"
+    | "agent_process_running"
+    | "agent_verify_running";
   step_index?: number;
   process_id?: string;
   run_id?: string;
@@ -70,6 +109,13 @@ type RuntimeState = {
     source?: string;
     event_name?: string | null;
     delivery_id?: string | null;
+  };
+  agent?: {
+    iteration: number;
+    memory: string;
+    observation: string;
+    last_decision_summary?: string;
+    completion_evidence?: string;
   };
 };
 
@@ -125,7 +171,7 @@ type DevicePolicySnapshot = {
 
 export type CreateAutomationInput = {
   name?: string;
-  kind?: AutomationKind;
+  kind?: AutomationCreateKind;
   device_id?: string;
   command?: string;
   cwd?: string;
@@ -134,6 +180,23 @@ export type CreateAutomationInput = {
     command?: string;
     cwd?: string;
     expected_exit_code?: number;
+  };
+  agent_goal?: {
+    objective?: string;
+    success_criteria?: string;
+    workspace?: string;
+    verify_command?: string;
+    verify_cwd?: string;
+    allowed_tools?: AgentToolName[];
+    max_iterations?: number;
+  };
+  github_merge?: {
+    owner?: string;
+    repo?: string;
+    pull_number?: number;
+    installation_id?: string;
+    merge_method?: "merge" | "squash" | "rebase";
+    expected_head_sha?: string;
   };
   condition?: {
     source?: "github" | "generic";
@@ -234,14 +297,101 @@ async function devicePolicySnapshot(
   };
 }
 
-const policySupportsAutomations = (policy: DevicePolicySnapshot) => {
-  if (policy.allowed_tools.length === 0) return true;
-  return ["start_process", "process_status", "stop_process"].every((tool) =>
-    policy.allowed_tools.includes(tool),
+const AGENT_TOOL_NAMES: AgentToolName[] = [
+  "list_directory",
+  "read_file",
+  "get_file_info",
+  "write_file",
+  "edit_block",
+  "start_process",
+];
+
+const policyAllowsTool = (policy: DevicePolicySnapshot, tool: string) =>
+  policy.allowed_tools.length === 0 || policy.allowed_tools.includes(tool);
+
+const policySupportsCommandAutomation = (policy: DevicePolicySnapshot) =>
+  ["start_process", "process_status", "stop_process"].every((tool) =>
+    policyAllowsTool(policy, tool),
   );
+
+const normalizeAgentTools = (
+  policy: DevicePolicySnapshot,
+  requested: AgentToolName[] | undefined,
+) => {
+  if (!Array.isArray(requested) || requested.length === 0) {
+    throw new Error("Agent Goal requires an explicit allowed_tools list.");
+  }
+  const unique = [...new Set(requested)].filter((tool): tool is AgentToolName =>
+    AGENT_TOOL_NAMES.includes(tool as AgentToolName),
+  );
+  const allowed = unique.filter((tool) => policyAllowsTool(policy, tool));
+  if (allowed.includes("start_process")) {
+    for (const dependency of ["process_status", "process_output", "stop_process"]) {
+      if (!policyAllowsTool(policy, dependency)) {
+        throw new Error(
+          "Agent Goal terminal access also requires process_status, process_output and stop_process.",
+        );
+      }
+    }
+  }
+  if (!allowed.length) {
+    throw new Error("No approved device tools are available for this Agent Goal.");
+  }
+  return allowed;
 };
 
+function sanitizeGitHubMerge(input: CreateAutomationInput): GitHubMergeSpec | null {
+  if (!input.github_merge) return null;
+  const owner = (input.github_merge.owner || "").trim();
+  const repo = (input.github_merge.repo || "").trim();
+  const installationId = (input.github_merge.installation_id || "").trim();
+  const expectedHeadSha = (input.github_merge.expected_head_sha || "").trim();
+  const pullNumber = Number(input.github_merge.pull_number);
+  if (!/^[A-Za-z0-9_.-]{1,100}$/.test(owner)) {
+    throw new Error("GitHub owner is invalid.");
+  }
+  if (!/^[A-Za-z0-9_.-]{1,100}$/.test(repo)) {
+    throw new Error("GitHub repository name is invalid.");
+  }
+  if (!Number.isInteger(pullNumber) || pullNumber < 1) {
+    throw new Error("GitHub pull_number must be a positive integer.");
+  }
+  if (installationId && !/^\d+$/.test(installationId)) {
+    throw new Error("GitHub installation_id must be numeric.");
+  }
+  if (expectedHeadSha && !/^[a-f0-9]{7,64}$/i.test(expectedHeadSha)) {
+    throw new Error("GitHub expected_head_sha is invalid.");
+  }
+  return {
+    type: "github_merge_pr",
+    owner,
+    repo,
+    pull_number: pullNumber,
+    ...(installationId ? { installation_id: installationId } : {}),
+    merge_method: input.github_merge.merge_method || "merge",
+    ...(expectedHeadSha ? { expected_head_sha: expectedHeadSha } : {}),
+  };
+}
+
 function sanitizeSteps(input: CreateAutomationInput): ActionPlan {
+  if (input.kind === "agent_goal") {
+    return {
+      steps: [],
+      recovery: input.recovery === "restart" ? "restart" : "require_approval",
+    };
+  }
+
+  const githubMerge = sanitizeGitHubMerge(input);
+  if (githubMerge) {
+    if (input.command || (Array.isArray(input.steps) && input.steps.length)) {
+      throw new Error("GitHub merge actions cannot be combined with device command steps.");
+    }
+    return {
+      steps: [githubMerge],
+      recovery: "require_approval",
+    };
+  }
+
   const source =
     Array.isArray(input.steps) && input.steps.length > 0
       ? input.steps
@@ -275,7 +425,53 @@ function sanitizeSteps(input: CreateAutomationInput): ActionPlan {
   };
 }
 
-function sanitizeGoal(input: CreateAutomationInput): GoalSpec | null {
+function sanitizeGoal(
+  input: CreateAutomationInput,
+  policy?: DevicePolicySnapshot | null,
+): GoalSpec | null {
+  if (input.kind === "agent_goal") {
+    if (!policy) throw new Error("Agent Goal requires a paired device.");
+    const objective = (input.agent_goal?.objective || "").trim();
+    const successCriteria = (input.agent_goal?.success_criteria || "").trim();
+    const workspace = (input.agent_goal?.workspace || "").trim();
+    const verifyCommand = (input.agent_goal?.verify_command || "").trim();
+    const verifyCwd = (input.agent_goal?.verify_cwd || workspace || "").trim();
+    if (!objective || objective.length > 6000) {
+      throw new Error("Agent Goal objective must be between 1 and 6000 characters.");
+    }
+    if (!successCriteria || successCriteria.length > 4000) {
+      throw new Error("Agent Goal success criteria must be between 1 and 4000 characters.");
+    }
+    if (workspace.length > 500 || verifyCwd.length > 500) {
+      throw new Error("Agent Goal workspace paths must be 500 characters or fewer.");
+    }
+    if (verifyCommand.length > 4000) {
+      throw new Error("Agent Goal verification command is too long.");
+    }
+    const maxIterations = Number(input.agent_goal?.max_iterations ?? 30);
+    if (!Number.isInteger(maxIterations) || maxIterations < 1 || maxIterations > 100) {
+      throw new Error("Agent Goal max_iterations must be between 1 and 100.");
+    }
+    const allowedTools = normalizeAgentTools(policy, input.agent_goal?.allowed_tools);
+    return {
+      type: "agent_goal",
+      objective,
+      success_criteria: successCriteria,
+      ...(workspace ? { workspace } : {}),
+      ...(verifyCommand
+        ? {
+            verify: {
+              command: verifyCommand,
+              ...(verifyCwd ? { cwd: verifyCwd } : {}),
+              expected_exit_code: 0,
+            },
+          }
+        : {}),
+      allowed_tools: allowedTools,
+      max_iterations: maxIterations,
+    };
+  }
+
   if (input.kind !== "goal_loop") return null;
   const command = (input.goal?.command || "").trim();
   const cwd = (input.goal?.cwd || "").trim();
@@ -395,34 +591,67 @@ export async function createAutomation(
   userId: string,
   input: CreateAutomationInput,
 ) {
-  const kind = input.kind || "long_task";
-  if (!["long_task", "condition_watch", "schedule_watch", "goal_loop"].includes(kind)) {
+  const requestedKind = input.kind || "long_task";
+  if (
+    !["long_task", "condition_watch", "schedule_watch", "goal_loop", "agent_goal"].includes(
+      requestedKind,
+    )
+  ) {
     throw new Error("Unsupported automation kind.");
   }
 
+  const storedKind: AutomationKind =
+    requestedKind === "agent_goal" ? "goal_loop" : requestedKind;
   const name = (input.name || "").trim();
   if (!name || name.length > 120) {
     throw new Error("Automation name must be between 1 and 120 characters.");
   }
 
+  const action = sanitizeSteps({ ...input, kind: requestedKind });
+  const cloudOnly = action.steps.length > 0 &&
+    action.steps.every((step) => step.type === "github_merge_pr");
   const deviceId = (input.device_id || "").trim();
-  if (!deviceId) throw new Error("device_id is required.");
 
-  const policy = await devicePolicySnapshot(env, userId, deviceId);
-  if (!policy) throw new Error("Device not found or revoked.");
-  if (!policySupportsAutomations(policy)) {
+  let policy: DevicePolicySnapshot | null = null;
+  if (!cloudOnly || requestedKind === "agent_goal") {
+    if (!deviceId) throw new Error("device_id is required for device-backed automation.");
+    policy = await devicePolicySnapshot(env, userId, deviceId);
+    if (!policy) throw new Error("Device not found or revoked.");
+
+    if (
+      requestedKind !== "agent_goal" &&
+      !policySupportsCommandAutomation(policy)
+    ) {
+      throw new Error(
+        "This device does not currently allow start_process, process_status and stop_process.",
+      );
+    }
+  }
+
+  if (requestedKind === "agent_goal" && !agentPlannerConfigured(env)) {
     throw new Error(
-      "This device does not currently allow start_process, process_status and stop_process.",
+      "Durable Agent Goals are not configured on this Remote Arc deployment.",
+    );
+  }
+  if (
+    action.steps.some((step) => step.type === "github_merge_pr") &&
+    !githubAutomationConfigured(env)
+  ) {
+    throw new Error(
+      "GitHub App automation is not configured on this Remote Arc deployment.",
     );
   }
 
-  const action = sanitizeSteps(input);
-  const goal = sanitizeGoal({ ...input, kind });
+  const goal = sanitizeGoal({ ...input, kind: requestedKind }, policy);
   const now = nowIso();
-  const { trigger, nextRunAt, initialStatus } = sanitizeTrigger(kind, input, now);
-  const expiresAt = defaultExpiry(kind, now, input);
-  const maxRuns = defaultMaxRuns(kind, input.max_runs);
-  const intervalSeconds = clampInterval(input.interval_seconds, 300);
+  const { trigger, nextRunAt, initialStatus } = sanitizeTrigger(storedKind, input, now);
+  const expiresAt = defaultExpiry(storedKind, now, input);
+  const maxRuns =
+    requestedKind === "agent_goal" ? 1 : defaultMaxRuns(storedKind, input.max_runs);
+  const intervalSeconds = clampInterval(
+    input.interval_seconds,
+    requestedKind === "agent_goal" ? 60 : 300,
+  );
   const id = crypto.randomUUID();
 
   await env.DB.prepare(
@@ -442,14 +671,26 @@ export async function createAutomation(
       id,
       userId,
       name,
-      kind,
+      storedKind,
       initialStatus,
-      deviceId,
+      deviceId || null,
       stableJson(trigger),
       stableJson(action),
       goal ? stableJson(goal) : null,
-      stableJson({ phase: "idle", step_index: 0 } satisfies RuntimeState),
-      stableJson(policy),
+      stableJson(
+        requestedKind === "agent_goal"
+          ? ({
+              phase: "idle",
+              step_index: 0,
+              agent: {
+                iteration: 0,
+                memory: "",
+                observation: "Initial turn. Inspect the workspace and choose the first bounded action.",
+              },
+            } satisfies RuntimeState)
+          : ({ phase: "idle", step_index: 0 } satisfies RuntimeState),
+      ),
+      policy ? stableJson(policy) : null,
       intervalSeconds,
       nextRunAt,
       expiresAt,
@@ -459,7 +700,7 @@ export async function createAutomation(
     .run();
 
   let webhook: { url: string; token: string } | null = null;
-  if (kind === "condition_watch") {
+  if (storedKind === "condition_watch") {
     const token = randomToken(24);
     await env.DB.prepare(
       `INSERT INTO automation_webhooks (automation_id, secret_hash, created_at)
@@ -631,7 +872,13 @@ export async function reapproveAutomation(
   if (!automation || !automation.device_id) throw new Error("Automation not found.");
   const snapshot = await devicePolicySnapshot(env, userId, automation.device_id);
   if (!snapshot) throw new Error("Device not found or revoked.");
-  if (!policySupportsAutomations(snapshot)) {
+
+  const currentGoal = parseJson<GoalSpec | null>(automation.goal_json, null);
+  let nextGoalJson = automation.goal_json;
+  if (currentGoal?.type === "agent_goal") {
+    const narrowedTools = normalizeAgentTools(snapshot, currentGoal.allowed_tools);
+    nextGoalJson = stableJson({ ...currentGoal, allowed_tools: narrowedTools });
+  } else if (!policySupportsCommandAutomation(snapshot)) {
     throw new Error("Device policy no longer permits persistent command execution.");
   }
 
@@ -645,15 +892,24 @@ export async function reapproveAutomation(
   await env.DB.prepare(
     `UPDATE automations
      SET permission_snapshot_json = ?1,
-         status = ?2,
-         next_run_at = ?3,
+         goal_json = ?2,
+         status = ?3,
+         next_run_at = ?4,
          last_error = NULL,
          lease_token = NULL,
          lease_until = NULL,
-         updated_at = ?4
-     WHERE id = ?5 AND user_id = ?6`,
+         updated_at = ?5
+     WHERE id = ?6 AND user_id = ?7`,
   )
-    .bind(stableJson(snapshot), status, nextRun, nowIso(), automationId, userId)
+    .bind(
+      stableJson(snapshot),
+      nextGoalJson,
+      status,
+      nextRun,
+      nowIso(),
+      automationId,
+      userId,
+    )
     .run();
 
   return getAutomation(env, userId, automationId);
@@ -959,7 +1215,7 @@ async function beginCommand(
   state: RuntimeState,
   command: string,
   cwd: string | undefined,
-  phase: "step_running" | "goal_running",
+  phase: "step_running" | "goal_running" | "agent_process_running" | "agent_verify_running",
 ) {
   if (!automation.device_id) throw new Error("Automation device is missing.");
   const result = await callDevice(
@@ -997,6 +1253,430 @@ function nextScheduleAfterRun(
   return null;
 }
 
+const clipAgentText = (value: string, max = 28000) =>
+  value.length <= max ? value : value.slice(0, max) + "\n…[truncated]";
+
+const agentResultText = (value: unknown) => {
+  if (typeof value === "string") return clipAgentText(value);
+  try {
+    return clipAgentText(JSON.stringify(value, null, 2));
+  } catch {
+    return clipAgentText(String(value));
+  }
+};
+
+function validateAgentToolArguments(
+  tool: AgentToolName,
+  args: Record<string, unknown>,
+) {
+  const text = (key: string, max: number) => {
+    const value = args[key];
+    if (typeof value !== "string" || !value.trim() || value.length > max) {
+      throw new Error("Agent tool argument " + key + " is invalid.");
+    }
+    return value;
+  };
+  const optionalText = (key: string, max: number) => {
+    const value = args[key];
+    if (value === undefined || value === null || value === "") return undefined;
+    if (typeof value !== "string" || value.length > max) {
+      throw new Error("Agent tool argument " + key + " is invalid.");
+    }
+    return value;
+  };
+
+  if (tool === "list_directory") {
+    const depthRaw = Number(args.depth ?? 2);
+    const depth = Number.isInteger(depthRaw)
+      ? Math.min(Math.max(depthRaw, 1), 6)
+      : 2;
+    return { path: text("path", 1000), depth };
+  }
+  if (tool === "read_file") {
+    const offsetRaw = args.offset === undefined ? undefined : Number(args.offset);
+    const lengthRaw = args.length === undefined ? 240 : Number(args.length);
+    return {
+      path: text("path", 1000),
+      ...(Number.isInteger(offsetRaw) ? { offset: offsetRaw } : {}),
+      length:
+        Number.isInteger(lengthRaw) && lengthRaw > 0
+          ? Math.min(lengthRaw, 1200)
+          : 240,
+    };
+  }
+  if (tool === "get_file_info") {
+    return { path: text("path", 1000) };
+  }
+  if (tool === "write_file") {
+    const mode = args.mode === "append" ? "append" : "rewrite";
+    const content = args.content;
+    if (typeof content !== "string" || content.length > 200000) {
+      throw new Error("Agent write_file content is invalid or too large.");
+    }
+    return { path: text("path", 1000), content, mode };
+  }
+  if (tool === "edit_block") {
+    const oldString = args.old_string;
+    const newString = args.new_string;
+    if (
+      typeof oldString !== "string" ||
+      typeof newString !== "string" ||
+      oldString.length > 200000 ||
+      newString.length > 200000
+    ) {
+      throw new Error("Agent edit_block content is invalid or too large.");
+    }
+    const expectedRaw = Number(args.expected_replacements ?? 1);
+    return {
+      file_path: text("file_path", 1000),
+      old_string: oldString,
+      new_string: newString,
+      expected_replacements:
+        Number.isInteger(expectedRaw) && expectedRaw > 0
+          ? Math.min(expectedRaw, 20)
+          : 1,
+    };
+  }
+
+  return {
+    command: text("command", 4000),
+    ...(optionalText("cwd", 500) ? { cwd: optionalText("cwd", 500) } : {}),
+    background: true,
+  };
+}
+
+async function updateRunSummary(
+  env: AutomationEnv,
+  runId: string | undefined,
+  summary: string,
+) {
+  if (!runId) return;
+  await env.DB.prepare(
+    `UPDATE automation_runs
+     SET output_summary = ?1
+     WHERE id = ?2`,
+  )
+    .bind(clipAgentText(summary, 6000), runId)
+    .run();
+}
+
+async function executeAgentGoal(
+  env: AutomationEnv,
+  automation: AutomationRow,
+  goal: AgentGoalSpec,
+  state: RuntimeState,
+) {
+  if (!automation.device_id) throw new Error("Agent Goal device is missing.");
+  const now = nowIso();
+  const identity = automationIdentity(automation, env);
+  state.agent ||= {
+    iteration: 0,
+    memory: "",
+    observation: "Initial turn. Inspect the workspace and choose the first bounded action.",
+  };
+
+  if (
+    state.process_id &&
+    (state.phase === "agent_process_running" ||
+      state.phase === "agent_verify_running")
+  ) {
+    let rawStatus: unknown;
+    try {
+      rawStatus = await callDevice(
+        env,
+        identity,
+        automation.device_id,
+        "process_status",
+        { process_id: state.process_id },
+      );
+    } catch (error) {
+      if (isDeviceOfflineError(error)) {
+        await persistRuntime(
+          env,
+          automation,
+          state,
+          "waiting_for_device",
+          addSeconds(now, automation.interval_seconds),
+          "Device offline; the Agent Goal will resume after reconnect.",
+        );
+        return;
+      }
+      if (isLostProcessError(error)) {
+        await persistRuntime(
+          env,
+          automation,
+          state,
+          "approval_required",
+          null,
+          "The local agent lost the managed process handle. Confirm before the Agent Goal chooses another action.",
+        );
+        return;
+      }
+      throw error;
+    }
+
+    const status = processStatus(rawStatus);
+    if (status.status === "running") {
+      await persistRuntime(
+        env,
+        automation,
+        state,
+        "running",
+        addSeconds(now, automation.interval_seconds),
+      );
+      return;
+    }
+
+    const processId = state.process_id;
+    const wasVerify = state.phase === "agent_verify_running";
+    const output = await callDevice(
+      env,
+      identity,
+      automation.device_id,
+      "process_output",
+      { process_id: processId },
+    ).catch((error) => ({ error: String(error) }));
+
+    state.process_id = undefined;
+    state.phase = "idle";
+    const exitCode = status.exitCode ?? 1;
+
+    if (wasVerify && goal.verify && exitCode === goal.verify.expected_exit_code) {
+      const evidence =
+        "Deterministic verification succeeded with exit code " + exitCode + ".\n" +
+        agentResultText(output);
+      state.agent.completion_evidence = clipAgentText(evidence, 3000);
+      await updateRunSummary(env, state.run_id, evidence);
+      await markRunFinished(env, state, "completed", exitCode, null);
+      state.run_id = undefined;
+      await persistRuntime(
+        env,
+        automation,
+        state,
+        "completed",
+        null,
+        null,
+        { incrementRun: true },
+      );
+      return;
+    }
+
+    state.agent.observation = clipAgentText(
+      (wasVerify ? "Goal verification" : "Command") +
+        " finished with exit code " +
+        exitCode +
+        ".\n" +
+        agentResultText(output),
+    );
+  }
+
+  for (let localStep = 0; localStep < 3; localStep += 1) {
+    if (state.agent.iteration >= goal.max_iterations) {
+      const message =
+        "Agent Goal reached its maximum of " +
+        goal.max_iterations +
+        " planning iterations without verified completion.";
+      await markRunFinished(env, state, "failed", null, message);
+      state.run_id = undefined;
+      await persistRuntime(
+        env,
+        automation,
+        state,
+        "failed",
+        null,
+        message,
+        { incrementRun: true },
+      );
+      return;
+    }
+
+    const decision = await planAgentTurn(env, {
+      objective: goal.objective,
+      successCriteria: goal.success_criteria,
+      workspace: goal.workspace,
+      iteration: state.agent.iteration + 1,
+      maxIterations: goal.max_iterations,
+      allowedTools: goal.allowed_tools,
+      memory: state.agent.memory,
+      observation: state.agent.observation,
+    });
+    state.agent.iteration += 1;
+    state.agent.memory = decision.memory;
+    state.agent.last_decision_summary = decision.decisionSummary;
+    await updateRunSummary(
+      env,
+      state.run_id,
+      "Iteration " +
+        state.agent.iteration +
+        ": " +
+        decision.decisionSummary +
+        (decision.completionEvidence
+          ? "\nEvidence: " + decision.completionEvidence
+          : ""),
+    );
+
+    if (decision.decision === "pause") {
+      await persistRuntime(
+        env,
+        automation,
+        state,
+        "paused",
+        null,
+        decision.decisionSummary || "Agent Goal paused because it is blocked.",
+      );
+      return;
+    }
+
+    if (decision.decision === "complete") {
+      state.agent.completion_evidence = decision.completionEvidence;
+      if (goal.verify) {
+        try {
+          await beginCommand(
+            env,
+            automation,
+            state,
+            goal.verify.command,
+            goal.verify.cwd,
+            "agent_verify_running",
+          );
+        } catch (error) {
+          if (isDeviceOfflineError(error)) {
+            state.agent.observation =
+              "The device went offline before deterministic goal verification.";
+            await persistRuntime(
+              env,
+              automation,
+              state,
+              "waiting_for_device",
+              addSeconds(now, automation.interval_seconds),
+              state.agent.observation,
+            );
+            return;
+          }
+          throw error;
+        }
+        await persistRuntime(
+          env,
+          automation,
+          state,
+          "running",
+          addSeconds(now, automation.interval_seconds),
+        );
+        return;
+      }
+
+      await markRunFinished(env, state, "completed", 0, null);
+      state.run_id = undefined;
+      await persistRuntime(
+        env,
+        automation,
+        state,
+        "completed",
+        null,
+        null,
+        { incrementRun: true },
+      );
+      return;
+    }
+
+    if (decision.tool === "none") {
+      throw new Error("Agent planner chose a tool decision without a tool.");
+    }
+    if (!goal.allowed_tools.includes(decision.tool)) {
+      throw new Error("Agent planner selected a tool outside the approved Agent Goal scope.");
+    }
+
+    const args = validateAgentToolArguments(decision.tool, decision.arguments);
+    if (decision.tool === "start_process") {
+      try {
+        const started = await callDevice(
+          env,
+          identity,
+          automation.device_id,
+          "start_process",
+          args,
+        ) as { process_id?: string };
+        if (!started.process_id) {
+          throw new Error("Device did not return a process_id.");
+        }
+        state.process_id = started.process_id;
+        state.phase = "agent_process_running";
+        if (state.run_id) {
+          await env.DB.prepare(
+            `UPDATE automation_runs SET process_id = ?1 WHERE id = ?2`,
+          )
+            .bind(started.process_id, state.run_id)
+            .run();
+        }
+      } catch (error) {
+        if (isDeviceOfflineError(error)) {
+          state.agent.observation =
+            "The device went offline before the planned command could start.";
+          await persistRuntime(
+            env,
+            automation,
+            state,
+            "waiting_for_device",
+            addSeconds(now, automation.interval_seconds),
+            state.agent.observation,
+          );
+          return;
+        }
+        throw error;
+      }
+      await persistRuntime(
+        env,
+        automation,
+        state,
+        "running",
+        addSeconds(now, automation.interval_seconds),
+      );
+      return;
+    }
+
+    let result: unknown;
+    try {
+      result = await callDevice(
+        env,
+        identity,
+        automation.device_id,
+        decision.tool,
+        args,
+      );
+    } catch (error) {
+      if (isDeviceOfflineError(error)) {
+        state.agent.observation =
+          "The device went offline before tool " + decision.tool + " completed.";
+        await persistRuntime(
+          env,
+          automation,
+          state,
+          "waiting_for_device",
+          addSeconds(now, automation.interval_seconds),
+          state.agent.observation,
+        );
+        return;
+      }
+      state.agent.observation =
+        "Tool " + decision.tool + " failed: " +
+        String(error instanceof Error ? error.message : error);
+      continue;
+    }
+
+    state.agent.observation =
+      "Tool " + decision.tool + " result:\n" + agentResultText(result);
+  }
+
+  await persistRuntime(
+    env,
+    automation,
+    state,
+    "waiting",
+    addSeconds(now, automation.interval_seconds),
+    null,
+  );
+}
+
 async function executeAutomation(
   env: AutomationEnv,
   automation: AutomationRow,
@@ -1010,47 +1690,6 @@ async function executeAutomation(
     return;
   }
 
-  if (!automation.device_id) {
-    await persistRuntime(
-      env,
-      automation,
-      parseJson<RuntimeState>(automation.state_json, {}),
-      "failed",
-      null,
-      "Automation device was removed.",
-    );
-    return;
-  }
-
-  const currentPolicy = await devicePolicySnapshot(
-    env,
-    automation.user_id,
-    automation.device_id,
-  );
-  if (!currentPolicy) {
-    await persistRuntime(
-      env,
-      automation,
-      parseJson<RuntimeState>(automation.state_json, {}),
-      "failed",
-      null,
-      "Automation device was revoked or removed.",
-    );
-    return;
-  }
-
-  if (stableJson(currentPolicy) !== (automation.permission_snapshot_json || "")) {
-    await persistRuntime(
-      env,
-      automation,
-      parseJson<RuntimeState>(automation.state_json, {}),
-      "approval_required",
-      null,
-      "Device permissions changed after this automation was approved.",
-    );
-    return;
-  }
-
   const action = parseJson<ActionPlan>(automation.action_json, { steps: [] });
   const goal = parseJson<GoalSpec | null>(automation.goal_json, null);
   const trigger = parseJson<TriggerSpec>(automation.trigger_json, {
@@ -1060,14 +1699,66 @@ async function executeAutomation(
     phase: "idle",
     step_index: 0,
   });
+  const cloudOnly =
+    action.steps.length > 0 &&
+    action.steps.every((step) => step.type === "github_merge_pr");
+
+  if (!cloudOnly) {
+    if (!automation.device_id) {
+      await persistRuntime(
+        env,
+        automation,
+        state,
+        "failed",
+        null,
+        "Automation device was removed.",
+      );
+      return;
+    }
+
+    const currentPolicy = await devicePolicySnapshot(
+      env,
+      automation.user_id,
+      automation.device_id,
+    );
+    if (!currentPolicy) {
+      await persistRuntime(
+        env,
+        automation,
+        state,
+        "failed",
+        null,
+        "Automation device was revoked or removed.",
+      );
+      return;
+    }
+
+    if (stableJson(currentPolicy) !== (automation.permission_snapshot_json || "")) {
+      await persistRuntime(
+        env,
+        automation,
+        state,
+        "approval_required",
+        null,
+        "Device permissions changed after this automation was approved.",
+      );
+      return;
+    }
+  }
 
   if (!state.run_id) {
     state = await startRun(env, automation, state);
   }
 
+  if (goal?.type === "agent_goal") {
+    await executeAgentGoal(env, automation, goal, state);
+    return;
+  }
+
   const identity = automationIdentity(automation, env);
 
   if (
+    automation.device_id &&
     state.process_id &&
     (state.phase === "step_running" || state.phase === "goal_running")
   ) {
@@ -1137,7 +1828,7 @@ async function executeAutomation(
     state.phase = "idle";
 
     if (wasGoal) {
-      if (goal && exitCode === goal.expected_exit_code) {
+      if (goal?.type === "command_exit" && exitCode === goal.expected_exit_code) {
         await markRunFinished(env, state, "completed", exitCode, null);
         state.run_id = undefined;
         await persistRuntime(
@@ -1241,41 +1932,55 @@ async function executeAutomation(
   const stepIndex = state.step_index || 0;
   if (stepIndex < action.steps.length) {
     const step = action.steps[stepIndex]!;
-    try {
-      await beginCommand(
+    if (step.type === "github_merge_pr") {
+      const result = await mergeGitHubPullRequest(env, step);
+      state.step_index = stepIndex + 1;
+      await updateRunSummary(
         env,
-        automation,
-        state,
-        step.command,
-        step.cwd,
-        "step_running",
+        state.run_id,
+        "GitHub pull request merged: " +
+          result.repository +
+          "#" +
+          result.pull_number +
+          (result.sha ? " @ " + result.sha : ""),
       );
-    } catch (error) {
-      if (isDeviceOfflineError(error)) {
-        await persistRuntime(
+    } else {
+      try {
+        await beginCommand(
           env,
           automation,
           state,
-          "waiting_for_device",
-          addSeconds(now, automation.interval_seconds),
-          "Device offline; waiting to start the command.",
+          step.command,
+          step.cwd,
+          "step_running",
         );
-        return;
+      } catch (error) {
+        if (isDeviceOfflineError(error)) {
+          await persistRuntime(
+            env,
+            automation,
+            state,
+            "waiting_for_device",
+            addSeconds(now, automation.interval_seconds),
+            "Device offline; waiting to start the command.",
+          );
+          return;
+        }
+        throw error;
       }
-      throw error;
-    }
 
-    await persistRuntime(
-      env,
-      automation,
-      state,
-      "running",
-      addSeconds(now, automation.interval_seconds),
-    );
-    return;
+      await persistRuntime(
+        env,
+        automation,
+        state,
+        "running",
+        addSeconds(now, automation.interval_seconds),
+      );
+      return;
+    }
   }
 
-  if (goal) {
+  if (goal?.type === "command_exit") {
     try {
       await beginCommand(
         env,
