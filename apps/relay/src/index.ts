@@ -22,6 +22,7 @@ import {
   handleDeviceUndoList,
   handleDeviceUndoAction,
   handleDeviceDirectoryBrowse,
+  handleDeviceBackgroundUpdate,
   handleDeviceManagedProcesses,
   handleDeviceManagedProcessOutput,
   handleDeviceManagedProcessStop,
@@ -30,6 +31,12 @@ import {
 } from "./device.js";
 import { readAudit } from "./audit.js";
 import { getMonthlyUsage } from "./usage.js";
+import {
+  handleAutomationCollection,
+  handleAutomationItem,
+  handleAutomationWebhook,
+  runAutomationTick,
+} from "./automations.js";
 import {
   handleGrantRevoke,
   handleMcpPause,
@@ -138,6 +145,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       url.pathname === "/dashboard" ||
       url.pathname === "/overview" ||
       url.pathname === "/devices" ||
+      url.pathname === "/automations" ||
       url.pathname === "/connect" ||
       url.pathname === "/security" ||
       url.pathname === "/settings" ||
@@ -192,7 +200,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return Response.json({
         ok: true,
         service: "remotearc-relay",
-        version: "0.3.14",
+        version: "0.4.0",
         auth: "oauth2-pkce",
       });
     }
@@ -246,6 +254,16 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return handleLogout(request, env);
     }
 
+    const automationHook = url.pathname.match(/^\/hooks\/automations\/([^/]+)\/([^/]+)$/);
+    if (automationHook) {
+      return handleAutomationWebhook(
+        request,
+        env,
+        decodeURIComponent(automationHook[1]!),
+        decodeURIComponent(automationHook[2]!),
+      );
+    }
+
     if (url.pathname === "/api/me" && request.method === "GET") {
       const user = await getSessionUser(request, env);
       return user
@@ -274,6 +292,20 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return handleMonitorState(request, env);
     }
 
+    if (url.pathname === "/api/automations") {
+      return handleAutomationCollection(request, env);
+    }
+
+    const automationApi = url.pathname.match(/^\/api\/automations\/([^/]+)(?:\/([^/]+))?$/);
+    if (automationApi) {
+      return handleAutomationItem(
+        request,
+        env,
+        decodeURIComponent(automationApi[1]!),
+        automationApi[2] ? decodeURIComponent(automationApi[2]) : undefined,
+      );
+    }
+
     if (url.pathname === "/api/activity" && request.method === "GET") {
       const user = await getSessionUser(request, env);
       if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
@@ -299,9 +331,37 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
     if (url.pathname === "/api/device/heartbeat" && request.method === "POST") {
       const identity = await authenticateDevice(request, env);
       if (!identity) return Response.json({ error: "unauthorized" }, { status: 401 });
+      const heartbeat = (await request.json().catch(() => ({}))) as {
+        background_enabled?: unknown;
+        background_process?: unknown;
+        background_service?: unknown;
+      };
+      const backgroundEnabled =
+        typeof heartbeat.background_enabled === "boolean"
+          ? heartbeat.background_enabled
+          : null;
+      const backgroundService =
+        typeof heartbeat.background_service === "string" &&
+        heartbeat.background_service.length <= 40
+          ? heartbeat.background_service
+          : null;
+      const now = new Date().toISOString();
       await env.DB.prepare(
-        "UPDATE devices SET last_seen = ?1 WHERE id = ?2 AND user_id = ?3 AND revoked_at IS NULL",
-      ).bind(new Date().toISOString(), identity.id, identity.user_id).run();
+        `UPDATE devices
+         SET last_seen = ?1,
+             background_enabled = COALESCE(?2, background_enabled),
+             background_service = COALESCE(?3, background_service),
+             background_seen_at = CASE WHEN ?2 IS NULL THEN background_seen_at ELSE ?1 END
+         WHERE id = ?4 AND user_id = ?5 AND revoked_at IS NULL`,
+      )
+        .bind(
+          now,
+          backgroundEnabled === null ? null : backgroundEnabled ? 1 : 0,
+          backgroundService,
+          identity.id,
+          identity.user_id,
+        )
+        .run();
       return new Response(null, { status: 204 });
     }
 
@@ -358,6 +418,13 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       request.method === "GET"
     ) {
       return handleDeviceDirectoryBrowse(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/background$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDeviceBackgroundUpdate(request, env);
     }
 
     if (
@@ -567,10 +634,15 @@ export default {
   },
 
   async scheduled(
-    _controller: ScheduledController,
+    controller: ScheduledController,
     env: Env,
     ctx: ExecutionContext,
   ) {
-    ctx.waitUntil(runSyntheticMonitor(env));
+    if (controller.cron === "* * * * *") {
+      ctx.waitUntil(runAutomationTick(env));
+    }
+    if (controller.cron === "*/5 * * * *") {
+      ctx.waitUntil(runSyntheticMonitor(env));
+    }
   },
 };

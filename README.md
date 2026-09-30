@@ -193,6 +193,33 @@ jobs and lets the user inspect output or stop a running process.
 Presets are shortcuts. The actual hosted policy is an individually editable
 per-device skill list.
 
+## Durable Automations
+
+Remote Arc can persist work independently of the chat session that created it. MCP clients need the separate `automation:read` / `automation:write` OAuth scopes to inspect or create persistent work; ordinary `computer:write` access does not grant that authority. Adaptive Agent Goals require the additional `agent:write` scope because they can inspect each result and choose a different next approved action over time.
+
+Five persistent modes share the same durable task engine:
+
+- **Long task** — start a command and keep tracking it after the MCP call/chat ends.
+- **Condition watch** — wait for a webhook event, then execute an approved plan.
+- **Schedule watch** — execute a plan on a recurring interval or at a future time.
+- **Goal loop** — repeat a fixed work plan, execute a verification command, and retry until verification succeeds, the task expires, the run limit is reached, or the user stops it.
+- **Agent Goal** — after each bounded tool result, a hosted planner updates compact working memory, rethinks the strategy and chooses a different next action from the user-approved tool set. An optional deterministic verification command can prevent model-only completion.
+
+Condition watches may also use a cloud-side GitHub App merge action. A matching CI webhook can therefore merge an explicitly configured pull request without depending on a paired computer being online.
+
+Automation state lives in D1 and is advanced by the Worker scheduler or webhook events. Device execution still goes through the same authenticated Durable Object route and the device's existing skill/path policy.
+
+Creating an automation snapshots the current device permission policy. Routine disconnects and local agent restarts do not introduce an approval step: unattended work waits for the device and automatically recovers. If you later change the device security policy itself, Remote Arc stops that automation rather than silently inheriting a different trust boundary.
+
+A device going offline moves eligible work to `waiting_for_device`; it does not automatically fail the automation. Deterministic long-running work defaults to automatic attempt restart if the local agent reconnects without its previous managed-process handle. Agent Goals handle the same case by marking the previous outcome as unknown, re-inspecting current state, and replanning instead of waiting for a person to approve continuation.
+
+The background agent and automation engine solve different problems:
+
+- the background agent keeps a paired device available and reconnecting without an open terminal window;
+- the automation engine preserves task state and triggers independently of an MCP request or chat lifetime.
+
+A sleeping, powered-off, or disconnected computer is not considered online. Device-backed work resumes only after the agent reconnects.
+
 Running:
 
 ```bash
@@ -379,11 +406,19 @@ not unnecessarily consume the Workers request quota.
 
 ## Remote MCP tools
 
-Hosted MCP currently exposes 19 user-facing tools. Availability is still filtered by the selected device's policy and live capabilities:
+Hosted MCP currently exposes 24 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
 
 ```text
 list_devices
 device_tools
+
+browser_list_tabs
+browser_get_current_tab
+browser_read_page
+browser_get_selected_text
+browser_extract_links
+browser_extract_table
+
 list_directory
 read_file
 get_file_info
@@ -395,7 +430,15 @@ stop_process
 write_file
 edit_block
 undo_last_change
+
+create_automation
+create_agent_goal
+list_automations
+get_automation
+manage_automation
 ```
+
+The automation tools create and manage durable control-plane state. They do not grant new device capabilities: when an automation executes on a computer, the normal device ownership, skill policy, Workspace Scope and Sensitive Path Policy checks still apply.
 
 Before a device call is forwarded, the relay verifies:
 

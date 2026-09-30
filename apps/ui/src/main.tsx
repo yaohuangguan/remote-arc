@@ -33,6 +33,10 @@ type Device = {
   undo_enabled?: boolean;
   policy_enforcement_available?: boolean;
   undo_history_available?: boolean;
+  background_agent_available?: boolean;
+  background_enabled?: boolean | null;
+  background_service?: string | null;
+  background_seen_at?: string | null;
 };
 
 type UndoAction = {
@@ -184,7 +188,63 @@ type MonitorState = {
   incidents: MonitorIncident[];
 };
 
-type DashboardTab = "overview" | "devices" | "connect" | "security" | "monitor" | "settings";
+type AutomationKind = "long_task" | "condition_watch" | "schedule_watch" | "goal_loop";
+type AutomationCreateKind = AutomationKind | "agent_goal";
+type AgentGoalTool = "list_directory" | "read_file" | "get_file_info" | "write_file" | "edit_block" | "start_process";
+type AutomationStatus =
+  | "waiting" | "running" | "waiting_for_device" | "waiting_for_event"
+  | "paused" | "completed" | "failed"
+  | "cancelled" | "expired";
+
+type Automation = {
+  id: string;
+  user_id: string;
+  name: string;
+  kind: AutomationKind;
+  status: AutomationStatus;
+  device_id: string | null;
+  trigger_json: string | null;
+  action_json: string;
+  goal_json: string | null;
+  state_json: string | null;
+  interval_seconds: number;
+  next_run_at: string | null;
+  expires_at: string | null;
+  max_runs: number;
+  run_count: number;
+  last_run_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type AutomationDraft = {
+  name: string;
+  kind: AutomationCreateKind;
+  device_id: string;
+  command: string;
+  cwd: string;
+  goal_command: string;
+  agent_objective: string;
+  agent_success_criteria: string;
+  agent_workspace: string;
+  agent_verify_command: string;
+  agent_max_iterations: string;
+  agent_allowed_tools: AgentGoalTool[];
+  interval_minutes: string;
+  schedule_minutes: string;
+  max_runs: string;
+  condition_source: "github" | "generic";
+  condition_event: string;
+  condition_match: string;
+  condition_action: "device_command" | "github_merge";
+  github_owner: string;
+  github_repo: string;
+  github_pr: string;
+  github_merge_method: "merge" | "squash" | "rebase";
+};
+
+type DashboardTab = "overview" | "devices" | "automations" | "connect" | "security" | "monitor" | "settings";
 
 const MARKETING_ORIGIN = "https://remotearc.app";
 const APP_ORIGIN = "https://mcp.remotearc.app";
@@ -201,6 +261,7 @@ function cursorMcpInstallUrl() {
 const DASHBOARD_PATHS: Record<DashboardTab, string> = {
   overview: "/overview",
   devices: "/devices",
+  automations: "/automations",
   connect: "/connect",
   security: "/security",
   monitor: "/monitor",
@@ -281,6 +342,7 @@ function DashboardNavIcon({ tab }: { tab: DashboardTab }) {
   };
   if (tab === "overview") return <svg {...common}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
   if (tab === "devices") return <svg {...common}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
+  if (tab === "automations") return <svg {...common}><path d="M4 12a8 8 0 0 1 14.6-4.5"/><path d="M18 3v5h-5"/><path d="M20 12a8 8 0 0 1-14.6 4.5"/><path d="M6 21v-5h5"/></svg>;
   if (tab === "connect") return <svg {...common}><path d="M8.5 12.5 12 9l3.5 3.5"/><path d="M12 9v9"/><path d="M5 6.5A4.5 4.5 0 0 1 9.5 2h5A4.5 4.5 0 0 1 19 6.5"/></svg>;
   if (tab === "security") return <svg {...common}><path d="M12 3 5 6v5c0 4.7 2.7 7.8 7 10 4.3-2.2 7-5.3 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>;
   if (tab === "monitor") return <svg {...common}><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>;
@@ -412,7 +474,7 @@ function PublicHeader({ user }: { user?: User | null }) {
                 <strong>{tr("Security", "安全")}</strong>
                 <small>{tr("Trust boundaries, permissions and limits", "信任边界、权限与真实限制")}</small>
               </a>
-              <a href="https://github.com/yaohuangguan/remote-arc/releases">
+              <a href="/releases">
                 <strong>{tr("Releases", "版本发布")}</strong>
                 <small>{tr("What's new in Remote Arc", "查看 Remote Arc 的版本更新")}</small>
               </a>
@@ -494,9 +556,16 @@ function PairDevice({
   const [code, setCode] = useState(initialCode);
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [message, setMessage] = useState("");
-  const [approved, setApproved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [approvedDeviceId, setApprovedDeviceId] = useState("");
+  const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
+  const [setupStep, setSetupStep] = useState<"permissions" | "workspace" | "done">("permissions");
+  const [directoryBrowser, setDirectoryBrowser] = useState<DirectoryBrowser | null>(null);
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [setupError, setSetupError] = useState("");
+  const [terminalConfirm, setTerminalConfirm] = useState(false);
+  const [backgroundRequested, setBackgroundRequested] = useState(true);
 
   async function lookup(targetCode = code) {
     if (!targetCode || !user) return;
@@ -519,6 +588,34 @@ function PairDevice({
     if (user && initialCode) void lookup(initialCode);
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!approvedDeviceId || setupStep === "done") return;
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const refreshPairedDevice = async () => {
+      try {
+        const response = await fetch("/api/devices");
+        if (!response.ok) return;
+        const devices = (await response.json()) as Device[];
+        const device = devices.find((item) => item.id === approvedDeviceId) || null;
+        if (!cancelled && device) {
+          setPairedDevice(device);
+        }
+      } finally {
+        if (!cancelled) {
+          timer = window.setTimeout(() => void refreshPairedDevice(), 1400);
+        }
+      }
+    };
+
+    void refreshPairedDevice();
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [approvedDeviceId, setupStep]);
+
   async function approve() {
     if (!pairing) return;
     setBusy(true);
@@ -529,15 +626,262 @@ function PairDevice({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ user_code: pairing.user_code }),
       });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(payload.error || tr("Could not approve device", "设备授权失败"));
-      setApproved(true);
+      const payload = (await response.json()) as {
+        error?: string;
+        device?: { id: string; name: string; platform: string; arch: string | null };
+      };
+      if (!response.ok || !payload.device?.id) {
+        throw new Error(payload.error || tr("Could not approve device", "设备授权失败"));
+      }
+      setApprovedDeviceId(payload.device.id);
+      setPairedDevice({
+        id: payload.device.id,
+        name: payload.device.name,
+        platform: payload.device.platform,
+        arch: payload.device.arch,
+        hostname: pairing.hostname,
+        created_at: new Date().toISOString(),
+        last_seen: null,
+        status: "offline",
+        tools: [],
+        available_tools: [],
+        allowed_tools: [...SAFE_DEVICE_TOOLS],
+        workspace_roots: [],
+        sensitive_paths: [],
+        sensitive_allow_paths: [],
+        protect_sensitive_paths: true,
+        undo_enabled: true,
+        background_agent_available: false,
+        background_enabled: null,
+        background_service: null,
+      });
+      setSetupStep("permissions");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
   }
+
+  async function browseWorkspace(path = "~") {
+    if (!approvedDeviceId) return;
+    setDirectoryLoading(true);
+    setSetupError("");
+    try {
+      const response = await fetch(
+        "/api/devices/" +
+          encodeURIComponent(approvedDeviceId) +
+          "/directories?path=" +
+          encodeURIComponent(path),
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        browser?: DirectoryBrowser;
+        error?: string;
+      };
+      if (!response.ok || !payload.browser) {
+        throw new Error(
+          payload.error ||
+            tr("Directory browsing is unavailable until the device is online.", "设备上线后才能浏览目录。"),
+        );
+      }
+      setDirectoryBrowser(payload.browser);
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setDirectoryLoading(false);
+    }
+  }
+
+  async function openWorkspacePicker() {
+    setSetupStep("workspace");
+    if (!directoryBrowser) await browseWorkspace("~");
+  }
+
+  async function saveTools(nextTools: readonly string[]) {
+    if (!approvedDeviceId) return false;
+    const available = pairedDevice?.available_tools || pairedDevice?.tools || [];
+    const supported =
+      available.length > 0
+        ? nextTools.filter((tool) => available.includes(tool))
+        : [...nextTools];
+
+    const response = await fetch(
+      "/api/devices/" + encodeURIComponent(approvedDeviceId) + "/tools",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ allowed_tools: supported }),
+      },
+    );
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(payload.error || tr("Could not save device permissions.", "无法保存设备权限。"));
+    }
+    setPairedDevice((current) =>
+      current ? { ...current, allowed_tools: supported } : current,
+    );
+    return true;
+  }
+
+  async function enableFileEditing() {
+    if (!approvedDeviceId) return;
+    setBusy(true);
+    setSetupError("");
+    try {
+      const current = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
+      await saveTools([
+        ...current,
+        "write_file",
+        "edit_block",
+        "undo_last_change",
+      ]);
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyWorkspaceScope() {
+    if (!directoryBrowser || !approvedDeviceId) return;
+    setBusy(true);
+    setSetupError("");
+    try {
+      const policyResponse = await fetch(
+        "/api/devices/" + encodeURIComponent(approvedDeviceId) + "/policy",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            workspace_roots: [directoryBrowser.path],
+            sensitive_paths: pairedDevice?.sensitive_paths || [],
+            sensitive_allow_paths: pairedDevice?.sensitive_allow_paths || [],
+            protect_sensitive_paths: pairedDevice?.protect_sensitive_paths ?? true,
+            undo_enabled: pairedDevice?.undo_enabled ?? true,
+          }),
+        },
+      );
+      if (!policyResponse.ok) {
+        const payload = (await policyResponse.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error || tr("Could not save Workspace Scope.", "无法保存 Workspace Scope。"));
+      }
+
+      setPairedDevice((current) =>
+        current ? { ...current, workspace_roots: [directoryBrowser.path] } : current,
+      );
+      setSetupStep("permissions");
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function enableTerminal() {
+    setBusy(true);
+    setSetupError("");
+    try {
+      const current = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
+      await saveTools([...current, "start_process"]);
+      setTerminalConfirm(false);
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function finishSetup() {
+    if (!approvedDeviceId) return;
+    if (pairedDevice?.status !== "online" || pairedDevice.background_agent_available !== true) {
+      setSetupError(
+        tr(
+          "Wait for the local Remote Arc agent to connect before finishing setup.",
+          "请等待本机 Remote Arc Agent 连接后再完成设置。",
+        ),
+      );
+      return;
+    }
+
+    setBusy(true);
+    setSetupError("");
+    try {
+      const response = await fetch(
+        "/api/devices/" + encodeURIComponent(approvedDeviceId) + "/background",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ enabled: backgroundRequested }),
+        },
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        enabled?: boolean;
+        status?: {
+          enabled?: boolean;
+          active?: boolean;
+          service?: string;
+          detail?: string;
+        };
+      };
+      if (!response.ok) {
+        throw new Error(
+          payload.error ||
+            tr(
+              "Could not apply the background connection setting.",
+              "无法应用后台连接设置。",
+            ),
+        );
+      }
+
+      const actualEnabled =
+        payload.enabled === true || payload.status?.enabled === true;
+      if (backgroundRequested && !actualEnabled) {
+        throw new Error(
+          payload.status?.detail ||
+            tr(
+              "Background service could not be installed. This terminal session is still connected.",
+              "后台服务安装失败，当前终端会话仍保持连接。",
+            ),
+        );
+      }
+
+      setPairedDevice((current) =>
+        current
+          ? {
+              ...current,
+              background_enabled: actualEnabled,
+              background_service:
+                payload.status?.service || current.background_service || null,
+              background_seen_at: new Date().toISOString(),
+            }
+          : current,
+      );
+      setSetupStep("done");
+    } catch (error) {
+      setSetupError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+  const availableTools = pairedDevice?.available_tools || pairedDevice?.tools || [];
+  const fileEditingSupported =
+    pairedDevice?.status === "online" &&
+    ["write_file", "edit_block", "undo_last_change"].every((tool) =>
+      availableTools.includes(tool),
+    );
+  const terminalSupported =
+    pairedDevice?.status === "online" && availableTools.includes("start_process");
+  const enabledTools = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
+  const fileEditingEnabled =
+    enabledTools.includes("write_file") &&
+    enabledTools.includes("edit_block") &&
+    enabledTools.includes("undo_last_change");
+  const terminalEnabled = enabledTools.includes("start_process");
+  const backgroundCapabilityReady =
+    pairedDevice?.status === "online" &&
+    pairedDevice.background_agent_available === true;
+  const backgroundActuallyEnabled = pairedDevice?.background_enabled === true;
 
   if (user === undefined) {
     return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Checking your Remote Arc account.", "正在检查 Remote Arc 账户。")} />;
@@ -568,14 +912,367 @@ function PairDevice({
     );
   }
 
-  if (approved) {
+  if (approvedDeviceId && setupStep === "done") {
+    const copyEndpoint = () => {
+      void navigator.clipboard?.writeText(MCP_ENDPOINT).catch(() => undefined);
+    };
+    const agentTargets = [
+      {
+        id: "chatgpt",
+        name: "ChatGPT",
+        icon: "/ai-openai.svg",
+        href: CHATGPT_PLUGIN_DIRECTORY_URL,
+        detail: tr("Find Remote Arc in the Plugin Directory", "在 Plugin Directory 中找到 Remote Arc"),
+        action: tr("Open Plugins", "打开 Plugins"),
+        copyEndpoint: false,
+      },
+      {
+        id: "claude",
+        name: "Claude",
+        icon: "/ai-claude.svg",
+        href: CLAUDE_CONNECTORS_URL,
+        detail: tr("Remote MCP endpoint will be copied for you", "会自动复制 Remote MCP 地址"),
+        action: tr("Open Connectors", "打开 Connectors"),
+        copyEndpoint: true,
+      },
+      {
+        id: "cursor",
+        name: "Cursor",
+        icon: "/ai-cursor.svg",
+        href: cursorMcpInstallUrl(),
+        detail: tr("One-click MCP install, then complete OAuth", "一键添加 MCP，然后完成 OAuth"),
+        action: tr("Add to Cursor", "添加到 Cursor"),
+        copyEndpoint: false,
+      },
+      {
+        id: "other",
+        name: tr("Other MCP", "其他 MCP"),
+        icon: "",
+        href: MARKETING_ORIGIN + "/docs/mcp",
+        detail: tr("Copy the endpoint and use your client's MCP setup", "复制 Endpoint，并在客户端的 MCP 设置中添加"),
+        action: tr("Copy & open docs", "复制并打开文档"),
+        copyEndpoint: true,
+      },
+    ];
+
     return (
       <CenteredCard
-        title={tr("Device connected", "设备已连接")}
-        body={tr("Authorization is complete. Return to your terminal — Remote Arc will connect automatically.", "授权完成。返回终端，Remote Arc 会自动完成连接。")}
+        title={tr("Computer ready", "电脑已就绪")}
+        body={tr(
+          "The computer is paired and the permissions below are active. Connect the AI you want to use next; you can add more clients later.",
+          "电脑已经配对，下面的权限已经生效。接下来连接你要使用的 AI；之后还可以继续添加其他客户端。",
+        )}
       >
         <div className="successMark">✓</div>
-        <a className="secondaryLink" href="/">{tr("Back to dashboard", "返回控制台")}</a>
+        <div className="pairSetupSummary">
+          <div>
+            <span>{tr("Background connection", "后台连接")}</span>
+            <strong>
+              {backgroundActuallyEnabled
+                ? tr("Enabled", "已开启")
+                : tr("Foreground only", "仅前台运行")}
+            </strong>
+          </div>
+          <div><span>{tr("Read access", "读取权限")}</span><strong>{tr("Enabled", "已开启")}</strong></div>
+          <div><span>{tr("File editing", "文件编辑")}</span><strong>{fileEditingEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
+          <div><span>{tr("Terminal", "终端")}</span><strong>{terminalEnabled ? tr("Enabled", "已开启") : tr("Off", "未开启")}</strong></div>
+        </div>
+
+        <section className="pairAgentConnect">
+          <div className="pairAgentConnectIntro">
+            <span className="eyebrow">{tr("NEXT · CONNECT YOUR AI", "下一步 · 连接你的 AI")}</span>
+            <h3>{tr("Use this computer from the agent you already work with.", "从你正在使用的 AI 里开始操作这台电脑。")}</h3>
+            <p>{tr(
+              "Pairing the computer and authorizing an AI client are separate. Choose one now, or connect more later from Dashboard → Connect AI.",
+              "电脑配对与 AI 客户端授权是两条独立关系。现在选择一个，之后也可以从 Dashboard → Connect AI 继续添加。",
+            )}</p>
+          </div>
+
+          <div className="pairAgentGrid">
+            {agentTargets.map((agent) => (
+              <a
+                className="pairAgentOption"
+                href={agent.href}
+                key={agent.id}
+                target="_blank"
+                rel="noreferrer"
+                onClick={agent.copyEndpoint ? copyEndpoint : undefined}
+              >
+                {agent.icon ? (
+                  <img src={agent.icon} alt="" />
+                ) : (
+                  <span className="pairMcpIcon">MCP</span>
+                )}
+                <div>
+                  <strong>{agent.name}</strong>
+                  <small>{agent.detail}</small>
+                </div>
+                <b>{agent.action} →</b>
+              </a>
+            ))}
+          </div>
+
+          <div className="pairAgentEndpoint">
+            <span>{tr("Remote MCP endpoint", "Remote MCP 地址")}</span>
+            <code>{MCP_ENDPOINT}</code>
+            <CopyButton value={MCP_ENDPOINT} />
+          </div>
+        </section>
+
+        <div className="pairDoneSecondary">
+          <a href="/connect">{tr("Connect another AI later", "之后连接其他 AI")} →</a>
+          <a href="/devices">{tr("Open Devices", "打开设备页")} →</a>
+        </div>
+      </CenteredCard>
+    );
+  }
+
+  if (approvedDeviceId && setupStep === "workspace") {
+    return (
+      <CenteredCard
+        title={tr("Choose a workspace", "选择工作区")}
+        body={tr(
+          "Workspace Scope is optional. If you choose a folder, Remote Arc will limit normal file reads and edits to that folder while sensitive paths stay protected.",
+          "Workspace Scope 是可选的。选择目录后，Remote Arc 会把普通文件读取和编辑限制在该目录内，同时继续保护敏感路径。",
+        )}
+      >
+        <div className="pairWorkspacePath">
+          <code>{directoryBrowser?.path || tr("Waiting for device…", "等待设备上线…")}</code>
+          {directoryBrowser?.parent && (
+            <button className="ghostButton small" onClick={() => void browseWorkspace(directoryBrowser.parent!)}>
+              ↑ {tr("Parent", "上一级")}
+            </button>
+          )}
+        </div>
+
+        <div className="pairWorkspaceList">
+          {directoryLoading && <div className="pairSetupEmpty">{tr("Loading folders…", "正在加载目录…")}</div>}
+          {!directoryLoading && directoryBrowser?.directories.map((entry) => (
+            <button key={entry.path} onClick={() => void browseWorkspace(entry.path)}>
+              <span>{entry.type === "symlink" ? "↗" : "▣"}</span>
+              <strong>{entry.name}</strong>
+              <small>›</small>
+            </button>
+          ))}
+          {!directoryLoading && directoryBrowser && !directoryBrowser.directories.length && (
+            <div className="pairSetupEmpty">{tr("No visible child folders.", "没有可见的子目录。")}</div>
+          )}
+        </div>
+
+        {directoryBrowser && directoryBrowser.protected_entries_omitted > 0 && (
+          <p className="pairSetupNote">{tr(
+            directoryBrowser.protected_entries_omitted + " protected folder(s) are hidden.",
+            "有 " + directoryBrowser.protected_entries_omitted + " 个受保护目录已隐藏。",
+          )}</p>
+        )}
+        {setupError && <p className="errorText">{setupError}</p>}
+
+        <div className="pairSetupActions">
+          <button className="ghostButton" onClick={() => setSetupStep("permissions")}>
+            {tr("Back", "返回")}
+          </button>
+          <button
+            className="primaryButton"
+            disabled={!directoryBrowser || directoryLoading || busy}
+            onClick={() => void applyWorkspaceScope()}
+          >
+            {busy ? tr("Saving…", "正在保存…") : tr("Use this folder", "使用此目录")}
+          </button>
+        </div>
+      </CenteredCard>
+    );
+  }
+
+  if (approvedDeviceId) {
+    return (
+      <CenteredCard
+        title={tr("Choose what AI can do", "选择 AI 可以做什么")}
+        body={tr(
+          "Your computer is paired. Start with the safe default, then opt in to file editing or terminal execution when you need them.",
+          "电脑已经配对。默认从安全的只读权限开始，需要时再主动开启文件编辑或终端执行。",
+        )}
+      >
+        <div className="pairConnectedDevice">
+          <div className="deviceIcon large">{platformGlyph(pairedDevice?.platform)}</div>
+          <div>
+            <strong>{pairedDevice?.name || pairing?.device_name}</strong>
+            <span>
+              {pairedDevice?.status === "online"
+                ? tr("Connected and ready", "已连接，可以使用")
+                : tr("Waiting for the local agent to connect…", "正在等待本地 Agent 连接…")}
+            </span>
+          </div>
+          <i className={"pairStatusDot " + (pairedDevice?.status === "online" ? "online" : "")} />
+        </div>
+
+        <div className="pairPermissionStack">
+          <section className={"pairPermissionCard " + (backgroundActuallyEnabled ? "enabled" : "")}>
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">↻</span>
+                <div>
+                  <div className="labelWithHelp">
+                    <strong>{tr("Background connection", "后台连接")}</strong>
+                    <HelpTip
+                      label={tr("How background reconnect works", "后台重连如何工作")}
+                      text={tr(
+                        "macOS uses launchd, Windows uses Task Scheduler, and Linux uses systemd --user. Locking the screen does not stop the agent. During sleep the network is unavailable; after wake, Wi-Fi changes, or transient Relay disconnects, the agent reconnects automatically. Turning this off keeps the current npx session in the foreground and does not install login autostart.",
+                        "macOS 使用 launchd，Windows 使用 Task Scheduler，Linux 使用 systemd --user。锁屏不会停止 Agent。睡眠时网络不可用；唤醒、Wi-Fi 切换或 Relay 短暂断开后，Agent 会自动重连。关闭后会保持当前 npx 会话前台连接，不安装登录自启。",
+                      )}
+                    />
+                  </div>
+                  <small>
+                    {backgroundActuallyEnabled
+                      ? tr("Installed locally", "本机已安装")
+                      : backgroundRequested
+                        ? tr("Recommended · selected by default", "推荐 · 默认选中")
+                        : tr("Foreground only", "仅前台运行")}
+                  </small>
+                </div>
+              </div>
+              <label className="compactSwitch">
+                <input
+                  type="checkbox"
+                  checked={backgroundRequested}
+                  disabled={!backgroundCapabilityReady || busy}
+                  onChange={(event) => setBackgroundRequested(event.target.checked)}
+                />
+                <span />
+              </label>
+            </div>
+            <p>
+              {backgroundRequested
+                ? tr(
+                    "When you finish setup, Remote Arc will install the OS login service and verify the local result before showing it as enabled.",
+                    "完成设置时，Remote Arc 会安装系统登录后台服务，并在本机确认成功后才显示为已开启。",
+                  )
+                : tr(
+                    "No login autostart will be installed. Keep this terminal session open while you want the computer reachable.",
+                    "不会安装登录自启。需要电脑保持可连接时，请保持当前终端会话运行。",
+                  )}
+            </p>
+            {!backgroundCapabilityReady && (
+              <small className="pairSetupNote">
+                {tr(
+                  "Waiting for the local agent before this choice can be applied.",
+                  "正在等待本机 Agent 上线，上线后才能应用此选项。",
+                )}
+              </small>
+            )}
+          </section>
+          <section className="pairPermissionCard enabled">
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">R</span>
+                <div>
+                  <strong>{tr("Read access", "读取权限")}</strong>
+                  <small>{tr("Safe default", "安全默认")}</small>
+                </div>
+              </div>
+              <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>
+            </div>
+            <ul>
+              <li>{tr("Browse files and folders", "浏览文件和目录")}</li>
+              <li>{tr("Read file contents and metadata", "读取文件内容与元数据")}</li>
+              <li>{tr("View running processes", "查看运行中的进程")}</li>
+            </ul>
+          </section>
+
+          <section className={"pairPermissionCard " + (fileEditingEnabled ? "enabled" : "")}>
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">✎</span>
+                <div>
+                  <strong>{tr("File editing", "文件编辑")}</strong>
+                  <small>{tr("Recommended for coding, documents and data", "推荐用于开发、文档和数据任务")}</small>
+                </div>
+              </div>
+              {fileEditingEnabled && <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>}
+            </div>
+            <p>{tr(
+              "Create and edit files with Sensitive Path Protection and Local Undo. You can optionally add a Workspace Scope to limit normal file access to one folder.",
+              "开启文件创建与编辑，并继续使用 Sensitive Path Protection 和 Local Undo。你也可以选择添加 Workspace Scope，把普通文件访问限制在一个目录内。",
+            )}</p>
+            {!fileEditingEnabled ? (
+              <button
+                className="primaryButton"
+                disabled={!fileEditingSupported || busy}
+                onClick={() => void enableFileEditing()}
+              >
+                {fileEditingSupported
+                  ? (busy ? tr("Enabling…", "正在开启…") : tr("Enable file editing", "开启文件编辑"))
+                  : tr("Waiting for device capability…", "等待设备能力上线…")}
+              </button>
+            ) : (
+              <div className="pairWorkspaceControl">
+                <div>
+                  <span>{tr("Workspace Scope", "Workspace Scope")}</span>
+                  <code>
+                    {pairedDevice?.workspace_roots?.[0] ||
+                      tr("All non-sensitive paths", "所有非敏感路径")}
+                  </code>
+                </div>
+                <button className="ghostButton" onClick={() => void openWorkspacePicker()}>
+                  {pairedDevice?.workspace_roots?.length
+                    ? tr("Change workspace", "更改工作区")
+                    : tr("Limit to a workspace", "限制到工作区")}
+                </button>
+              </div>
+            )}
+          </section>
+
+          <section className={"pairPermissionCard terminal " + (terminalEnabled ? "enabled" : "")}>
+            <div className="pairPermissionHead">
+              <div>
+                <span className="pairPermissionIcon">›_</span>
+                <div>
+                  <strong>{tr("Terminal access", "终端权限")}</strong>
+                  <small>{tr("Advanced", "高级功能")}</small>
+                </div>
+              </div>
+              {terminalEnabled && <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>}
+            </div>
+            <p>{tr(
+              "Allow AI to run shell commands. Commands can modify local state or external services, and Workspace Scope is not a complete OS sandbox.",
+              "允许 AI 执行 Shell 命令。命令可能修改本地状态或外部服务，Workspace Scope 也不是完整的操作系统沙箱。",
+            )}</p>
+            {!terminalEnabled && !terminalConfirm && (
+              <button
+                className="ghostButton"
+                disabled={!terminalSupported}
+                onClick={() => setTerminalConfirm(true)}
+              >
+                {tr("Enable terminal access", "开启终端权限")}
+              </button>
+            )}
+            {!terminalEnabled && terminalConfirm && (
+              <div className="pairTerminalConfirm">
+                <span>{tr("Terminal commands can have effects that Local Undo cannot reverse.", "终端命令可能产生 Local Undo 无法撤销的影响。")}</span>
+                <div>
+                  <button className="ghostButton" onClick={() => setTerminalConfirm(false)}>{tr("Cancel", "取消")}</button>
+                  <button className="dangerConfirmButton" disabled={busy} onClick={() => void enableTerminal()}>
+                    {busy ? tr("Enabling…", "正在开启…") : tr("Confirm terminal access", "确认开启终端")}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+
+        {setupError && <p className="errorText">{setupError}</p>}
+
+        <div className="pairSetupFooter">
+          <span>{tr("You can change every permission later from Devices.", "之后可以在设备页随时修改所有权限。")}</span>
+          <button
+            className="primaryButton"
+            disabled={!backgroundCapabilityReady || busy}
+            onClick={() => void finishSetup()}
+          >
+            {busy
+              ? tr("Saving setup…", "正在保存设置…")
+              : tr("Finish setup", "完成设置")}
+          </button>
+        </div>
       </CenteredCard>
     );
   }
@@ -611,10 +1308,10 @@ function PairDevice({
           </div>
           <div className="permissionBox">
             <div>
-              <strong>{tr("Developer access", "开发者权限")}</strong>
-              <span>{tr("Files, processes and development commands", "文件、进程与开发命令")}</span>
+              <strong>{tr("Read-only access", "只读权限")}</strong>
+              <span>{tr("Files, folders, metadata and process visibility", "文件、目录、元数据与进程可见性")}</span>
             </div>
-            <span className="permissionBadge">{tr("Local policy enforced", "本机权限策略生效")}</span>
+            <span className="permissionBadge">{tr("Safe default", "安全默认")}</span>
           </div>
           <button className="approveButton" onClick={() => void approve()} disabled={busy}>
             {busy ? tr("Authorizing…", "授权中…") : tr("Authorize this device", "授权此设备")}
@@ -685,7 +1382,15 @@ function OAuthConsent({ user }: { user: User | null | undefined }) {
                     ? tr("See linked computers and online state.", "查看已连接设备及在线状态。")
                     : scope === "computer:read"
                       ? tr("Read files, directories and process metadata.", "读取文件、目录与进程信息。")
-                      : tr("Edit files and run commands on devices that allow it.", "在允许的设备上编辑文件并运行命令。")}
+                      : scope === "computer:write"
+                        ? tr("Edit files and run commands on devices that allow it.", "在允许的设备上编辑文件并运行命令。")
+                        : scope === "browser:read"
+                          ? tr("Read content from browser tabs you explicitly share.", "读取你明确共享的浏览器标签页内容。")
+                          : scope === "automation:read"
+                            ? tr("View persistent tasks, watches and their run state.", "查看持久任务、监听及其运行状态。")
+                            : scope === "automation:write"
+                              ? tr("Create and manage persistent tasks that can continue after this chat ends.", "创建和管理可在当前聊天结束后继续运行的持久任务。")
+                              : tr("Allow durable Agent Goals to inspect results, re-plan and choose new approved actions over time.", "允许 Durable Agent Goal 持续读取结果、重新规划，并在已授权范围内选择新的后续动作。")}
                 </small>
               </span>
             </div>
@@ -1848,6 +2553,9 @@ function ConnectPage({ user }: { user?: User | null }) {
     ["computer:read", tr("Read files, directories and process metadata when the selected device allows it.", "在目标设备允许时读取文件、目录和进程元数据。")],
     ["computer:write", tr("Request edit and terminal tools; the selected device policy still decides whether they are available.", "请求编辑和终端工具；最终是否可用仍由目标设备策略决定。")],
     ["browser:read", tr("Read content from browser tabs explicitly shared by the user.", "读取用户明确共享的浏览器标签页内容。")],
+    ["automation:read", tr("View persistent tasks, watches and run state.", "查看持久任务、监听与运行状态。")],
+    ["automation:write", tr("Create and manage persistent work that can continue after the creating chat ends.", "创建和管理可在原聊天结束后继续运行的持久任务。")],
+    ["agent:write", tr("Allow durable Agent Goals to inspect results and adapt their next approved action over time.", "允许 Durable Agent Goal 根据执行结果持续调整后续已授权动作。")],
   ];
 
   return (
@@ -1939,6 +2647,7 @@ function DocsPage({ user }: { user?: User | null }) {
     ["Filesystem", "list_directory · read_file · get_file_info · write_file · edit_block · undo_last_change", tr("Read, inspect and optionally edit files under the selected device policy.", "在目标设备策略范围内读取、检查并按需编辑文件。")],
     ["Processes", "list_processes · start_process · process_status · process_output · stop_process", tr("Inspect processes, run commands and manage Remote Arc-started background processes.", "检查进程、运行命令并管理由 Remote Arc 启动的后台进程。")],
     ["Shared browser tab", "browser_list_tabs · browser_get_current_tab · browser_read_page · browser_get_selected_text · browser_extract_links · browser_extract_table", tr("Read-only context from tabs the user explicitly shares.", "读取用户明确共享标签页中的只读上下文。")],
+    ["Durable automations", "create_automation · create_agent_goal · list_automations · get_automation · manage_automation", tr("Create and manage deterministic persistent work plus adaptive Agent Goals that can re-plan after each result.", "创建和管理确定性的持久任务，以及能够根据每轮结果重新规划的 Adaptive Agent Goal。")],
   ];
 
   return (
@@ -1967,6 +2676,7 @@ function DocsPage({ user }: { user?: User | null }) {
             <a href="#docs-policy">{tr("Permission model", "权限模型")}</a>
             <a href="#docs-files">{tr("Files & Undo", "文件与 Undo")}</a>
             <a href="#docs-processes">{tr("Processes", "进程")}</a>
+            <a href="#docs-automations">{tr("Automations", "自动化")}</a>
             <a href="#docs-browser">{tr("Browser", "浏览器")}</a>
             <a href="#docs-tools">{tr("Tool reference", "工具参考")}</a>
             <a href="#docs-data">{tr("Data handling", "数据处理")}</a>
@@ -2071,6 +2781,29 @@ function DocsPage({ user }: { user?: User | null }) {
               )}</p>
             </section>
 
+            <section id="docs-automations">
+              <h2>{tr("Durable automations", "持久自动化")}</h2>
+              <p>{tr(
+                "A normal MCP tool call ends when its result is returned. Durable Automations move the task lifecycle into Remote Arc's control plane so a long command, webhook watch, recurring schedule or goal loop can continue after the creating chat is gone. The Worker stores task state in D1 and advances due work from a one-minute scheduler or a matching webhook event.",
+                "普通 MCP Tool Call 在返回结果后就结束。Durable Automations 把任务生命周期放进 Remote Arc 控制面，因此长命令、Webhook 监听、周期任务或 Goal Loop 可以在创建它的聊天结束后继续存在。Worker 将任务状态保存在 D1，并通过每分钟调度器或匹配的 Webhook 事件推进任务。",
+              )}</p>
+              <p>{tr(
+                "Long Task runs an approved command until it exits. Condition Watch waits for a webhook before starting a device or cloud action. Schedule Watch runs a plan at a future time or recurring interval. Goal Loop repeats the same work plan until verification succeeds. Agent Goal is different: each planning turn receives the latest bounded result, updates compact working memory, and may choose a different next approved tool action. An optional deterministic verification command must exit 0 before the Agent Goal can complete.",
+                "Long Task 会持续跟踪已批准命令直到退出；Condition Watch 等待 Webhook 后执行设备或云端动作；Schedule Watch 在未来时间或固定间隔执行；Goal Loop 重复同一工作计划直到验证成功。Agent Goal 则不同：每轮 Planner 都会读取最新的受限结果、更新精简工作记忆，并可在已批准工具范围内选择不同的下一步。还可以配置最终确定性验证命令，只有退出码为 0 才允许完成。",
+              )}</p>
+              <p>{tr(
+                "Persistent authority is explicit. Deterministic automations freeze the trigger and action plan. Agent Goals freeze the objective, success criteria, approved tool set, iteration/expiry limits and device permission snapshot; only the next action is chosen dynamically inside those boundaries. Routine reconnects and lost process handles recover without human approval. If the device security policy itself changes, unattended execution stops rather than inheriting a different trust boundary. A GitHub condition may instead run a cloud-side merge action through a repository-scoped GitHub App installation token, so the paired computer is not part of that action path.",
+                "持久权限是显式的。确定性 Automation 会冻结 Trigger 与 Action Plan；Agent Goal 则冻结 Objective、成功标准、已批准 Tool Set、迭代/到期限制和设备权限快照，只允许在这些边界内动态选择下一步。普通断线重连和进程句柄丢失不需要人工批准，会自动恢复；如果设备安全策略本身发生变化，无人值守执行会停止，而不是继承新的信任边界。GitHub Condition 也可以通过仓库范围的 GitHub App Installation Token 执行云端 Merge，因此无需依赖已配对电脑参与动作链路。",
+              )}</p>
+              <div className="articleCallout">
+                <strong>{tr("24/7 means reconnectable, not magically awake", "24/7 指可持续重连，不代表电脑永不休眠")}</strong>
+                <p>{tr(
+                  "The background agent can start at login and maintain or re-establish the outbound connection without an open terminal window. A sleeping, powered-off or network-disconnected computer is still offline; device-backed automations resume only after the agent reconnects.",
+                  "Background Agent 可以在登录后自启，并在无需打开终端窗口的情况下维持或恢复出站连接。但休眠、关机或断网的电脑仍然是 Offline；依赖设备的 Automation 会等 Agent 重连后再继续。",
+                )}</p>
+              </div>
+            </section>
+
             <section id="docs-browser">
               <h2>{tr("Shared browser context", "共享浏览器上下文")}</h2>
               <p>{tr(
@@ -2081,7 +2814,7 @@ function DocsPage({ user }: { user?: User | null }) {
 
             <section id="docs-tools">
               <h2>{tr("Public MCP tool reference", "公开 MCP Tool 参考")}</h2>
-              <p>{tr("The current relay exposes 19 user-facing tools. Dashboard-only helpers are not part of this public surface.", "当前 Relay 公开 19 个面向用户的工具；仅供 Dashboard 使用的内部辅助能力不计入此公开 Surface。")}</p>
+              <p>{tr("The current relay exposes 24 user-facing tools. Dashboard-only helpers are not part of this public surface.", "当前 Relay 公开 24 个面向用户的工具；仅供 Dashboard 使用的内部辅助能力不计入此公开 Surface。")}</p>
               <div className="toolReferenceList">
                 {toolGroups.map(([title, tools, body]) => (
                   <div key={title}>
@@ -2157,6 +2890,7 @@ function SecurityModelPage({ user }: { user?: User | null }) {
             <a href="#security-tools">{tr("Skill policy", "Skill 策略")}</a>
             <a href="#security-transport">{tr("Transport & relay", "传输与 Relay")}</a>
             <a href="#security-recovery">{tr("Recovery", "恢复")}</a>
+            <a href="#security-automations">{tr("Persistent tasks", "持久任务")}</a>
             <a href="#security-revoke">{tr("Revocation", "撤销")}</a>
             <a href="#security-nonclaims">{tr("What we do not claim", "我们不声称什么")}</a>
           </aside>
@@ -2236,7 +2970,7 @@ function SecurityModelPage({ user }: { user?: User | null }) {
               <table className="articleTable">
                 <thead><tr><th>{tr("Location", "位置")}</th><th>{tr("Examples", "示例")}</th></tr></thead>
                 <tbody>
-                  <tr><td>D1</td><td>{tr("Account, device metadata, credential hashes, OAuth grants, policy, usage and audit metadata.", "账户、设备元数据、凭证 Hash、OAuth Grant、策略、用量与审计元数据。")}</td></tr>
+                  <tr><td>D1</td><td>{tr("Account, device metadata, credential hashes, OAuth grants, policy, usage, audit metadata, and durable automation state/trigger metadata.", "账户、设备元数据、凭证 Hash、OAuth Grant、策略、用量、审计元数据以及持久 Automation 的状态与 Trigger 元数据。")}</td></tr>
                   <tr><td>{tr("Live relay path", "实时 Relay 链路")}</td><td>{tr("Active file contents, directory listings, process output and command results required for the current call.", "当前调用所需的文件内容、目录列表、进程输出与命令结果。")}</td></tr>
                   <tr><td>{tr("Device only", "仅设备")}</td><td>{tr("Raw device credential, filesystem/process state and Local Undo snapshot contents.", "原始设备凭证、文件系统/进程状态与 Local Undo 快照内容。")}</td></tr>
                 </tbody>
@@ -2252,6 +2986,22 @@ function SecurityModelPage({ user }: { user?: User | null }) {
               <p>{tr(
                 "Local Undo only covers supported file edits. It cannot reverse a deployment, package publish, API request, database mutation or arbitrary shell side effect.",
                 "Local Undo 只覆盖受支持的文件编辑，无法撤销部署、包发布、API 请求、数据库修改或任意 Shell 副作用。",
+              )}</p>
+            </section>
+
+            <section id="security-automations">
+              <h2>{tr("Persistent tasks freeze authority at creation time", "持久任务在创建时冻结权限")}</h2>
+              <p>{tr(
+                "A durable automation may execute hours after the MCP request that created it has ended. Deterministic automations therefore store an explicit trigger and action plan. Adaptive Agent Goals store a user-approved objective, success criteria, tool set, optional deterministic verification, iteration/expiry limits, target device and permission snapshot. The planner can reinterpret results and choose a different next action, but cannot expand those stored authority boundaries.",
+                "Durable Automation 可能在创建它的 MCP 请求结束数小时后才执行。确定性 Automation 会保存明确 Trigger 与 Action Plan；Adaptive Agent Goal 则保存用户批准的目标、成功标准、Tool Set、可选确定性验证、迭代/到期限制、目标设备和权限快照。Planner 可以重新理解结果并调整下一步，但不能扩大这些已经保存的权限边界。",
+              )}</p>
+              <p>{tr(
+                "Every future device action still passes the normal ownership, revocation, allowed-tool and local path-policy checks. Unattended tasks do not enter a mid-run approval queue: disconnects wait for the device, deterministic long tasks restart a lost attempt by default, and Agent Goals re-inspect state before choosing another action after a lost process handle. If the device security policy itself changes, execution stops and records the policy change instead of waiting for someone to approve it.",
+                "未来每次设备执行仍然经过正常的 Ownership、Revocation、Allowed Tool 与本地路径策略检查。无人值守任务不会在运行途中进入审批队列：断线时等待设备；确定性的长任务默认会在句柄丢失后重新启动当前尝试；Agent Goal 则会先重新检查状态，再决定下一步。如果设备安全策略本身发生变化，执行会停止并记录原因，而不是等待有人批准。",
+              )}</p>
+              <p>{tr(
+                "Condition Watch callback URLs contain a high-entropy secret and act as bearer capabilities. Only a SHA-256 hash is stored and delivery IDs can be deduplicated when supplied. A configured GitHub condition can merge one explicitly selected pull request with a repository-scoped GitHub App installation token. The current webhook transport still relies on the secret callback URL rather than claiming provider-specific GitHub HMAC verification.",
+                "Condition Watch 回调 URL 包含高熵 Secret，本身就是 Bearer Capability；云端只保存 SHA-256 Hash，并在提供 Delivery ID 时做去重。配置后的 GitHub Condition 可以使用仓库范围的 GitHub App Installation Token 合并一个明确指定的 Pull Request。当前 Webhook 传输仍依赖这个秘密回调 URL，不声称已经实现 GitHub Provider-specific HMAC 校验。",
               )}</p>
             </section>
 
@@ -2271,6 +3021,8 @@ function SecurityModelPage({ user }: { user?: User | null }) {
                 <li>{tr("Local Undo is not a general transaction rollback system.", "Local Undo 不是通用事务回滚系统。")}</li>
                 <li>{tr("Managed background processes are not a reboot-persistent service manager.", "受管后台进程不是跨重启持久化的服务管理器。")}</li>
                 <li>{tr("Browser context is currently read-only rather than full browser automation.", "浏览器上下文当前只读，而不是完整浏览器自动化。")}</li>
+                <li>{tr("Adaptive Agent Goals may choose different next actions over time, but only inside the approved objective, tool set, device policy, iteration/expiry limits and optional deterministic verification boundary.", "Adaptive Agent Goal 可以随执行结果调整下一步，但只能在已批准目标、Tool Set、设备策略、迭代/到期限制与可选确定性验证边界内行动。")}</li>
+                <li>{tr("24/7 background mode cannot keep a sleeping, powered-off or network-disconnected computer online.", "24/7 Background 模式无法让休眠、关机或断网的电脑继续保持在线。")}</li>
               </ul>
               <p>{tr(
                 "These are product boundaries, not footnotes. The safest deployment still depends on selecting an appropriate local OS user, granting only the skills a device needs, constraining paths where practical and revoking access when it is no longer required.",
@@ -3274,6 +4026,36 @@ function Dashboard({
   const [securityBusy, setSecurityBusy] = useState(false);
   const [monitorState, setMonitorState] = useState<MonitorState | null>(null);
   const [monitorLoading, setMonitorLoading] = useState(false);
+  const [automations, setAutomations] = useState<Automation[]>([]);
+  const [automationLoading, setAutomationLoading] = useState(false);
+  const [automationBusy, setAutomationBusy] = useState<string | null>(null);
+  const [showAutomationCreate, setShowAutomationCreate] = useState(false);
+  const [createdWebhook, setCreatedWebhook] = useState<string | null>(null);
+  const [automationDraft, setAutomationDraft] = useState<AutomationDraft>({
+    name: "",
+    kind: "long_task",
+    device_id: "",
+    command: "",
+    cwd: "",
+    goal_command: "",
+    agent_objective: "",
+    agent_success_criteria: "",
+    agent_workspace: "",
+    agent_verify_command: "",
+    agent_max_iterations: "30",
+    agent_allowed_tools: ["list_directory", "read_file", "get_file_info", "edit_block", "start_process"],
+    interval_minutes: "5",
+    schedule_minutes: "60",
+    max_runs: "",
+    condition_source: "github",
+    condition_event: "workflow_run",
+    condition_match: '{"action":"completed","workflow_run.conclusion":"success"}',
+    condition_action: "device_command",
+    github_owner: "yaohuangguan",
+    github_repo: "remote-arc",
+    github_pr: "",
+    github_merge_method: "merge",
+  });
   const [undoByDevice, setUndoByDevice] = useState<Record<string, UndoAction[]>>({});
   const [undoLoading, setUndoLoading] = useState<string | null>(null);
   const [undoErrors, setUndoErrors] = useState<Record<string, string>>({});
@@ -3405,6 +4187,251 @@ function Dashboard({
     return () => window.clearInterval(timer);
   }, [active, user.isAdmin]);
 
+  async function refreshAutomations() {
+    setAutomationLoading(true);
+    try {
+      const response = await fetch("/api/automations");
+      if (!response.ok) return;
+      const payload = await response.json() as { automations?: Automation[] };
+      setAutomations(Array.isArray(payload.automations) ? payload.automations : []);
+    } finally {
+      setAutomationLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (active !== "automations") return;
+    void refreshAutomations();
+    const timer = window.setInterval(() => void refreshAutomations(), 15_000);
+    return () => window.clearInterval(timer);
+  }, [active]);
+
+  useEffect(() => {
+    if (automationDraft.device_id || !devices.length) return;
+    const preferred = devices.find((device) => device.status === "online") || devices[0];
+    if (preferred) {
+      setAutomationDraft((current) => ({ ...current, device_id: preferred.id }));
+    }
+  }, [devices, automationDraft.device_id]);
+
+  async function createDashboardAutomation() {
+    if (UI_PREVIEW) return;
+    const name = automationDraft.name.trim();
+    const command = automationDraft.command.trim();
+    const isAgentGoal = automationDraft.kind === "agent_goal";
+    const isGitHubMerge =
+      automationDraft.kind === "condition_watch" &&
+      automationDraft.condition_action === "github_merge";
+
+    if (!name) {
+      await showNotice(
+        tr("Missing automation name", "缺少自动化名称"),
+        tr("Give this persistent task a name.", "请为这条持久任务填写名称。"),
+      );
+      return;
+    }
+    if (
+      isAgentGoal &&
+      (!automationDraft.device_id ||
+        !automationDraft.agent_objective.trim() ||
+        !automationDraft.agent_success_criteria.trim() ||
+        automationDraft.agent_allowed_tools.length === 0)
+    ) {
+      await showNotice(
+        tr("Agent Goal details required", "Agent Goal 信息不完整"),
+        tr(
+          "Choose a device, provide the objective and success criteria, and explicitly select at least one Agent Goal tool.",
+          "请选择设备、填写目标与成功标准，并明确选择至少一个 Agent Goal Tool。",
+        ),
+      );
+      return;
+    }
+    if (
+      isGitHubMerge &&
+      (!automationDraft.github_owner.trim() ||
+        !automationDraft.github_repo.trim() ||
+        !/^\d+$/.test(automationDraft.github_pr.trim()))
+    ) {
+      await showNotice(
+        tr("GitHub PR details required", "需要 GitHub PR 信息"),
+        tr(
+          "Repository owner, repository name and pull request number are required.",
+          "需要填写仓库 Owner、仓库名和 Pull Request 编号。",
+        ),
+      );
+      return;
+    }
+    if (!isAgentGoal && !isGitHubMerge && (!command || !automationDraft.device_id)) {
+      await showNotice(
+        tr("Missing automation details", "自动化信息不完整"),
+        tr("Device and command are required.", "设备和命令不能为空。"),
+      );
+      return;
+    }
+
+    const intervalMinutes = Number(automationDraft.interval_minutes || "5");
+    const scheduleMinutes = Number(automationDraft.schedule_minutes || "60");
+    const maxRunsRaw = automationDraft.max_runs.trim();
+    const body: Record<string, unknown> = {
+      name,
+      kind: automationDraft.kind,
+      interval_seconds: Math.max(
+        60,
+        Math.round((Number.isFinite(intervalMinutes) ? intervalMinutes : 5) * 60),
+      ),
+      ...(maxRunsRaw ? { max_runs: Math.max(0, Math.round(Number(maxRunsRaw))) } : {}),
+      recovery: "restart",
+    };
+
+    if (isAgentGoal) {
+      body.device_id = automationDraft.device_id;
+      body.agent_goal = {
+        objective: automationDraft.agent_objective.trim(),
+        success_criteria: automationDraft.agent_success_criteria.trim(),
+        ...(automationDraft.agent_workspace.trim()
+          ? { workspace: automationDraft.agent_workspace.trim() }
+          : {}),
+        ...(automationDraft.agent_verify_command.trim()
+          ? { verify_command: automationDraft.agent_verify_command.trim() }
+          : {}),
+        ...(automationDraft.agent_workspace.trim()
+          ? { verify_cwd: automationDraft.agent_workspace.trim() }
+          : {}),
+        max_iterations: Math.min(
+          100,
+          Math.max(1, Math.round(Number(automationDraft.agent_max_iterations || "30"))),
+        ),
+        allowed_tools: automationDraft.agent_allowed_tools,
+      };
+    } else if (isGitHubMerge) {
+      body.github_merge = {
+        owner: automationDraft.github_owner.trim(),
+        repo: automationDraft.github_repo.trim(),
+        pull_number: Number(automationDraft.github_pr),
+        merge_method: automationDraft.github_merge_method,
+      };
+    } else {
+      body.device_id = automationDraft.device_id;
+      body.command = command;
+      if (automationDraft.cwd.trim()) body.cwd = automationDraft.cwd.trim();
+    }
+
+    if (automationDraft.kind === "goal_loop") {
+      if (!automationDraft.goal_command.trim()) {
+        await showNotice(
+          tr("Goal check required", "需要目标验证"),
+          tr("Goal loops need a verification command. Exit code 0 means the goal has been reached.", "Goal Loop 需要验证命令；退出码 0 表示目标已经达成。"),
+        );
+        return;
+      }
+      body.goal = {
+        command: automationDraft.goal_command.trim(),
+        expected_exit_code: 0,
+        ...(automationDraft.cwd.trim() ? { cwd: automationDraft.cwd.trim() } : {}),
+      };
+    }
+
+    if (automationDraft.kind === "schedule_watch") {
+      body.schedule = {
+        every_seconds: Math.max(
+          60,
+          Math.round((Number.isFinite(scheduleMinutes) ? scheduleMinutes : 60) * 60),
+        ),
+      };
+    }
+
+    if (automationDraft.kind === "condition_watch") {
+      let match: Record<string, string | number | boolean | null> = {};
+      try {
+        const parsed = JSON.parse(automationDraft.condition_match || "{}") as unknown;
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not an object");
+        match = parsed as Record<string, string | number | boolean | null>;
+      } catch {
+        await showNotice(
+          tr("Invalid condition JSON", "条件 JSON 无效"),
+          tr("Match conditions must be a JSON object using dotted payload paths.", "Match 条件必须是一个使用点号路径的 JSON 对象。"),
+        );
+        return;
+      }
+      body.condition = {
+        source: isGitHubMerge ? "github" : automationDraft.condition_source,
+        ...(automationDraft.condition_event.trim() ? { event: automationDraft.condition_event.trim() } : {}),
+        match,
+      };
+    }
+
+    setAutomationBusy("create");
+    try {
+      const response = await fetch("/api/automations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const payload = await response.json().catch(() => ({})) as {
+        error?: string;
+        webhook?: { url?: string } | null;
+      };
+      if (!response.ok) {
+        await showNotice(
+          tr("Automation was not created", "自动化创建失败"),
+          payload.error || tr("The server rejected this automation.", "服务器拒绝了这条自动化。"),
+        );
+        return;
+      }
+      setCreatedWebhook(payload.webhook?.url || null);
+      setShowAutomationCreate(false);
+      setAutomationDraft((current) => ({
+        ...current,
+        name: "",
+        command: "",
+        goal_command: "",
+        agent_objective: "",
+        agent_success_criteria: "",
+        agent_verify_command: "",
+        github_pr: "",
+        max_runs: "",
+      }));
+      await refreshAutomations();
+    } finally {
+      setAutomationBusy(null);
+    }
+  }
+
+  async function manageDashboardAutomation(
+    automation: Automation,
+    action: "pause" | "resume" | "cancel",
+  ) {
+    if (UI_PREVIEW) return;
+    if (
+      action === "cancel" &&
+      !(await askConfirm(
+        tr("Cancel automation?", "取消自动化？"),
+        tr("Remote Arc will stop orchestration and best-effort stop its currently managed process.", "Remote Arc 会停止编排，并尽力停止当前由它管理的进程。"),
+        tr("Cancel automation", "取消自动化"),
+        "danger",
+      ))
+    ) return;
+
+    setAutomationBusy(automation.id + ":" + action);
+    try {
+      const response = await fetch(
+        "/api/automations/" + encodeURIComponent(automation.id) + "/" + action,
+        { method: "POST" },
+      );
+      const payload = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) {
+        await showNotice(
+          tr("Automation was not updated", "自动化更新失败"),
+          payload.error || tr("The server rejected this change.", "服务器拒绝了这次修改。"),
+        );
+        return;
+      }
+      await refreshAutomations();
+    } finally {
+      setAutomationBusy(null);
+    }
+  }
+
   async function setMcpPaused(paused: boolean) {
     setSecurityBusy(true);
     try {
@@ -3516,6 +4543,51 @@ function Dashboard({
     }
     await refreshAll();
     return true;
+  }
+
+  async function updateDeviceBackground(device: Device, enabled: boolean) {
+    if (device.status !== "online") {
+      await showNotice(
+        tr("Computer is offline", "电脑当前离线"),
+        tr(
+          "Background mode can only be changed while the local Remote Arc agent is online. If it was disabled previously, run npx remotelink once on that computer to reconnect it.",
+          "只有本机 Remote Arc Agent 在线时才能修改后台运行设置。如果之前已经关闭，请在那台电脑上运行一次 npx remotelink 重新连接。",
+        ),
+      );
+      return;
+    }
+    if (!device.background_agent_available) {
+      await showNotice(
+        tr("Update remotelink first", "请先更新 remotelink"),
+        tr(
+          "This computer is running an older Remote Arc client that does not support background-agent controls yet.",
+          "这台电脑正在运行旧版 Remote Arc 客户端，暂不支持后台 Agent 控制。",
+        ),
+      );
+      return;
+    }
+
+    const response = await fetch(
+      "/api/devices/" + encodeURIComponent(device.id) + "/background",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      },
+    );
+    const payload = await response.json().catch(() => ({})) as { error?: string };
+    if (!response.ok) {
+      await showNotice(
+        tr("Background setting was not updated", "后台设置未更新"),
+        payload.error ||
+          tr(
+            "Remote Arc could not update the background connection on this computer.",
+            "Remote Arc 无法更新这台电脑的后台连接设置。",
+          ),
+      );
+      return;
+    }
+    await refreshAll();
   }
 
   async function updateDeviceTools(device: Device, tool: string, enabled: boolean) {
@@ -3865,9 +4937,68 @@ function Dashboard({
     return event.event_type;
   };
 
+  const automationTime = (value: string | null) => {
+    if (!value) return "—";
+    const delta = new Date(value).getTime() - Date.now();
+    if (delta <= 0) return timeAgo(value);
+    if (delta < 60_000) return tr("in <1m", "<1 分钟后");
+    if (delta < 3_600_000) return tr("in " + Math.ceil(delta / 60_000) + "m", Math.ceil(delta / 60_000) + " 分钟后");
+    if (delta < 86_400_000) return tr("in " + Math.ceil(delta / 3_600_000) + "h", Math.ceil(delta / 3_600_000) + " 小时后");
+    return tr("in " + Math.ceil(delta / 86_400_000) + "d", Math.ceil(delta / 86_400_000) + " 天后");
+  };
+
+  const automationDisplayKind = (automation: Automation): AutomationCreateKind => {
+    if (automation.kind !== "goal_loop" || !automation.goal_json) return automation.kind;
+    try {
+      const goal = JSON.parse(automation.goal_json) as { type?: string };
+      return goal?.type === "agent_goal" ? "agent_goal" : automation.kind;
+    } catch {
+      return automation.kind;
+    }
+  };
+
+  const automationKindLabel = (kind: AutomationCreateKind) =>
+    kind === "long_task"
+      ? tr("Long task", "长任务")
+      : kind === "condition_watch"
+        ? tr("Condition watch", "条件监听")
+        : kind === "schedule_watch"
+          ? tr("Schedule", "定时任务")
+          : kind === "agent_goal"
+            ? tr("Agent goal", "Agent 目标")
+            : tr("Goal loop", "目标循环");
+
+  const automationStatusLabel = (value: AutomationStatus) =>
+    value === "waiting"
+      ? tr("Waiting", "等待中")
+      : value === "running"
+        ? tr("Running", "运行中")
+        : value === "waiting_for_device"
+          ? tr("Waiting for device", "等待设备")
+          : value === "waiting_for_event"
+            ? tr("Waiting for event", "等待事件")
+            : value === "paused"
+              ? tr("Paused", "已暂停")
+                : value === "completed"
+                  ? tr("Completed", "已完成")
+                  : value === "failed"
+                    ? tr("Failed", "失败")
+                    : value === "cancelled"
+                      ? tr("Cancelled", "已取消")
+                      : tr("Expired", "已过期");
+
+  const automationTerminal = (value: AutomationStatus) =>
+    ["completed", "failed", "cancelled", "expired"].includes(value);
+
+  const automationActiveCount = automations.filter((item) =>
+    ["waiting", "running", "waiting_for_device", "waiting_for_event"].includes(item.status),
+  ).length;
+  const backgroundConfiguredCount = devices.filter((device) => device.background_enabled === true).length;
+
   const navItems: Array<[DashboardTab, string]> = [
     ["overview", tr("Overview", "概览")],
     ["devices", tr("Devices", "设备")],
+    ["automations", tr("Automations", "自动化")],
     ["connect", tr("Connect AI", "连接 AI")],
     ["security", tr("Security", "安全")],
     ...(user.isAdmin ? [["monitor", tr("Monitor", "监控")] as [DashboardTab, string]] : []),
@@ -4026,6 +5157,50 @@ function Dashboard({
                       <div><span>{tr("Last seen", "最后在线")}</span><strong>{timeAgo(device.last_seen)}</strong></div>
                       <div><span>{tr("Enabled tools", "已启用工具")}</span><strong>{enabledTools.length} / {allTools.length}</strong></div>
                       <div><span>Device ID</span><strong>{device.id.slice(0,8)}</strong></div>
+                    </div>
+
+                    <div className="deviceBackgroundRow">
+                      <div>
+                        <div className="labelWithHelp">
+                          <strong>{tr("Background connection", "后台连接")}</strong>
+                          <HelpTip
+                            label={tr("About background connection", "了解后台连接")}
+                            text={tr(
+                              "macOS uses launchd, Windows uses Task Scheduler, and Linux uses systemd --user. Locking the screen does not stop the agent. During sleep the network is unavailable; after wake, Wi-Fi changes, or transient Relay disconnects, a WebSocket liveness watchdog detects stale connections and the agent reconnects with exponential backoff from 1 to 30 seconds. On Windows, the task starts at user logon, StartWhenAvailable is enabled, and task failures are retried. A powered-off or still-sleeping computer remains unavailable until the OS resumes. Turning this off removes login autostart; an offline device cannot be re-enabled from the cloud.",
+                              "macOS 使用 launchd，Windows 使用 Task Scheduler，Linux 使用 systemd --user。锁屏不会停止 Agent。电脑睡眠期间网络不可用；唤醒后、Wi-Fi 切换或 Relay 短暂断开时，WebSocket 存活检测会识别失效连接，并按 1 到 30 秒的指数退避自动重连。Windows 会在用户登录时启动任务，同时启用 StartWhenAvailable，并在任务异常失败后重试。电脑如果仍在睡眠或已经关机，则必须等操作系统恢复后才能重新在线。关闭此开关会移除登录自启动；设备已经离线时无法从云端重新开启。",
+                            )}
+                          />
+                        </div>
+                        <span>
+                          {!device.background_agent_available
+                            ? tr("Requires the next remotelink release", "需要新版 remotelink")
+                            : device.background_enabled === true
+                              ? tr(
+                                  "Starts at login · auto reconnect" +
+                                    (device.background_service ? " · " + device.background_service : ""),
+                                  "登录自启 · 自动重连" +
+                                    (device.background_service ? " · " + device.background_service : ""),
+                                )
+                              : device.background_enabled === false
+                                ? tr(
+                                    "Off · use npx remotelink locally to reconnect after this session ends",
+                                    "已关闭 · 当前会话结束后需在本机运行 npx remotelink 重新连接",
+                                  )
+                                : tr(
+                                    "Not configured · current session only",
+                                    "尚未配置 · 仅当前会话",
+                                  )}
+                        </span>
+                      </div>
+                      <label className="compactSwitch">
+                        <input
+                          type="checkbox"
+                          checked={device.background_enabled === true}
+                          disabled={device.status !== "online" || !device.background_agent_available}
+                          onChange={(event) => void updateDeviceBackground(device, event.target.checked)}
+                        />
+                        <span />
+                      </label>
                     </div>
 
                     <div className="deviceAccessSummary">
@@ -4461,6 +5636,551 @@ function Dashboard({
           </>
         )}
 
+        {active === "automations" && (
+          <>
+            <section className="overviewTopbar automationPageHeader">
+              <div>
+                <span className="eyebrow">{tr("AUTOMATIONS", "自动化")}</span>
+                <h1>{tr("Automations", "自动化")}</h1>
+                <p>{tr(
+                  "Persistent tasks and watches keep running after the chat that created them has ended.",
+                  "持久任务与监听不会依赖创建它们的聊天会话；对话结束后仍会继续运行。",
+                )}</p>
+              </div>
+              <div className="automationHeaderActions">
+                <button className="ghostButton" disabled={automationLoading} onClick={() => void refreshAutomations()}>
+                  {automationLoading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}
+                </button>
+                <button
+                  className="addButton"
+                  onClick={() => {
+                    setCreatedWebhook(null);
+                    setShowAutomationCreate((value) => !value);
+                  }}
+                >
+                  {showAutomationCreate ? tr("Close", "关闭") : "+ " + tr("New automation", "新建自动化")}
+                </button>
+              </div>
+            </section>
+
+            <section className="automationStats">
+              <article>
+                <span>{tr("Active", "活动任务")}</span>
+                <strong>{automationActiveCount}</strong>
+                <small>{tr("Running or waiting", "运行中或等待触发")}</small>
+              </article>
+              <article>
+                <span>{tr("Waiting for event", "等待事件")}</span>
+                <strong>{automations.filter((item) => item.status === "waiting_for_event").length}</strong>
+                <small>{tr("Webhook-driven watches", "Webhook 条件监听")}</small>
+              </article>
+              <article>
+                <span>{tr("Online agents", "在线 Agent")}</span>
+                <strong>{devices.filter((device) => device.status === "online").length}</strong>
+                <small>{tr("Available right now", "当前可接受任务")}</small>
+              </article>
+              <article>
+                <span>{tr("24/7 configured", "24/7 已配置")}</span>
+                <strong>{backgroundConfiguredCount}</strong>
+                <small>{tr("Start at login + reconnect", "登录自启 + 自动重连")}</small>
+              </article>
+            </section>
+
+            {createdWebhook && (
+              <section className="automationWebhookNotice">
+                <div>
+                  <span className="eyebrow">{tr("WEBHOOK CREATED", "WEBHOOK 已创建")}</span>
+                  <strong>{tr("Copy this URL now. It is shown only after creation.", "请现在复制这个 URL；它只会在创建后返回一次。")}</strong>
+                  <p>{tr(
+                    "Treat it like a secret bearer capability. For GitHub, add it as a repository webhook with JSON payloads and the workflow_run event.",
+                    "把它当作秘密 Bearer Capability。GitHub 中可将它添加为仓库 Webhook，Payload 使用 JSON，并监听 workflow_run 事件。",
+                  )}</p>
+                </div>
+                <div className="automationWebhookValue">
+                  <code>{createdWebhook}</code>
+                  <CopyButton value={createdWebhook} />
+                </div>
+                <button className="ghostButton small" onClick={() => setCreatedWebhook(null)}>{tr("Dismiss", "关闭")}</button>
+              </section>
+            )}
+
+            {showAutomationCreate && (
+              <section className="automationCreatePanel">
+                <div className="automationCreateIntro">
+                  <div>
+                    <span className="eyebrow">{tr("NEW AUTOMATION", "新建自动化")}</span>
+                    <h2>{tr("Persistent execution", "持久执行")}</h2>
+                  </div>
+                  <p>{tr(
+                    "The plan is frozen when you create it. Long-running work recovers automatically from disconnects and lost local process handles. If you later change the device security policy, Remote Arc stops the unattended task rather than waiting for approval or silently crossing the new boundary.",
+                    "创建后执行计划会被冻结。长任务遇到断线或本地进程句柄丢失时会自动恢复；如果之后你主动修改设备安全策略，Remote Arc 会停止该无人值守任务，而不是等待人工批准，也不会静默跨过新的权限边界。",
+                  )}</p>
+                </div>
+
+                <div className="automationKindTabs" role="tablist">
+                  {([
+                    ["long_task", tr("Long task", "长任务"), tr("Run once, even if it takes hours.", "运行一次，即使需要几个小时。")],
+                    ["condition_watch", tr("Condition", "条件监听"), tr("Wait for a webhook event, then run.", "等待 Webhook 事件后执行。")],
+                    ["schedule_watch", tr("Schedule", "定时任务"), tr("Run repeatedly on an interval.", "按固定间隔重复运行。")],
+                    ["goal_loop", tr("Goal loop", "目标循环"), tr("Repeat the same plan until verification passes.", "重复同一计划，直到验证通过。")],
+                    ["agent_goal", tr("Agent goal", "Agent 目标"), tr("Inspect results, rethink the plan, and adapt each round.", "每轮读取结果、重新规划并调整策略。")],
+                  ] as Array<[AutomationCreateKind, string, string]>).map(([kind, label, detail]) => (
+                    <button
+                      type="button"
+                      key={kind}
+                      className={automationDraft.kind === kind ? "active" : ""}
+                      onClick={() => setAutomationDraft((current) => ({ ...current, kind }))}
+                    >
+                      <strong>{label}</strong>
+                      <small>{detail}</small>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="automationForm">
+                  <label className="automationField">
+                    <span>{tr("Name", "名称")}</span>
+                    <input
+                      value={automationDraft.name}
+                      maxLength={120}
+                      placeholder={tr("Nightly integration test", "夜间集成测试")}
+                      onChange={(event) => setAutomationDraft((current) => ({ ...current, name: event.target.value }))}
+                    />
+                  </label>
+
+                  {!(automationDraft.kind === "condition_watch" && automationDraft.condition_action === "github_merge") && (
+                    <label className="automationField">
+                      <span>{tr("Device", "设备")}</span>
+                      <select
+                        value={automationDraft.device_id}
+                        onChange={(event) => setAutomationDraft((current) => ({ ...current, device_id: event.target.value }))}
+                      >
+                        <option value="">{tr("Choose a device", "选择设备")}</option>
+                        {devices.map((device) => (
+                          <option value={device.id} key={device.id}>
+                            {device.name} · {device.status}{device.background_enabled ? " · 24/7" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+
+                  {automationDraft.kind !== "agent_goal" &&
+                    !(automationDraft.kind === "condition_watch" && automationDraft.condition_action === "github_merge") && (
+                    <>
+                      <label className="automationField automationFieldWide">
+                        <span>{automationDraft.kind === "goal_loop" ? tr("Work command", "工作命令") : tr("Command", "命令")}</span>
+                        <textarea
+                          rows={3}
+                          value={automationDraft.command}
+                          maxLength={4000}
+                          placeholder={tr("pnpm test", "pnpm test")}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, command: event.target.value }))}
+                        />
+                      </label>
+
+                      <label className="automationField">
+                        <span>{tr("Working directory", "工作目录")} <small>{tr("optional", "可选")}</small></span>
+                        <input
+                          value={automationDraft.cwd}
+                          maxLength={500}
+                          placeholder="/Users/sam/work/project"
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, cwd: event.target.value }))}
+                        />
+                      </label>
+                    </>
+                  )}
+
+                  {(automationDraft.kind === "long_task" || automationDraft.kind === "goal_loop") && (
+                    <label className="automationField">
+                      <span>{tr("Check / retry interval", "检查 / 重试间隔")}</span>
+                      <div className="automationInlineInput">
+                        <input
+                          inputMode="numeric"
+                          value={automationDraft.interval_minutes}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, interval_minutes: event.target.value.replace(/[^0-9]/g, "") }))}
+                        />
+                        <span>{tr("minutes", "分钟")}</span>
+                      </div>
+                    </label>
+                  )}
+
+                  {automationDraft.kind === "goal_loop" && (
+                    <>
+                      <label className="automationField automationFieldWide">
+                        <span>{tr("Goal verification command", "目标验证命令")}</span>
+                        <textarea
+                          rows={2}
+                          value={automationDraft.goal_command}
+                          maxLength={4000}
+                          placeholder={tr("pnpm test:e2e", "pnpm test:e2e")}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, goal_command: event.target.value }))}
+                        />
+                        <small>{tr("Exit code 0 means the goal is reached. Otherwise Remote Arc waits and starts the next attempt.", "退出码 0 表示目标达成；否则 Remote Arc 等待后开始下一轮。")}</small>
+                      </label>
+                      <label className="automationField">
+                        <span>{tr("Maximum attempts", "最大轮数")} <small>{tr("blank = unlimited until expiry", "留空 = 到期前不限轮数")}</small></span>
+                        <input
+                          inputMode="numeric"
+                          value={automationDraft.max_runs}
+                          placeholder={tr("Unlimited", "不限")}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, max_runs: event.target.value.replace(/[^0-9]/g, "") }))}
+                        />
+                      </label>
+                    </>
+                  )}
+
+                  {automationDraft.kind === "agent_goal" && (
+                    <>
+                      <div className="automationAgentNotice automationFieldWide">
+                        <strong>{tr("Adaptive planner", "自适应 Planner")}</strong>
+                        <span>{tr(
+                          "Each round reads the latest tool result, updates compact working memory, and chooses a different next action when needed. This is not the deterministic Goal Loop.",
+                          "每一轮都会读取最新 Tool Result、更新精简工作记忆，并在需要时选择不同的下一步；这不是固定脚本式 Goal Loop。",
+                        )}</span>
+                      </div>
+                      <div className="automationAgentTools automationFieldWide">
+                        <span>{tr("Approved Agent Goal tools", "已批准的 Agent Goal 工具")}</span>
+                        <div>
+                          {([
+                            ["list_directory", tr("List folders", "列目录")],
+                            ["read_file", tr("Read files", "读文件")],
+                            ["get_file_info", tr("File metadata", "文件信息")],
+                            ["edit_block", tr("Edit existing blocks", "编辑现有代码块")],
+                            ["write_file", tr("Write / create files", "写入 / 创建文件")],
+                            ["start_process", tr("Run commands", "运行命令")],
+                          ] as Array<[AgentGoalTool, string]>).map(([tool, label]) => {
+                            const checked = automationDraft.agent_allowed_tools.includes(tool);
+                            return (
+                              <label key={tool} className={checked ? "selected" : ""}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(event) => setAutomationDraft((current) => ({
+                                    ...current,
+                                    agent_allowed_tools: event.target.checked
+                                      ? [...new Set([...current.agent_allowed_tools, tool])]
+                                      : current.agent_allowed_tools.filter((item) => item !== tool),
+                                  }))}
+                                />
+                                <span>{label}</span>
+                                <code>{tool}</code>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <small>{tr(
+                          "This tool set is frozen with the Agent Goal. Later device-policy changes require reapproval and can only narrow/revalidate the set.",
+                          "这组 Tool 会随 Agent Goal 一起冻结。之后设备策略变化会要求重新确认，并且只能重新校验或收窄这组能力。",
+                        )}</small>
+                      </div>
+
+                      <label className="automationField automationFieldWide">
+                        <span>{tr("Objective", "目标")}</span>
+                        <textarea
+                          rows={4}
+                          value={automationDraft.agent_objective}
+                          maxLength={6000}
+                          placeholder={tr(
+                            "Make the integration suite pass without weakening tests or removing coverage.",
+                            "让 integration suite 全部通过，不允许削弱测试或删除覆盖。",
+                          )}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, agent_objective: event.target.value }))}
+                        />
+                      </label>
+                      <label className="automationField automationFieldWide">
+                        <span>{tr("Success criteria", "成功标准")}</span>
+                        <textarea
+                          rows={3}
+                          value={automationDraft.agent_success_criteria}
+                          maxLength={4000}
+                          placeholder={tr(
+                            "All tests pass, typecheck passes, and git diff contains only changes needed for this goal.",
+                            "全部测试通过、typecheck 通过，并且 git diff 只包含完成目标所需的修改。",
+                          )}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, agent_success_criteria: event.target.value }))}
+                        />
+                      </label>
+                      <label className="automationField">
+                        <span>{tr("Workspace", "工作区")} <small>{tr("recommended", "建议填写")}</small></span>
+                        <input
+                          value={automationDraft.agent_workspace}
+                          maxLength={500}
+                          placeholder="/Users/sam/work/project"
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, agent_workspace: event.target.value }))}
+                        />
+                      </label>
+                      <label className="automationField">
+                        <span>{tr("Maximum planning turns", "最大规划轮数")}</span>
+                        <input
+                          inputMode="numeric"
+                          value={automationDraft.agent_max_iterations}
+                          onChange={(event) => setAutomationDraft((current) => ({
+                            ...current,
+                            agent_max_iterations: event.target.value.replace(/[^0-9]/g, ""),
+                          }))}
+                        />
+                      </label>
+                      <label className="automationField automationFieldWide">
+                        <span>{tr("Deterministic final verification", "最终确定性验证")} <small>{tr("optional but recommended", "可选，但建议填写")}</small></span>
+                        <textarea
+                          rows={2}
+                          value={automationDraft.agent_verify_command}
+                          maxLength={4000}
+                          placeholder="pnpm typecheck && pnpm test"
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, agent_verify_command: event.target.value }))}
+                        />
+                        <small>{tr(
+                          "When provided, the AI cannot mark the goal complete until this command exits 0.",
+                          "填写后，AI 不能仅凭自己判断完成；必须等这条命令退出码为 0。",
+                        )}</small>
+                      </label>
+                      <label className="automationField">
+                        <span>{tr("Planner interval", "Planner 间隔")}</span>
+                        <div className="automationInlineInput">
+                          <input
+                            inputMode="numeric"
+                            value={automationDraft.interval_minutes}
+                            onChange={(event) => setAutomationDraft((current) => ({
+                              ...current,
+                              interval_minutes: event.target.value.replace(/[^0-9]/g, ""),
+                            }))}
+                          />
+                          <span>{tr("minutes", "分钟")}</span>
+                        </div>
+                      </label>
+                    </>
+                  )}
+
+                  {automationDraft.kind === "schedule_watch" && (
+                    <>
+                      <label className="automationField">
+                        <span>{tr("Run every", "执行间隔")}</span>
+                        <div className="automationInlineInput">
+                          <input
+                            inputMode="numeric"
+                            value={automationDraft.schedule_minutes}
+                            onChange={(event) => setAutomationDraft((current) => ({ ...current, schedule_minutes: event.target.value.replace(/[^0-9]/g, "") }))}
+                          />
+                          <span>{tr("minutes", "分钟")}</span>
+                        </div>
+                      </label>
+                      <label className="automationField">
+                        <span>{tr("Maximum runs", "最大执行次数")} <small>{tr("blank = unlimited", "留空 = 不限")}</small></span>
+                        <input
+                          inputMode="numeric"
+                          value={automationDraft.max_runs}
+                          placeholder={tr("Unlimited", "不限")}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, max_runs: event.target.value.replace(/[^0-9]/g, "") }))}
+                        />
+                      </label>
+                    </>
+                  )}
+
+                  {automationDraft.kind === "condition_watch" && (
+                    <>
+                      <label className="automationField">
+                        <span>{tr("On match", "匹配后执行")}</span>
+                        <select
+                          value={automationDraft.condition_action}
+                          onChange={(event) => setAutomationDraft((current) => ({
+                            ...current,
+                            condition_action: event.target.value as "device_command" | "github_merge",
+                            condition_source: event.target.value === "github_merge" ? "github" : current.condition_source,
+                          }))}
+                        >
+                          <option value="device_command">{tr("Run command on device", "在设备上运行命令")}</option>
+                          <option value="github_merge">{tr("Merge GitHub pull request", "合并 GitHub Pull Request")}</option>
+                        </select>
+                      </label>
+                      {automationDraft.condition_action === "device_command" ? (
+                        <label className="automationField">
+                          <span>{tr("Webhook source", "Webhook 来源")}</span>
+                          <select
+                            value={automationDraft.condition_source}
+                            onChange={(event) => setAutomationDraft((current) => ({ ...current, condition_source: event.target.value as "github" | "generic" }))}
+                          >
+                            <option value="github">GitHub</option>
+                            <option value="generic">{tr("Generic webhook", "通用 Webhook")}</option>
+                          </select>
+                        </label>
+                      ) : (
+                        <>
+                          <label className="automationField">
+                            <span>{tr("Repository owner", "仓库 Owner")}</span>
+                            <input
+                              value={automationDraft.github_owner}
+                              placeholder="yaohuangguan"
+                              onChange={(event) => setAutomationDraft((current) => ({ ...current, github_owner: event.target.value }))}
+                            />
+                          </label>
+                          <label className="automationField">
+                            <span>{tr("Repository", "仓库")}</span>
+                            <input
+                              value={automationDraft.github_repo}
+                              placeholder="remote-arc"
+                              onChange={(event) => setAutomationDraft((current) => ({ ...current, github_repo: event.target.value }))}
+                            />
+                          </label>
+                          <label className="automationField">
+                            <span>{tr("Pull request", "Pull Request")}</span>
+                            <input
+                              inputMode="numeric"
+                              value={automationDraft.github_pr}
+                              placeholder="43"
+                              onChange={(event) => setAutomationDraft((current) => ({ ...current, github_pr: event.target.value.replace(/[^0-9]/g, "") }))}
+                            />
+                          </label>
+                          <label className="automationField">
+                            <span>{tr("Merge method", "合并方式")}</span>
+                            <select
+                              value={automationDraft.github_merge_method}
+                              onChange={(event) => setAutomationDraft((current) => ({
+                                ...current,
+                                github_merge_method: event.target.value as "merge" | "squash" | "rebase",
+                              }))}
+                            >
+                              <option value="merge">merge</option>
+                              <option value="squash">squash</option>
+                              <option value="rebase">rebase</option>
+                            </select>
+                          </label>
+                          <div className="automationAgentNotice automationFieldWide">
+                            <strong>{tr("Cloud-side merge", "云端直接合并")}</strong>
+                            <span>{tr(
+                              "When the webhook matches, Remote Arc uses its GitHub App installation token to merge the PR directly. The computer does not need to be online.",
+                              "Webhook 匹配后，Remote Arc 使用 GitHub App Installation Token 直接合并 PR；电脑无需在线。",
+                            )}</span>
+                          </div>
+                        </>
+                      )}
+                      <label className="automationField">
+                        <span>{tr("Event", "事件")}</span>
+                        <input
+                          value={automationDraft.condition_event}
+                          placeholder="workflow_run"
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, condition_event: event.target.value }))}
+                        />
+                      </label>
+                      <label className="automationField automationFieldWide">
+                        <span>{tr("Match conditions", "匹配条件")} <small>JSON</small></span>
+                        <textarea
+                          rows={4}
+                          value={automationDraft.condition_match}
+                          spellCheck={false}
+                          onChange={(event) => setAutomationDraft((current) => ({ ...current, condition_match: event.target.value }))}
+                        />
+                        <small>{tr(
+                          'Use dotted payload paths, for example {"workflow_run.name":"CI","workflow_run.conclusion":"success"}.',
+                          '使用点号 Payload 路径，例如 {"workflow_run.name":"CI","workflow_run.conclusion":"success"}。',
+                        )}</small>
+                      </label>
+                    </>
+                  )}
+                </div>
+
+                <div className="automationCreateFooter">
+                  <div>
+                    <strong>{tr("Recovery policy", "恢复策略")}</strong>
+                    <span>{tr(
+                      "If the local agent restarts and loses a process handle, Remote Arc asks for approval before rerunning it to avoid duplicate side effects.",
+                      "如果本地 Agent 重启导致进程句柄丢失，Remote Arc 会先要求确认再重跑，避免重复副作用。",
+                    )}</span>
+                  </div>
+                  <button
+                    className="primaryButton"
+                    disabled={automationBusy === "create" || UI_PREVIEW}
+                    onClick={() => void createDashboardAutomation()}
+                  >
+                    {automationBusy === "create" ? tr("Creating…", "创建中…") : tr("Create automation", "创建自动化")}
+                  </button>
+                </div>
+              </section>
+            )}
+
+            <section className="automationListPanel">
+              <div className="automationListHeader">
+                <div>
+                  <span className="eyebrow">{tr("TASKS & WATCHES", "任务与监听")}</span>
+                  <h2>{tr("Persistent work", "持久任务")}</h2>
+                </div>
+                <span>{automations.length} {tr("total", "条")}</span>
+              </div>
+
+              <div className="automationList">
+                {automations.map((automation) => {
+                  const device = devices.find((item) => item.id === automation.device_id);
+                  const busy = automationBusy?.startsWith(automation.id + ":");
+                  return (
+                    <article className={"automationRow status-" + automation.status} key={automation.id}>
+                      <div className="automationIdentity">
+                        <span className={"automationStatusDot " + automation.status} />
+                        <div>
+                          <strong>{automation.name}</strong>
+                          <span>{automationKindLabel(automationDisplayKind(automation))} · {device?.name || automation.device_id || tr("Cloud", "云端")}</span>
+                        </div>
+                      </div>
+
+                      <div className="automationRunMeta">
+                        <span>{tr("Runs", "执行")}</span>
+                        <strong>{automation.run_count}{automation.max_runs > 0 ? " / " + automation.max_runs : ""}</strong>
+                      </div>
+
+                      <div className="automationRunMeta">
+                        <span>{tr("Next", "下次")}</span>
+                        <strong>{automation.next_run_at ? automationTime(automation.next_run_at) : "—"}</strong>
+                      </div>
+
+                      <span className={"automationStatusBadge " + automation.status}>{automationStatusLabel(automation.status)}</span>
+
+                      <div className="automationActions">
+                        {automation.status === "paused" && (
+                          <button disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "resume")}>{tr("Resume", "恢复")}</button>
+                        )}
+                        {!automationTerminal(automation.status) && automation.status !== "paused" && (
+                          <button disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "pause")}>{tr("Pause", "暂停")}</button>
+                        )}
+                        {!automationTerminal(automation.status) && (
+                          <button className="danger" disabled={!!busy || UI_PREVIEW} onClick={() => void manageDashboardAutomation(automation, "cancel")}>{tr("Cancel", "取消")}</button>
+                        )}
+                      </div>
+
+                      <details className="automationDetails">
+                        <summary>{tr("Details", "详情")}<span>›</span></summary>
+                        <div className="automationDetailGrid">
+                          <div><span>{tr("Created", "创建")}</span><strong>{timeAgo(automation.created_at)}</strong></div>
+                          <div><span>{tr("Last run", "上次执行")}</span><strong>{automation.last_run_at ? timeAgo(automation.last_run_at) : "—"}</strong></div>
+                          <div><span>{tr("Expires", "到期")}</span><strong>{automation.expires_at ? automationTime(automation.expires_at) : tr("No expiry", "不过期")}</strong></div>
+                          <div><span>{tr("Check interval", "检查间隔")}</span><strong>{Math.round(automation.interval_seconds / 60)}m</strong></div>
+                        </div>
+                        {automation.last_error && <p className="automationLastError">{automation.last_error}</p>}
+                        {automation.kind === "condition_watch" && (
+                          <p className="automationDetailNote">{tr(
+                            "The webhook secret is not stored in recoverable form. If you lose the URL, create a new condition watch.",
+                            "Webhook Secret 不会以可恢复形式保存；如果 URL 丢失，请创建新的 Condition Watch。",
+                          )}</p>
+                        )}
+                      </details>
+                    </article>
+                  );
+                })}
+
+                {!automationLoading && !automations.length && (
+                  <div className="automationEmpty">
+                    <strong>{tr("No persistent work yet", "还没有持久任务")}</strong>
+                    <span>{tr(
+                      "Create one here, or ask an MCP-connected AI to create a long task, watch, schedule, or goal loop.",
+                      "可以在这里创建，也可以让已连接 MCP 的 AI 创建长任务、监听、定时任务或目标循环。",
+                    )}</span>
+                    {!UI_PREVIEW && <button onClick={() => setShowAutomationCreate(true)}>+ {tr("New automation", "新建自动化")}</button>}
+                  </div>
+                )}
+                {automationLoading && !automations.length && <div className="automationEmpty">{tr("Loading automations…", "正在加载自动化…")}</div>}
+              </div>
+            </section>
+          </>
+        )}
+
         {active === "connect" && (
           <>
             <section className="overviewTopbar connectPageHeader">
@@ -4854,6 +6574,7 @@ function Dashboard({
         {([
           ["overview", tr("Home", "首页")],
           ["devices", tr("Devices", "设备")],
+          ["automations", tr("Automate", "自动化")],
           ["connect", tr("Connect", "连接")],
           ["security", tr("Security", "安全")],
           ["settings", tr("Settings", "设置")],
@@ -4993,6 +6714,294 @@ function Dashboard({
 }
 
 
+
+type ProductRelease = {
+  version: string;
+  date: string;
+  status?: "release-candidate" | "released";
+  title: string;
+  summary: string;
+  changes: string[];
+};
+
+const PRODUCT_RELEASES: ProductRelease[] = [
+  {
+    version: "0.4.0",
+    date: "2026-10-01",
+    status: "release-candidate",
+    title: "Durable work and adaptive agents",
+    summary: "Remote Arc moves beyond request-bound remote execution: devices can stay available in the background, work can survive the chat that created it, and Agent Goals can inspect results and change strategy until a verifiable objective is reached.",
+    changes: [
+      "Durable Automations: Long Task, Condition Watch, Schedule Watch and deterministic Goal Loop with D1 state, leases, expiry, pause/resume/cancel and offline recovery.",
+      "Adaptive Agent Goal: each planning turn receives the latest bounded tool result, updates compact working memory, and may choose a different next approved action; optional deterministic verification must exit 0 before completion.",
+      "Cloud-side GitHub action: a matching CI workflow webhook can merge one explicitly configured pull request through a GitHub App installation token without requiring a paired computer to be online.",
+      "Separate persistent-authority OAuth scopes: automation:read, automation:write and agent:write; ordinary computer:write does not silently grant future autonomous work.",
+      "Background Agent baseline: start at login, reconnect automatically and keep a paired Windows, macOS or Linux machine reachable without an open terminal window while the machine is awake.",
+      "Pairing permission onboarding, post-pair Connect AI launcher, improved device policy controls, local undo visibility and managed background-process controls.",
+      "Chrome Browser Beta, PWA device management, service monitoring, light-first dashboard, QHD scaling, richer documentation/security pages and a substantive public-site information architecture.",
+    ],
+  },
+  {
+    version: "0.3.14",
+    date: "2026-09-29",
+    status: "released",
+    title: "Relay reconnect resilience",
+    summary: "Made long-lived device connectivity recover more reliably after failed handshakes instead of giving up on the relay session.",
+    changes: [
+      "Keep reconnect attempts alive after WebSocket handshake failures.",
+      "Hardened the background connection path used by remotelink.",
+    ],
+  },
+  {
+    version: "0.3.13",
+    date: "2026-09-27",
+    status: "released",
+    title: "Self-repairing pairing and publishing",
+    summary: "Reduced two operational failure modes: revoked devices can repair their pairing flow and release automation no longer depends on hard-coded CLI versions.",
+    changes: [
+      "Automatically re-pair a remotelink client when its saved device credential has been revoked.",
+      "Made package/release version checks derive the current CLI version dynamically.",
+    ],
+  },
+  {
+    version: "0.3.12",
+    date: "2026-09-27",
+    status: "released",
+    title: "Clearer AI grants and dashboard controls",
+    summary: "Made the relationship between OAuth client grants, paired computers and device controls easier to understand and manage.",
+    changes: [
+      "Clarified AI-client grants independently from paired-device trust.",
+      "Upgraded dashboard controls for day-to-day device administration.",
+    ],
+  },
+  {
+    version: "0.3.11",
+    date: "2026-09-27",
+    status: "released",
+    title: "Policy-aware operations",
+    summary: "Connected path-policy, undo and managed-process state more directly to the dashboard and live device connection.",
+    changes: [
+      "Extended path-policy and Local Undo status surfaced by connected devices.",
+      "Improved managed background-process visibility and policy-capable connection selection.",
+    ],
+  },
+  {
+    version: "0.3.10",
+    date: "2026-09-27",
+    status: "released",
+    title: "Protected directory listings",
+    summary: "Sensitive-path policy stopped being only an operation-time guard: protected entries are also hidden from ordinary directory listings.",
+    changes: [
+      "Hide protected entries from directory-listing results.",
+      "Reduce accidental disclosure before a later file operation is attempted.",
+    ],
+  },
+  {
+    version: "0.3.9",
+    date: "2026-09-27",
+    status: "released",
+    title: "Path policy and Local Undo history",
+    summary: "Introduced practical filesystem boundaries and user-visible recovery state for supported edits.",
+    changes: [
+      "Workspace Scope and sensitive-path policy for normal file tools.",
+      "Local-only Undo history with conflict-safe restore semantics.",
+    ],
+  },
+  {
+    version: "0.3.8",
+    date: "2026-09-27",
+    status: "released",
+    title: "Native execution core",
+    summary: "Removed the Desktop Commander dependency and brought filesystem, process and safety behavior into Remote Arc's own execution core.",
+    changes: [
+      "Replaced Desktop Commander with Remote Arc's native Node/OS execution core.",
+      "Removed the legacy external CLI path and refreshed trusted-publisher/architecture documentation.",
+    ],
+  },
+  {
+    version: "0.3.7",
+    date: "2026-09-27",
+    status: "released",
+    title: "Free-tier global relay optimization",
+    summary: "Reduced unnecessary Worker cost and request pressure while keeping the hosted relay globally reachable.",
+    changes: [
+      "Optimized static and live routing paths for Cloudflare's free-tier economics.",
+      "Kept the outbound device relay architecture while reducing avoidable Worker work.",
+    ],
+  },
+  {
+    version: "0.3.6",
+    date: "2026-09-27",
+    status: "released",
+    title: "Local Undo and Safety Guard",
+    summary: "Added local recovery for supported edits and another defense-in-depth layer around catastrophic shell patterns.",
+    changes: [
+      "Local Undo snapshots for supported Remote Arc file edits.",
+      "Safety Guard for a narrow set of catastrophic command patterns.",
+      "Hardened OIDC-based package publishing.",
+    ],
+  },
+  {
+    version: "0.3.5",
+    date: "2026-09-26",
+    status: "released",
+    title: "Safe-by-default device access",
+    summary: "New device access began from a read-oriented baseline instead of assuming broad write or terminal authority.",
+    changes: [
+      "Safe access became the default permission posture.",
+      "Production D1 binding and health fixes stabilized the hosted control plane.",
+    ],
+  },
+  {
+    version: "0.3.4",
+    date: "2026-09-26",
+    status: "released",
+    title: "Real security controls and edge protection",
+    summary: "Turned the dashboard's security story into enforceable controls instead of descriptive settings.",
+    changes: [
+      "Added real per-device security controls and edge-side enforcement.",
+      "Upgraded Overview, Devices, Connect AI and Security Center UX around those controls.",
+    ],
+  },
+  {
+    version: "0.3.3",
+    date: "2026-09-26",
+    status: "released",
+    title: "Separate website, dashboard and MCP surfaces",
+    summary: "Split product marketing from the authenticated control plane and prepared the service for public MCP/plugin review.",
+    changes: [
+      "Separated the dashboard/MCP host from the public website.",
+      "Refined onboarding, installation entry points and public-review readiness.",
+    ],
+  },
+  {
+    version: "0.3.2",
+    date: "2026-09-25",
+    status: "released",
+    title: "Observable CLI and trusted publishing",
+    summary: "Made remotelink easier to diagnose and moved package publishing toward an auditable OIDC flow.",
+    changes: [
+      "Structured connection and tool logs in the CLI.",
+      "Trusted-publishing workflow plus package metadata and source-license cleanup.",
+      "Fixed pairing-log output.",
+    ],
+  },
+  {
+    version: "0.3.1",
+    date: "2026-09-25",
+    status: "released",
+    title: "remotearc.app and product identity",
+    summary: "Completed the public Remote Arc identity, domain migration and legal/plugin surface around the renamed product.",
+    changes: [
+      "Migrated public traffic and canonical branding to remotearc.app.",
+      "Added plugin/MCP metadata, privacy, terms and support pages.",
+      "Centralized Settings and per-device tool permissions.",
+    ],
+  },
+  {
+    version: "0.3.0",
+    date: "2026-09-25",
+    status: "released",
+    title: "Remote Arc",
+    summary: "The Remote Link prototype became Remote Arc, with the remotelink CLI/package becoming the stable installation entry.",
+    changes: [
+      "Rebranded Remote Link to Remote Arc across UI, CLI and MCP surfaces.",
+      "Standardized the remotelink package and executable product flow.",
+    ],
+  },
+  {
+    version: "0.2.0",
+    date: "2026-09-24",
+    status: "released",
+    title: "Hosted identity, pairing and OAuth",
+    summary: "The prototype became a multi-user hosted control plane with explicit device identity and AI-client authorization.",
+    changes: [
+      "Google account/session authentication, browser-approved device pairing and per-device credentials.",
+      "OAuth 2.1 authorization-code flow with PKCE and explicit consent for Remote MCP clients.",
+      "Per-user Durable Object routing, device ownership/revocation checks and privacy-preserving audit metadata.",
+      "10,000-call monthly hosted quota, bilingual product pages and the first full device dashboard.",
+    ],
+  },
+  {
+    version: "0.1.0",
+    date: "2026-09-24",
+    status: "released",
+    title: "First end-to-end Remote Link",
+    summary: "Established the original architecture: local agent, hosted relay, MCP adapter and a one-command path toward pairing a real computer.",
+    changes: [
+      "Initialized the monorepo, local MCP execution path, agent and Cloudflare relay.",
+      "Added the first dashboard and one-command pairing CLI foundation.",
+    ],
+  },
+];
+
+function ReleasesPage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  const latest = PRODUCT_RELEASES[0]!;
+
+  return (
+    <PublicLayout user={user}>
+      <main className="releasesPage">
+        <header className="articleHeader releaseHeader">
+          <span className="eyebrow">{tr("RELEASES", "版本发布")}</span>
+          <h1>{tr("Remote Arc release history", "Remote Arc 版本历史")}</h1>
+          <p>{tr(
+            "A version-by-version record of how Remote Arc evolved from a one-command remote MCP prototype into a persistent, policy-aware execution and agent control plane.",
+            "按版本记录 Remote Arc 如何从一条命令即可连接的 Remote MCP 原型，演进为具备持久任务、权限策略与 Agent 控制面的产品。",
+          )}</p>
+          <div className="releaseLatestLine">
+            <span>{tr("NEXT", "下一版")}</span>
+            <strong>v{latest.version}</strong>
+            <em>{tr("Release candidate", "Release Candidate")}</em>
+            <time>{latest.date}</time>
+          </div>
+        </header>
+
+        <section className="releaseIntro">
+          <div>
+            <strong>{tr("One product history", "一条完整产品历史")}</strong>
+            <p>{tr(
+              "This page stays on remotearc.app and combines CLI, relay, dashboard, security and product-surface milestones into the version in which they became part of the product.",
+              "本页保留在 remotearc.app 内，把 CLI、Relay、Dashboard、安全能力和产品界面的重要升级归入真正形成产品能力的对应版本。",
+            )}</p>
+          </div>
+          <div>
+            <strong>{tr("Release status", "版本状态")}</strong>
+            <p>{tr(
+              "v0.4.0 is staged on the current draft release branch. Earlier entries are historical released versions.",
+              "v0.4.0 当前位于 Draft Release 分支；此前条目均为历史已发布版本。",
+            )}</p>
+          </div>
+        </section>
+
+        <div className="releaseTimeline">
+          {PRODUCT_RELEASES.map((release, index) => (
+            <article className={"releaseEntry " + (index === 0 ? "latest" : "")} key={release.version} id={"v" + release.version.replaceAll(".", "-")}>
+              <aside className="releaseVersionRail">
+                <span className="releaseRailDot" />
+                <strong>v{release.version}</strong>
+                <time>{release.date}</time>
+                <span className={"releaseState " + (release.status || "released")}>
+                  {release.status === "release-candidate"
+                    ? tr("Release candidate", "候选版本")
+                    : tr("Released", "已发布")}
+                </span>
+              </aside>
+              <div className="releaseBody">
+                <h2>{release.title}</h2>
+                <p className="releaseSummary">{release.summary}</p>
+                <ul>
+                  {release.changes.map((change) => <li key={change}>{change}</li>)}
+                </ul>
+              </div>
+            </article>
+          ))}
+        </div>
+      </main>
+    </PublicLayout>
+  );
+}
+
 function LegalPage({
   kind,
   user,
@@ -5013,6 +7022,8 @@ function LegalPage({
         [tr("Account data", "账户数据"), tr("We use your Google account identity to create and secure your Remote Arc account. We store identifiers, display name, email address, session records and authorization metadata needed to operate the service.", "我们使用你的 Google 账户身份来创建并保护 Remote Arc 账户，并保存服务运行所需的标识符、显示名称、邮箱、会话记录和授权元数据。")],
         [tr("Device data", "设备数据"), tr("For paired computers we store device identifiers, device names, platform metadata, credential hashes and connection timestamps. Raw device credentials are not stored in the hosted database.", "对于已配对电脑，我们保存设备标识、设备名称、平台信息、凭证哈希和连接时间。托管数据库不会保存原始设备凭证。")],
         [tr("Remote actions and tool results", "远程操作与工具结果"), tr("Remote Arc relays authorized MCP tool requests between your selected AI client and your connected device. Requested file contents, directory listings, process output and command results may pass through the hosted relay and be returned to the AI client to fulfill your request. Remote Arc audit records are designed to retain only operational metadata such as tool name, device, success state and time, not file contents, command arguments, OAuth tokens or device credentials.", "Remote Arc 会在你选择的 AI 客户端与已连接设备之间转发已授权的 MCP 工具请求。为完成你的请求，被读取的文件内容、目录列表、进程输出和命令结果可能经过托管 Relay 并返回给 AI 客户端。Remote Arc 的审计记录仅设计为保存工具名称、设备、成功状态和时间等运行元数据，不保存文件内容、命令参数、OAuth Token 或设备凭证。")],
+        [tr("Durable automation and Agent Goal data", "持久自动化与 Agent Goal 数据"), tr("Deterministic automations store the approved trigger and action plan. Adaptive Agent Goals store the objective, success criteria, approved tool set, optional verification command, target device, iteration and expiry limits, permission snapshot, compact planner working memory and task state so work can continue after the original chat ends. Bounded tool/process observations are sent to the configured hosted planner for the next decision, but automation records are not designed to retain raw managed-process stdout or stderr.", "确定性 Automation 会保存已批准的 Trigger 与 Action Plan。Adaptive Agent Goal 会保存目标、成功标准、已批准 Tool Set、可选验证命令、目标设备、迭代与到期限制、权限快照、精简 Planner 工作记忆和任务状态，使工作能够在原聊天结束后继续。受限的 Tool/Process Observation 会发送给已配置的托管 Planner 用于下一轮决策，但 Automation 记录不会设计为持久化原始受管进程 stdout 或 stderr。")],
+        [tr("Agent planner processing", "Agent Planner 处理"), tr("Adaptive Agent Goals require hosted model inference between execution turns. Remote Arc uses its configured planner service to process the objective, success criteria, compact working memory and bounded tool/process observations needed to choose the next action. The default hosted deployment can use Cloudflare Workers AI; deployments may instead configure the OpenAI Responses API. Planner responses are validated against Remote Arc's approved tool and policy boundary before execution.", "Adaptive Agent Goal 会在执行轮次之间调用托管模型进行推理。Remote Arc 会把选择下一步所需的目标、成功标准、精简工作记忆以及受限 Tool/Process Observation 交给已配置的 Planner 服务处理。默认托管部署可使用 Cloudflare Workers AI，也可以改为配置 OpenAI Responses API。Planner 返回结果在执行前仍会经过 Remote Arc 的已批准 Tool 与 Policy 边界校验。")],
         [tr("AI platforms", "AI 平台"), tr("When you connect Remote Arc to ChatGPT, Codex or another compatible MCP client, tool requests and results are also processed by that provider under the account, product settings, terms and privacy policy you use with that provider.", "当你将 Remote Arc 连接到 ChatGPT、Codex 或其他兼容 MCP 客户端时，工具请求与结果也会由该服务商按照你所使用账户和产品的设置、条款及隐私政策进行处理。")],
         [tr("Infrastructure", "基础设施"), tr("The hosted service uses Cloudflare infrastructure and Google OAuth. Their processing is governed by their respective terms and privacy policies.", "托管服务使用 Cloudflare 基础设施和 Google OAuth；相关处理同时受这些服务各自的条款和隐私政策约束。")],
         [tr("Control and deletion", "控制与删除"), tr("You can revoke individual devices from the Remote Arc dashboard. For account or hosted-data deletion requests, use the support contact below.", "你可以在 Remote Arc 控制台撤销单台设备。如需删除账户或托管数据，请通过下方支持渠道联系。")],
@@ -5027,7 +7038,7 @@ function LegalPage({
       ),
       sections: [
         [tr("Authorized use", "授权使用"), tr("You must have permission to access every computer, file, account and service you control through Remote Arc. Do not use Remote Arc to bypass access controls or interfere with systems you do not own or administer.", "你必须有权访问通过 Remote Arc 控制的每台电脑、文件、账户和服务。不得使用 Remote Arc 绕过访问控制或干扰你无权管理的系统。")],
-        [tr("Your responsibility", "你的责任"), tr("Remote computer control can read or modify files, execute commands, affect running software and, when commands access network services, cause changes outside the local computer. You are responsible for reviewing device permissions, AI prompts and consequential actions before approving or enabling high-impact access.", "远程电脑控制可能读取或修改文件、执行命令、影响运行中的软件；当命令访问网络服务时，也可能对本机之外的系统产生影响。你有责任在批准或启用高影响访问前检查设备权限、AI 提示与相关操作。")],
+        [tr("Your responsibility", "你的责任"), tr("Remote computer control can read or modify files, execute commands, affect running software and, when commands access network services, cause changes outside the local computer. Durable Automations may continue after the chat that created them has ended. You are responsible for reviewing device permissions, persistent task plans, expiry and run limits, AI prompts and consequential actions before approving or enabling high-impact access.", "远程电脑控制可能读取或修改文件、执行命令、影响运行中的软件；当命令访问网络服务时，也可能对本机之外的系统产生影响。Durable Automations 可能在创建它的聊天结束后继续运行。你有责任在批准或启用高影响访问前检查设备权限、持久任务计划、到期与次数限制、AI 提示与相关操作。")],
         [tr("Service availability", "服务可用性"), tr("The hosted service is provided without a guarantee of uninterrupted availability. Features, quotas and supported integrations may change as Remote Arc develops.", "托管服务不保证持续无中断可用。随着 Remote Arc 的发展，功能、额度和支持的集成可能发生变化。")],
         [tr("Third-party software", "第三方软件"), tr("Third-party components used by Remote Arc are governed by their respective licenses and terms. The Remote Arc product is provided as a managed hosted service.", "Remote Arc 使用的第三方组件受各自许可证与条款约束；Remote Arc 产品以托管服务方式提供。")],
         [tr("Suspension", "暂停服务"), tr("Access may be limited or suspended for abuse, security risks, legal requirements or material violations of these terms.", "如存在滥用、安全风险、法律要求或重大违反本条款的情况，访问可能会被限制或暂停。")],
@@ -5170,6 +7181,7 @@ function App() {
   }
   if (location.pathname === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
   if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/remote-arc-vs-openclaw") return <RemoteArcVsOpenClawArticlePage user={user === undefined ? null : user} />;

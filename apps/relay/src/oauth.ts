@@ -21,6 +21,9 @@ const SUPPORTED_SCOPES = [
   "computer:read",
   "computer:write",
   "browser:read",
+  "automation:read",
+  "automation:write",
+  "agent:write",
 ] as const;
 
 const appOrigin = (env: OAuthEnv) => env.APP_ORIGIN || env.PUBLIC_ORIGIN;

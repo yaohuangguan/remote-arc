@@ -72,6 +72,72 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     },
   ];
 
+  const automations = [
+    {
+      id: "preview-goal",
+      user_id: "preview-user",
+      name: "Stabilize overnight integration tests",
+      kind: "goal_loop",
+      status: "running",
+      device_id: "preview-mac",
+      trigger_json: JSON.stringify({ type: "immediate" }),
+      action_json: JSON.stringify({ steps: [{ type: "device_command", command: "pnpm test:integration", cwd: "/Users/sam/work/remote-arc" }] }),
+      goal_json: JSON.stringify({ type: "command_exit", command: "pnpm test:integration", cwd: "/Users/sam/work/remote-arc", expected_exit_code: 0 }),
+      state_json: JSON.stringify({ phase: "step_running" }),
+      interval_seconds: 300,
+      next_run_at: new Date(Date.now() + 4 * 60000).toISOString(),
+      expires_at: new Date(Date.now() + 11 * 3600000).toISOString(),
+      max_runs: 0,
+      run_count: 3,
+      last_run_at: previewAgo(12 * 60000),
+      last_error: null,
+      created_at: previewAgo(2 * 3600000),
+      updated_at: previewAgo(20000),
+    },
+    {
+      id: "preview-ci",
+      user_id: "preview-user",
+      name: "Merge after CI passes",
+      kind: "condition_watch",
+      status: "waiting_for_event",
+      device_id: "preview-mac",
+      trigger_json: JSON.stringify({ type: "webhook", source: "github", event: "workflow_run", match: { "workflow_run.name": "CI", "workflow_run.conclusion": "success" } }),
+      action_json: JSON.stringify({ steps: [{ type: "device_command", command: "gh pr merge 52 --merge", cwd: "/Users/sam/work/remote-arc" }] }),
+      goal_json: null,
+      state_json: JSON.stringify({ phase: "idle" }),
+      interval_seconds: 300,
+      next_run_at: null,
+      expires_at: null,
+      max_runs: 1,
+      run_count: 0,
+      last_run_at: null,
+      last_error: null,
+      created_at: previewAgo(45 * 60000),
+      updated_at: previewAgo(45 * 60000),
+    },
+    {
+      id: "preview-offline",
+      user_id: "preview-user",
+      name: "Nightly build",
+      kind: "schedule_watch",
+      status: "waiting_for_device",
+      device_id: "preview-mac",
+      trigger_json: JSON.stringify({ type: "interval", every_seconds: 86400 }),
+      action_json: JSON.stringify({ steps: [{ type: "device_command", command: "pnpm build" }] }),
+      goal_json: null,
+      state_json: JSON.stringify({ phase: "idle" }),
+      interval_seconds: 300,
+      next_run_at: null,
+      expires_at: null,
+      max_runs: 0,
+      run_count: 5,
+      last_run_at: previewAgo(22 * 3600000),
+      last_error: "Device offline; the task will resume automatically after reconnect.",
+      created_at: previewAgo(6 * 86400000),
+      updated_at: previewAgo(20 * 60000),
+    },
+  ];
+
   const json = (value: unknown, status = 200) =>
     Promise.resolve(
       new Response(JSON.stringify(value), {
@@ -232,6 +298,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     }
 
     if (url.pathname === "/api/devices") return json(devices);
+    if (url.pathname === "/api/automations") return json({ automations });
     return json({ ok: true });
   }) as typeof window.fetch;
 }

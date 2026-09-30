@@ -66,6 +66,20 @@ history and snapshot contents are not persisted in the cloud. Per-device
 workspace roots and protected-path strings are stored as explicit control-plane
 policy metadata.
 
+## Durable automation security
+
+Persistent automations outlive the MCP request or chat that creates them, so their authority is separated from ordinary request-time computer access. Deterministic automations use `automation:read` / `automation:write`; adaptive Agent Goals additionally require `agent:write`. Holding `computer:write` alone does not authorize a client to leave persistent or self-directed work behind.
+
+At creation time a deterministic automation stores its explicit trigger and action plan. An Agent Goal instead stores the objective, success criteria, approved tool set, optional deterministic verification command, iteration/expiry limits, target device, and a snapshot of that device's permission policy. The planner may choose different next actions only inside that frozen tool/policy boundary. Each future device execution still passes through device ownership, revocation, allowed-tool and local path-policy checks.
+
+Unattended automations do not enter a mid-run approval queue. A temporarily offline device moves the task to `waiting_for_device` and resumes after reconnect. If a deterministic long task loses a managed-process handle after a local agent restart, the default recovery policy restarts that attempt automatically; operators can choose `fail` instead for commands that must never be retried. Agent Goals do not blindly rerun the lost command: they persist an “outcome unknown” observation, re-inspect current state, and let the planner choose the next approved action. If the device security policy itself changes, execution stops and records the policy change instead of waiting for approval or inheriting a different trust boundary.
+
+Condition watches use a high-entropy secret URL. Only a SHA-256 hash of that secret is stored. The URL is a bearer capability and must be protected like a credential. Delivery IDs are used to reject duplicate webhook deliveries when present. A GitHub condition may execute a cloud-side pull-request merge through a GitHub App installation token scoped to the configured repository; the current webhook transport still relies on the secret callback URL rather than claiming provider-specific HMAC verification.
+
+Automation state, trigger metadata, run status and bounded error/decision summaries are cloud control-plane data. Agent Goals also persist compact planner working memory so a later turn can continue without the original chat. Raw command stdout/stderr is not intentionally persisted in the automation tables; process output is fetched from the device when needed, sent to the planner as a bounded observation, then reduced to compact memory/summary.
+
+A background agent configured to start at login can keep reconnecting while the computer is awake. Remote Arc does not claim that a sleeping, powered-off or network-disconnected computer remains online.
+
 ## Before public multi-user release
 
 The project still needs:
