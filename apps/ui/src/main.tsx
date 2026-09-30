@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider, useI18n } from "./i18n.js";
 import { ThemeProvider, useTheme } from "./theme.js";
+import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import "./styles.css";
 
 type User = {
@@ -188,6 +189,8 @@ type DashboardTab = "overview" | "devices" | "connect" | "security" | "monitor" 
 const MARKETING_ORIGIN = "https://remotearc.app";
 const APP_ORIGIN = "https://mcp.remotearc.app";
 const MCP_ENDPOINT = APP_ORIGIN + "/mcp";
+const dashboardHref = (path: string) => UI_PREVIEW ? path : APP_ORIGIN + path;
+installUiPreviewFetchMock(MCP_ENDPOINT);
 const CHATGPT_PLUGIN_DIRECTORY_URL = "https://chatgpt.com/plugins?q=Remote%20Arc";
 const CLAUDE_CONNECTORS_URL = "https://claude.ai/settings/connectors";
 
@@ -419,7 +422,7 @@ function PublicHeader({ user }: { user?: User | null }) {
         <div className="publicNavActions">
           <ThemeSwitcher compact />
           {user ? (
-            <a className="navDashboard" href={APP_ORIGIN + "/overview"}>{tr("Dashboard", "控制台")} <span>↗</span></a>
+            <a className="navDashboard" href={dashboardHref("/overview")}>{tr("Dashboard", "控制台")} <span>↗</span></a>
           ) : (
             <button className="navLogin installNavCta" type="button" onClick={() => setShowSignIn(true)}>
               {tr("Sign in", "登录")} <span>→</span>
@@ -1776,7 +1779,7 @@ function Landing({ user }: { user?: User | null }) {
           <h2>{tr("Connect one machine in minutes.", "几分钟内，让第一台电脑上线。")}</h2>
           <p>{tr("Start with 10,000 hosted tool calls each month, then add paid usage when you need more.", "每月先用 10,000 次免费托管调用，需要更多时直接充值扩容。")}</p>
         </div>
-        <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : "/install/chatgpt"}>{user ? tr("Open dashboard", "打开控制台") : tr("Install Remote Arc", "安装 Remote Arc")}</a>
+        <a className="primaryButton goldButton" href={user ? dashboardHref("/overview") : "/install/chatgpt"}>{user ? tr("Open dashboard", "打开控制台") : tr("Install Remote Arc", "安装 Remote Arc")}</a>
       </section>
     </PublicLayout>
   );
@@ -2540,7 +2543,7 @@ function PricingPage({ user }: { user?: User | null }) {
             <li>{tr("Google sign-in and OAuth MCP", "Google 登录与 OAuth MCP")}</li>
             <li>{tr("ChatGPT + compatible MCP clients", "ChatGPT + 兼容 MCP 客户端")}</li>
           </ul>
-          <a className="primaryButton goldButton" href={user ? APP_ORIGIN + "/overview" : APP_ORIGIN + "/auth/google?return_to=/overview"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start free", "免费开始")}</a>
+          <a className="primaryButton goldButton" href={user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/google?return_to=/overview"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start free", "免费开始")}</a>
         </article>
         <article className="priceCard">
           <span className="planTag">{tr("PAID USAGE", "付费额度")}</span>
@@ -2552,7 +2555,7 @@ function PricingPage({ user }: { user?: User | null }) {
             <li>{tr("Same OAuth and device permissions", "继续使用同一套 OAuth 与设备权限")}</li>
             <li>{tr("Designed for heavier personal usage", "适合更高频的个人使用")}</li>
           </ul>
-          <a className="ghostButton priceLink" href={user ? APP_ORIGIN + "/settings" : APP_ORIGIN + "/auth/google?return_to=/settings"}>{tr("Manage usage", "管理额度")}</a>
+          <a className="ghostButton priceLink" href={user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/google?return_to=/settings"}>{tr("Manage usage", "管理额度")}</a>
         </article>
       </section>
     </PublicLayout>
@@ -3892,6 +3895,12 @@ function Dashboard({
       </aside>
 
       <main className="dashboardMain">
+        {UI_PREVIEW && (
+          <div className="previewModeBanner" role="status">
+            <strong>PR PREVIEW</strong>
+            <span>{tr("Mock data · read-only · no production OAuth, D1, MCP or device state", "模拟数据 · 只读 · 不连接生产 OAuth、D1、MCP 或设备状态")}</span>
+          </div>
+        )}
         <header className="mobileTopbar"><Brand/><div className="mobileActions"><ThemeSwitcher compact/><button className="addButton compact" onClick={() => setShowAdd(true)}>+ {tr("Device", "设备")}</button></div></header>
 
         {active === "overview" && (
@@ -5105,7 +5114,7 @@ function App() {
 
   useEffect(() => { void loadMe(); }, []);
   useEffect(() => {
-    if (!("serviceWorker" in navigator) || location.protocol !== "https:") return;
+    if (UI_PREVIEW || !("serviceWorker" in navigator) || location.protocol !== "https:") return;
     void navigator.serviceWorker.register("/sw.js").catch(() => {
       // PWA support is progressive enhancement; dashboard functionality must not depend on it.
     });
@@ -5127,6 +5136,7 @@ function App() {
   }, [user?.id]);
 
   const isAppHost = location.hostname === "mcp.remotearc.app";
+  const isDashboardHost = isAppHost || UI_PREVIEW;
   if (isAppHost && location.pathname === "/") {
     history.replaceState({}, "", "/overview");
   }
@@ -5171,7 +5181,7 @@ function App() {
   if (location.pathname === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
   if (location.pathname === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
 
-  if (isAppHost && (location.pathname === "/dashboard" || Object.values(DASHBOARD_PATHS).includes(location.pathname))) {
+  if (isDashboardHost && (location.pathname === "/dashboard" || Object.values(DASHBOARD_PATHS).includes(location.pathname))) {
     if (user === undefined) {
       return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
     }

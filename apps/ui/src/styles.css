@@ -10695,3 +10695,38 @@ body{font-size:18px;line-height:1.6}
   background:#0d2935;
   color:#8addf7;
 }
+
+.previewModeBanner{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 4px;
+  padding:9px 12px;
+  border:1px solid #cfe6ed;
+  border-radius:10px;
+  background:#f0f8fa;
+  color:#496a75;
+  font-size:12px;
+  line-height:1.45;
+}
+.previewModeBanner strong{
+  flex:0 0 auto;
+  color:#087ea4;
+  font-size:11px;
+  letter-spacing:.08em;
+}
+:root[data-theme="dark"] .previewModeBanner{
+  border-color:#214556;
+  background:#0a1c25;
+  color:#96afb7;
+}
+:root[data-theme="dark"] .previewModeBanner strong{
+  color:#8addf7;
+}
+@media(max-width:620px){
+  .previewModeBanner{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:3px;
+  }
+}

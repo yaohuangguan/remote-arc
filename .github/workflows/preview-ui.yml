@@ -37,6 +37,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build UI
+        env:
+          VITE_UI_PREVIEW: "1"
         run: pnpm --filter @remotearc/ui build
 
       - id: preview
@@ -67,10 +69,13 @@ jobs:
               marker,
               '### Remote Arc UI Preview',
               '',
-              `**Preview:** ${preview}`,
+              `**Public site:** ${preview}`,
+              `**Dashboard:** ${preview}/overview`,
+              `**Connect AI:** ${preview}/connect`,
+              `**Settings:** ${preview}/settings`,
               unique ? `**This deployment:** ${unique}` : '',
               '',
-              'This preview contains the PR UI build only. Production OAuth, D1, MCP and device state are not connected.',
+              'Dashboard routes use read-only mock data. Production OAuth, D1, MCP and device state are not connected.',
             ].filter(Boolean).join('\n');
 
             const { owner, repo } = context.repo;
