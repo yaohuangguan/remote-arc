@@ -30,19 +30,51 @@ Last updated: 2026-10-01. Branch: `feat/goal-continuation`, stacked on PR #43.
    lease takeover, unknown dispatch outcome, late handle cleanup and no early
    scheduled execution. They are not a real Plugin/host or device test.
 
+4. Implemented signed MCP event subscriptions/delivery, encrypted signing keys,
+   OAuth revocation checks and bounded retries. Delivery is deliberately gated
+   on a secure Cloudflare egress service binding; production provisioning and
+   real Chat callback acceptance are still pending.
+5. Added explicit account/repository GitHub action permission, per-device task
+   permission APIs and Dashboard switches, and optional expiring power leases
+   in the device CLI. Added the full system architecture and bilingual website
+   long-running-work guide.
+6. Expanded goal tests passed, including recurring independent runs, provider
+   retry, device permission revocation, signed callback retry/revocation, power
+   helper expiry and actual MCP SDK discovery/scope checks. Wrangler/D1 E2E
+   passed for long tasks, two-attempt verification, six-turn hosted Agent Goal,
+   policy change, webhook/GitHub action and offline reconnect completion.
+7. Dashboard upgraded with 16px body/inputs, 14px secondary text, larger primary
+   actions, task search/status filters, attention ordering, source-AI waiting
+   guidance, completion evidence and on-demand run history. Added accessible
+   permission controls and a one-row mobile navigation. The long-work guide
+   loads separately from the main website bundle.
+8. Confirmed the user workflow: ordinary tool calls are not automatically Tasks.
+   Users ask in the AI chat; the AI creates ongoing/scheduled tasks inside prior
+   authorization. Dashboard is an optional management surface. Recorded this in
+   the technical reference, website guide and MCP tool descriptions.
+9. Final local CI, UI/CLI builds and diff checks passed. Browser checks at 1440px
+   and 390px covered both languages/themes, search/filter empty state, source
+   progress, completion evidence/output, device permissions and form blocking.
+   Core Dashboard pages and the ten-section Docs route had no horizontal
+   overflow. Existing main bundle size warning remains; the new Docs chunk is
+   separate. Native keep-awake helpers still need actual target-OS acceptance.
+
 ## Next concrete action
 
-Add authenticated signed MCP event subscriptions/delivery, bind GitHub cloud
-actions to account/repository permission, finish formal architecture + bilingual
-website Docs, and broaden recovery/scheduling tests before running full CI/E2E.
+Push the implementation to draft PR #44 and confirm CI at its exact head. Next
+acceptance requires a provisioned secure Cloudflare event-egress binding, real
+Plugin OAuth/callback discovery, a real source-controlled Chat/Work goal, and
+actual supported OS power-helper behavior. Keep the release HOLD until its
+separate review/release conditions are satisfied. Resume from PLAN.md and this
+log; do not infer overnight host support from the transport mocks.
 
 ## Validation and unresolved limits
 
 - Runtime regressions for cancellation resurrection and stale-worker lease
-  clearing pass with the new fences. Full Wrangler E2E is still pending.
+  clearing pass with the new fences. Local Wrangler E2E also passed.
 - No production credentials, migration, deployment or release were performed.
 - No real Plugin/Chat/Work overnight acceptance has run. Preserve that pending
   status; mocked E2E cannot establish a host's overnight reasoning lifetime.
-- `docs/system-architecture.md` and website Docs are required follow-up work.
+- `docs/system-architecture.md` and website Docs are implemented locally.
 - Power availability must be verified on a real target device; do not imply
   login background service alone prevents sleep.

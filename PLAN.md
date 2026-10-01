@@ -4,6 +4,10 @@ Read this file first when resuming implementation. The detailed design is in
 [the implementation plan](docs/long-running-work-plan.md), the public technical
 reference is in [the system architecture](docs/system-architecture.md), and the
 current checkpoint is in [the progress log](docs/long-running-work-progress.md).
+Dashboard behavior and design references are in
+[the Dashboard design note](docs/dashboard-design.md). Users keep the AI chat
+as their primary entrypoint; persistent Tasks are for ongoing/scheduled work,
+not a required wrapper around every ordinary tool call.
 
 The accepted product outcome is a verifiable goal that an agent can continue
 working on for hours while the user is away. Execution, observation, revised

@@ -199,13 +199,16 @@ accurately. UI preview is not production release; retain the PR release gate.
 
 ## 10. Implementation sequence and checkpoints
 
-- [ ] A. Fix lease fences, pause/cancel/expiry races and action checkpoints.
-- [ ] B. Add journal/revision and source-controller context/decision tools.
-- [ ] C. Add signed, durable MCP task-event subscriptions and delivery.
-- [ ] D. Add Agent Goal schedules, bounded provider retries, evidence checks and
+- [x] A. Fix lease fences, pause/cancel/expiry races and action checkpoints.
+- [x] B. Add journal/revision and source-controller context/decision tools.
+- [x] C. Add signed, durable MCP task-event subscriptions and delivery.
+      Implemented behind the required secure-egress binding; production binding
+      and real callback acceptance remain part of G / release acceptance.
+- [x] D. Add Agent Goal schedules, bounded provider retries, evidence checks and
       task-scoped availability support where safe and verifiable.
-- [ ] E. Formal architecture, bilingual website Docs and accurate UI/API text.
-- [ ] F. Failure-injection tests, full required CI/build checks and review.
+- [x] E. Formal architecture, bilingual website Docs and accurate UI/API text.
+- [x] F. Failure-injection tests, local CI/build checks and diff review.
+      Confirm GitHub Actions against each pushed head before release review.
 - [ ] G. Real Plugin OAuth, Chat event continuation, Work goal and target-device
       overnight acceptance (requires actual host execution, never mock proof).
 
