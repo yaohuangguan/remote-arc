@@ -64,6 +64,20 @@ Last updated: 2026-10-01. Branch: `feat/goal-continuation`, stacked on PR #43.
     Ubuntu, Windows and macOS. A final CSS adjustment overrides the inherited
     26px heading rule so the documented 28–36px scale applies.
 
+11. User requested a comprehensive Docs/Use Cases review against PR41/43/44,
+    clarification of process recovery and sandbox isolation, and a replacement
+    connection recording. Rebuilt the lower homepage around concrete workflows,
+    setup, saved goals, permissions and FAQ. Added lazy Docs/MCP and ten Use Case
+    routes with matching SEO/sitemap. The final hero rotates Build apps, Run
+    tasks, Fix bugs and Analyze data above fixed Anywhere / Anytime lines.
+    Overnight/scheduled work appears as supporting scenes. PPT was removed.
+    Recorded 21 seconds of actual product UI with captions and chapter controls.
+    Full local CI, UI typecheck/build and the 26-tool/ten-route source audit pass.
+    Desktop/mobile language/theme, keyboard tabs, fixed headline geometry,
+    reduced motion, video chapters and clipboard-denial checks pass. The 320px
+    public navigation clipping is fixed. Audit evidence and the future isolation
+    decision are in `docs/website-content-review.md` and `docs/execution-isolation.md`.
+
 ## Next concrete action
 
 Implementation is saved in draft PR #44. Confirm CI at each subsequent head.

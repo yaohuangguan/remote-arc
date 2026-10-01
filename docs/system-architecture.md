@@ -5,6 +5,10 @@ Draft PR；代码、官网预览与生产发布分别管理。本文不代表新
 实现与续接进度见 [PLAN.md](../PLAN.md) 和
 [进度记录](long-running-work-progress.md)。
 
+官网与代码一致性审查见 [官网内容审查](website-content-review.md)，当前执行边界及
+未来可选隔离执行器的技术决策见 [执行隔离](execution-isolation.md)。后者是设计
+建议，当前实现不包含 OS 沙箱。
+
 ## 1. 产品目标与系统职责
 
 Remote Arc 将兼容 MCP 的 AI 客户端连接到用户自己的 Windows、macOS、Linux

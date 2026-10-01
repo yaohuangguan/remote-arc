@@ -1,5 +1,6 @@
 import React from "react";
 import { useI18n } from "./i18n.js";
+import { TaskAvailability } from "./product-docs.js";
 
 export function LongRunningWorkDocs() {
   const { tr } = useI18n();
@@ -11,7 +12,7 @@ export function LongRunningWorkDocs() {
     ["Agent Goal", tr("Inspect results, choose the next action, revise and verify.", "检查结果、选择下一步、调整方案并验收。"), tr("Coding, investigation and tasks whose next step depends on the result.", "开发、排查以及下一步取决于结果的工作。")],
   ];
   return (
-    <main className="technicalDoc">
+    <main className="technicalDoc productDocs">
       <header className="articleHeader">
         <span className="eyebrow">{tr("DOCUMENTATION · LONG-RUNNING WORK", "文档 · 持续工作")}</span>
         <h1>{tr("Long-running, overnight and scheduled work", "长任务、过夜任务与定时任务")}</h1>
@@ -22,6 +23,7 @@ export function LongRunningWorkDocs() {
           <a href="https://github.com/yaohuangguan/remote-arc/blob/feat/goal-continuation/docs/system-architecture.md" target="_blank" rel="noreferrer">{tr("Engineering reference", "系统技术参考")} ↗</a>
         </div>
       </header>
+      <TaskAvailability />
       <div className="technicalDocLayout">
         <aside className="articleToc">
           <strong>{tr("CONTENTS", "目录")}</strong>
@@ -33,6 +35,7 @@ export function LongRunningWorkDocs() {
             ["prepare", tr("Prepare an overnight goal", "准备过夜目标")],
             ["schedule", tr("Scheduled goals", "定时目标")],
             ["recovery", tr("Interruptions and recovery", "中断与恢复")],
+            ["status", tr("States and limits", "状态与限制")],
             ["evidence", tr("Completion and evidence", "完成与证据")],
             ["data", tr("Task data", "任务数据")],
             ["availability", tr("Availability", "可用状态")],
@@ -81,7 +84,25 @@ export function LongRunningWorkDocs() {
           <section id="work-recovery">
             <h2>{tr("Continue from saved progress", "从保存的进度继续")}</h2>
             <p>{tr("A temporary device disconnect waits for reconnection. Transient planner errors get bounded retries. A new conversation can read the saved goal, factual memory, latest result and ordered journal. An uncertain action outcome is reported for inspection before another action is chosen.", "设备暂时断线时等待重连，Planner 的临时错误有界重试。新对话可以读取保存的目标、事实记忆、最新结果和有序日志。操作结果不确定时先说明情况、检查现状，再选择下一步。")}</p>
+            <div className="docsTableWrap"><table className="articleTable"><thead><tr><th>{tr("Interruption", "中断")}</th><th>{tr("Recovery", "恢复")}</th></tr></thead><tbody>
+              <tr><td>{tr("Chat ends", "聊天结束")}</td><td>{tr("Fixed saved tasks continue. Adaptive source tasks still need the host to submit further decisions; hosted tasks use the selected configured planner.", "固定持久任务可以继续；自适应源任务仍需要宿主提交后续决策，托管任务则使用已选择配置的 Planner。")}</td></tr>
+              <tr><td>{tr("Device disconnects", "设备断线")}</td><td>{tr("The task waits for reconnection. Saved progress remains; no new local action runs while offline.", "任务等待重连，保存进度仍在，离线时不执行新的本机动作。")}</td></tr>
+              <tr><td>{tr("Local agent or machine restarts", "本地 Agent 或机器重启")}</td><td>{tr("The task remains in D1. After the OS/user session and agent return, a lost acknowledged process handle follows restart/fail for fixed work, or inspection for an Agent Goal. The old PID and local capture are not restored.", "任务仍保存在 D1。OS 用户会话和 Agent 恢复后，已确认但丢失的进程句柄按固定任务 restart/fail 或 Agent Goal 重新检查处理；不恢复旧 PID 和本地捕获。")}</td></tr>
+              <tr><td>{tr("Relay worker is replaced", "Relay Worker 被替换")}</td><td>{tr("Persistent leases and revisions fence stale writes. A later scheduler turn reads the saved state. Unknown dispatch effects are inspected rather than blindly replayed.", "持久租约和版本阻止旧写回，后续调度轮次读取保存状态。未知派发副作用先检查，不盲目重放。")}</td></tr>
+            </tbody></table></div>
+            <p>{tr("restart means a new command attempt, not resuming the same OS process. Use fail for a fixed command that cannot safely run twice, and inspect the real state after an uncertain outcome. Permanent daemons still belong under an OS service manager; durable Tasks solve the lifecycle of approved work.", "restart 指新的命令尝试，不是继续同一个 OS 进程。不能安全重复的固定命令应选择 fail，结果不确定时检查真实状态。常驻守护进程仍应使用 OS 服务管理器，持久 Task 解决的是已批准工作的生命周期。")}</p>
             <p>{tr("Use Pause to suspend further work and Cancel to stop the task. Cancellation attempts to stop its managed process. Changing file/tool safety policy stops old tasks rather than granting them new authority. No system can automatically undo every shell or external action.", "Pause 暂停后续工作，Cancel 停止任务并尝试停止受管进程。修改文件或工具安全策略会停止旧任务，不会给它们扩大权限。系统无法自动撤销所有命令或外部操作。")}</p>
+          </section>
+          <section id="work-status">
+            <h2>{tr("Read the state and respect the limits", "理解状态与停止限制")}</h2>
+            <div className="docsTableWrap"><table className="articleTable"><thead><tr><th>{tr("State", "状态")}</th><th>{tr("Meaning", "含义")}</th></tr></thead><tbody>
+              <tr><td>waiting / running</td><td>{tr("Waiting for its start or next turn, or executing work.", "等待开始或下一轮，或正在执行。")}</td></tr>
+              <tr><td>waiting_for_device</td><td>{tr("Execution needs the offline computer to reconnect.", "执行需要离线电脑重新连接。")}</td></tr>
+              <tr><td>waiting_for_event</td><td>{tr("Waiting for a condition, or awaiting a source decision. Read the phase; awaiting_agent means the AI must continue.", "等待条件或源决策。查看 phase，awaiting_agent 表示需要 AI 继续。")}</td></tr>
+              <tr><td>paused / cancelled</td><td>{tr("Further task work is suspended or stopped. Prior effects are not automatically undone.", "后续任务工作已暂停或停止，此前副作用不会自动撤销。")}</td></tr>
+              <tr><td>completed / failed / expired</td><td>{tr("A run/goal finished, could not finish, or reached its deadline. Check evidence and run history; a recurring task can wait for its next run.", "一轮或目标完成、无法完成，或到达期限。检查证据与运行历史，周期任务可等待下一轮。")}</td></tr>
+            </tbody></table></div>
+            <p>{tr("max_iterations limits planning turns, not hours or tokens. The current Agent Goal limit is 1–2000 turns, with a default of 30. Task expiry, run limits and host/provider quotas also apply. Reaching a budget or deadline is a stopping outcome, not success. A one-minute scheduler advances due work; schedules are not exact-second timers.", "max_iterations 限制规划轮数，不是小时或 Token。当前 Agent Goal 范围为 1–2000 轮，默认 30 轮；任务期限、运行次数和宿主或服务额度也适用。触及预算或期限是停止结果，不是成功。每分钟调度器推进到期工作，调度不是精确到秒的计时器。")}</p>
           </section>
           <section id="work-evidence">
             <h2>{tr("Read completion evidence", "阅读完成证据")}</h2>

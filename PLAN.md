@@ -28,6 +28,15 @@ push over concurrent work. Keep docs and progress claims consistent with tests.
 
 ## Resume procedure
 
+Latest requested follow-up: audit website Docs against PR41/43/44, rewrite the
+MCP reference and Use Cases, clarify process handles versus durable task
+recovery and native execution versus OS isolation, and replace the homepage
+connection clip with a recording of actual product pages. The homepage now has
+short headline scenes above fixed Anywhere / Anytime lines and a rebuilt lower half.
+PPT was removed at the user's request. Track completed checks and the future
+sandbox decision in `docs/website-content-review.md`. This work remains on PR44
+and preserves the release HOLD.
+
 Compatibility: keep existing tools, task modes and hosted-planner defaults.
 New source-controller tools/fields are opt-in and D1 migrations are additive.
 Do not edit or push the parent PR #43 branch for this implementation.
