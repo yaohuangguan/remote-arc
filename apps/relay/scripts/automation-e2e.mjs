@@ -1,3 +1,4 @@
+import os from "node:os";
 import { createHash, generateKeyPairSync } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import http from "node:http";
@@ -8,7 +9,10 @@ import WebSocket from "../../agent/node_modules/ws/wrapper.mjs";
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const repo=path.resolve(here,"../../..");
-const persist=path.join(process.env.TMPDIR||"/tmp","ra-auto-e2e-"+process.pid);
+const persist=fs.mkdtempSync(path.join(os.tmpdir(),"ra-auto-e2e-"));
+const wranglerCli=path.join(repo,"apps/relay/node_modules/wrangler/bin/wrangler.js");
+const relayDir=path.join(repo,"apps/relay");
+const removePersist=()=>{if(path.dirname(persist)!==os.tmpdir()||!path.basename(persist).startsWith("ra-auto-e2e-"))throw new Error("Invalid cleanup path");fs.rmSync(persist,{recursive:true,force:true});};
 const base="http://127.0.0.1:8789";
 const password="automation-e2e";
 const email="automation-e2e@example.com";
@@ -67,14 +71,14 @@ if(baseConfig.assets&&Array.isArray(baseConfig.assets.run_worker_first)&&!baseCo
 const e2eConfig=repo+"/apps/relay/wrangler.e2e.json";
 fs.writeFileSync(e2eConfig,JSON.stringify(baseConfig,null,2));
 
-fs.rmSync(persist,{recursive:true,force:true});
-let r=spawnSync("pnpm",["--filter","@remotearc/relay","exec","wrangler","d1","migrations","apply","remote-link-auth","--local","--persist-to",persist],{cwd:repo,encoding:"utf8"});
+removePersist();
+let r=spawnSync(process.execPath,[wranglerCli,"d1","migrations","apply","remote-link-auth","--local","--persist-to",persist],{cwd:relayDir,encoding:"utf8"});
 if(r.status!==0)throw new Error("migration failed\n"+r.stdout+"\n"+r.stderr);
 
-const args=["--filter","@remotearc/relay","exec","wrangler","dev","--config","wrangler.e2e.json","--local","--persist-to",persist,"--port","8789","--test-scheduled",
+const args=[wranglerCli,"dev","--config","wrangler.e2e.json","--local","--persist-to",persist,"--port","8789","--test-scheduled",
   "--var","PUBLIC_ORIGIN:"+base,"--var","APP_ORIGIN:"+base,"--var","MARKETING_ORIGIN:"+base,
   "--var","REVIEWER_EMAIL:"+email,"--var","REVIEWER_PASSWORD_SHA256:"+passHash,"--var","REVIEWER_DEMO_DEVICE_ID:review-e2e"];
-const worker=spawn("pnpm",args,{cwd:repo,env:process.env,stdio:["ignore","pipe","pipe"]});
+const worker=spawn(process.execPath,args,{cwd:relayDir,env:process.env,stdio:["ignore","pipe","pipe"]});
 let workerLog="";
 worker.stdout.on("data",d=>workerLog+=d.toString()); worker.stderr.on("data",d=>workerLog+=d.toString());
 
@@ -221,6 +225,11 @@ try {
   await tick(); row=await get(ciId); assert(row.status==="running","condition starts "+row.status);
   await poke(ciId); await tick(); row=await get(ciId); assert(row.status==="completed","condition completes "+row.status);
 
+  assert(/^[a-f0-9-]{36}$/.test(deviceId),"safe SQL fixture device ID");
+  const permission=spawnSync(process.execPath,[wranglerCli,"d1","execute","remote-link-auth","--local","--persist-to",persist,"--command",
+    "INSERT INTO github_automation_permissions(user_id,installation_id,owner,repo,created_at) SELECT user_id,'67890','yaohuangguan','remote-arc',datetime('now') FROM devices WHERE id='"+deviceId+"'"],{cwd:relayDir,encoding:"utf8"});
+  assert(permission.status===0,"local test permission setup "+permission.stderr);
+
   // Native GitHub action: CI webhook success -> cloud-side PR merge, no device command.
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({
     name:"E2E merge after CI",
@@ -243,11 +252,18 @@ try {
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E offline",kind:"long_task",device_id:deviceId,command:"offline-task",interval_seconds:60})});
   const offlineId=created.automation.id; await tick(); row=await get(offlineId); assert(row.status==="waiting_for_device","offline waits "+row.status);
 
-  console.log(JSON.stringify({ok:true,long:"completed",unattended_recovery:"completed_without_approval",goal:{status:"completed",attempts:2},agent_goal:{status:"completed",planner_turns:plannerCalls},policy_change:"failed_without_approval",condition:"completed",github_merge:{status:"completed",api_calls:githubMergeCalls},offline:"waiting_for_device",deviceId},null,2));
+  const reconnected=new WebSocket(base.replace("http","ws")+"/agent",{headers:{Authorization:"Bearer "+tokenBody.device_token}});
+  attachSocket(reconnected);
+  await new Promise((ok,fail)=>{reconnected.once("open",()=>setTimeout(ok,150));reconnected.once("error",fail)});
+  await poke(offlineId);await tick();row=await get(offlineId);assert(row.status==="running","reconnected task starts "+row.status);
+  await poke(offlineId);await tick();row=await get(offlineId);assert(row.status==="completed","reconnected task completes "+row.status);
+  reconnected.close();
+
+  console.log(JSON.stringify({ok:true,long:"completed",unattended_recovery:"completed_without_approval",goal:{status:"completed",attempts:2},agent_goal:{status:"completed",planner_turns:plannerCalls},policy_change:"failed_without_approval",condition:"completed",github_merge:{status:"completed",api_calls:githubMergeCalls},offline:"reconnected_and_completed",deviceId},null,2));
 } finally {
   worker.kill("SIGTERM");
   await sleep(300);
   await new Promise((resolve)=>mockServer.close(resolve));
   fs.rmSync(e2eConfig,{force:true});
-  fs.rmSync(persist,{recursive:true,force:true});
+  removePersist();
 }

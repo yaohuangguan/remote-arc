@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createTaskKeepAwakeManager } from "./keep-awake.js";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
@@ -289,7 +290,8 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
   );
 
   const tools = await core.tools();
-  const internalTools = ["background_agent_status", "set_background_agent"];
+  const internalTools = ["background_agent_status", "set_background_agent", "set_task_keep_awake"];
+  let keepAwake = createTaskKeepAwakeManager();
   logLine("success", `Local tools ready: ${tools.length} exposed`);
   process.stdout.write("       " + dim(tools.map((tool) => tool.name).join(" · ")) + "\n");
   try {
@@ -312,6 +314,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
 
   const shutdown = async () => {
     stopped = true;
+    keepAwake.close();
     await core.close().catch(() => undefined);
   };
   process.on("SIGINT", shutdown);
@@ -478,7 +481,9 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
             let result: unknown;
             let exitAfterResponse = false;
 
-            if (message.tool === "background_agent_status") {
+            if (message.tool === "set_task_keep_awake") {
+              result = await keepAwake.set(String(message.arguments?.task_id || ""), Number(message.arguments?.seconds || 0));
+            } else if (message.tool === "background_agent_status") {
               const status = await backgroundAgentStatus();
               result = {
                 ...status,
@@ -563,6 +568,8 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
           (error instanceof Error ? error.message : String(error)),
       );
     } finally {
+      keepAwake.close();
+      if (!stopped) keepAwake = createTaskKeepAwakeManager();
       ws.removeAllListeners("message");
       ws.removeAllListeners("open");
       ws.removeAllListeners("unexpected-response");

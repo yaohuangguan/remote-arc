@@ -1,0 +1,58 @@
+.pricingContent{--pricing-muted:var(--muted);padding:68px 0 50px;color:var(--text)}
+:root[data-theme="light"] .pricingContent{--pricing-muted:#536c77}
+:root[data-theme="dark"] .pricingContent{--pricing-muted:#9eb0ba}
+.pricingContent .eyebrow{font-size:12px;letter-spacing:.1em;font-weight:750;color:var(--pricing-muted)}
+.pricingIntro{max-width:880px;margin-bottom:42px}
+.pricingContent .pricingIntro h1{max-width:850px;margin:17px 0 23px;font-size:clamp(38px,4.8vw,60px);line-height:1.12;letter-spacing:-.04em;color:var(--text);text-wrap:balance}
+.pricingIntro>p{max-width:700px;margin:0;font-size:19px;line-height:1.7;color:var(--pricing-muted)}
+.pricingPlans{display:grid;grid-template-columns:1.16fr 1fr;gap:22px;align-items:stretch}
+.pricingPlans>article{border:1px solid var(--line);border-radius:17px;padding:35px 38px;min-width:0}
+.pricingPlans .hostedPlan{background:var(--panel);border-top:3px solid #269bbb}
+.planHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;letter-spacing:.08em;font-weight:750;color:var(--pricing-muted)}
+.currentPlanTag{border:1px solid var(--line);border-radius:6px;letter-spacing:0;font-weight:600;padding:5px 9px;font-size:12px}
+.hostedPrice{display:flex;align-items:baseline;gap:12px;margin:23px 0 20px}
+.hostedPrice>strong{font-size:66px;line-height:1;letter-spacing:-.045em}
+.hostedPrice>span{font-size:16px;color:var(--pricing-muted)}
+.includedAllowance{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.includedAllowance>strong{font-size:28px;letter-spacing:-.02em;line-height:1.2}
+.includedAllowance>span{font-size:16px;color:var(--pricing-muted)}
+.planDescription{font-size:16px;line-height:1.7;color:var(--pricing-muted);margin:16px 0 0;max-width:480px}
+.planIncluded{list-style:none;margin:24px 0 29px;padding:22px 0 0;border-top:1px solid var(--line);display:grid;gap:14px}
+.planIncluded li{display:flex;align-items:flex-start;gap:11px;font-size:16px;line-height:1.5}
+.planIncluded li>span{color:#269bbb;font-weight:700}
+.pricingPlans .primaryButton,.pricingPlans .ghostButton{min-height:48px;display:inline-flex;align-items:center;justify-content:center;font-size:16px;padding:12px 23px;border-radius:9px}
+.hostedPlan>small{display:block;margin-top:15px;font-size:13px;line-height:1.6;color:var(--pricing-muted);max-width:440px}
+.capacityPlan{display:flex;flex-direction:column;align-items:flex-start;background:transparent}
+.pricingContent .capacityPlan h2{margin:25px 0 18px;max-width:440px;font-size:36px;line-height:1.15;letter-spacing:-.025em}
+.capacityPlan>p,.capacityDetails p{font-size:17px;line-height:1.75;color:var(--pricing-muted);margin:0;max-width:460px}
+.capacityDetails{border-top:1px solid var(--line);padding-top:23px;margin:25px 0 30px}
+.capacityDetails strong{display:block;font-size:17px;margin-bottom:11px}
+.capacityDetails p{font-size:16px}
+.capacityPlan .ghostButton{margin-top:auto}
+.pricingUsageLink{display:inline-block;margin-top:18px;color:var(--pricing-muted);font-size:14px;text-decoration:underline;text-underline-offset:3px;line-height:1.6}
+.pricingMetering{padding:68px 0}
+.pricingContent section>header h2,.pricingTasks h2{font-size:clamp(28px,3vw,38px);letter-spacing:-.025em;line-height:1.17;margin:15px 0 26px;color:var(--text)}
+.meteringGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);gap:30px;padding-top:25px}
+.meteringGrid article>span{font-size:13px;color:var(--pricing-muted);font-variant-numeric:tabular-nums}
+.meteringGrid h3{font-size:20px;line-height:1.4;margin:13px 0 11px}
+.meteringGrid p{font-size:16px;line-height:1.75;color:var(--pricing-muted);margin:0}
+.pricingTasks{display:flex;align-items:center;justify-content:space-between;gap:35px;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:29px 32px}
+.pricingTasks>div{max-width:840px;min-width:0}
+.pricingTasks h2{font-size:27px;margin:12px 0 16px}
+.pricingTasks p{font-size:16px;color:var(--pricing-muted);line-height:1.75;margin:0}
+.pricingTasks>a{flex-shrink:0;font-size:15px;font-weight:600;line-height:1.6}
+.pricingQuestions{display:grid;grid-template-columns:.7fr 1.3fr;gap:70px;padding:68px 0 40px}
+.pricingQuestions>div{min-width:0}
+.pricingQuestions details{border-top:1px solid var(--line)}
+.pricingQuestions details:last-child{border-bottom:1px solid var(--line)}
+.pricingQuestions summary{display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;font-size:17px;line-height:1.5;font-weight:600;padding:21px 0;list-style:none}
+.pricingQuestions summary::-webkit-details-marker{display:none}
+.pricingQuestions summary>span{font-size:23px;font-weight:400;color:var(--pricing-muted);flex:0 0 auto}
+.pricingQuestions details[open] summary>span{transform:rotate(45deg)}
+.pricingQuestions details p{font-size:16px;line-height:1.8;color:var(--pricing-muted);margin:0 0 23px}
+.pricingFooter{display:flex;align-items:center;flex-wrap:wrap;gap:22px;border-top:1px solid var(--line);padding-top:24px;font-size:15px}
+.pricingFooter p{margin:0;color:var(--pricing-muted)}
+.pricingContent a:focus-visible,.pricingContent summary:focus-visible{outline:3px solid #269bbb;outline-offset:5px}
+@media(max-width:900px){.pricingPlans>article{padding:28px}.pricingContent .capacityPlan h2{font-size:30px}.pricingQuestions{gap:35px}.pricingTasks{align-items:flex-start;flex-direction:column;gap:20px}}
+@media(max-width:700px){.pricingContent{padding-top:49px}.pricingIntro{margin-bottom:29px}.pricingContent .pricingIntro h1{font-size:38px;line-height:1.16}.pricingIntro>p{font-size:17px}.pricingPlans{grid-template-columns:1fr;gap:19px}.pricingPlans>article{padding:27px 24px}.hostedPrice>strong{font-size:58px}.capacityPlan>p{font-size:16px}.pricingContent .capacityPlan h2{font-size:30px}.pricingMetering{padding:49px 0}.meteringGrid{grid-template-columns:1fr;gap:27px}.meteringGrid h3{margin-top:9px}.pricingTasks{padding:25px}.pricingTasks h2{font-size:26px}.pricingQuestions{grid-template-columns:1fr;gap:12px;padding-top:49px}.pricingContent section>header h2{font-size:30px}.pricingQuestions summary{font-size:17px}.pricingFooter{gap:15px}}
+@media(prefers-reduced-motion:reduce){.pricingContent *{transition:none!important;animation:none!important}}

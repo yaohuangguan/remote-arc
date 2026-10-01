@@ -1,3 +1,5 @@
+import { requireTaskPermission } from "./device-task-policy.js";
+import { validateAgentToolArguments } from "./agent-tools.js";
 import {
   getSessionUser,
   nowIso,
@@ -5,13 +7,16 @@ import {
   sha256Hex,
   type OAuthIdentity,
 } from "./auth.js";
+import { checkpointTask, journalStatement, LeaseLostError, renewTaskLease } from "./automation-store.js";
 import { callDevice, type DeviceCallEnv } from "./device-call.js";
 import {
   agentPlannerConfigured,
   planAgentTurn,
+  PlannerTransientError,
   type AgentPlannerEnv,
   type AgentToolName,
 } from "./agent-planner.js";
+import { takeSourceDecision } from "./source-goals.js";
 import {
   githubAutomationConfigured,
   mergeGitHubPullRequest,
@@ -38,7 +43,7 @@ export type AutomationStatus =
   | "cancelled"
   | "expired";
 
-type AutomationEnv = DeviceCallEnv &
+export type AutomationEnv = DeviceCallEnv &
   AgentPlannerEnv &
   GitHubAutomationEnv & {
     PUBLIC_ORIGIN: string;
@@ -56,6 +61,7 @@ type DeviceCommandStep = {
 type AutomationStep = DeviceCommandStep | GitHubMergeSpec;
 
 type ActionPlan = {
+  keep_awake?: boolean;
   steps: AutomationStep[];
   recovery?: "restart" | "fail";
 };
@@ -67,8 +73,10 @@ type CommandGoalSpec = {
   expected_exit_code: number;
 };
 
-type AgentGoalSpec = {
+export type AgentGoalSpec = {
   type: "agent_goal";
+  controller?: "hosted" | "source";
+  controller_client_id?: string;
   objective: string;
   success_criteria: string;
   workspace?: string;
@@ -94,9 +102,12 @@ type TriggerSpec =
       match?: Record<string, JsonPrimitive>;
     };
 
-type RuntimeState = {
+export type RuntimeState = {
+  inflight_action?: { id: string; tool: string };
+  retry_count?: number;
   phase?:
     | "idle"
+    | "awaiting_agent"
     | "step_running"
     | "goal_running"
     | "agent_process_running"
@@ -141,6 +152,7 @@ export type AutomationRow = {
   lease_until: string | null;
   created_at: string;
   updated_at: string;
+  revision: number;
 };
 
 type AutomationRunRow = {
@@ -169,6 +181,7 @@ type DevicePolicySnapshot = {
 };
 
 export type CreateAutomationInput = {
+  keep_awake?: boolean;
   name?: string;
   kind?: AutomationCreateKind;
   device_id?: string;
@@ -181,6 +194,8 @@ export type CreateAutomationInput = {
     expected_exit_code?: number;
   };
   agent_goal?: {
+    controller?: "hosted" | "source";
+    controller_client_id?: string;
     objective?: string;
     success_criteria?: string;
     workspace?: string;
@@ -448,12 +463,14 @@ function sanitizeGoal(
       throw new Error("Agent Goal verification command is too long.");
     }
     const maxIterations = Number(input.agent_goal?.max_iterations ?? 30);
-    if (!Number.isInteger(maxIterations) || maxIterations < 1 || maxIterations > 100) {
-      throw new Error("Agent Goal max_iterations must be between 1 and 100.");
+    if (!Number.isInteger(maxIterations) || maxIterations < 1 || maxIterations > 2000) {
+      throw new Error("Agent Goal max_iterations must be between 1 and 2000.");
     }
     const allowedTools = normalizeAgentTools(policy, input.agent_goal?.allowed_tools);
     return {
       type: "agent_goal",
+      controller: input.agent_goal?.controller === "source" ? "source" : "hosted",
+      ...(input.agent_goal?.controller_client_id ? { controller_client_id: input.agent_goal.controller_client_id } : {}),
       objective,
       success_criteria: successCriteria,
       ...(workspace ? { workspace } : {}),
@@ -585,6 +602,15 @@ function defaultMaxRuns(kind: AutomationKind, value: unknown) {
   return 1;
 }
 
+async function authorizeGitHubAction(env: AutomationEnv, userId: string, action: GitHubMergeSpec) {
+  const installationId = action.installation_id || env.GITHUB_APP_INSTALLATION_ID;
+  const permission = installationId && await env.DB.prepare(`SELECT user_id FROM github_automation_permissions
+    WHERE user_id = ?1 AND installation_id = ?2 AND owner = ?3 COLLATE NOCASE AND repo = ?4 COLLATE NOCASE`)
+    .bind(userId, installationId, action.owner, action.repo).first();
+  if (!permission) throw new Error("GitHub cloud action requires an explicit account/installation/repository permission binding.");
+  return { ...action, installation_id: installationId! };
+}
+
 export async function createAutomation(
   env: AutomationEnv,
   userId: string,
@@ -607,6 +633,7 @@ export async function createAutomation(
   }
 
   const action = sanitizeSteps({ ...input, kind: requestedKind });
+  if (input.keep_awake) action.keep_awake = true;
   const cloudOnly = action.steps.length > 0 &&
     action.steps.every((step) => step.type === "github_merge_pr");
   const deviceId = (input.device_id || "").trim();
@@ -627,7 +654,7 @@ export async function createAutomation(
     }
   }
 
-  if (requestedKind === "agent_goal" && !agentPlannerConfigured(env)) {
+  if (requestedKind === "agent_goal" && input.agent_goal?.controller !== "source" && !agentPlannerConfigured(env)) {
     throw new Error(
       "Durable Agent Goals are not configured on this Remote Arc deployment.",
     );
@@ -641,12 +668,18 @@ export async function createAutomation(
     );
   }
 
+  for (const step of action.steps) {
+    if (step.type === "github_merge_pr") Object.assign(step, await authorizeGitHubAction(env, userId, step));
+  }
   const goal = sanitizeGoal({ ...input, kind: requestedKind }, policy);
   const now = nowIso();
-  const { trigger, nextRunAt, initialStatus } = sanitizeTrigger(storedKind, input, now);
-  const expiresAt = defaultExpiry(storedKind, now, input);
+  const { trigger, nextRunAt, initialStatus } = sanitizeTrigger(
+    requestedKind === "agent_goal" && input.schedule ? "schedule_watch" : storedKind, input, now);
+  if (!cloudOnly) await requireTaskPermission(env.DB, userId, deviceId, storedKind, goal, trigger, action.keep_awake);
+  const expiresAt = defaultExpiry(requestedKind === "agent_goal" && trigger.type === "interval" ? "schedule_watch" : storedKind,
+    requestedKind === "agent_goal" && trigger.type === "at" ? trigger.at : now, input);
   const maxRuns =
-    requestedKind === "agent_goal" ? 1 : defaultMaxRuns(storedKind, input.max_runs);
+    requestedKind === "agent_goal" ? (input.schedule?.every_seconds ? defaultMaxRuns("schedule_watch", input.max_runs) : 1) : defaultMaxRuns(storedKind, input.max_runs);
   const intervalSeconds = clampInterval(
     input.interval_seconds,
     requestedKind === "agent_goal" ? 60 : 300,
@@ -715,6 +748,7 @@ export async function createAutomation(
   }
 
   const automation = await getAutomation(env, userId, id);
+  if (automation) await journalStatement(env.DB, automation, "created", "Task contract saved.", undefined).run();
   return { automation, webhook };
 }
 
@@ -783,12 +817,17 @@ async function updateAutomationStatus(
          last_error = ?3,
          lease_token = NULL,
          lease_until = NULL,
-         updated_at = ?4
-     WHERE id = ?5 AND user_id = ?6`,
+         updated_at = ?4,
+         revision = revision + 1
+     WHERE id = ?5 AND user_id = ?6
+       AND status NOT IN ('completed','failed','cancelled','expired')`,
   )
     .bind(status, nextRunAt, lastError, now, automationId, userId)
     .run();
-  return getAutomation(env, userId, automationId);
+  const updated = await getAutomation(env, userId, automationId);
+  if (updated) await journalStatement(env.DB, updated, status,
+    "User changed task status to " + status + ".", undefined).run();
+  return updated;
 }
 
 export async function pauseAutomation(
@@ -801,7 +840,9 @@ export async function pauseAutomation(
   if (isTerminalStatus(automation.status)) {
     throw new Error("Completed, failed, cancelled or expired automations cannot be paused.");
   }
-  return updateAutomationStatus(env, userId, automationId, "paused", null);
+  const paused = await updateAutomationStatus(env, userId, automationId, "paused", null);
+  await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
+  return paused;
 }
 
 export async function resumeAutomation(
@@ -837,7 +878,10 @@ export async function cancelAutomation(
 ) {
   const automation = await getAutomation(env, userId, automationId);
   if (!automation) throw new Error("Automation not found.");
+  if (isTerminalStatus(automation.status)) return automation;
 
+  await updateAutomationStatus(env, userId, automationId, "cancelled", null);
+  await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
   const state = parseJson<RuntimeState>(automation.state_json, {});
   if (state.process_id && automation.device_id) {
     await callDevice(
@@ -849,17 +893,17 @@ export async function cancelAutomation(
     ).catch(() => undefined);
   }
 
-  if (state.run_id) {
+  {
     await env.DB.prepare(
       `UPDATE automation_runs
        SET status = 'cancelled', finished_at = ?1
-       WHERE id = ?2 AND user_id = ?3 AND finished_at IS NULL`,
+       WHERE automation_id = ?2 AND user_id = ?3 AND finished_at IS NULL`,
     )
-      .bind(nowIso(), state.run_id, userId)
+      .bind(nowIso(), automationId, userId)
       .run();
   }
 
-  return updateAutomationStatus(env, userId, automationId, "cancelled", null);
+  return getAutomation(env, userId, automationId);
 }
 
 const getByPath = (value: unknown, path: string): unknown => {
@@ -1057,7 +1101,9 @@ async function startRun(
   await env.DB.prepare(
     `INSERT INTO automation_runs (
        id, automation_id, user_id, attempt, status, trigger_payload, started_at
-     ) VALUES (?1, ?2, ?3, ?4, 'running', ?5, ?6)`,
+     ) SELECT ?1, ?2, ?3, ?4, 'running', ?5, ?6 FROM automations
+       WHERE id = ?2 AND lease_token = ?7 AND lease_until > ?6
+       AND status IN ('waiting','running','waiting_for_device')`,
   )
     .bind(
       runId,
@@ -1066,16 +1112,19 @@ async function startRun(
       automation.run_count + 1,
       triggerPayload,
       now,
+      automation.lease_token,
     )
     .run();
   state.run_id = runId;
   state.phase = "idle";
   state.step_index = 0;
+  await persistRuntime(env, automation, state, automation.status, now, null, { retainLease: true, event: "run_started" });
   return state;
 }
 
 async function markRunFinished(
   env: AutomationEnv,
+  automation: AutomationRow,
   state: RuntimeState,
   status: string,
   exitCode: number | null,
@@ -1088,45 +1137,75 @@ async function markRunFinished(
          exit_code = ?2,
          error = ?3,
          finished_at = ?4
-     WHERE id = ?5`,
+     WHERE id = ?5 AND automation_id = ?6
+       AND EXISTS (SELECT 1 FROM automations WHERE id = ?6 AND lease_token = ?7
+         AND lease_until > ?4 AND status IN ('waiting','running','waiting_for_device'))`,
   )
-    .bind(status, exitCode, error, nowIso(), state.run_id)
+    .bind(status, exitCode, error, nowIso(), state.run_id, automation.id, automation.lease_token)
     .run();
 }
 
 async function persistRuntime(
-  env: AutomationEnv,
-  automation: AutomationRow,
-  state: RuntimeState,
-  status: AutomationStatus,
-  nextRunAt: string | null,
-  lastError: string | null = null,
-  extra?: { incrementRun?: boolean },
+  env: AutomationEnv, automation: AutomationRow, state: RuntimeState,
+  status: AutomationStatus, nextRunAt: string | null, lastError: string | null = null,
+  extra?: { incrementRun?: boolean; retainLease?: boolean; event?: string; summary?: string },
 ) {
-  const now = nowIso();
-  await env.DB.prepare(
-    `UPDATE automations
-     SET state_json = ?1,
-         status = ?2,
-         next_run_at = ?3,
-         last_error = ?4,
-         last_run_at = CASE WHEN ?5 = 1 THEN ?6 ELSE last_run_at END,
-         run_count = run_count + ?5,
-         lease_token = NULL,
-         lease_until = NULL,
-         updated_at = ?6
-     WHERE id = ?7`,
-  )
-    .bind(
-      stableJson(state),
-      status,
-      nextRunAt,
-      lastError,
-      extra?.incrementRun ? 1 : 0,
-      now,
-      automation.id,
-    )
-    .run();
+  await checkpointTask(env.DB, automation, state, status, nextRunAt, lastError, extra);
+  if (isTerminalStatus(status) || status === "paused" || extra?.incrementRun) {
+    await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
+  }
+}
+
+async function automationCall(env: AutomationEnv, automation: AutomationRow,
+  state: RuntimeState, tool: string, args: Record<string, unknown>, phase?: RuntimeState["phase"]) {
+  await renewTaskLease(env.DB, automation);
+  const plan = parseJson<ActionPlan>(automation.action_json, { steps: [] });
+  await requireTaskPermission(env.DB, automation.user_id, automation.device_id!, automation.kind,
+    parseJson<GoalSpec | null>(automation.goal_json, null), parseJson<TriggerSpec | null>(automation.trigger_json, null), plan.keep_awake);
+  // Recheck the frozen policy immediately before dispatch, including after a
+  // slow planner response. The device enforces current local policy again.
+  const policy = await devicePolicySnapshot(env, automation.user_id, automation.device_id!);
+  if (!policy || stableJson(policy) !== automation.permission_snapshot_json) {
+    throw new Error("Device permission policy changed; automation stopped instead of waiting for approval.");
+  }
+  const effect = ["start_process", "write_file", "edit_block"].includes(tool);
+  if (effect) {
+    state.inflight_action = { id: crypto.randomUUID(), tool };
+    await persistRuntime(env, automation, state, automation.status, nowIso(), null,
+      { retainLease: true, event: "action_intent", summary: "Dispatch " + tool + " (outcome not yet acknowledged)." });
+  }
+  let result: unknown;
+  try {
+    result = await callDevice(env, automationIdentity(automation, env), automation.device_id!, tool, args);
+  } catch (error) {
+    if (effect) {
+      state.inflight_action = undefined;
+      if (state.agent) state.agent.observation = "Tool " + tool + " did not return a successful acknowledgement. Inspect current state before repeating: " + String(error);
+      await persistRuntime(env, automation, state, automation.status, nowIso(), null,
+        { retainLease: true, event: "action_error", summary: "Dispatch failed or outcome unknown: " + tool });
+    }
+    throw error;
+  }
+  try { await renewTaskLease(env.DB, automation); }
+  catch (error) {
+    // A process can start just as cancellation invalidates the lease. Clean up
+    // the late handle; never write the stale result back into the task.
+    const processId = (result as { process_id?: string })?.process_id;
+    if (tool === "start_process" && processId) {
+      await callDevice(env, automationIdentity(automation, env), automation.device_id!,
+        "stop_process", { process_id: processId }).catch(() => undefined);
+    }
+    throw error;
+  }
+  if (effect) {
+    state.inflight_action = undefined;
+    if (phase) state.phase = phase;
+    if (tool === "start_process") state.process_id = (result as { process_id?: string }).process_id;
+    if (state.agent) state.agent.observation = "Tool " + tool + " result:\n" + agentResultText(result);
+    await persistRuntime(env, automation, state, automation.status, nowIso(), null,
+      { retainLease: true, event: "action_result", summary: "Acknowledged " + tool });
+  }
+  return result;
 }
 
 const processStatus = (value: unknown) => {
@@ -1164,16 +1243,17 @@ async function beginCommand(
   phase: "step_running" | "goal_running" | "agent_process_running" | "agent_verify_running",
 ) {
   if (!automation.device_id) throw new Error("Automation device is missing.");
-  const result = await callDevice(
+  const result = await automationCall(
     env,
-    automationIdentity(automation, env),
-    automation.device_id,
+    automation,
+    state,
     "start_process",
     {
       command,
       ...(cwd ? { cwd } : {}),
       background: true,
     },
+    phase,
   );
   const started = result as { process_id?: string };
   if (!started.process_id) throw new Error("Device did not return a process_id.");
@@ -1184,9 +1264,11 @@ async function beginCommand(
     await env.DB.prepare(
       `UPDATE automation_runs
        SET process_id = ?1
-       WHERE id = ?2`,
+       WHERE id = ?2 AND automation_id = ?3 AND EXISTS (
+         SELECT 1 FROM automations WHERE id = ?3 AND lease_token = ?4
+         AND lease_until > ?5 AND status IN ('waiting','running','waiting_for_device'))`,
     )
-      .bind(started.process_id, state.run_id)
+      .bind(started.process_id, state.run_id, automation.id, automation.lease_token, nowIso())
       .run();
   }
 }
@@ -1211,88 +1293,10 @@ const agentResultText = (value: unknown) => {
   }
 };
 
-function validateAgentToolArguments(
-  tool: AgentToolName,
-  args: Record<string, unknown>,
-) {
-  const text = (key: string, max: number) => {
-    const value = args[key];
-    if (typeof value !== "string" || !value.trim() || value.length > max) {
-      throw new Error("Agent tool argument " + key + " is invalid.");
-    }
-    return value;
-  };
-  const optionalText = (key: string, max: number) => {
-    const value = args[key];
-    if (value === undefined || value === null || value === "") return undefined;
-    if (typeof value !== "string" || value.length > max) {
-      throw new Error("Agent tool argument " + key + " is invalid.");
-    }
-    return value;
-  };
-
-  if (tool === "list_directory") {
-    const depthRaw = Number(args.depth ?? 2);
-    const depth = Number.isInteger(depthRaw)
-      ? Math.min(Math.max(depthRaw, 1), 6)
-      : 2;
-    return { path: text("path", 1000), depth };
-  }
-  if (tool === "read_file") {
-    const offsetRaw = args.offset === undefined ? undefined : Number(args.offset);
-    const lengthRaw = args.length === undefined ? 240 : Number(args.length);
-    return {
-      path: text("path", 1000),
-      ...(Number.isInteger(offsetRaw) ? { offset: offsetRaw } : {}),
-      length:
-        Number.isInteger(lengthRaw) && lengthRaw > 0
-          ? Math.min(lengthRaw, 1200)
-          : 240,
-    };
-  }
-  if (tool === "get_file_info") {
-    return { path: text("path", 1000) };
-  }
-  if (tool === "write_file") {
-    const mode = args.mode === "append" ? "append" : "rewrite";
-    const content = args.content;
-    if (typeof content !== "string" || content.length > 200000) {
-      throw new Error("Agent write_file content is invalid or too large.");
-    }
-    return { path: text("path", 1000), content, mode };
-  }
-  if (tool === "edit_block") {
-    const oldString = args.old_string;
-    const newString = args.new_string;
-    if (
-      typeof oldString !== "string" ||
-      typeof newString !== "string" ||
-      oldString.length > 200000 ||
-      newString.length > 200000
-    ) {
-      throw new Error("Agent edit_block content is invalid or too large.");
-    }
-    const expectedRaw = Number(args.expected_replacements ?? 1);
-    return {
-      file_path: text("file_path", 1000),
-      old_string: oldString,
-      new_string: newString,
-      expected_replacements:
-        Number.isInteger(expectedRaw) && expectedRaw > 0
-          ? Math.min(expectedRaw, 20)
-          : 1,
-    };
-  }
-
-  return {
-    command: text("command", 4000),
-    ...(optionalText("cwd", 500) ? { cwd: optionalText("cwd", 500) } : {}),
-    background: true,
-  };
-}
 
 async function updateRunSummary(
   env: AutomationEnv,
+  automation: AutomationRow,
   runId: string | undefined,
   summary: string,
 ) {
@@ -1300,10 +1304,26 @@ async function updateRunSummary(
   await env.DB.prepare(
     `UPDATE automation_runs
      SET output_summary = ?1
-     WHERE id = ?2`,
+     WHERE id = ?2 AND automation_id = ?3
+       AND EXISTS (SELECT 1 FROM automations WHERE id = ?3 AND lease_token = ?4
+         AND lease_until > ?5 AND status IN ('waiting','running','waiting_for_device'))`,
   )
-    .bind(clipAgentText(summary, 6000), runId)
+    .bind(clipAgentText(summary, 6000), runId, automation.id, automation.lease_token, nowIso())
     .run();
+}
+
+async function finishAgentRun(env: AutomationEnv, automation: AutomationRow, state: RuntimeState) {
+  const trigger = parseJson<TriggerSpec>(automation.trigger_json, { type: "immediate" });
+  const recurring = trigger.type === "interval" && (automation.max_runs === 0 || automation.run_count + 1 < automation.max_runs);
+  if (recurring) {
+    // Evidence is retained in the run summary/journal. A new invocation starts
+    // with a fresh memory, observation and iteration budget.
+    state.agent = { iteration: 0, memory: "", observation: "New scheduled run. Inspect current workspace state before acting." };
+    state.phase = "idle";
+  }
+  await persistRuntime(env, automation, state, recurring ? "waiting" : "completed",
+    recurring ? nextScheduleAfterRun(trigger, nowIso()) : null, null,
+    { incrementRun: true, event: "run_completed", summary: recurring ? "Verified run completed; next interval scheduled." : "Goal completed; see run evidence." });
 }
 
 async function executeAgentGoal(
@@ -1328,14 +1348,15 @@ async function executeAgentGoal(
   ) {
     let rawStatus: unknown;
     try {
-      rawStatus = await callDevice(
+      rawStatus = await automationCall(
         env,
-        identity,
-        automation.device_id,
+        automation,
+        state,
         "process_status",
         { process_id: state.process_id },
       );
     } catch (error) {
+      if (error instanceof LeaseLostError) throw error;
       if (isDeviceOfflineError(error)) {
         await persistRuntime(
           env,
@@ -1379,10 +1400,10 @@ async function executeAgentGoal(
 
     const processId = state.process_id;
     const wasVerify = state.phase === "agent_verify_running";
-    const output = await callDevice(
+    const output = await automationCall(
       env,
-      identity,
-      automation.device_id,
+      automation,
+      state,
       "process_output",
       { process_id: processId },
     ).catch((error) => ({ error: String(error) }));
@@ -1396,18 +1417,10 @@ async function executeAgentGoal(
         "Deterministic verification succeeded with exit code " + exitCode + ".\n" +
         agentResultText(output);
       state.agent.completion_evidence = clipAgentText(evidence, 3000);
-      await updateRunSummary(env, state.run_id, evidence);
-      await markRunFinished(env, state, "completed", exitCode, null);
+      await updateRunSummary(env, automation, state.run_id, evidence);
+      await markRunFinished(env, automation, state, "completed", exitCode, null);
       state.run_id = undefined;
-      await persistRuntime(
-        env,
-        automation,
-        state,
-        "completed",
-        null,
-        null,
-        { incrementRun: true },
-      );
+      await finishAgentRun(env, automation, state);
       return;
     }
 
@@ -1420,13 +1433,14 @@ async function executeAgentGoal(
     );
   }
 
-  for (let localStep = 0; localStep < 3; localStep += 1) {
+  const planningStarted = Date.now();
+  for (let localStep = 0; localStep < 3 && Date.now() - planningStarted < 45_000; localStep += 1) {
     if (state.agent.iteration >= goal.max_iterations) {
       const message =
         "Agent Goal reached its maximum of " +
         goal.max_iterations +
         " planning iterations without verified completion.";
-      await markRunFinished(env, state, "failed", null, message);
+      await markRunFinished(env, automation, state, "failed", null, message);
       state.run_id = undefined;
       await persistRuntime(
         env,
@@ -1440,7 +1454,10 @@ async function executeAgentGoal(
       return;
     }
 
-    const decision = await planAgentTurn(env, {
+    await renewTaskLease(env.DB, automation);
+    const decision = goal.controller === "source"
+      ? await takeSourceDecision(env.DB, automation)
+      : await planAgentTurn(env, {
       objective: goal.objective,
       successCriteria: goal.success_criteria,
       workspace: goal.workspace,
@@ -1450,11 +1467,21 @@ async function executeAgentGoal(
       memory: state.agent.memory,
       observation: state.agent.observation,
     });
+    if (!decision) {
+      state.phase = "awaiting_agent";
+      await persistRuntime(env, automation, state, "waiting_for_event", null, null,
+        { event: "needs_agent", summary: "Source agent can read the current context and submit the next decision." });
+      return;
+    }
+    state.phase = "idle";
+    state.retry_count = 0;
+    await renewTaskLease(env.DB, automation);
     state.agent.iteration += 1;
     state.agent.memory = decision.memory;
     state.agent.last_decision_summary = decision.decisionSummary;
     await updateRunSummary(
       env,
+      automation,
       state.run_id,
       "Iteration " +
         state.agent.iteration +
@@ -1464,6 +1491,9 @@ async function executeAgentGoal(
           ? "\nEvidence: " + decision.completionEvidence
           : ""),
     );
+
+    await persistRuntime(env, automation, state, automation.status, nowIso(), null,
+      { retainLease: true, event: "decision", summary: decision.decisionSummary });
 
     if (decision.decision === "pause") {
       await persistRuntime(
@@ -1478,6 +1508,12 @@ async function executeAgentGoal(
     }
 
     if (decision.decision === "complete") {
+      if (!decision.completionEvidence.trim()) {
+        state.agent.observation = "Completion requires concrete evidence for the success criteria. Inspect or verify before completing.";
+        await persistRuntime(env, automation, state, "waiting", addSeconds(now, automation.interval_seconds), null,
+          { event: "verification_required", summary: state.agent.observation });
+        return;
+      }
       state.agent.completion_evidence = decision.completionEvidence;
       if (goal.verify) {
         try {
@@ -1515,17 +1551,9 @@ async function executeAgentGoal(
         return;
       }
 
-      await markRunFinished(env, state, "completed", 0, null);
+      await markRunFinished(env, automation, state, "completed", 0, null);
       state.run_id = undefined;
-      await persistRuntime(
-        env,
-        automation,
-        state,
-        "completed",
-        null,
-        null,
-        { incrementRun: true },
-      );
+      await finishAgentRun(env, automation, state);
       return;
     }
 
@@ -1539,12 +1567,13 @@ async function executeAgentGoal(
     const args = validateAgentToolArguments(decision.tool, decision.arguments);
     if (decision.tool === "start_process") {
       try {
-        const started = await callDevice(
+        const started = await automationCall(
           env,
-          identity,
-          automation.device_id,
+          automation,
+          state,
           "start_process",
           args,
+          "agent_process_running",
         ) as { process_id?: string };
         if (!started.process_id) {
           throw new Error("Device did not return a process_id.");
@@ -1553,9 +1582,9 @@ async function executeAgentGoal(
         state.phase = "agent_process_running";
         if (state.run_id) {
           await env.DB.prepare(
-            `UPDATE automation_runs SET process_id = ?1 WHERE id = ?2`,
+            `UPDATE automation_runs SET process_id = ?1 WHERE id = ?2 AND automation_id = ?3 AND EXISTS (SELECT 1 FROM automations WHERE id = ?3 AND lease_token = ?4 AND lease_until > ?5 AND status IN ('waiting','running','waiting_for_device'))`,
           )
-            .bind(started.process_id, state.run_id)
+            .bind(started.process_id, state.run_id, automation.id, automation.lease_token, nowIso())
             .run();
         }
       } catch (error) {
@@ -1586,14 +1615,15 @@ async function executeAgentGoal(
 
     let result: unknown;
     try {
-      result = await callDevice(
+      result = await automationCall(
         env,
-        identity,
-        automation.device_id,
+        automation,
+        state,
         decision.tool,
         args,
       );
     } catch (error) {
+      if (error instanceof LeaseLostError) throw error;
       if (isDeviceOfflineError(error)) {
         state.agent.observation =
           "The device went offline before tool " + decision.tool + " completed.";
@@ -1608,13 +1638,15 @@ async function executeAgentGoal(
         return;
       }
       state.agent.observation =
-        "Tool " + decision.tool + " failed: " +
+        "Tool " + decision.tool + " failed or its outcome is unknown. Inspect current state before repeating: " +
         String(error instanceof Error ? error.message : error);
+      await persistRuntime(env, automation, state, automation.status, nowIso(), null, { retainLease: true, event: "observation", summary: state.agent.observation });
       continue;
     }
 
     state.agent.observation =
       "Tool " + decision.tool + " result:\n" + agentResultText(result);
+    await persistRuntime(env, automation, state, automation.status, nowIso(), null, { retainLease: true, event: "observation", summary: "Result available for " + decision.tool });
   }
 
   await persistRuntime(
@@ -1635,7 +1667,7 @@ async function executeAutomation(
 
   if (automation.expires_at && automation.expires_at <= now) {
     const state = parseJson<RuntimeState>(automation.state_json, {});
-    await markRunFinished(env, state, "expired", null, "Automation expired.");
+    await markRunFinished(env, automation, state, "expired", null, "Automation expired.");
     await persistRuntime(env, automation, state, "expired", null, "Automation expired.");
     return;
   }
@@ -1654,6 +1686,7 @@ async function executeAutomation(
     action.steps.every((step) => step.type === "github_merge_pr");
 
   if (!cloudOnly) {
+    await requireTaskPermission(env.DB, automation.user_id, automation.device_id!, automation.kind, goal, trigger, action.keep_awake);
     if (!automation.device_id) {
       await persistRuntime(
         env,
@@ -1695,6 +1728,7 @@ async function executeAutomation(
       }
       await markRunFinished(
         env,
+        automation,
         state,
         "failed",
         null,
@@ -1712,8 +1746,33 @@ async function executeAutomation(
     }
   }
 
+  if (state.inflight_action) {
+    const tool = state.inflight_action.tool;
+    state.inflight_action = undefined;
+    const message = "Previous dispatch of " + tool + " has an unknown outcome after interruption. Inspect current state before repeating it.";
+    if (goal?.type === "agent_goal") {
+      state.agent ||= { iteration: 0, memory: "", observation: "" };
+      state.agent.observation = message;
+      state.phase = "idle";
+      await persistRuntime(env, automation, state, "waiting", nowIso(), message, { event: "outcome_unknown" });
+    } else {
+      await markRunFinished(env, automation, state, "failed", null, message);
+      await persistRuntime(env, automation, state, "failed", null, message, { event: "outcome_unknown" });
+    }
+    return;
+  }
+
   if (!state.run_id) {
     state = await startRun(env, automation, state);
+  }
+
+  if (action.keep_awake) {
+    try { await setTaskKeepAwake(env, automation, 180); }
+    catch (error) {
+      if (!isDeviceOfflineError(error)) throw error;
+      await persistRuntime(env, automation, state, "waiting_for_device", addSeconds(now, automation.interval_seconds), "Waiting for device to acquire task keep-awake.");
+      return;
+    }
   }
 
   if (goal?.type === "agent_goal") {
@@ -1730,14 +1789,15 @@ async function executeAutomation(
   ) {
     let rawStatus: unknown;
     try {
-      rawStatus = await callDevice(
+      rawStatus = await automationCall(
         env,
-        identity,
-        automation.device_id,
+        automation,
+        state,
         "process_status",
         { process_id: state.process_id },
       );
     } catch (error) {
+      if (error instanceof LeaseLostError) throw error;
       if (isDeviceOfflineError(error)) {
         await persistRuntime(
           env,
@@ -1765,6 +1825,7 @@ async function executeAutomation(
         }
         await markRunFinished(
           env,
+          automation,
           state,
           "failed",
           null,
@@ -1802,7 +1863,7 @@ async function executeAutomation(
 
     if (wasGoal) {
       if (goal?.type === "command_exit" && exitCode === goal.expected_exit_code) {
-        await markRunFinished(env, state, "completed", exitCode, null);
+        await markRunFinished(env, automation, state, "completed", exitCode, null);
         state.run_id = undefined;
         await persistRuntime(
           env,
@@ -1818,6 +1879,7 @@ async function executeAutomation(
 
       await markRunFinished(
         env,
+        automation,
         state,
         "goal_not_reached",
         exitCode,
@@ -1853,6 +1915,7 @@ async function executeAutomation(
     if (exitCode !== 0) {
       await markRunFinished(
         env,
+        automation,
         state,
         "failed",
         exitCode,
@@ -1906,10 +1969,19 @@ async function executeAutomation(
   if (stepIndex < action.steps.length) {
     const step = action.steps[stepIndex]!;
     if (step.type === "github_merge_pr") {
-      const result = await mergeGitHubPullRequest(env, step);
+      const permitted = await authorizeGitHubAction(env, automation.user_id, step);
+      await renewTaskLease(env.DB, automation);
+      state.inflight_action = { id: crypto.randomUUID(), tool: "github_merge_pr" };
+      await persistRuntime(env, automation, state, automation.status, nowIso(), null,
+        { retainLease: true, event: "action_intent", summary: "Dispatch authorized GitHub merge; outcome pending." });
+      const result = await mergeGitHubPullRequest(env, permitted);
+      await renewTaskLease(env.DB, automation);
+      state.inflight_action = undefined;
       state.step_index = stepIndex + 1;
+      await persistRuntime(env, automation, state, automation.status, nowIso(), null, { retainLease: true, event: "action_result", summary: "GitHub merge acknowledged." });
       await updateRunSummary(
         env,
+        automation,
         state.run_id,
         "GitHub pull request merged: " +
           result.repository +
@@ -1964,6 +2036,7 @@ async function executeAutomation(
         "goal_running",
       );
     } catch (error) {
+      if (error instanceof LeaseLostError) throw error;
       if (isDeviceOfflineError(error)) {
         await persistRuntime(
           env,
@@ -1988,7 +2061,7 @@ async function executeAutomation(
     return;
   }
 
-  await markRunFinished(env, state, "completed", 0, null);
+  await markRunFinished(env, automation, state, "completed", 0, null);
   state.run_id = undefined;
   state.step_index = 0;
   state.phase = "idle";
@@ -2037,6 +2110,26 @@ async function executeAutomation(
   );
 }
 
+async function setTaskKeepAwake(env: AutomationEnv, automation: AutomationRow, seconds: number) {
+  if (!automation.device_id || !parseJson<ActionPlan>(automation.action_json, { steps: [] }).keep_awake) return;
+  const result = await callDevice(env, automationIdentity(automation, env), automation.device_id,
+    "set_task_keep_awake", { task_id: automation.id, seconds }) as { supported?: boolean; active?: boolean };
+  if (seconds > 0 && (!result.supported || !result.active)) throw new Error("This computer could not acquire its task keep-awake lease. Check the local OS power service.");
+}
+
+async function maintainTaskKeepAwake(env: AutomationEnv) {
+  const active = await env.DB.prepare(`SELECT * FROM automations WHERE device_id IS NOT NULL
+    AND status IN ('waiting','running','waiting_for_device','waiting_for_event')
+    AND json_extract(action_json,'$.keep_awake') = 1 AND json_extract(state_json,'$.run_id') IS NOT NULL
+    AND (expires_at IS NULL OR expires_at > ?1) ORDER BY updated_at LIMIT 100`)
+    .bind(nowIso()).all<AutomationRow>();
+  for (const task of active.results) {
+    await requireTaskPermission(env.DB, task.user_id, task.device_id!, task.kind,
+      parseJson<GoalSpec | null>(task.goal_json, null), parseJson<TriggerSpec | null>(task.trigger_json, null), true)
+      .then(() => setTaskKeepAwake(env, task, 180)).catch(() => undefined);
+  }
+}
+
 async function claimAutomation(
   env: AutomationEnv,
   automation: AutomationRow,
@@ -2051,6 +2144,8 @@ async function claimAutomation(
          updated_at = ?3
      WHERE id = ?4
        AND status IN ('waiting','running','waiting_for_device')
+       AND next_run_at IS NOT NULL AND next_run_at <= ?3
+       AND (expires_at IS NULL OR expires_at > ?3)
        AND (lease_until IS NULL OR lease_until <= ?3)`,
   )
     .bind(leaseToken, leaseUntil, now, automation.id)
@@ -2069,6 +2164,7 @@ export async function runAutomationTick(
   at = new Date(),
 ) {
   const now = at.toISOString();
+  await maintainTaskKeepAwake(env);
 
   const expiring = await env.DB.prepare(
     `SELECT *
@@ -2082,31 +2178,23 @@ export async function runAutomationTick(
     .all<AutomationRow>();
 
   for (const automation of expiring.results) {
+    const expired = await env.DB.prepare(`UPDATE automations SET status = 'expired',
+      next_run_at = NULL, lease_token = NULL, lease_until = NULL,
+      revision = revision + 1, last_error = 'Automation expired.', updated_at = ?2
+      WHERE id = ?1 AND expires_at <= ?2
+        AND status NOT IN ('completed','failed','cancelled','expired')`)
+      .bind(automation.id, now).run();
+    if (!expired.meta.changes) continue;
+    await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
     const state = parseJson<RuntimeState>(automation.state_json, {});
+    await env.DB.prepare(`UPDATE automation_runs SET status = 'expired', finished_at = ?2,
+      error = 'Automation expired.' WHERE automation_id = ?1 AND finished_at IS NULL`)
+      .bind(automation.id, now).run();
+    await journalStatement(env.DB, automation, "expired", "Automation expired.", state.run_id, automation.revision + 1).run();
     if (state.process_id && automation.device_id) {
-      await callDevice(
-        env,
-        automationIdentity(automation, env),
-        automation.device_id,
-        "stop_process",
-        { process_id: state.process_id },
-      ).catch(() => undefined);
+      await callDevice(env, automationIdentity(automation, env), automation.device_id,
+        "stop_process", { process_id: state.process_id }).catch(() => undefined);
     }
-    await markRunFinished(
-      env,
-      state,
-      "expired",
-      null,
-      "Automation expired.",
-    );
-    await persistRuntime(
-      env,
-      automation,
-      state,
-      "expired",
-      null,
-      "Automation expired.",
-    );
   }
 
   const due = await env.DB.prepare(
@@ -2124,18 +2212,27 @@ export async function runAutomationTick(
 
   let executed = 0;
   let failed = 0;
+  const tickStarted = Date.now();
 
   for (const candidate of due.results) {
-    const automation = await claimAutomation(env, candidate, now);
+    if (Date.now() - tickStarted >= 45_000) break;
+    const automation = await claimAutomation(env, candidate, nowIso());
     if (!automation) continue;
 
     try {
       await executeAutomation(env, automation);
       executed += 1;
     } catch (error) {
+      if (error instanceof LeaseLostError) continue;
       failed += 1;
       const message = error instanceof Error ? error.message : String(error);
       const state = parseJson<RuntimeState>(automation.state_json, {});
+      if (error instanceof PlannerTransientError && (state.retry_count || 0) < 5) {
+        state.retry_count = (state.retry_count || 0) + 1;
+        await persistRuntime(env, automation, state, "waiting", addSeconds(nowIso(), Math.min(3600, 60 * 2 ** (state.retry_count - 1))),
+          message.slice(0, 1000), { event: "retry", summary: "Transient planner error; retry " + state.retry_count }).catch((failure) => { if (!(failure instanceof LeaseLostError)) throw failure; });
+        continue;
+      }
       await persistRuntime(
         env,
         automation,
@@ -2143,7 +2240,7 @@ export async function runAutomationTick(
         "failed",
         null,
         message.slice(0, 1000),
-      );
+      ).catch((failure) => { if (!(failure instanceof LeaseLostError)) throw failure; });
     }
   }
 
