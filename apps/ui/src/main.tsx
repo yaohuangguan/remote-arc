@@ -9,6 +9,8 @@ import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import "./styles.css";
 import "./dashboard.css";
 
+const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
+
 const Documentation = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.Documentation })));
 const McpReference = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.McpReference })));
 const UseCaseCatalog = React.lazy(() => import("./use-cases.js").then(module => ({ default: module.UseCaseCatalog })));
@@ -477,10 +479,6 @@ function PublicHeader({ user }: { user?: User | null }) {
               <a href="/blogs">
                 <strong>{tr("Blog", "博客")}</strong>
                 <small>{tr("Ideas, product notes and what we're building", "产品思考、开发记录与我们正在做的事")}</small>
-              </a>
-              <a href="/resources">
-                <strong>{tr("Technical resources", "技术资源")}</strong>
-                <small>{tr("Architecture, security and implementation", "架构、安全与实现细节")}</small>
               </a>
               <a href="/use-cases">
                 <strong>{tr("Use cases", "使用场景")}</strong>
@@ -2543,41 +2541,9 @@ function ChatGptComputerAccessPage({ user }: { user?: User | null }) {
 
 function PricingPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  return (
-    <PublicLayout user={user}>
-      <section className="publicHero compactHero">
-        <span className="eyebrow">{tr("PRICING", "价格")}</span>
-        <h1>{tr("Start free. Add usage when you need it.", "免费开始，需要更多时再扩容。")}</h1>
-        <p>{tr("Remote Arc includes 10,000 hosted tool calls each month. When you need more, add paid usage without changing your setup.", "Remote Arc 每月包含 10,000 次托管工具调用；需要更多时可直接付费扩容，无需修改现有配置。")}</p>
-      </section>
-      <section className="pricingGrid">
-        <article className="priceCard featured">
-          <span className="planTag">{tr("HOSTED FREE", "托管免费版")}</span>
-          <h2>$0 <small>/ {tr("month", "月")}</small></h2>
-          <p>{tr("For personal use and everyday AI workflows.", "适合个人使用与日常 AI 工作流。")}</p>
-          <ul>
-            <li>{tr("10,000 tool calls / month", "每月 10,000 次工具调用")}</li>
-            <li>{tr("Multiple personal devices", "支持多台个人设备")}</li>
-            <li>{tr("Google sign-in and OAuth MCP", "Google 登录与 OAuth MCP")}</li>
-            <li>{tr("ChatGPT + compatible MCP clients", "ChatGPT + 兼容 MCP 客户端")}</li>
-          </ul>
-          <a className="primaryButton goldButton" href={user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/google?return_to=/overview"}>{user ? tr("Open dashboard", "打开控制台") : tr("Start free", "免费开始")}</a>
-        </article>
-        <article className="priceCard">
-          <span className="planTag">{tr("PAID USAGE", "付费额度")}</span>
-          <h2>{tr("Top up", "按需充值")}</h2>
-          <p>{tr("Keep the same account, devices and MCP endpoint. Add hosted usage only when the free allowance is not enough.", "账户、设备和 MCP 地址都不用变；免费额度不够时，只需按需充值托管调用额度。")}</p>
-          <ul>
-            <li>{tr("Usage added to your hosted account", "额度直接加入当前托管账户")}</li>
-            <li>{tr("No infrastructure to operate", "无需维护任何基础设施")}</li>
-            <li>{tr("Same OAuth and device permissions", "继续使用同一套 OAuth 与设备权限")}</li>
-            <li>{tr("Designed for heavier personal usage", "适合更高频的个人使用")}</li>
-          </ul>
-          <a className="ghostButton priceLink" href={user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/google?return_to=/settings"}>{tr("Manage usage", "管理额度")}</a>
-        </article>
-      </section>
-    </PublicLayout>
-  );
+  const startHref = user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/google?return_to=/overview";
+  const usageHref = user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/google?return_to=/settings";
+  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><PricingContent startHref={startHref} usageHref={usageHref} signedIn={Boolean(user)} /></React.Suspense></PublicLayout>;
 }
 
 const blogPosts = [
@@ -2674,7 +2640,7 @@ function BlogsPage({ user }: { user?: User | null }) {
         <nav className="readingPageLinks">
           <a href="/docs">{tr("Docs", "文档")} →</a>
           <a href="/security-model">{tr("Security", "安全")} →</a>
-          <a href="/resources">{tr("Architecture notes", "架构说明")} →</a>
+          <a href="/docs#docs-routing">{tr("Architecture notes", "架构说明")} →</a>
         </nav>
       </section>
 
@@ -3071,7 +3037,7 @@ function ArchitectureArticlePage({ user }: { user?: User | null }) {
 
           <div className="blogSourceNote">
             <strong>{tr("Explore the implementation", "查看实现")}</strong>
-            <a href="/resources">{tr("Technical resources", "技术资源")} →</a>
+            <a href="/docs#docs-routing">{tr("System architecture", "系统架构")} →</a>
             <a href="https://github.com/yaohuangguan/remote-arc" target="_blank" rel="noreferrer">GitHub →</a>
           </div>
 
@@ -3082,98 +3048,10 @@ function ArchitectureArticlePage({ user }: { user?: User | null }) {
   );
 }
 
-function ResourcesPage({ user }: { user?: User | null }) {
+function ResourcesRedirect() {
   const { tr } = useI18n();
-  const items: Array<[string, string, string, string]> = [
-    [tr("Long-running work", "持续工作"), tr("Goals, schedules, restart recovery, source decisions and completion evidence.", "目标、调度、重启恢复、源决策和完成证据。"), "/docs/long-running-work", "WORK"],
-    [tr("System architecture", "系统技术文档"), tr("The full task and execution architecture, including current release boundaries.", "任务与执行的完整架构，包括当前发布边界。"), "https://github.com/yaohuangguan/remote-arc/blob/feat/goal-continuation/docs/system-architecture.md", "ENGINEERING"],
-    [tr("Quick start", "快速开始"), tr("Pair a computer with one command and connect it to the hosted relay.", "一条命令配对电脑并连接到托管 Relay。"), "/docs/mcp", "START"],
-    [tr("Control-plane architecture", "控制面架构"), tr("How Worker, D1, Durable Objects and the device agent cooperate to route Remote MCP calls.", "了解 Worker、D1、Durable Objects 与设备 Agent 如何协同路由 Remote MCP 调用。"), "#control-plane-architecture", "ARCH"],
-    [tr("Security control plane", "安全控制面"), tr("Emergency pause, revocable OAuth grants, per-device policy and layered enforcement.", "紧急暂停、可撤销 OAuth 授权、每设备策略与多层权限执行。"), "#security-control-plane", "SEC"],
-    [tr("Cloudflare edge protection", "Cloudflare 边缘保护"), tr("Why Remote Arc rate-limits MCP traffic separately from auth and pairing endpoints.", "为什么 Remote Arc 会分别对 MCP 流量与认证、配对入口做独立限流。"), "#edge-protection", "EDGE"],
-    [tr("Presence & heartbeat", "在线状态与心跳"), tr("How WebSocket presence and persistent heartbeat combine to produce useful online and last-seen state.", "WebSocket 在线状态与持久心跳如何共同提供可靠的在线与最近在线信息。"), "#presence-heartbeat", "LIVE"],
-    [tr("OAuth 2.1 for Remote MCP", "Remote MCP 的 OAuth 2.1"), tr("PKCE, scopes, access tokens, refresh tokens and per-client revocation in a remote-control product.", "PKCE、Scope、Access Token、Refresh Token 与按客户端撤销如何应用到远程控制产品。"), "#oauth-remote-mcp", "AUTH"],
-    [tr("Per-device permissions", "每设备权限"), tr("Why tool access is enforced twice: once at the relay and again by the local agent.", "为什么工具权限要执行两次：Relay 一次，本地 Agent 再一次。"), "#per-device-permissions", "POLICY"],
-    [tr("Privacy-preserving audit", "隐私友好审计"), tr("Operational visibility without intentionally persisting file contents, command arguments or credentials.", "在不主动持久化文件内容、命令参数与凭证的前提下获得运行可观测性。"), "#privacy-audit", "AUDIT"],
-    [tr("Security policy", "安全策略"), tr("Read the public security policy and vulnerability-reporting guidance.", "查看公开安全策略与漏洞报告指引。"), "https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md", "POLICY"],
-    [tr("Source code", "源代码"), tr("Inspect the implementation and follow Remote Arc development on GitHub.", "在 GitHub 查看实现并跟踪 Remote Arc 开发。"), "https://github.com/yaohuangguan/remote-arc", "CODE"],
-  ];
-  return (
-    <PublicLayout user={user}>
-      <section className="publicHero compactHero">
-        <span className="eyebrow">{tr("RESOURCES", "资源")}</span>
-        <h1>{tr("Understand the system behind Remote Arc.", "了解 Remote Arc 背后的系统。")}</h1>
-        <p>{tr("Explore the architecture, MCP protocol and product documentation behind the managed Remote Arc service.", "了解 Remote Arc 托管服务背后的架构、MCP 协议与产品文档。")}</p>
-      </section>
-      <section className="resourceDocsLayout">
-        <aside className="resourceToc">
-          <div className="resourceTocInner">
-            <span className="eyebrow">{tr("TECHNICAL INDEX", "技术目录")}</span>
-            <nav>
-              {items.filter(([, , href]) => href.startsWith("#")).map(([title, , href, tag], index) => (
-                <a href={href} key={title}><span>{String(index + 1).padStart(2, "0")}</span><strong>{title}</strong><small>{tag}</small></a>
-              ))}
-            </nav>
-            <div className="resourceTocLinks">
-              <span>{tr("REFERENCE", "参考")}</span>
-              {items.filter(([, , href]) => !href.startsWith("#")).map(([title, , href]) => <a href={href} key={title}>{title}<em>↗</em></a>)}
-            </div>
-          </div>
-        </aside>
-
-        <div className="resourceArticles">
-        <article id="control-plane-architecture">
-          <span className="resourceArticleTag">ARCHITECTURE / 01</span>
-          <h2>{tr("Control-plane architecture", "控制面架构")}</h2>
-          <p>{tr("Remote Arc splits responsibility across the hosted control plane and the local device agent. Cloudflare Workers handle HTTP, OAuth and API entry points; D1 stores durable identity, device and audit metadata; Durable Objects maintain live device presence and WebSocket routing; the local agent is the final execution boundary.", "Remote Arc 将职责拆分到托管控制面与本地设备 Agent。Cloudflare Workers 负责 HTTP、OAuth 与 API 入口；D1 保存持久身份、设备与审计元数据；Durable Objects 维护实时在线状态与 WebSocket 路由；本地 Agent 则是最终执行边界。")}</p>
-          <div className="resourceCodeRail"><code>AI client</code><span>→</span><code>Worker</code><span>→</span><code>Durable Object</code><span>→</span><code>Device Agent</code></div>
-        </article>
-
-        <article id="security-control-plane">
-          <span className="resourceArticleTag">SECURITY / 02</span>
-          <h2>{tr("Security control plane", "安全控制面")}</h2>
-          <p>{tr("Security is enforced at multiple layers instead of relying on one permission check. OAuth scopes constrain the AI client, the hosted relay applies account and per-device policy, and the local agent only executes tools it actually exposes. The account-level MCP pause can stop all authenticated calls immediately.", "安全不是依赖单一权限判断，而是多层执行。OAuth Scope 限制 AI 客户端，托管 Relay 执行账户级与设备级策略，本地 Agent 只执行自己实际开放的工具。账户级 MCP Pause 可以立即停止全部已认证调用。")}</p>
-          <div className="resourceCodeRail"><code>OAuth scope</code><span>→</span><code>Relay policy</code><span>→</span><code>Device policy</code><span>→</span><code>Execution</code></div>
-        </article>
-
-        <article id="edge-protection">
-          <span className="resourceArticleTag">CLOUDFLARE / 03</span>
-          <h2>{tr("Edge protection", "边缘保护")}</h2>
-          <p>{tr("Remote Arc uses Cloudflare Workers Rate Limiting before application execution. Authenticated MCP traffic is keyed by user and OAuth client, while OAuth, pairing and token endpoints use a separate, tighter limiter. This reduces runaway-agent loops, credential abuse and accidental quota burn.", "Remote Arc 使用 Cloudflare Workers Rate Limiting 在应用执行前进行拦截。已认证 MCP 流量按用户与 OAuth 客户端组合限流，而 OAuth、配对与 Token 入口使用独立、更严格的限制，从而降低 Agent 死循环、凭证滥用和意外耗尽额度的风险。")}</p>
-          <div className="resourceMetricRow"><div><strong>120/min</strong><span>MCP traffic</span></div><div><strong>30/min</strong><span>Auth & pairing</span></div><div><strong>429</strong><span>Retry-After</span></div></div>
-        </article>
-
-        <article id="presence-heartbeat">
-          <span className="resourceArticleTag">PRESENCE / 04</span>
-          <h2>{tr("Presence and heartbeat", "在线状态与心跳")}</h2>
-          <p>{tr("Live presence and durable history solve different problems. WebSocket presence answers whether a device is reachable right now. The local agent also sends a periodic authenticated heartbeat so D1 keeps an accurate last-seen timestamp after the socket disconnects.", "实时在线状态与持久历史解决的是不同问题。WebSocket Presence 用来判断设备此刻是否可达；本地 Agent 还会周期性发送经过认证的 heartbeat，让 D1 在连接断开后仍保留准确的 last-seen 时间。")}</p>
-          <div className="resourceMetricRow"><div><strong>WebSocket</strong><span>{tr("live presence", "实时在线")}</span></div><div><strong>60s</strong><span>{tr("heartbeat", "心跳间隔")}</span></div><div><strong>D1</strong><span>last_seen</span></div></div>
-        </article>
-
-        <article id="oauth-remote-mcp">
-          <span className="resourceArticleTag">AUTH / 05</span>
-          <h2>{tr("OAuth 2.1 for Remote MCP", "Remote MCP 的 OAuth 2.1")}</h2>
-          <p>{tr("Remote Arc avoids copied long-lived secrets between AI clients and the control plane. OAuth 2.1 with PKCE provides explicit scopes, short-lived access tokens and refresh tokens. Active grants are visible in the Security Center and can be revoked per client.", "Remote Arc 避免在 AI 客户端与控制面之间复制长期密钥。OAuth 2.1 + PKCE 提供明确 Scope、短期 Access Token 与 Refresh Token。活跃授权可在 Security Center 中查看，并可按客户端单独撤销。")}</p>
-          <div className="resourceCodeRail"><code>authorize</code><span>→</span><code>PKCE</code><span>→</span><code>access token</code><span>→</span><code>refresh / revoke</code></div>
-        </article>
-
-        <article id="per-device-permissions">
-          <span className="resourceArticleTag">POLICY / 06</span>
-          <h2>{tr("Per-device permissions", "每设备权限")}</h2>
-          <p>{tr("A laptop used for development does not need the same exposure as a home server. Remote Arc stores per-device tool policy in the control plane, blocks disabled tools before routing, and still respects the local agent's advertised capability set. Supported file edits can also be reversed from local-only snapshots.", "开发用笔记本与家庭服务器不应暴露同样的能力。Remote Arc 在控制面保存每设备工具策略，在路由前拦截被关闭的工具，同时仍严格受本地 Agent 实际声明的能力集合约束。支持的文件修改还可以通过仅保存在本机的快照撤销。")}</p>
-          <div className="resourceCodeRail"><code>read_file</code><span>✓</span><code>edit_block</code><span>↶</span><code>start_process</code><span>?</span></div>
-        </article>
-
-        <article id="privacy-audit">
-          <span className="resourceArticleTag">AUDIT / 07</span>
-          <h2>{tr("Privacy-preserving audit", "隐私友好审计")}</h2>
-          <p>{tr("The activity feed is designed for operational visibility rather than content retention. Remote Arc records metadata such as tool name, device, result and time, while file contents, command arguments, OAuth tokens and raw device credentials are not intentionally stored in audit records.", "活动记录用于运行可观测性，而不是内容留存。Remote Arc 记录工具名称、设备、结果与时间等元数据，而不会有意在审计记录中保存文件内容、命令参数、OAuth Token 或原始设备凭证。")}</p>
-          <div className="resourceAuditMatrix"><span>✓ tool</span><span>✓ device</span><span>✓ result</span><span>✓ time</span><span>× file contents</span><span>× command args</span><span>× credentials</span></div>
-        </article>
-        </div>
-      </section>
-    </PublicLayout>
-  );
+  useEffect(() => { window.location.replace("/docs"); }, []);
+  return <p role="status"><a href="/docs">{tr("Open documentation", "打开文档")} →</a></p>;
 }
 
 function McpPage({ user }: { user?: User | null }) {
@@ -5845,13 +5723,13 @@ function Dashboard({
             <section className="settingsGrid">
               <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Choose Light, Dark or System. Your preference is saved in this browser.", "选择浅色、深色或跟随系统；偏好会保存在当前浏览器。")}</p></div><ThemeSwitcher /></article>
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
-              <article className="settingsCard"><div><h2>{tr("Account & profile", "账号与个人信息")}</h2><p>{user.name || tr("Remote Arc user", "Remote Arc 用户")} · {user.email}</p></div><button className="ghostButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button></article><article className="settingsCard"><div><h2>{tr("MCP connection", "MCP 连接")}</h2><p>{tr("Manage per-device tool access from Devices. Disabled tools are enforced by the relay.", "在设备页管理每台电脑的工具权限；关闭的工具会由 Relay 强制拦截。")}</p><code>{mcpEndpoint}</code></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button></article><article className="settingsCard"><div><h2>{tr("Billing & payments", "账单与支付")}</h2><p>{usage?.unlimited ? tr("Administrator account with unlimited hosted usage.", "管理员账户，托管调用无限额。") : tr("Your account starts on the free hosted tier. Paid usage is added through top-ups when you need more capacity.", "账户默认使用免费托管额度；需要更多容量时通过充值增加付费调用额度。")}</p></div><div className="planValue">{usage?.unlimited ? tr("Unlimited", "无限") : `${usage?.used ?? 0} / ${usageLimitLabel}`}</div></article>
-              <article className="settingsCard"><div><h2>{tr("Usage & top-ups", "额度与充值")}</h2><p>{tr("Your hosted account includes a free monthly allowance. Add paid usage when you need more capacity.", "托管账户每月包含免费额度；需要更多容量时可按需充值。")}</p></div><a className="ghostButton" href={MARKETING_ORIGIN + "/pricing"}>{tr("View pricing", "查看价格")}</a></article>
+              <article className="settingsCard"><div><h2>{tr("Account & profile", "账号与个人信息")}</h2><p>{user.name || tr("Remote Arc user", "Remote Arc 用户")} · {user.email}</p></div><button className="ghostButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button></article><article className="settingsCard"><div><h2>{tr("MCP connection", "MCP 连接")}</h2><p>{tr("Manage per-device tool access from Devices. Disabled tools are enforced by the relay.", "在设备页管理每台电脑的工具权限；关闭的工具会由 Relay 强制拦截。")}</p><code>{mcpEndpoint}</code></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button></article><article className="settingsCard"><div><h2>{tr("Account allowance", "账户额度")}</h2><p>{usage?.unlimited ? tr("Administrator account with unlimited hosted usage.", "管理员账户，托管调用无限额。") : tr("Your account uses the free monthly hosted allowance. Paid top-ups are not available yet.", "账户使用每月免费托管额度，目前尚未开放付费充值。")}</p></div><div className="planValue">{usage?.unlimited ? tr("Unlimited", "无限") : `${usage?.used ?? 0} / ${usageLimitLabel}`}</div></article>
+              <article className="settingsCard"><div><h2>{tr("Plans & capacity", "方案与容量")}</h2><p>{tr("Review the current allowance, how calls are counted and the support path for capacity needs.", "了解当前额度、调用计数方式和更多容量的咨询渠道。")}</p></div><a className="ghostButton" href={MARKETING_ORIGIN + "/pricing"}>{tr("View pricing", "查看价格")}</a></article>
             </section>
           </>
         )}
 
-        <footer className="dashboardFooter"><span>Remote Arc · mcp.remotearc.app</span><div><a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a><a href={MARKETING_ORIGIN + "/resources"}>{tr("Resources", "资源")}</a><a href={MARKETING_ORIGIN + "/docs/mcp"}>MCP</a><a href={MARKETING_ORIGIN + "/privacy"}>{tr("Privacy", "隐私")}</a><a href={MARKETING_ORIGIN + "/terms"}>{tr("Terms", "条款")}</a><a href={MARKETING_ORIGIN + "/support"}>{tr("Support", "支持")}</a></div></footer>
+        <footer className="dashboardFooter"><span>Remote Arc · mcp.remotearc.app</span><div><a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a><a href={MARKETING_ORIGIN + "/docs"}>{tr("Docs", "文档")}</a><a href={MARKETING_ORIGIN + "/docs/mcp"}>MCP</a><a href={MARKETING_ORIGIN + "/privacy"}>{tr("Privacy", "隐私")}</a><a href={MARKETING_ORIGIN + "/terms"}>{tr("Terms", "条款")}</a><a href={MARKETING_ORIGIN + "/support"}>{tr("Support", "支持")}</a></div></footer>
       </main>
 
       <nav className="mobileBottomNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
@@ -6472,7 +6350,7 @@ function App() {
   if (location.pathname === "/blogs/remote-arc-vs-openclaw") return <RemoteArcVsOpenClawArticlePage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/powerful-ai-access-without-exposing-your-computer") return <PowerfulAccessArticlePage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/how-remote-arc-works") return <ArchitectureArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/resources") return <ResourcesPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/resources") return <ResourcesRedirect />;
   if (location.pathname === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
   if (location.pathname === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
   if (location.pathname === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;

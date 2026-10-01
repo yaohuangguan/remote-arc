@@ -37,6 +37,11 @@ PPT was removed at the user's request. Track completed checks and the future
 sandbox decision in `docs/website-content-review.md`. This work remains on PR44
 and preserves the release HOLD.
 
+2026-10-02 follow-up: hero cursor/pause controls removed, product/security FAQ
+expanded, redundant Technical Resources retired with Docs redirects, and Pricing
+rebuilt against actual allowance/billing capabilities. Wake-on-LAN is deferred at
+the user's request. See checkpoint 12 and the website audit for completed checks.
+
 Compatibility: keep existing tools, task modes and hosted-planner defaults.
 New source-controller tools/fields are opt-in and D1 migrations are additive.
 Do not edit or push the parent PR #43 branch for this implementation.

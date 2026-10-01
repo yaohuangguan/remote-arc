@@ -1,6 +1,6 @@
 # Long-running work implementation checkpoint
 
-Last updated: 2026-10-01. Branch: `feat/goal-continuation`, stacked on PR #43.
+Last updated: 2026-10-02. Branch: `feat/goal-continuation`, stacked on PR #43.
 
 ## Current state
 
@@ -77,6 +77,16 @@ Last updated: 2026-10-01. Branch: `feat/goal-continuation`, stacked on PR #43.
     reduced motion, video chapters and clipboard-denial checks pass. The 320px
     public navigation clipping is fixed. Audit evidence and the future isolation
     decision are in `docs/website-content-review.md` and `docs/execution-isolation.md`.
+
+12. Website follow-up: removed hero cursor/pause controls while preserving
+    reduced motion and stable typewriter height; expanded FAQ to 13 product,
+    security and task questions in keyboard-accessible topic tabs. Removed the
+    redundant Technical Resources page and links, with server GET/HEAD 301 and
+    client preview redirect to Docs. Rebuilt lazy Pricing around the verified
+    10,000-call allowance, UTC reset, separate AI costs and capacity support.
+    Corrected unavailable top-up claims in Pricing and Dashboard. Full local
+    CI, builds, actual relay redirect/SEO checks and desktop/mobile browser
+    checks pass. Wake-on-LAN is explicitly deferred; no wake feature was added.
 
 ## Next concrete action
 

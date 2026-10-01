@@ -186,6 +186,10 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return Response.redirect(canonical.toString(), 301);
     }
 
+    if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/resources") {
+      return Response.redirect(new URL("/docs", url.origin).toString(), 301);
+    }
+
     if (url.pathname === "/.well-known/openai-apps-challenge") {
       if (!env.OPENAI_APPS_CHALLENGE) {
         return new Response("Not configured", { status: 404 });
