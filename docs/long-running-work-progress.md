@@ -19,18 +19,27 @@ Last updated: 2026-10-01. Branch: `feat/goal-continuation`, stacked on PR #43.
 
 ## Completed checkpoints
 
-1. Repository plan and resume log prepared (this commit).
+1. Repository plan and resume log committed as `45d3192`; Draft PR #44 created
+   with base `feat/durable-automations` (#43).
+2. Task lease/revision fences, dispatch checkpoints and late process cleanup;
+   source-controlled goals, bounded context/journal, idempotent decisions and
+   MCP tools; future/interval Agent Goal triggers and provider retry handling.
+3. Relay typecheck and `pnpm test:goals` passed. Tests run the actual relay
+   functions/SQL against SQLite with a device transport stub. They cover
+   context, duplicate/stale/foreign decisions, evidence/verification, cancel,
+   lease takeover, unknown dispatch outcome, late handle cleanup and no early
+   scheduled execution. They are not a real Plugin/host or device test.
 
 ## Next concrete action
 
-Implement step A: fence worker state/run writes by the current lease and active
-status, checkpoint each external action, and add regression tests for pause,
-cancel and lease takeover. Then implement the source controller/journal protocol.
+Add authenticated signed MCP event subscriptions/delivery, bind GitHub cloud
+actions to account/repository permission, finish formal architecture + bilingual
+website Docs, and broaden recovery/scheduling tests before running full CI/E2E.
 
 ## Validation and unresolved limits
 
-- Review reproduced cancellation resurrection and stale-worker lease clearing
-  using the actual SQL in isolated SQLite. Runtime fixes are not yet applied.
+- Runtime regressions for cancellation resurrection and stale-worker lease
+  clearing pass with the new fences. Full Wrangler E2E is still pending.
 - No production credentials, migration, deployment or release were performed.
 - No real Plugin/Chat/Work overnight acceptance has run. Preserve that pending
   status; mocked E2E cannot establish a host's overnight reasoning lifetime.
