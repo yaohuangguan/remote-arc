@@ -21,7 +21,7 @@
 :root[data-theme] .appFrame .overviewTopbar { margin-bottom: 24px; padding-bottom: 20px; gap: 20px; }
 :root[data-theme] .appFrame .overviewTopbar h1,
 :root[data-theme] .appFrame .securityTopbar h1,
-:root[data-theme] .appFrame .pageHeader h1 { font-size: clamp(28px, 2.5vw, 36px); line-height: 1.2; }
+:root[data-theme] .appFrame .pageHeader h1 { font-size: clamp(28px, 2.5vw, 36px) !important; line-height: 1.2; }
 :root[data-theme] .appFrame .overviewTopbar p,
 :root[data-theme] .appFrame .securityTopbar p,
 :root[data-theme] .appFrame .pageHeader p { font-size: 16px; line-height: 1.6; max-width: 740px; }
@@ -236,7 +236,7 @@
   :root[data-theme] .appFrame .automationKindTabs { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
 @media (max-width: 820px) {
-  :root[data-theme] .appFrame .overviewTopbar h1 { font-size: 28px; }
+  :root[data-theme] .appFrame .overviewTopbar h1 { font-size: 28px !important; }
   :root[data-theme] .appFrame .overviewTopbar p { font-size: 15px; }
   :root[data-theme] .appFrame .overviewStatusGrid,
   :root[data-theme] .appFrame .automationStats { gap: 12px; }

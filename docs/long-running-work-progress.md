@@ -58,11 +58,16 @@ Last updated: 2026-10-01. Branch: `feat/goal-continuation`, stacked on PR #43.
    Core Dashboard pages and the ten-section Docs route had no horizontal
    overflow. Existing main bundle size warning remains; the new Docs chunk is
    separate. Native keep-awake helpers still need actual target-OS acceptance.
+10. Implementation committed as `41b20da` (events/device controls) and `d93c0f3`
+    (Dashboard/Docs), pushed to draft PR #44. GitHub CI at `d93c0f3` passed the
+    full verification job (including Wrangler E2E) and native-core jobs on
+    Ubuntu, Windows and macOS. A final CSS adjustment overrides the inherited
+    26px heading rule so the documented 28–36px scale applies.
 
 ## Next concrete action
 
-Push the implementation to draft PR #44 and confirm CI at its exact head. Next
-acceptance requires a provisioned secure Cloudflare event-egress binding, real
+Implementation is saved in draft PR #44. Confirm CI at each subsequent head.
+Next acceptance requires a provisioned secure Cloudflare event-egress binding, real
 Plugin OAuth/callback discovery, a real source-controlled Chat/Work goal, and
 actual supported OS power-helper behavior. Keep the release HOLD until its
 separate review/release conditions are satisfied. Resume from PLAN.md and this
