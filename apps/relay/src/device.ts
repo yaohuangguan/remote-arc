@@ -1,3 +1,4 @@
+import { parseTaskPermissions } from "./device-task-policy.js";
 import {
   addSecondsIso,
   getSessionUser,
@@ -310,7 +311,7 @@ export async function getDevicesForUser(
   const rows = await env.DB.prepare(
     `SELECT id, name, platform, arch, hostname, created_at, last_seen, allowed_tools,
             workspace_roots, sensitive_paths, sensitive_allow_paths, protect_sensitive_paths, undo_enabled,
-            background_enabled, background_service, background_seen_at
+            background_enabled, background_service, background_seen_at, automation_permissions
      FROM devices
      WHERE user_id = ?1 AND revoked_at IS NULL
      ORDER BY created_at DESC`,
@@ -330,6 +331,7 @@ export async function getDevicesForUser(
       sensitive_allow_paths: string | null;
       protect_sensitive_paths: number;
       undo_enabled: number;
+      automation_permissions: string | null;
       background_enabled: number | null;
       background_service: string | null;
       background_seen_at: string | null;
@@ -439,6 +441,8 @@ export async function getDevicesForUser(
           : device.background_enabled !== 0,
       background_service: device.background_service,
       background_seen_at: device.background_seen_at,
+      automation_permissions: parseTaskPermissions(device.automation_permissions),
+      keep_awake_available: (live?.tools || []).includes("set_task_keep_awake"),
       status: live ? "online" : "offline",
       tools,
     };

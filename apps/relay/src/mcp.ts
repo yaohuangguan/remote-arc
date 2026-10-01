@@ -654,7 +654,7 @@ export function createRemoteLinkMcp(
       {
         title: "Create a persistent Remote Arc automation",
         description:
-          "Create a durable Remote Arc task that continues after this chat tool call ends. Supports long-running commands, webhook condition watches, recurring schedules, and goal loops that retry until a verification command succeeds.",
+          "Save user-requested ongoing or scheduled work as a durable task; the user can ask in chat and need not fill a Dashboard form. Use ordinary tools for immediate one-off operations. Supports long commands, webhook watches, interval schedules and fixed-plan goal loops; use create_agent_goal when each result may require a different next action.",
         inputSchema: z.object({
           name: z.string().min(1).max(120),
           kind: z.enum([
@@ -663,6 +663,7 @@ export function createRemoteLinkMcp(
             "schedule_watch",
             "goal_loop",
           ]),
+          keep_awake: z.boolean().default(false),
           device_id: z.string().optional(),
           command: z.string().max(4000).optional(),
           cwd: z.string().max(500).optional(),
@@ -769,9 +770,10 @@ export function createRemoteLinkMcp(
       {
         title: "Create a self-directed durable Agent Goal",
         description:
-          "Create a persistent coding/work goal whose hosted planner can inspect tool results, choose a different next action, and continue until the goal is verified, paused, expired, cancelled, or its iteration limit is reached. This is more powerful than a deterministic goal loop and requires the separate agent:write scope.",
+          "Save a user-requested ongoing adaptive goal from chat; no Dashboard form is required. Choose the controller explicitly: source AI uses get_goal_context and submit_goal_decision and needs a continuing host runtime or task events; hosted planner is a separate option (legacy default), not a silent model fallback. Completion needs evidence and configured verification. Device policy, budgets and agent:write scope apply.",
         inputSchema: z.object({
           name: z.string().min(1).max(120),
+          keep_awake: z.boolean().default(false),
           device_id: z.string(),
           objective: z.string().min(1).max(6000),
           success_criteria: z.string().min(1).max(4000),
@@ -826,6 +828,7 @@ export function createRemoteLinkMcp(
         await consume(env, identity);
         const created = await createAutomation(env, identity.userId, {
           name: input.name,
+          keep_awake: input.keep_awake,
           kind: "agent_goal",
           device_id: input.device_id,
           interval_seconds: input.interval_seconds,

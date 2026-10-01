@@ -1,3 +1,4 @@
+import { requireTaskPermission } from "./device-task-policy.js";
 import { validateAgentToolArguments } from "./agent-tools.js";
 import {
   getSessionUser,
@@ -60,6 +61,7 @@ type DeviceCommandStep = {
 type AutomationStep = DeviceCommandStep | GitHubMergeSpec;
 
 type ActionPlan = {
+  keep_awake?: boolean;
   steps: AutomationStep[];
   recovery?: "restart" | "fail";
 };
@@ -179,6 +181,7 @@ type DevicePolicySnapshot = {
 };
 
 export type CreateAutomationInput = {
+  keep_awake?: boolean;
   name?: string;
   kind?: AutomationCreateKind;
   device_id?: string;
@@ -599,6 +602,15 @@ function defaultMaxRuns(kind: AutomationKind, value: unknown) {
   return 1;
 }
 
+async function authorizeGitHubAction(env: AutomationEnv, userId: string, action: GitHubMergeSpec) {
+  const installationId = action.installation_id || env.GITHUB_APP_INSTALLATION_ID;
+  const permission = installationId && await env.DB.prepare(`SELECT user_id FROM github_automation_permissions
+    WHERE user_id = ?1 AND installation_id = ?2 AND owner = ?3 COLLATE NOCASE AND repo = ?4 COLLATE NOCASE`)
+    .bind(userId, installationId, action.owner, action.repo).first();
+  if (!permission) throw new Error("GitHub cloud action requires an explicit account/installation/repository permission binding.");
+  return { ...action, installation_id: installationId! };
+}
+
 export async function createAutomation(
   env: AutomationEnv,
   userId: string,
@@ -621,6 +633,7 @@ export async function createAutomation(
   }
 
   const action = sanitizeSteps({ ...input, kind: requestedKind });
+  if (input.keep_awake) action.keep_awake = true;
   const cloudOnly = action.steps.length > 0 &&
     action.steps.every((step) => step.type === "github_merge_pr");
   const deviceId = (input.device_id || "").trim();
@@ -655,11 +668,16 @@ export async function createAutomation(
     );
   }
 
+  for (const step of action.steps) {
+    if (step.type === "github_merge_pr") Object.assign(step, await authorizeGitHubAction(env, userId, step));
+  }
   const goal = sanitizeGoal({ ...input, kind: requestedKind }, policy);
   const now = nowIso();
   const { trigger, nextRunAt, initialStatus } = sanitizeTrigger(
     requestedKind === "agent_goal" && input.schedule ? "schedule_watch" : storedKind, input, now);
-  const expiresAt = defaultExpiry(storedKind, now, input);
+  if (!cloudOnly) await requireTaskPermission(env.DB, userId, deviceId, storedKind, goal, trigger, action.keep_awake);
+  const expiresAt = defaultExpiry(requestedKind === "agent_goal" && trigger.type === "interval" ? "schedule_watch" : storedKind,
+    requestedKind === "agent_goal" && trigger.type === "at" ? trigger.at : now, input);
   const maxRuns =
     requestedKind === "agent_goal" ? (input.schedule?.every_seconds ? defaultMaxRuns("schedule_watch", input.max_runs) : 1) : defaultMaxRuns(storedKind, input.max_runs);
   const intervalSeconds = clampInterval(
@@ -801,11 +819,15 @@ async function updateAutomationStatus(
          lease_until = NULL,
          updated_at = ?4,
          revision = revision + 1
-     WHERE id = ?5 AND user_id = ?6`,
+     WHERE id = ?5 AND user_id = ?6
+       AND status NOT IN ('completed','failed','cancelled','expired')`,
   )
     .bind(status, nextRunAt, lastError, now, automationId, userId)
     .run();
-  return getAutomation(env, userId, automationId);
+  const updated = await getAutomation(env, userId, automationId);
+  if (updated) await journalStatement(env.DB, updated, status,
+    "User changed task status to " + status + ".", undefined).run();
+  return updated;
 }
 
 export async function pauseAutomation(
@@ -818,7 +840,9 @@ export async function pauseAutomation(
   if (isTerminalStatus(automation.status)) {
     throw new Error("Completed, failed, cancelled or expired automations cannot be paused.");
   }
-  return updateAutomationStatus(env, userId, automationId, "paused", null);
+  const paused = await updateAutomationStatus(env, userId, automationId, "paused", null);
+  await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
+  return paused;
 }
 
 export async function resumeAutomation(
@@ -854,8 +878,10 @@ export async function cancelAutomation(
 ) {
   const automation = await getAutomation(env, userId, automationId);
   if (!automation) throw new Error("Automation not found.");
+  if (isTerminalStatus(automation.status)) return automation;
 
   await updateAutomationStatus(env, userId, automationId, "cancelled", null);
+  await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
   const state = parseJson<RuntimeState>(automation.state_json, {});
   if (state.process_id && automation.device_id) {
     await callDevice(
@@ -1125,11 +1151,17 @@ async function persistRuntime(
   extra?: { incrementRun?: boolean; retainLease?: boolean; event?: string; summary?: string },
 ) {
   await checkpointTask(env.DB, automation, state, status, nextRunAt, lastError, extra);
+  if (isTerminalStatus(status) || status === "paused" || extra?.incrementRun) {
+    await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
+  }
 }
 
 async function automationCall(env: AutomationEnv, automation: AutomationRow,
   state: RuntimeState, tool: string, args: Record<string, unknown>, phase?: RuntimeState["phase"]) {
   await renewTaskLease(env.DB, automation);
+  const plan = parseJson<ActionPlan>(automation.action_json, { steps: [] });
+  await requireTaskPermission(env.DB, automation.user_id, automation.device_id!, automation.kind,
+    parseJson<GoalSpec | null>(automation.goal_json, null), parseJson<TriggerSpec | null>(automation.trigger_json, null), plan.keep_awake);
   // Recheck the frozen policy immediately before dispatch, including after a
   // slow planner response. The device enforces current local policy again.
   const policy = await devicePolicySnapshot(env, automation.user_id, automation.device_id!);
@@ -1401,7 +1433,8 @@ async function executeAgentGoal(
     );
   }
 
-  for (let localStep = 0; localStep < 3; localStep += 1) {
+  const planningStarted = Date.now();
+  for (let localStep = 0; localStep < 3 && Date.now() - planningStarted < 45_000; localStep += 1) {
     if (state.agent.iteration >= goal.max_iterations) {
       const message =
         "Agent Goal reached its maximum of " +
@@ -1605,7 +1638,7 @@ async function executeAgentGoal(
         return;
       }
       state.agent.observation =
-        "Tool " + decision.tool + " failed: " +
+        "Tool " + decision.tool + " failed or its outcome is unknown. Inspect current state before repeating: " +
         String(error instanceof Error ? error.message : error);
       await persistRuntime(env, automation, state, automation.status, nowIso(), null, { retainLease: true, event: "observation", summary: state.agent.observation });
       continue;
@@ -1653,6 +1686,7 @@ async function executeAutomation(
     action.steps.every((step) => step.type === "github_merge_pr");
 
   if (!cloudOnly) {
+    await requireTaskPermission(env.DB, automation.user_id, automation.device_id!, automation.kind, goal, trigger, action.keep_awake);
     if (!automation.device_id) {
       await persistRuntime(
         env,
@@ -1730,6 +1764,15 @@ async function executeAutomation(
 
   if (!state.run_id) {
     state = await startRun(env, automation, state);
+  }
+
+  if (action.keep_awake) {
+    try { await setTaskKeepAwake(env, automation, 180); }
+    catch (error) {
+      if (!isDeviceOfflineError(error)) throw error;
+      await persistRuntime(env, automation, state, "waiting_for_device", addSeconds(now, automation.interval_seconds), "Waiting for device to acquire task keep-awake.");
+      return;
+    }
   }
 
   if (goal?.type === "agent_goal") {
@@ -1926,8 +1969,16 @@ async function executeAutomation(
   if (stepIndex < action.steps.length) {
     const step = action.steps[stepIndex]!;
     if (step.type === "github_merge_pr") {
-      const result = await mergeGitHubPullRequest(env, step);
+      const permitted = await authorizeGitHubAction(env, automation.user_id, step);
+      await renewTaskLease(env.DB, automation);
+      state.inflight_action = { id: crypto.randomUUID(), tool: "github_merge_pr" };
+      await persistRuntime(env, automation, state, automation.status, nowIso(), null,
+        { retainLease: true, event: "action_intent", summary: "Dispatch authorized GitHub merge; outcome pending." });
+      const result = await mergeGitHubPullRequest(env, permitted);
+      await renewTaskLease(env.DB, automation);
+      state.inflight_action = undefined;
       state.step_index = stepIndex + 1;
+      await persistRuntime(env, automation, state, automation.status, nowIso(), null, { retainLease: true, event: "action_result", summary: "GitHub merge acknowledged." });
       await updateRunSummary(
         env,
         automation,
@@ -2059,6 +2110,26 @@ async function executeAutomation(
   );
 }
 
+async function setTaskKeepAwake(env: AutomationEnv, automation: AutomationRow, seconds: number) {
+  if (!automation.device_id || !parseJson<ActionPlan>(automation.action_json, { steps: [] }).keep_awake) return;
+  const result = await callDevice(env, automationIdentity(automation, env), automation.device_id,
+    "set_task_keep_awake", { task_id: automation.id, seconds }) as { supported?: boolean; active?: boolean };
+  if (seconds > 0 && (!result.supported || !result.active)) throw new Error("This computer could not acquire its task keep-awake lease. Check the local OS power service.");
+}
+
+async function maintainTaskKeepAwake(env: AutomationEnv) {
+  const active = await env.DB.prepare(`SELECT * FROM automations WHERE device_id IS NOT NULL
+    AND status IN ('waiting','running','waiting_for_device','waiting_for_event')
+    AND json_extract(action_json,'$.keep_awake') = 1 AND json_extract(state_json,'$.run_id') IS NOT NULL
+    AND (expires_at IS NULL OR expires_at > ?1) ORDER BY updated_at LIMIT 100`)
+    .bind(nowIso()).all<AutomationRow>();
+  for (const task of active.results) {
+    await requireTaskPermission(env.DB, task.user_id, task.device_id!, task.kind,
+      parseJson<GoalSpec | null>(task.goal_json, null), parseJson<TriggerSpec | null>(task.trigger_json, null), true)
+      .then(() => setTaskKeepAwake(env, task, 180)).catch(() => undefined);
+  }
+}
+
 async function claimAutomation(
   env: AutomationEnv,
   automation: AutomationRow,
@@ -2093,6 +2164,7 @@ export async function runAutomationTick(
   at = new Date(),
 ) {
   const now = at.toISOString();
+  await maintainTaskKeepAwake(env);
 
   const expiring = await env.DB.prepare(
     `SELECT *
@@ -2113,6 +2185,7 @@ export async function runAutomationTick(
         AND status NOT IN ('completed','failed','cancelled','expired')`)
       .bind(automation.id, now).run();
     if (!expired.meta.changes) continue;
+    await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
     const state = parseJson<RuntimeState>(automation.state_json, {});
     await env.DB.prepare(`UPDATE automation_runs SET status = 'expired', finished_at = ?2,
       error = 'Automation expired.' WHERE automation_id = ?1 AND finished_at IS NULL`)
@@ -2139,9 +2212,11 @@ export async function runAutomationTick(
 
   let executed = 0;
   let failed = 0;
+  const tickStarted = Date.now();
 
   for (const candidate of due.results) {
-    const automation = await claimAutomation(env, candidate, now);
+    if (Date.now() - tickStarted >= 45_000) break;
+    const automation = await claimAutomation(env, candidate, nowIso());
     if (!automation) continue;
 
     try {

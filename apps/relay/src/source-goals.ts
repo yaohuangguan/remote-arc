@@ -1,8 +1,18 @@
+import { requireTaskPermission } from "./device-task-policy.js";
 import { validateAgentToolArguments } from "./agent-tools.js";
 import { nowIso, sha256Hex, type OAuthIdentity } from "./auth.js";
 import { validateAgentDecision, type RawDecision } from "./agent-planner.js";
 import { readTaskJournal, renewTaskLease } from "./automation-store.js";
 import type { AgentGoalSpec, AutomationRow, RuntimeState } from "./automations.js";
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
+  if (value && typeof value === "object") {
+    const object = value as Record<string, unknown>;
+    return "{" + Object.keys(object).sort().map((key) => JSON.stringify(key) + ":" + canonicalJson(object[key])).join(",") + "}";
+  }
+  return JSON.stringify(value);
+}
 
 export async function getGoalContext(db: D1Database, userId: string, id: string, after = 0) {
   const task = await db.prepare("SELECT * FROM automations WHERE id = ?1 AND user_id = ?2")
@@ -22,6 +32,7 @@ export async function getGoalContext(db: D1Database, userId: string, id: string,
     completion_evidence: state.agent?.completion_evidence || null,
     verification: goal.verify ? "command_exit" : "controller_attested",
     expires_at: task.expires_at, last_error: task.last_error, run_count: task.run_count,
+    next_run_at: task.next_run_at,
     ready_for_decision: goal.controller === "source" && task.status === "waiting_for_event" && state.phase === "awaiting_agent",
     journal, next_cursor: journal.length ? (journal.at(-1) as { sequence: number }).sequence : after,
   };
@@ -38,16 +49,20 @@ export async function submitGoalDecision(db: D1Database, identity: OAuthIdentity
   const goal = JSON.parse(task.goal_json || "null") as AgentGoalSpec | null;
   if (goal?.type !== "agent_goal" || goal.controller !== "source") throw new Error("Goal is not source-controlled.");
   if (goal.controller_client_id && goal.controller_client_id !== identity.clientId) throw new Error("Goal belongs to another source client.");
+  await requireTaskPermission(db, identity.userId, task.device_id!, task.kind, goal, JSON.parse(task.trigger_json || "null"), JSON.parse(task.action_json).keep_awake);
   const decision = validateAgentDecision(raw, goal.allowed_tools);
   if (decision.decision === "tool") validateAgentToolArguments(decision.tool as import("./agent-planner.js").AgentToolName, decision.arguments);
   if (decision.decision === "complete" && !decision.completionEvidence.trim()) throw new Error("Completion requires evidence.");
-  const hash = await sha256Hex(JSON.stringify({ expectedRevision, decision }));
-  const previous = await db.prepare("SELECT payload_hash,expected_revision FROM automation_decisions WHERE automation_id = ?1 AND idempotency_key = ?2")
-    .bind(id, key).first<{ payload_hash: string; expected_revision: number }>();
-  if (previous) {
+  const hash = await sha256Hex(canonicalJson({ expectedRevision, decision }));
+  async function previousDecision() {
+    const previous = await db.prepare("SELECT payload_hash,expected_revision FROM automation_decisions WHERE automation_id = ?1 AND idempotency_key = ?2")
+      .bind(id, key).first<{ payload_hash: string; expected_revision: number }>();
+    if (!previous) return null;
     if (previous.payload_hash !== hash) throw new Error("Idempotency key was already used for a different decision.");
     return { accepted: true, duplicate: true, revision: previous.expected_revision + 1 };
   }
+  const previous = await previousDecision();
+  if (previous) return previous;
   const decisionId = crypto.randomUUID();
   const now = nowIso();
   const results = await db.batch([
@@ -66,7 +81,12 @@ export async function submitGoalDecision(db: D1Database, identity: OAuthIdentity
       SELECT id,user_id,revision,'decision_submitted',?2,?3 FROM automations WHERE id = ?1 AND changes() = 1`)
       .bind(id, decision.decisionSummary, now),
   ]);
-  if (!results[0]?.meta.changes || !results[1]?.meta.changes) throw new Error("Goal revision changed or it is not awaiting a decision. Read context again.");
+  if (!results[0]?.meta.changes || !results[1]?.meta.changes) {
+    // Another request can commit the same key between the initial read and CAS.
+    const duplicate = await previousDecision();
+    if (duplicate) return duplicate;
+    throw new Error("Goal revision changed or it is not awaiting a decision. Read context again.");
+  }
   return { accepted: true, duplicate: false, revision: expectedRevision + 1 };
 }
 

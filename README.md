@@ -285,7 +285,8 @@ execution, including canonical-path checks that prevent a symlink inside an
 allowed workspace from escaping into a protected or out-of-scope directory.
 
 The selected workspace/protected-path strings are control-plane policy metadata
-stored in D1. Remote Arc does not store the file contents behind those paths.
+stored in D1; saving a path does not copy its file contents. Durable Agent Goals
+can separately persist bounded file/process observations needed for continuation.
 
 ## Workspace Scope
 
@@ -406,7 +407,7 @@ not unnecessarily consume the Workers request quota.
 
 ## Remote MCP tools
 
-Hosted MCP currently exposes 24 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
+Hosted MCP currently exposes 26 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
 
 ```text
 list_devices
@@ -433,12 +434,28 @@ undo_last_change
 
 create_automation
 create_agent_goal
+get_goal_context
+submit_goal_decision
 list_automations
 get_automation
 manage_automation
 ```
 
-The automation tools create and manage durable control-plane state. They do not grant new device capabilities: when an automation executes on a computer, the normal device ownership, skill policy, Workspace Scope and Sensitive Path Policy checks still apply.
+The automation tools create and manage durable control-plane state. They do not grant new device capabilities: when an automation executes on a computer, the normal device ownership, skill policy, Workspace Scope and Sensitive Path Policy checks still apply. Per-device task permissions independently govern background, scheduled, adaptive, source-controlled and keep-awake capabilities.
+
+Agent Goals support two explicit controllers: the existing hosted planner
+(default), or the source AI client using context/revision-based decisions. Source
+mode does not silently switch models. Sustained reasoning depends on the host's
+goal runtime or verified MCP task-event continuation; installing a Plugin alone
+does not guarantee overnight reasoning. Event discovery is disabled unless both
+encrypted signing-key storage and a secure HTTPS/DNS-pinning egress service
+binding are provisioned. The ordinary Cloudflare fetch path is not a fallback.
+
+See [the complete system architecture](docs/system-architecture.md),
+[implementation plan](docs/long-running-work-plan.md),
+[resume checkpoint](docs/long-running-work-progress.md) and the website guide
+at `/docs/long-running-work`. Real Plugin/Chat/Work overnight acceptance remains
+pending. Local Wrangler tests prove relay execution/recovery, not host lifetime.
 
 Before a device call is forwarded, the relay verifies:
 
@@ -452,7 +469,7 @@ Before a device call is forwarded, the relay verifies:
 
 Requirements:
 
-- Node.js 20+
+- Node.js 24+ for development and the SQLite test suite (device CLI: Node.js 20+)
 - pnpm 10
 - Cloudflare Wrangler for relay work
 

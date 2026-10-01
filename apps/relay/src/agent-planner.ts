@@ -222,6 +222,7 @@ export async function planAgentTurn(
       throw new Error("Agent planner returned invalid JSON.");
     }
   } else {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     const result = (await Promise.race([env.AI!.run(
       env.WORKERS_AI_MODEL || "@cf/openai/gpt-oss-120b",
       {
@@ -236,7 +237,7 @@ export async function planAgentTurn(
           json_schema: DECISION_SCHEMA,
         },
       },
-    ), new Promise((_, reject) => setTimeout(() => reject(new PlannerTransientError("Workers AI planner timed out.")), 90_000))]).catch((error) => { throw new PlannerTransientError("Workers AI transport failed: " + String(error)); })) as {
+    ), new Promise((_, reject) => { timeout = setTimeout(() => reject(new PlannerTransientError("Workers AI planner timed out.")), 90_000); })]).catch((error) => { throw new PlannerTransientError("Workers AI transport failed: " + String(error)); }).finally(() => clearTimeout(timeout))) as {
       response?: unknown;
       errors?: Array<{ message?: string }>;
     };
