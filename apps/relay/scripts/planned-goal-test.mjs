@@ -30,11 +30,12 @@ try {
   sqlite.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools,automation_permissions) VALUES(?,?,?,?,?,?,?,?)")
     .run("device", "owner", "Test", "linux", "hash", now, JSON.stringify(["read_file", "write_file", "edit_block", "start_process", "process_status", "process_output", "stop_process"]), JSON.stringify(permissions));
   let calls = [], counter = 0, frontier = "initial", generation = 0, exit = 0, running = false, offline = false, nativeEnvelope = false;
-  let unknownDispatch = false, lostProcess = false, cancelOnStart;
+  let unknownDispatch = false, unknownWrite = false, unknownCapture = false, lostProcess = false, cancelOnStart;
   const env = { DB: db, PUBLIC_ORIGIN: "https://relay.test.invalid", REGISTRY: { getByName() { return { async fetch(req) {
     const body = await req.json(); calls.push(body);
     if (offline) return Response.json({ error: "device offline" }, { status: 503 });
     if (body.tool === "start_process" && unknownDispatch) { unknownDispatch = false; return Response.json({ error: "device call timed out" }, { status: 504 }); }
+    if (body.tool === "write_file" && unknownWrite) { unknownWrite = false; return Response.json({ error: "device call timed out" }, { status: 504 }); }
     if (body.tool === "process_status" && lostProcess) return Response.json({ error: "Managed process not found after restart" }, { status: 504 });
     let result = { ok: true };
     if (body.tool === "start_process") result = { process_id: "process-" + (++counter) };
@@ -44,6 +45,7 @@ try {
     if (body.tool === "read_file") result = "unchanged source";
     if (body.tool === "goal_workspace") {
       if (body.arguments.action === "capture") frontier = "green-" + counter;
+      if (body.arguments.action === "capture" && unknownCapture) { unknownCapture = false; return Response.json({ error: "checkpoint acknowledgement lost" }, { status: 504 }); }
       if (body.arguments.action === "reject") generation++;
       result = { path: "/workspace/candidate-" + generation, root: "/workspace", frontier, generation, tree: "tree" };
     }
@@ -84,6 +86,10 @@ try {
   await assert.rejects(submit(uncertain, "execution_slice", { steps: [step("unknown-effect")] }), /read-only inspection/);
   await submit(uncertain, "tool", { path: "/workspace/status.txt" }, "", "read_file"); await tick(uncertain);
   assert.equal((await source.getGoalContext(db, "owner", uncertain)).planned.inspection_required, false);
+  const uncertainEdit = await create(fixed([phase("uncertain-edit")])); await tick(uncertainEdit);
+  await submit(uncertainEdit, "tool", { path: "/workspace/change.txt", content: "candidate" }, "", "write_file"); unknownWrite = true; await tick(uncertainEdit);
+  assert((await state(uncertainEdit)).planned.inspection_required, "Dynamic effects also require inspection after lost acknowledgement");
+  await assert.rejects(submit(uncertainEdit, "complete"), /read-only inspection/);
   const lostId = await create(fixed([phase("lost", { execution_slice: [step("lost-process")] })])); await tick(lostId); lostProcess = true; await tick(lostId); lostProcess = false;
   assert.equal((await get(lostId)).status, "waiting_for_event"); assert((await state(lostId)).planned.inspection_required);
   const cancelled = await create(fixed([phase("cancel", { execution_slice: [step("cancel-race")] })])); cancelOnStart = cancelled; await tick(cancelled);
@@ -113,8 +119,17 @@ try {
   sqlite.prepare("UPDATE automations SET next_run_at=? WHERE id=?").run(new Date().toISOString(), deadline);
   await tick(deadline); assert.equal((await get(deadline)).status, "completed");
   assert.equal((await state(deadline)).planned.report.partial[0].id, "unfinished");
+  const finalFailure = await create(fixed([phase("unverified")]), { verify_command: "final-check" }); await tick(finalFailure);
+  await writeState(finalFailure, s => { s.planned.plan.time_policy.end_at = new Date(Date.now() + 20_000).toISOString(); });
+  sqlite.prepare("UPDATE automations SET next_run_at=? WHERE id=?").run(new Date().toISOString(), finalFailure);
+  await tick(finalFailure); exit = 1; await settle(finalFailure); exit = 0;
+  const finalReport = (await state(finalFailure)).planned.report;
+  assert.equal((await get(finalFailure)).status, "completed", "Finalized is distinct from accepted work");
+  assert(finalReport.needs_reasoning && finalReport.latest_checks.some(c => !c.passed));
+  assert.equal(finalReport.accepted.length, 0);
   const pure = plan.initialPlannedState(plan.sanitizePlan(fixed([phase("large", { execution_slice: [{ ...step(), timeout_seconds: 300 }] })]), "/workspace"), now);
   pure.plan.time_policy.end_at = new Date(Date.parse(now) + 180_000).toISOString(); assert.equal(plan.selectPhase(pure, now), undefined);
+  pure.plan.phases[0].min_duration_seconds = 1; assert.equal(plan.selectPhase(pure, now), undefined, "A small minimum must not hide an oversized saved slice");
   assert.throws(() => plan.sanitizePlan({ ...fixed([phase("bad")]), time_policy: { end_at: "2030-01-01T07:00:00" } }), /offset/);
 
   // 8: cross-phase facts retained; phase-local memory cleared.
@@ -125,6 +140,9 @@ try {
 
   // 9, 10: baseline green, passing candidate promotes; regression preserves it.
   const quality = { ...fixed([phase("candidate")]), quality_policy: { promotion: "green_only", required_checks: [step("quality")], rollback_on_regression: true } };
+  const captureLost = await create(quality); unknownCapture = true; await settle(captureLost);
+  assert((await state(captureLost)).planned.inspection_required, "Unknown checkpoint capture must not be accepted or silently replayed");
+  assert.equal((await state(captureLost)).planned.green_frontier, undefined);
   const good = await create(quality); await settle(good); const baseline = (await state(good)).planned.green_frontier.checkpoint;
   await submit(good, "complete"); await settle(good); const promoted = (await state(good)).planned.green_frontier.checkpoint; assert.notEqual(promoted, baseline);
   const bad = await create(quality); await settle(bad); const prior = (await state(bad)).planned.green_frontier.checkpoint;
@@ -136,7 +154,10 @@ try {
   assert(!plan.recordProgress(watchdog, "test at line 123 failed", false, true)); assert(!plan.recordProgress(watchdog, "test at line 456 failed", false, true)); assert(plan.recordProgress(watchdog, "test at line 789 failed", false, true));
   assert(watchdog.replan_reason.includes("stuck")); assert.equal(watchdog.watchdog.strategy_retries, 1);
   const revise = await create({ planning_mode: "autonomous", phases: [], time_policy: { max_duration_seconds: 3600, finalization_reserve_seconds: 60 }, recovery_policy: { no_progress_iteration_limit: 2 } });
-  await tick(revise); await submit(revise, "revise_plan", { phases: [phase("r1")], reason: "Initial bounded plan" }); await tick(revise); await tick(revise);
+  await tick(revise);
+  await submit(revise, "tool", { path: "/workspace/README.md" }, "", "read_file"); await tick(revise); await tick(revise);
+  await submit(revise, "revise_plan", { phases: [phase("r1")], reason: "Initial bounded plan" }); await tick(revise); await tick(revise);
+  assert((await state(revise)).planned.plan_memory.includes("Established factual context"), "Pre-plan inspection facts survive initial phase planning");
   await submit(revise, "phase_result", { outcome: "blocked", blocker: "dependency absent" }); await tick(revise); await tick(revise);
   assert.equal((await state(revise)).planned.active_phase, undefined, JSON.stringify(await source.getGoalContext(db, "owner", revise)));
   await submit(revise, "revise_plan", { phases: [phase("r2")], reason: "Independent strategy" }); await tick(revise);

@@ -1,5 +1,14 @@
 # Long-running work implementation checkpoint
 
+Last updated: 2026-10-03. Active branch: `feat/chat-first-planned-goals`.
+Draft [PR #55](https://github.com/yaohuangguan/remote-arc/pull/55) targets
+`feat/goal-continuation`; PR44 stays at `2094828`. The active PR55 checkpoint
+and remaining real-host acceptance are below. Read
+`docs/chat-first-planned-goals.md` for the implemented contract and
+`docs/chat-first-planned-goals-plan.md` for the original plan. Preserve release HOLD.
+
+## Historical PR44 checkpoint
+
 Last updated: 2026-10-02. Branch: `feat/goal-continuation`, stacked on PR #43.
 
 ## Current state
@@ -109,7 +118,7 @@ log; do not infer overnight host support from the transport mocks.
   login background service alone prevents sleep.
 # 2026-10-03 — stacked planned-goal follow-up
 
-## Runtime/UI checkpoint — PR55, pending final browser/review
+## Runtime/UI checkpoint — PR55
 
 Implemented optional plan/source capabilities, phases/dependencies/results,
 bounded revisions and two-level factual memory; source context and planned
@@ -123,15 +132,21 @@ keep existing behavior; planned scheduled runs reset per-run state/workspace.
 
 Inspection found/fixed a parent runtime gap: CLI returns MCP content envelopes;
 task execution now decodes them privately instead of reading missing top-level
-process fields. Ordinary MCP returns are unchanged. Unknown slice acknowledgements
-and lost process handles require read-only inspection before new effects.
+process fields. Ordinary MCP returns are unchanged. Unknown slice/dynamic-effect/
+checkpoint acknowledgements and lost process handles require read-only inspection
+before new effects. Failed final checks preserve a factual finalized report;
+finalization does not assert all objectives passed. Phase feasibility accounts
+for saved command effort even when a smaller phase minimum is configured.
 
-Passed so far: workspace typecheck, legacy source-goal tests, new planned SQLite
-tests, real local Git worktree/guard/process-deadline tests, and extended existing
-Wrangler/D1 automation E2E. One full CI run passed before the latest review fixes;
-run final CI again after browser verification. Native OS CI remains pending remote.
-UI create/detail and bilingual website technical guide are implemented; browser
-desktop/mobile/theme/language checks and final PR description remain next.
+Passed locally: full `pnpm run ci` (workspace typecheck, native execution/MCP smoke,
+legacy source-goal tests, planned SQLite and real local Git worktree/guard/process
+deadline tests), extended existing Wrangler/D1 automation E2E, UI build and CLI
+build. UI create/detail and bilingual website technical guide are implemented;
+the plan UI is lazy loaded. Browser checks cover 1440/390/320px, English/Chinese,
+light/dark, Safety Guard's literal device error, plan inputs with labels/16px text,
+outcome/frontier detail, Docs anchors and horizontal overflow. Cross-platform
+native CI and PR preview status are verified on GitHub separately from local
+Windows execution. These are fixture/browser tests, not real Chat overnight runs.
 Formal reference: `docs/chat-first-planned-goals.md`. No D1 migration added.
 
 Coverage map: ordered/early/deterministic source-loss slices (1/2/15); partial/
@@ -139,12 +154,16 @@ dependency/independent phases (3/4/13); no filler and next-turn context (5/16/17
 deadline/reserve/reconnect (6/7/23); memory (8); frontier pass/fail (9/10); stuck/
 revisions (11/12); adaptive feasibility (14); CAS/late-cancel/pause/revocation
 (18/19/20); parent legacy hosted/source and no fallback (21/22); categorized
-report (24). Extra coverage: CLI result format, unknown dispatch, lost handle,
+report (24). Extra coverage: CLI result format, unknown slice/dynamic/capture
+acknowledgements, lost handle, failed final checks, initial read-only inspection,
 native checkout/index preservation, symlink candidate escape and modified trees.
 
 Real Chat autonomous wakeup, real overnight host acceptance, secure egress and
-OS power acceptance stay pending. Preserve release HOLD. Resume final review and
-verification here; only push `feat/chat-first-planned-goals`, never PR44.
+OS power acceptance stay pending. Preserve release HOLD. Resume acceptance from
+this checkpoint; only push `feat/chat-first-planned-goals`, never PR44. Accepted
+Git checkpoints need review before applying them to the user's original branch.
+
+## Initial PR55 planning checkpoint (historical; implementation is now complete)
 
 Active branch is now `feat/chat-first-planned-goals`, based on PR44 `2094828`.
 PR44 remains unchanged. Read `docs/chat-first-planned-goals-plan.md` before
@@ -152,6 +171,12 @@ resuming. Reviewed existing scheduler/source/planner/tool/store/event/device
 permission/keep-awake implementations. Homepage now includes the exact device
 Safety Guard shutdown rejection with a labeled example, user-control message
 and accurate narrow-pattern/OS-account boundary. UI build and typecheck passed.
-Next: additive planned contract, transitions, deterministic slice scheduler and
-source context/decision extensions. Runtime feature is not yet implemented.
+At that initial checkpoint the runtime had not yet been implemented. The runtime,
+UI and documentation implementation and verification are recorded above.
 Release HOLD and real-host overnight acceptance remain unchanged.
+
+User clarified that Chat creates the task/plan; Dashboard manages the same task,
+with manual creation optional. Creation now returns the saved ID plus a task
+Dashboard URL, the UI filters/opens that record and offers a copyable chat
+reference. This does not invent ChatGPT conversation-ID access or model wakeup.
+Formal/public docs explain the identity mapping and explicit source selection.

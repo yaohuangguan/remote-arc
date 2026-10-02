@@ -75,11 +75,14 @@ export function sanitizePhases(value: unknown, workspace?: string): GoalPhase[] 
   });
   const ids = new Set(phases.map(p => p.id));
   if (ids.size !== phases.length) throw new Error("Duplicate phase ids.");
+  const visited = new Set<string>();
   const visit = (id: string, ancestors: Set<string>) => {
     if (ancestors.has(id)) throw new Error("Cyclic phase dependency.");
+    if (visited.has(id)) return;
     const p = phases.find(x => x.id === id);
     if (!p) throw new Error("Unknown phase dependency.");
     for (const d of p.depends_on) visit(d, new Set([...ancestors, id]));
+    visited.add(id);
   };
   for (const p of phases) visit(p.id, new Set());
   return phases;
@@ -136,10 +139,12 @@ export function timeBudget(state: PlannedState, now: string, expiresAt?: string 
     finalization_due: remaining !== null && remaining <= policy.finalization_reserve_seconds, hard_stop: remaining === 0 };
 }
 export const activePhase = (s: PlannedState) => s.plan.phases.find(p => p.id === s.active_phase);
+const phaseEffort = (p: GoalPhase) => Math.max(1, p.selection?.estimated_seconds || 0,
+  p.min_duration_seconds || 0, p.execution_slice?.reduce((n, c) => n + c.timeout_seconds, 0) || 0);
 export function selectPhase(s: PlannedState, now: string, expiresAt?: string | null) {
   const available = s.plan.phases.filter(p => !s.outcomes.some(o => o.id === p.id) && p.depends_on.every(d => s.outcomes.some(o => o.id === d && o.outcome === "completed")));
   const safe = timeBudget(s, now, expiresAt).safe_seconds;
-  return available.find(p => safe === null || (p.selection?.estimated_seconds ?? p.min_duration_seconds ?? p.execution_slice?.reduce((n, c) => n + c.timeout_seconds, 0) ?? 1) <= safe);
+  return available.find(p => safe === null || phaseEffort(p) <= safe);
 }
 export function startPhase(s: PlannedState, p: GoalPhase, now: string) {
   s.active_phase = p.id; s.phase_started_at = now; s.phase_memory = ""; s.checks = []; s.phase_useful_seconds = 0;
@@ -199,7 +204,7 @@ export function revisePhases(s: PlannedState, phases: GoalPhase[], reason: strin
 export function adaptiveCandidates(phases: GoalPhase[], s: PlannedState, now: string, expiresAt?: string | null) {
   const safe = timeBudget(s, now, expiresAt).safe_seconds;
   return phases.filter(p => p.selection && (p.verify_command || p.execution_slice?.length) &&
-    (safe === null || p.selection.estimated_seconds <= safe) &&
+    (safe === null || phaseEffort(p) <= safe) &&
     p.depends_on.every(d => s.outcomes.some(o => o.id === d && o.outcome === "completed")))
     .sort((a, b) => (b.selection!.value * b.selection!.confidence / (1 + b.selection!.risk)) - (a.selection!.value * a.selection!.confidence / (1 + a.selection!.risk)));
 }

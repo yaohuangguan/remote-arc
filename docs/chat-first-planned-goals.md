@@ -158,6 +158,26 @@ the original branch. Retained worktrees consume disk and need intentional cleanu
 
 ## Source decisions and factual handoff
 
+### Chat and Dashboard refer to one saved task
+
+The normal entrypoint is the existing AI conversation. For requested ongoing work,
+the AI calls `create_agent_goal` (explicit `controller: "source"` to keep judgment
+in that conversation) or `create_automation` for deterministic work. The user does
+not need to fill a Dashboard form. Creation returns `automation.id` plus
+`dashboard_url`, an authenticated `/automations?task=<id>` link. The AI retains
+the ID in the conversation and shows the link; Dashboard filters and opens that
+same durable record. Details provide a copyable chat reference, so a later turn
+can read the checkpoint and resume when authorized. Names are not identity.
+
+This is task identity, not an automatic binding to ChatGPT's private conversation
+ID. One chat may create several tasks; a permitted source client can revisit a
+task by ID from another turn/chat. Ownership and OAuth client binding remain the
+authority. Remote Arc does not read the whole chat or create tasks merely because
+an ordinary tool was used. If the host loses the reference, `list_automations`
+can recover account-owned task IDs. A saved link/reference does not wake a model.
+The existing hosted default remains for backwards compatibility; chat-controlled
+goals explicitly select source and never silently switch controllers.
+
 Legacy tool/complete/pause remain. Planned decisions add:
 
 | Decision | `arguments_json` | Result |

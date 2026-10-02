@@ -47,6 +47,8 @@ const hasScope = (identity: OAuthIdentity, scope: Scope) =>
 
 const consume = async (env: Env, identity: OAuthIdentity) =>
   consumeToolCall(env, identity.userId);
+const taskDashboardUrl = (env: Env, id: string) =>
+  `${(env.APP_ORIGIN || env.PUBLIC_ORIGIN).replace(/\/$/, "")}/automations?task=${encodeURIComponent(id)}`;
 
 const oauthSchemes = (scope: Scope) => [
   {
@@ -750,6 +752,7 @@ export function createRemoteLinkMcp(
         await consume(env, identity);
         const created = await createAutomation(env, identity.userId, input);
         return textResult({
+          dashboard_url: created.automation ? taskDashboardUrl(env, created.automation.id) : null,
           automation: created.automation
             ? {
                 id: created.automation.id,
@@ -779,7 +782,7 @@ export function createRemoteLinkMcp(
       {
         title: "Create a self-directed durable Agent Goal",
         description:
-          "Save user-requested ongoing work from chat. Optional plan persists phases/dependencies, time/reserve, green-only checks and recovery. Saved deterministic execution_slice steps continue without the source turn; new reasoning uses get_goal_context/submit_goal_decision on a later turn or host wakeup. Source never silently switches to hosted (legacy default). Green-only work uses owned Git worktrees and needs updated remotelink; accepted work is reviewed before applying to the user's branch. Device policy, evidence and agent:write scope apply.",
+          "Create user-requested ongoing work directly from the current AI chat; no Dashboard form is required. For reasoning in this conversation, explicitly select controller=source; hosted remains the legacy default, never a source fallback. Return the saved automation.id and dashboard_url to the chat and retain that ID for get_goal_context/submit_goal_decision on later turns. Optional plan persists phases/dependencies, time/reserve, green-only checks and recovery. Saved deterministic slices continue without the chat stream; new reasoning waits for the selected controller or host wakeup. Green-only work uses owned Git worktrees and needs updated remotelink; review accepted work before applying it. Device policy, evidence and agent:write scope apply.",
         inputSchema: z.object({
           name: z.string().min(1).max(120),
           keep_awake: z.boolean().default(false),
@@ -861,6 +864,7 @@ export function createRemoteLinkMcp(
           },
         });
         return textResult({
+          dashboard_url: created.automation ? taskDashboardUrl(env, created.automation.id) : null,
           automation: created.automation
             ? {
                 id: created.automation.id,
@@ -876,7 +880,7 @@ export function createRemoteLinkMcp(
             : null,
           note:
             input.controller === "source"
-              ? "Read get_goal_context and submit_goal_decision on this or a later source turn. Saved deterministic slices continue without the chat stream; new judgment waits in needs_reasoning. Autonomous wakeup depends on the host and is not guaranteed. No silent hosted fallback."
+              ? "Show the task ID and dashboard_url in this conversation. This is the same saved task displayed in Dashboard, not a separate plan. Retain its ID; read get_goal_context and submit_goal_decision on this or a later source turn. Saved deterministic slices continue without the chat stream; new judgment waits in needs_reasoning. Autonomous wakeup depends on the host and is not guaranteed. No silent hosted fallback."
               : "The explicitly selected hosted planner continues with bounded observations and compact memory. This may be a different model from the creating chat.",
         });
       },

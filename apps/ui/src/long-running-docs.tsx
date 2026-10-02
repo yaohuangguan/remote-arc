@@ -20,7 +20,7 @@ export function LongRunningWorkDocs() {
         <div className="articleMetaLinks">
           <a href="/docs">{tr("All documentation", "全部文档")} →</a>
           <a href="/security-model">{tr("Security model", "安全模型")} →</a>
-          <a href="https://github.com/yaohuangguan/remote-arc/blob/feat/goal-continuation/docs/system-architecture.md" target="_blank" rel="noreferrer">{tr("Engineering reference", "系统技术参考")} ↗</a>
+          <a href="https://github.com/yaohuangguan/remote-arc/blob/feat/chat-first-planned-goals/docs/chat-first-planned-goals.md" target="_blank" rel="noreferrer">{tr("Engineering reference", "系统技术参考")} ↗</a>
         </div>
       </header>
       <TaskAvailability />
@@ -46,6 +46,7 @@ export function LongRunningWorkDocs() {
           <section id="work-overview">
             <h2>{tr("One goal, many decisions", "一个目标，多轮推进")}</h2>
             <p>{tr("Keep using your AI chat. Reading a file or running an ordinary command is a tool call, not a persistent task. When you ask for ongoing, overnight or scheduled work, the AI can create and manage a task under your existing permissions. You do not need to open Dashboard for every operation; use it to inspect progress, pause work or change device permissions.", "继续从 AI 聊天入口使用即可。读文件或执行普通命令是工具调用，不是持久任务。你要求持续、过夜或定时工作时，AI 可以在已有权限内创建和管理任务；不需要每次操作都打开 Dashboard。控制台主要用于看进度、暂停任务和管理设备权限。")}</p>
+            <p>{tr("The AI receives a task ID and a Dashboard link when it creates the work. Chat and Dashboard refer to the same saved task; the link opens its progress directly. A later chat turn uses that ID to read the checkpoint. You can also copy the task's chat reference from Dashboard. One chat may have several tasks: this is not an automatic binding to a private ChatGPT conversation ID.", "AI 创建工作后会得到任务 ID 和 Dashboard 链接。聊天与 Dashboard 对应同一条保存的任务，链接可直接打开它的进度；后续聊天用该 ID 读取检查点。也可从 Dashboard 复制任务的聊天引用。一段聊天可以有多个任务，这不等于自动绑定 ChatGPT 私有的对话 ID。")}</p>
             <p>{tr("A useful overnight task includes observation, action, checks and changes of strategy. Remote Arc stores the objective, permissions, progress and results. A continuing agent can use each new result to decide what to do next until the acceptance criteria are met or a real blocker appears.", "有效的过夜任务包含观察、操作、检查和策略调整。Remote Arc 保存目标、权限、进度与结果，持续运行的 Agent 根据每个新结果判断下一步，直到满足验收标准或遇到真正的阻塞。")}</p>
             <p>{tr("A long-running command can wait without a model thinking continuously. Adaptive work also needs a continuing reasoning controller. Connecting the Plugin enables access to tools; the AI host determines how and when reasoning continues.", "长时间运行的命令可以在模型没有持续推理时继续等待。需要动态调整的工作还需要持续推理控制器。连接 Plugin 提供工具访问，AI 宿主决定推理如何以及何时继续。")}</p>
           </section>

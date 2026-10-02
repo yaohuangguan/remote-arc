@@ -11,7 +11,7 @@ type Ops = {
   save(status: AutomationStatus, next: string | null, error: string | null, event: string, retainLease?: boolean): Promise<void>;
   finish(summary: string, status: AutomationStatus): Promise<void>;
 };
-const compact = (v: unknown, max = 4000) => (typeof v === "string" ? v : JSON.stringify(v)).slice(0, max);
+const compact = (v: unknown, max = 4000) => (typeof v === "string" ? v : JSON.stringify(v) ?? "No result returned.").slice(0, max);
 const offline = (e: unknown) => String(e).toLowerCase().includes("device offline");
 const lost = (e: unknown) => /managed process not found|retention window has expired/i.test(String(e));
 const nextTick = (task: AutomationRow, s: PlannedState) => {
@@ -182,12 +182,16 @@ export async function executePlannedGoal(env: AutomationEnv, task: AutomationRow
         s.slice.index++;
         if (!passed) {
           const purpose = s.slice.purpose; s.slice = undefined;
-          if (purpose === "final") { s.needs_reasoning = "Final check did not pass; inspect the final report and accepted frontier."; await finalize("Final checks stopped on failure."); s.slice = undefined; }
+          if (purpose === "final") {
+            s.needs_reasoning = "Final check did not pass; inspect the final report and accepted frontier.";
+            s.finished_at = nowIso(); s.report = plannedReport(s);
+            await ops.finish(compact(s.report, 6000), "completed"); return;
+          }
           else if (purpose === "baseline") { s.replan_reason = "Baseline checks failed; no green frontier established."; }
           else {
             const stuck = recordProgress(s, evidence, false, true);
             await reject(evidence);
-            if (stuck || purpose === "execution") await phaseEnd("blocked", evidence, "Check failure requires another strategy.", evidence);
+            if (stuck || purpose === "execution") { await phaseEnd("blocked", evidence, "Check failure requires another strategy.", evidence); return; }
             else { await wait("Quality regression. Candidate isolated; source must change strategy before further work."); return; }
           }
         }
@@ -303,7 +307,14 @@ export async function executePlannedGoal(env: AutomationEnv, task: AutomationRow
     }
     const result = await ops.call(decision.tool, args); agent.observation = compact(result, 12000);
     if (["read_file", "list_directory", "get_file_info"].includes(decision.tool)) s.inspection_required = false;
-    if (decision.tool === "start_process") state.process_id = (result as { process_id?: string }).process_id;
+    if (decision.tool === "start_process") {
+      state.process_id = (result as { process_id?: string })?.process_id;
+      if (!state.process_id) {
+        s.inspection_required = true;
+        s.candidate = { ...s.candidate, status: "unknown", evidence: "Command acknowledgement lacks a managed process handle." };
+        throw new Error("Device did not return managed process id; inspect before retrying.");
+      }
+    }
     // File edits are candidate progress, not accepted progress. Reads/repeated
     // identical observations count toward the bounded no-progress watchdog.
     const material = ["write_file", "edit_block"].includes(decision.tool);
@@ -321,7 +332,7 @@ export async function executePlannedGoal(env: AutomationEnv, task: AutomationRow
       s.inspection_required = true;
       s.candidate = { ...s.candidate, status: "unknown", evidence: "Execution/checkpoint outcome requires inspection: " + String(e) };
     }
-    if (recordProgress(s, String(e), false, true) && s.active_phase) {
+    if (!s.inspection_required && recordProgress(s, String(e), false, true) && s.active_phase) {
       await reject(String(e)).catch(() => undefined); await phaseEnd("blocked", String(e), "Safe strategy exhausted.", String(e)); return;
     }
     await wait("Checkpoint preserved; reasoning required: " + String(e));

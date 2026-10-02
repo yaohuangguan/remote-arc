@@ -5,10 +5,13 @@
 Continue on `feat/chat-first-planned-goals`, stacked on PR44
 `feat/goal-continuation`; do not modify PR44. Read
 [the concrete implementation plan](docs/chat-first-planned-goals-plan.md).
-First add the exact homepage Safety Guard example, then extend the existing
-Agent Goal with durable phases, quality frontier, bounded execution slices,
-time/finalization policy, recovery and factual next-turn source handoff.
-Open a new Draft PR targeting PR44 and preserve every release HOLD below.
+Implementation is saved in [Draft PR55](https://github.com/yaohuangguan/remote-arc/pull/55)
+targeting PR44: exact homepage Safety Guard example, optional Agent Goal phases,
+quality frontier, bounded execution slices, time/finalization policy, recovery,
+factual next-turn handoff and Dashboard controls. Read the
+[implemented technical contract](docs/chat-first-planned-goals.md) and latest
+[validation/acceptance checkpoint](docs/long-running-work-progress.md).
+Preserve every release HOLD below; real host/Plugin overnight acceptance remains.
 The earlier instruction to continue on PR44 is historical and superseded.
 
 Read this file first when resuming implementation. The detailed design is in

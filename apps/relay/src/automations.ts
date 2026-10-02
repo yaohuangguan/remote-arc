@@ -1205,6 +1205,12 @@ async function automationCall(env: AutomationEnv, automation: AutomationRow,
     if (effect) {
       state.inflight_action = undefined;
       if (state.agent) state.agent.observation = "Tool " + tool + " did not return a successful acknowledgement. Inspect current state before repeating: " + String(error);
+      if (state.planned && !isDeviceOfflineError(error)) {
+        state.planned.inspection_required = true;
+        state.planned.slice = undefined;
+        state.planned.candidate = { ...state.planned.candidate, status: "unknown",
+          evidence: "Unacknowledged " + tool + ": " + String(error).slice(0, 2000) };
+      }
       await persistRuntime(env, automation, state, automation.status, nowIso(), null,
         { retainLease: true, event: "action_error", summary: "Dispatch failed or outcome unknown: " + tool });
     }
