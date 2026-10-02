@@ -1,6 +1,7 @@
 import { HeroHeadline, LandingContent } from "./landing-content.js";
 import type { UseCaseSlug } from "./use-cases.js";
 import { TaskResults, taskNeedsAgent, taskNeedsAttention, taskProgress } from "./dashboard-task-view.js";
+import { PlannedGoalEditor, newPlannedDraft, buildPlannedContract } from "./planned-goal-view.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider, useI18n } from "./i18n.js";
@@ -3098,6 +3099,7 @@ function Dashboard({
   const [automationBusy, setAutomationBusy] = useState<string | null>(null);
   const [showAutomationCreate, setShowAutomationCreate] = useState(false);
   const [createdWebhook, setCreatedWebhook] = useState<string | null>(null);
+  const [plannedDraft, setPlannedDraft] = useState(newPlannedDraft);
   const [automationDraft, setAutomationDraft] = useState<AutomationDraft>({
     name: "",
     kind: "long_task",
@@ -3377,6 +3379,8 @@ function Dashboard({
           Math.max(1, Math.round(Number(automationDraft.agent_max_iterations || "30"))),
         ),
         allowed_tools: automationDraft.agent_allowed_tools,
+        ...(plannedDraft.enabled ? { plan: buildPlannedContract(plannedDraft) } : {}),
+        ...(automationDraft.agent_controller === "source" ? { source_capabilities: { durable_context: true, resume_on_next_turn: true, autonomous_event_wakeup: false } } : {}),
       };
       const start = automationDraft.agent_start_at ? new Date(automationDraft.agent_start_at).toISOString() : undefined;
       const repeat = Number(automationDraft.agent_repeat_minutes);
@@ -5031,12 +5035,13 @@ function Dashboard({
                           <option value="hosted">{tr("Remote Arc hosted planner", "Remote Arc 托管 Planner")}</option>
                           <option value="source">{tr("Source AI client", "源 AI 客户端")}</option>
                         </select>
-                        <small>{tr("Source mode needs an AI host that can continue the goal or receive task events. It never silently switches models.", "源模式需要能够持续推进目标或接收任务事件的 AI 宿主，不会自动替换模型。")}</small>
+                        <small>{tr("Source mode saves context for the next chat turn. Saved command slices continue locally; new reasoning waits for the AI host. Automatic wakeup is not guaranteed. The controller never changes silently.", "源模式保存上下文供下一轮聊天续接。已保存的命令步骤继续执行，新判断等待 AI 宿主。自动唤醒不作保证，控制器不会悄悄替换。")}</small>
                       </label>
                       <label className="automationField">
                         <span>{tr("Start at (optional)", "启动时间（可选）")}</span>
                         <input type="datetime-local" value={automationDraft.agent_start_at} onChange={event => setAutomationDraft(current => ({ ...current, agent_start_at: event.target.value }))} />
                       </label>
+                      <PlannedGoalEditor value={plannedDraft} onChange={setPlannedDraft} />
                       <label className="automationField">
                         <span>{tr("Repeat after completion (minutes, optional)", "完成后重复间隔（分钟，可选）")}</span>
                         <input type="number" min="1" max="1440" value={automationDraft.agent_repeat_minutes} onChange={event => setAutomationDraft(current => ({ ...current, agent_repeat_minutes: event.target.value }))} />
@@ -5249,8 +5254,8 @@ function Dashboard({
                   <div>
                     <strong>{tr("Recovery policy", "恢复策略")}</strong>
                     <span>{tr(
-                      "If the local agent restarts and loses a process handle, Remote Arc asks for approval before rerunning it to avoid duplicate side effects.",
-                      "如果本地 Agent 重启导致进程句柄丢失，Remote Arc 会先要求确认再重跑，避免重复副作用。",
+                      "Fixed tasks use their saved restart/fail policy. Agent Goals preserve unknown outcomes for inspection; they do not blindly replay a lost action.",
+                      "固定任务遵循保存的 restart/fail 策略。Agent Goal 保存未知结果供检查，不会盲目重放丢失的动作。",
                     )}</span>
                   </div>
                   <button

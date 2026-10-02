@@ -29,6 +29,7 @@ export async function callDevice(
   deviceId: string,
   tool: string,
   args: Record<string, unknown>,
+  taskWorkspaceRoot?: string,
 ) {
   const ownedDevice = await env.DB.prepare(
     `SELECT id, allowed_tools, workspace_roots, sensitive_paths, sensitive_allow_paths,
@@ -74,7 +75,7 @@ export async function callDevice(
     } catch {
       allowedTools = [];
     }
-    if (!allowedTools.includes(tool)) {
+    if (!allowedTools.includes(tool === "goal_workspace" ? "start_process" : tool)) {
       throw new Error('tool "' + tool + '" is disabled for this device');
     }
   }
@@ -91,6 +92,7 @@ export async function callDevice(
         tool,
         arguments: args,
         policy: {
+          ...(taskWorkspaceRoot ? { taskWorkspaceRoot } : {}),
           workspaceRoots: parseStoredStringArray(ownedDevice.workspace_roots),
           sensitivePaths: parseStoredStringArray(ownedDevice.sensitive_paths),
           sensitiveAllowPaths: parseStoredStringArray(ownedDevice.sensitive_allow_paths),

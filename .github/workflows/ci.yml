@@ -46,3 +46,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @remotearc/execution-core test:integration
       - run: pnpm --filter @remotearc/mcp test:smoke
+      - run: pnpm --filter @remotearc/execution-core exec tsx ../cli/scripts/goal-workspace-test.ts

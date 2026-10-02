@@ -18,6 +18,7 @@ export type AgentHelloMessage = {
 
 export type DeviceExecutionPolicy = {
   workspaceRoots?: string[];
+  taskWorkspaceRoot?: string;
   protectSensitivePaths?: boolean;
   sensitivePaths?: string[];
   sensitiveAllowPaths?: string[];

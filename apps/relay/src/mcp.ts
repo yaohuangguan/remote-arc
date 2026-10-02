@@ -1,6 +1,15 @@
 import { getGoalContext, submitGoalDecision } from "./source-goals.js";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+const plannedCheckSchema = z.object({ name: z.string().min(1).max(80), command: z.string().min(1).max(4000), cwd: z.string().max(500).optional(), timeout_seconds: z.number().int().min(1).max(3600).default(300) });
+const plannedPhaseSchema = z.object({ id: z.string().min(1).max(80), objective: z.string().min(1).max(2000), success_criteria: z.string().min(1).max(2000),
+  verify_command: z.string().max(4000).optional(), verify_cwd: z.string().max(500).optional(), depends_on: z.array(z.string().max(80)).max(24).optional(),
+  min_duration_seconds: z.number().int().min(1).max(604800).optional(), max_duration_seconds: z.number().int().min(1).max(604800).optional(), execution_slice: z.array(plannedCheckSchema).max(8).optional() });
+const plannedGoalSchema = z.object({ planning_mode: z.enum(["fixed", "guided", "autonomous"]), priorities: z.array(z.string().max(800)).max(16).optional(), phases: z.array(plannedPhaseSchema).max(24).optional(),
+  time_policy: z.object({ min_duration_seconds: z.number().int().min(1).max(604800).optional(), max_duration_seconds: z.number().int().min(1).max(604800).optional(), end_at: z.string().max(64).optional(), timezone: z.string().max(80).optional(), finalization_reserve_seconds: z.number().int().min(0).max(3600).optional() }).optional(),
+  quality_policy: z.object({ promotion: z.literal("green_only"), required_checks: z.array(plannedCheckSchema).min(1).max(8), rollback_on_regression: z.boolean() }).optional(),
+  recovery_policy: z.object({ same_failure_limit: z.number().int().min(1).max(20).optional(), no_progress_iteration_limit: z.number().int().min(1).max(100).optional(), max_strategy_retries: z.number().int().min(0).max(10).optional(), on_stuck: z.literal("replan").optional(), on_repeated_failure: z.literal("rollback_and_switch").optional(), on_blocked: z.literal("park_and_continue").optional() }).optional(),
+  continuation: z.object({ mode: z.enum(["none", "highest_value_safe_work"]) }).optional() });
 import { getDevicesForUser } from "./device.js";
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
@@ -770,7 +779,7 @@ export function createRemoteLinkMcp(
       {
         title: "Create a self-directed durable Agent Goal",
         description:
-          "Save a user-requested ongoing adaptive goal from chat; no Dashboard form is required. Choose the controller explicitly: source AI uses get_goal_context and submit_goal_decision and needs a continuing host runtime or task events; hosted planner is a separate option (legacy default), not a silent model fallback. Completion needs evidence and configured verification. Device policy, budgets and agent:write scope apply.",
+          "Save user-requested ongoing work from chat. Optional plan persists phases/dependencies, time/reserve, green-only checks and recovery. Saved deterministic execution_slice steps continue without the source turn; new reasoning uses get_goal_context/submit_goal_decision on a later turn or host wakeup. Source never silently switches to hosted (legacy default). Green-only work uses owned Git worktrees and needs updated remotelink; accepted work is reviewed before applying to the user's branch. Device policy, evidence and agent:write scope apply.",
         inputSchema: z.object({
           name: z.string().min(1).max(120),
           keep_awake: z.boolean().default(false),
@@ -794,6 +803,8 @@ export function createRemoteLinkMcp(
             .min(1)
             .max(6),
           controller: z.enum(["hosted", "source"]).default("hosted"),
+          plan: plannedGoalSchema.optional(),
+          source_capabilities: z.object({ durable_context: z.boolean(), resume_on_next_turn: z.boolean(), autonomous_event_wakeup: z.boolean() }).optional(),
           max_iterations: z.number().int().min(1).max(2000).default(30),
           schedule: z.object({
             at: z.string().optional(), every_seconds: z.number().int().min(60).max(86400).optional(),
@@ -837,6 +848,8 @@ export function createRemoteLinkMcp(
           max_runs: input.max_runs,
           agent_goal: {
             controller: input.controller,
+            plan: input.plan,
+            source_capabilities: input.source_capabilities,
             controller_client_id: input.controller === "source" ? identity.clientId : undefined,
             objective: input.objective,
             success_criteria: input.success_criteria,
@@ -863,7 +876,7 @@ export function createRemoteLinkMcp(
             : null,
           note:
             input.controller === "source"
-              ? "Use get_goal_context and submit_goal_decision to continue this durable goal. The source host needs a persistent goal runtime or a verified event subscription. Remote Arc does not silently switch to a hosted planner."
+              ? "Read get_goal_context and submit_goal_decision on this or a later source turn. Saved deterministic slices continue without the chat stream; new judgment waits in needs_reasoning. Autonomous wakeup depends on the host and is not guaranteed. No silent hosted fallback."
               : "The explicitly selected hosted planner continues with bounded observations and compact memory. This may be a different model from the creating chat.",
         });
       },
@@ -996,7 +1009,7 @@ export function createRemoteLinkMcp(
       inputSchema: z.object({
         automation_id: z.string(), expected_revision: z.number().int().min(0),
         idempotency_key: z.string().min(1).max(120),
-        decision: z.enum(["tool", "complete", "pause"]),
+        decision: z.enum(["tool", "complete", "pause", "revise_plan", "phase_result", "execution_slice", "needs_reasoning"]),
         tool: z.enum(["none", "list_directory", "read_file", "get_file_info", "write_file", "edit_block", "start_process"]),
         arguments_json: z.string().max(250000).default("{}"),
         decision_summary: z.string().min(1).max(1200),

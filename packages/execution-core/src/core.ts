@@ -382,7 +382,7 @@ export class RemoteArcExecutionCore {
         }
         const cwd = cwdInput ? await enforcePathPolicy(cwdInput, policy) : undefined;
         if (args.background === true) {
-          return textResult(await startBackgroundProcess(command, cwd));
+          return textResult(await startBackgroundProcess(command, cwd, optionalNumber(args, "max_duration_seconds")));
         }
         return textResult(
           await runShellCommand(

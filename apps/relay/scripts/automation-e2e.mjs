@@ -257,6 +257,19 @@ try {
   await new Promise((ok,fail)=>{reconnected.once("open",()=>setTimeout(ok,150));reconnected.once("error",fail)});
   await poke(offlineId);await tick();row=await get(offlineId);assert(row.status==="running","reconnected task starts "+row.status);
   await poke(offlineId);await tick();row=await get(offlineId);assert(row.status==="completed","reconnected task completes "+row.status);
+  // Extend the same Wrangler/D1 + WebSocket device E2E with chat-independent
+  // planned execution. This proves relay behavior, not real Chat wakeup.
+  await api("/api/devices/"+deviceId+"/task-permissions",{method:"POST",body:JSON.stringify({background_tasks:true,scheduled_tasks:true,adaptive_agent:true,source_agent:true,keep_awake:false})});
+  created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E source planned slices",kind:"agent_goal",device_id:deviceId,interval_seconds:60,agent_goal:{controller:"source",objective:"Execute saved validation phases",success_criteria:"Both checks pass",workspace:"/workspace",allowed_tools:["start_process"],plan:{planning_mode:"fixed",time_policy:{max_duration_seconds:3600,finalization_reserve_seconds:60},phases:[{id:"first",objective:"First check",success_criteria:"First exit zero",execution_slice:[{name:"first",command:"planned-first",timeout_seconds:20}]},{id:"second",objective:"Second check",success_criteria:"Second exit zero",depends_on:["first"],execution_slice:[{name:"second",command:"planned-second",timeout_seconds:20}]}]}}})});
+  const plannedId=created.automation.id, turnsBefore=plannerCalls;
+  for(let i=0;i<8;i++){row=await get(plannedId);if(row.status==="completed")break;await poke(plannedId);await tick();}
+  row=await get(plannedId);assert(row.status==="completed","planned source goal settles "+JSON.stringify(row));
+  const plannedState=JSON.parse(row.state_json).planned;
+  assert(plannedState.outcomes.length===2&&plannedState.outcomes.every(p=>p.outcome==="completed"),"phases persist accepted outcomes");
+  assert(plannedState.report.accepted.length===2,"final phase report stored");
+  assert(plannerCalls===turnsBefore,"source mode must not fall back to hosted planner");
+  assert([...processes.values()].filter(p=>p.command==="planned-first").length===1,"first slice exactly one acknowledged dispatch");
+  assert([...processes.values()].filter(p=>p.command==="planned-second").length===1,"second slice exactly one acknowledged dispatch");
   reconnected.close();
 
   console.log(JSON.stringify({ok:true,long:"completed",unattended_recovery:"completed_without_approval",goal:{status:"completed",attempts:2},agent_goal:{status:"completed",planner_turns:plannerCalls},policy_change:"failed_without_approval",condition:"completed",github_merge:{status:"completed",api_calls:githubMergeCalls},offline:"reconnected_and_completed",deviceId},null,2));

@@ -4,6 +4,7 @@ import { nowIso, sha256Hex, type OAuthIdentity } from "./auth.js";
 import { validateAgentDecision, type RawDecision } from "./agent-planner.js";
 import { readTaskJournal, renewTaskLease } from "./automation-store.js";
 import type { AgentGoalSpec, AutomationRow, RuntimeState } from "./automations.js";
+import { plannedContext, validatePlannedDecision } from "./planned-goal-runtime.js";
 
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
@@ -33,7 +34,9 @@ export async function getGoalContext(db: D1Database, userId: string, id: string,
     verification: goal.verify ? "command_exit" : "controller_attested",
     expires_at: task.expires_at, last_error: task.last_error, run_count: task.run_count,
     next_run_at: task.next_run_at,
-    ready_for_decision: goal.controller === "source" && task.status === "waiting_for_event" && state.phase === "awaiting_agent",
+    ...(state.planned ? { planned: plannedContext(state.planned, task) } : {}),
+    source_capabilities: goal.source_capabilities || { durable_context: true, resume_on_next_turn: true, autonomous_event_wakeup: false },
+    ready_for_decision: goal.controller === "source" && task.status === "waiting_for_event" && ["awaiting_agent", "needs_reasoning"].includes(state.phase || ""),
     journal, next_cursor: journal.length ? (journal.at(-1) as { sequence: number }).sequence : after,
   };
 }
@@ -63,6 +66,7 @@ export async function submitGoalDecision(db: D1Database, identity: OAuthIdentity
   }
   const previous = await previousDecision();
   if (previous) return previous;
+  validatePlannedDecision(decision, goal, JSON.parse(task.state_json || "{}").planned);
   const decisionId = crypto.randomUUID();
   const now = nowIso();
   const results = await db.batch([
@@ -70,7 +74,7 @@ export async function submitGoalDecision(db: D1Database, identity: OAuthIdentity
       (id,automation_id,user_id,client_id,idempotency_key,expected_revision,payload_hash,decision_json,created_at)
       SELECT ?1,id,user_id,?3,?4,revision,?5,?6,?7 FROM automations
       WHERE id = ?2 AND user_id = ?8 AND revision = ?9 AND status = 'waiting_for_event'
-      AND json_extract(state_json,'$.phase') = 'awaiting_agent'
+      AND json_extract(state_json,'$.phase') IN ('awaiting_agent','needs_reasoning')
       AND (expires_at IS NULL OR expires_at > ?7)`)
       .bind(decisionId, id, identity.clientId, key, hash, JSON.stringify(decision), now, identity.userId, expectedRevision),
     db.prepare(`UPDATE automations SET status = 'waiting',next_run_at = ?2,

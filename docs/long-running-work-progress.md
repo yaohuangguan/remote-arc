@@ -109,6 +109,43 @@ log; do not infer overnight host support from the transport mocks.
   login background service alone prevents sleep.
 # 2026-10-03 — stacked planned-goal follow-up
 
+## Runtime/UI checkpoint — PR55, pending final browser/review
+
+Implemented optional plan/source capabilities, phases/dependencies/results,
+bounded revisions and two-level factual memory; source context and planned
+decision validation reuse existing CAS/idempotency/client binding. Added command
+slices, green-only checks, deadline/phase alarms, finalization/report, watchdog,
+bounded adaptive selection and no hosted fallback. Private CLI owned worktree
+checkpoints preserve rejected candidates and the user's checkout; canonical task
+root and validation-tree fingerprints fence file escape/concurrent modification.
+Managed commands have optional device-side duration limits. Fixed/legacy goals
+keep existing behavior; planned scheduled runs reset per-run state/workspace.
+
+Inspection found/fixed a parent runtime gap: CLI returns MCP content envelopes;
+task execution now decodes them privately instead of reading missing top-level
+process fields. Ordinary MCP returns are unchanged. Unknown slice acknowledgements
+and lost process handles require read-only inspection before new effects.
+
+Passed so far: workspace typecheck, legacy source-goal tests, new planned SQLite
+tests, real local Git worktree/guard/process-deadline tests, and extended existing
+Wrangler/D1 automation E2E. One full CI run passed before the latest review fixes;
+run final CI again after browser verification. Native OS CI remains pending remote.
+UI create/detail and bilingual website technical guide are implemented; browser
+desktop/mobile/theme/language checks and final PR description remain next.
+Formal reference: `docs/chat-first-planned-goals.md`. No D1 migration added.
+
+Coverage map: ordered/early/deterministic source-loss slices (1/2/15); partial/
+dependency/independent phases (3/4/13); no filler and next-turn context (5/16/17);
+deadline/reserve/reconnect (6/7/23); memory (8); frontier pass/fail (9/10); stuck/
+revisions (11/12); adaptive feasibility (14); CAS/late-cancel/pause/revocation
+(18/19/20); parent legacy hosted/source and no fallback (21/22); categorized
+report (24). Extra coverage: CLI result format, unknown dispatch, lost handle,
+native checkout/index preservation, symlink candidate escape and modified trees.
+
+Real Chat autonomous wakeup, real overnight host acceptance, secure egress and
+OS power acceptance stay pending. Preserve release HOLD. Resume final review and
+verification here; only push `feat/chat-first-planned-goals`, never PR44.
+
 Active branch is now `feat/chat-first-planned-goals`, based on PR44 `2094828`.
 PR44 remains unchanged. Read `docs/chat-first-planned-goals-plan.md` before
 resuming. Reviewed existing scheduler/source/planner/tool/store/event/device

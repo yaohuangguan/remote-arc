@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useI18n } from "./i18n.js";
+import { PlannedGoalProgress, type PlannedProgress } from "./planned-goal-view.js";
 
 type Task = {
   id: string;
@@ -12,6 +13,7 @@ type Task = {
   last_error: string | null;
 };
 type Progress = {
+  planned?: PlannedProgress;
   phase?: string;
   process_id?: string;
   agent?: {
@@ -37,7 +39,7 @@ export function taskProgress(task: Pick<Task, "state_json">): Progress {
 }
 
 export function taskNeedsAgent(task: Pick<Task, "state_json" | "status">) {
-  return task.status === "waiting_for_event" && taskProgress(task).phase === "awaiting_agent";
+  return task.status === "waiting_for_event" && ["awaiting_agent", "needs_reasoning"].includes(taskProgress(task).phase || "");
 }
 
 export function taskNeedsAttention(task: Pick<Task, "state_json" | "status">) {
@@ -78,7 +80,7 @@ export function TaskResults({ task }: { task: Task }) {
 
   const timestamp = (value: string | null) => value
     ? new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-US") : "—";
-  const phaseLabel = progress.phase === "awaiting_agent" ? tr("Waiting for the source AI", "等待来源 AI 决策")
+  const phaseLabel = ["awaiting_agent", "needs_reasoning"].includes(progress.phase || "") ? tr("Waiting for the source AI", "等待来源 AI 决策")
     : task.status === "waiting_for_device" ? tr("Waiting for the computer to reconnect", "等待电脑重新连接")
     : task.status === "waiting_for_event" ? tr("Waiting for a matching event", "等待匹配事件")
     : task.status === "paused" ? tr("Task paused", "任务已暂停")
@@ -90,6 +92,7 @@ export function TaskResults({ task }: { task: Task }) {
     <details className="automationDetails" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>{tr("Progress & results", "进度与结果")}<span aria-hidden="true">›</span></summary>
       <div className="taskResultsBody">
+        {progress.planned && <PlannedGoalProgress value={progress.planned} expiresAt={task.expires_at} />}
         {!['completed', 'failed', 'cancelled', 'expired'].includes(task.status) && (
           <div className="taskProgressPanel">
             <strong>{phaseLabel}</strong>
