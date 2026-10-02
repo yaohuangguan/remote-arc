@@ -94,6 +94,20 @@
 .controlDetails strong{font-size:18px;color:var(--text)}
 .controlDetails p{font-size:16px;line-height:1.7;color:var(--landing-muted);margin:10px 0 0}
 .sectionResourceLinks{display:flex;gap:26px;flex-wrap:wrap;margin-top:24px;font-size:14px;font-weight:650}
+.safetyExample{display:grid;grid-template-columns:1fr 1.1fr;gap:48px;align-items:center;margin-top:48px;padding-top:40px;border-top:1px solid var(--line)}
+.safetyStory h3{font-size:clamp(26px,3vw,34px);letter-spacing:-.035em;line-height:1.2;margin:14px 0 18px;color:var(--text)}
+.safetyStory p{font-size:17px;line-height:1.7;color:var(--landing-muted);margin:0 0 16px}
+.safetyStory p.safetyScope{font-size:14px;line-height:1.7;margin-bottom:0}
+.safetyTerminal{margin:0;border:1px solid #33444f;border-radius:14px;background:#101b24;color:#d7e4eb;overflow:hidden;box-shadow:0 20px 45px rgba(0,0,0,.12)}
+.safetyTerminal figcaption{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 22px;border-bottom:1px solid #33444f;font-size:13px;color:#a5b6c3}
+.safetyTerminal figcaption>span:first-child{letter-spacing:4px;color:#69808e}
+.safetyTerminalBody{padding:24px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:15px;line-height:1.75}
+.safetyTool{color:#95bacd;font-size:13px;margin-bottom:12px}
+.safetyTerminal code{font:inherit;color:#e8f2f7;overflow-wrap:anywhere}
+.safetyBlocked{color:#ffbc80;font-size:12px;font-weight:700;letter-spacing:.07em;margin-top:24px}
+.safetyTerminal pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;color:#ffd0a9;margin:10px 0 18px}
+.safetyTerminal p{font:inherit;font-size:13px;color:#a5b6c3;margin:0}
+@media(max-width:800px){.safetyExample{grid-template-columns:1fr;gap:24px}.safetyTerminalBody{padding:20px;font-size:14px}}
 .landingQuestions{display:grid;grid-template-columns:.65fr 1fr;gap:72px}
 .landingQuestions .modernSectionIntro{margin:0}
 .modernFaq details{border-bottom:1px solid var(--line);padding:20px 0}

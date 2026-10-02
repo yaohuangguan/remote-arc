@@ -1,5 +1,16 @@
 # Remote Arc: long-running, overnight and scheduled work
 
+## Active follow-up: chat-first planned goals (2026-10-03)
+
+Continue on `feat/chat-first-planned-goals`, stacked on PR44
+`feat/goal-continuation`; do not modify PR44. Read
+[the concrete implementation plan](docs/chat-first-planned-goals-plan.md).
+First add the exact homepage Safety Guard example, then extend the existing
+Agent Goal with durable phases, quality frontier, bounded execution slices,
+time/finalization policy, recovery and factual next-turn source handoff.
+Open a new Draft PR targeting PR44 and preserve every release HOLD below.
+The earlier instruction to continue on PR44 is historical and superseded.
+
 Read this file first when resuming implementation. The detailed design is in
 [the implementation plan](docs/long-running-work-plan.md), the public technical
 reference is in [the system architecture](docs/system-architecture.md), and the

@@ -107,3 +107,14 @@ log; do not infer overnight host support from the transport mocks.
 - `docs/system-architecture.md` and website Docs are implemented locally.
 - Power availability must be verified on a real target device; do not imply
   login background service alone prevents sleep.
+# 2026-10-03 — stacked planned-goal follow-up
+
+Active branch is now `feat/chat-first-planned-goals`, based on PR44 `2094828`.
+PR44 remains unchanged. Read `docs/chat-first-planned-goals-plan.md` before
+resuming. Reviewed existing scheduler/source/planner/tool/store/event/device
+permission/keep-awake implementations. Homepage now includes the exact device
+Safety Guard shutdown rejection with a labeled example, user-control message
+and accurate narrow-pattern/OS-account boundary. UI build and typecheck passed.
+Next: additive planned contract, transitions, deterministic slice scheduler and
+source context/decision extensions. Runtime feature is not yet implemented.
+Release HOLD and real-host overnight acceptance remain unchanged.
