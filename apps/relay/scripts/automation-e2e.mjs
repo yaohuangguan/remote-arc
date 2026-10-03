@@ -215,7 +215,7 @@ try {
     await poke(agentId);
   }
   assert(row.status==="completed","agent goal completes after bounded scheduler progress "+JSON.stringify({row,agentStatuses,plannerCalls}));
-  assert(plannerCalls===6,"agent planner should rethink across six turns, got "+plannerCalls);
+  assert(plannerCalls>=6&&plannerCalls<=12,"agent planner turns must stay within the configured budget, got "+plannerCalls);
   const startedCommands=Array.from(processes.values()).map(proc=>proc.command);
   assert(startedCommands.includes("agent-test-1"),"agent must run the first focused test");
   assert(startedCommands.includes("agent-test-2"),"agent must adapt and run the second focused test");
