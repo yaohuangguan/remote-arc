@@ -1,7 +1,7 @@
 import { handleDeviceTaskSettings } from "./device-task-settings.js";
 import { deliverTaskEvents, handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
 import { DeviceRegistry } from "./registry.js";
-import { renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
+import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
 import { createRemoteLinkMcp } from "./mcp.js";
 import {
   authenticateDevice,
@@ -145,6 +145,15 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
     if (url.hostname === "www.remotearc.app") {
       const canonical = new URL(url.pathname + url.search, marketingOrigin);
       return Response.redirect(canonical.toString(), 301);
+    }
+
+    if (url.hostname === "remotearc.app" && url.pathname.length > 1 && url.pathname.endsWith("/")) {
+      const canonical = new URL(url.pathname.replace(/\/+$/, "") + url.search, marketingOrigin);
+      return Response.redirect(canonical.toString(), 301);
+    }
+
+    if ((request.method === "GET" || request.method === "HEAD") && url.hostname === "remotearc.app" && url.pathname === "/install") {
+      return Response.redirect(new URL("/install/chatgpt", marketingOrigin).toString(), 301);
     }
 
     if (url.hostname === "remotearc.app" && (
@@ -589,6 +598,24 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       });
     }
 
+    if (request.method === "GET" && isMarketingHost && url.pathname === "/feed.xml") {
+      return new Response(feedXml(), {
+        headers: { "content-type": "application/rss+xml; charset=utf-8", "cache-control": "public, max-age=3600" },
+      });
+    }
+
+    if (request.method === "GET" && isMarketingHost && url.pathname === "/llms.txt") {
+      return new Response(llmsTxt(), {
+        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" },
+      });
+    }
+
+    if (request.method === "GET" && isMarketingHost && url.pathname === "/llms-full.txt") {
+      return new Response(llmsFullTxt(), {
+        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" },
+      });
+    }
+
     const marketingDocumentRequest =
       isMarketingHost &&
       request.method === "GET" &&
@@ -615,9 +642,19 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       const html = await assetResponse.text();
       const rendered = isMarketingHost ? renderMarketingHtml(html, url.pathname) : html;
 
+      if (!isMarketingHost) {
+        headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+      } else {
+        const canonical = canonicalForPath(url.pathname);
+        if (canonical) headers.set("link", "<" + canonical + '>; rel="canonical"');
+        if (marketingStatusCode(url.pathname) === 404) {
+          headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+        }
+      }
+
       return new Response(rendered, {
-        status: assetResponse.status,
-        statusText: assetResponse.statusText,
+        status: isMarketingHost ? marketingStatusCode(url.pathname) : assetResponse.status,
+        statusText: isMarketingHost && marketingStatusCode(url.pathname) === 404 ? "Not Found" : assetResponse.statusText,
         headers,
       });
     }
