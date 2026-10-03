@@ -14,7 +14,9 @@ import { getDevicesForUser } from "./device.js";
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
 import { consumeToolCall } from "./usage.js";
-import { requireFeature } from "./entitlements.js";
+import { requireFeature, requireFeatures } from "./entitlements.js";
+import { binaryBytesRead, recordPlusUsage } from "./plus-usage.js";
+import { createFileResource, revokeFileResource } from "./file-resources.js";
 import {
   cancelAutomation,
   createAutomation,
@@ -22,6 +24,7 @@ import {
   listAutomationRuns,
   listAutomations,
   pauseAutomation,
+  requiredAutomationFeatures,
   resumeAutomation,
 } from "./automations.js";
 
@@ -418,22 +421,75 @@ export function createRemoteLinkMcp(
           path: z.string(),
           offset: z.number().int().min(0).default(0),
           length: z.number().int().min(1).max(262144).default(65536),
+          expected_revision: z.string().min(1).max(128).optional(),
         }),
         annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
         _meta: oauthToolMeta("computer:read"),
       },
-      async ({ device_id, path, offset, length }) => {
+      async ({ device_id, path, offset, length, expected_revision }) => {
+        if (!identity || !hasScope(identity, "computer:read")) {
+          return authRequired(env, "computer:read");
+        }
+        await requireFeature(env, identity.userId, "binary_read");
+        await consume(env, identity);
+        const result = await callDevice(env, identity, device_id, "read_binary_file", {
+          path,
+          offset,
+          length,
+          ...(expected_revision ? { expected_revision } : {}),
+        });
+        await recordPlusUsage(env, identity.userId, {
+          binary_bytes: binaryBytesRead(result),
+        });
+        return textResult(result);
+      },
+    );
+
+    server.registerTool(
+      "create_file_resource",
+      {
+        title: "Create a temporary file resource",
+        description:
+          "Remote Arc Plus: create a 10-minute bearer URL for a binary file so large files can be transferred outside model context. The resource is pinned to the current file revision and still uses the device's read_binary_file permission while streaming.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          path: z.string(),
+        }),
+        annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("computer:read"),
+      },
+      async ({ device_id, path }) => {
         if (!identity || !hasScope(identity, "computer:read")) {
           return authRequired(env, "computer:read");
         }
         await requireFeature(env, identity.userId, "binary_read");
         await consume(env, identity);
         return textResult(
-          await callDevice(env, identity, device_id, "read_binary_file", {
-            path,
-            offset,
-            length,
-          }),
+          await createFileResource(env, identity, device_id, path),
+        );
+      },
+    );
+
+    server.registerTool(
+      "revoke_file_resource",
+      {
+        title: "Revoke a temporary file resource",
+        description:
+          "Revoke a previously created Remote Arc Plus temporary file resource before its 10-minute expiry.",
+        inputSchema: z.object({
+          resource_id: z.string().min(1).max(128),
+        }),
+        annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false, idempotentHint: true },
+        _meta: oauthToolMeta("computer:read"),
+      },
+      async ({ resource_id }) => {
+        if (!identity || !hasScope(identity, "computer:read")) {
+          return authRequired(env, "computer:read");
+        }
+        await requireFeature(env, identity.userId, "binary_read");
+        await consume(env, identity);
+        return textResult(
+          await revokeFileResource(env, identity, resource_id),
         );
       },
     );
@@ -781,8 +837,13 @@ export function createRemoteLinkMcp(
         if (!identity || !hasScope(identity, "automation:write")) {
           return authRequired(env, "automation:write");
         }
+        const entitlements = await requireFeatures(
+          env,
+          identity.userId,
+          requiredAutomationFeatures(input),
+        );
         await consume(env, identity);
-        const created = await createAutomation(env, identity.userId, input);
+        const created = await createAutomation(env, identity.userId, input, { entitlements });
         return textResult({
           dashboard_url: created.automation ? taskDashboardUrl(env, created.automation.id) : null,
           automation: created.automation
@@ -872,11 +933,10 @@ export function createRemoteLinkMcp(
         ) {
           return authRequired(env, "agent:write");
         }
-        await consume(env, identity);
-        const created = await createAutomation(env, identity.userId, {
+        const automationInput = {
           name: input.name,
           keep_awake: input.keep_awake,
-          kind: "agent_goal",
+          kind: "agent_goal" as const,
           device_id: input.device_id,
           interval_seconds: input.interval_seconds,
           expires_at: input.expires_at,
@@ -895,7 +955,19 @@ export function createRemoteLinkMcp(
             allowed_tools: input.allowed_tools,
             max_iterations: input.max_iterations,
           },
-        });
+        };
+        const entitlements = await requireFeatures(
+          env,
+          identity.userId,
+          requiredAutomationFeatures(automationInput),
+        );
+        await consume(env, identity);
+        const created = await createAutomation(
+          env,
+          identity.userId,
+          automationInput,
+          { entitlements },
+        );
         return textResult({
           dashboard_url: created.automation ? taskDashboardUrl(env, created.automation.id) : null,
           automation: created.automation

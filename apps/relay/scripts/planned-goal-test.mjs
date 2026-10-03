@@ -11,8 +11,20 @@ const relay = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ts = createRequire(path.join(relay, "package.json"))("typescript");
 const compiled = fs.mkdtempSync(path.join(os.tmpdir(), "remote-arc-plan-test-"));
 fs.writeFileSync(path.join(compiled, "package.json"), '{"type":"module"}');
+const protocolSource = fs.readFileSync(
+  path.resolve(relay, "../../packages/protocol/src/index.ts"),
+  "utf8",
+);
+fs.writeFileSync(
+  path.join(compiled, "protocol.js"),
+  ts.transpileModule(protocolSource, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
+  }).outputText,
+);
 for (const name of fs.readdirSync(path.join(relay, "src")).filter(n => n.endsWith(".ts") && n !== "mcp.ts")) {
-  fs.writeFileSync(path.join(compiled, name.replace(/\.ts$/, ".js")), ts.transpileModule(fs.readFileSync(path.join(relay, "src", name), "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText);
+  let input = fs.readFileSync(path.join(relay, "src", name), "utf8");
+  input = input.replaceAll('from "@remotearc/protocol"', 'from "./protocol.js"');
+  fs.writeFileSync(path.join(compiled, name.replace(/\.ts$/, ".js")), ts.transpileModule(input, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 } }).outputText);
 }
 try {
   const load = name => import(pathToFileURL(path.join(compiled, name + ".js")).href);

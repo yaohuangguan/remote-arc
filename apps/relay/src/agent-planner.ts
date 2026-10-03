@@ -105,7 +105,7 @@ Critical rules:
 9. decision_summary must be a short operational summary, not private chain-of-thought.
 10. memory must be a compact factual working memory for the next turn: what was learned, what changed, and what remains. Do not copy large raw outputs.
 11. arguments_json must be a JSON object encoded as a string. For complete or pause, use "{}".
-12. For read_file, prefer bounded line ranges when possible. For list_directory, use shallow depth unless more is necessary.
+12. For read_file, prefer bounded line ranges when possible. For read_binary_file, keep chunks bounded and reuse the returned file_revision as expected_revision on every later chunk; if the revision changes, restart the read instead of combining versions. For list_directory, use shallow depth unless more is necessary.
 13. For edit_block, use exact old/new strings and expected_replacements. For write_file, avoid replacing an existing file unless the observation makes the intended full contents clear.
 14. For start_process, use background execution only through Remote Arc; provide command and optional cwd only. The orchestrator handles background mode.
 15. When planned_context exists, follow the active phase and frozen policy. revise_plan uses arguments_json {phases, reason, adaptive?}; phase_result uses {outcome, remaining_work?, blocker?} with concrete completion_evidence. execution_slice uses {steps:[{name,command,cwd?,timeout_seconds}]}. needs_reasoning stops when new authority/judgment is needed. These decisions are valid only for planned goals.

@@ -114,8 +114,58 @@ export async function readTextFile(
 const BINARY_DEFAULT_BYTES = 64 * 1024;
 const BINARY_MAX_BYTES = 256 * 1024;
 
-function binaryMimeType(targetPath: string) {
+function binaryFileRevision(stat: { size: number; mtimeMs: number }) {
+  return crypto
+    .createHash("sha256")
+    .update(String(stat.size) + ":" + String(stat.mtimeMs))
+    .digest("hex");
+}
+
+function assertBinaryRevision(expected: string | undefined, actual: string) {
+  if (expected && expected !== actual) {
+    throw new Error(
+      "FILE_CHANGED_DURING_READ: Binary file changed since the previous chunk. Restart from offset 0 with the new file_revision.",
+    );
+  }
+}
+
+function binaryMimeType(targetPath: string, header?: Buffer) {
   const extension = path.extname(targetPath).toLowerCase();
+  const office: Record<string, string> = {
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  };
+  if (office[extension]) return office[extension];
+
+  const bytes = header || Buffer.alloc(0);
+  const ascii = bytes.toString("ascii");
+  if (bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return "image/png";
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (ascii.startsWith("GIF87a") || ascii.startsWith("GIF89a")) return "image/gif";
+  if (ascii.startsWith("%PDF-")) return "application/pdf";
+  if (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) return "application/gzip";
+  if (bytes.length >= 4 && bytes.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d]))) {
+    return "application/wasm";
+  }
+  if (bytes.length >= 12 && ascii.startsWith("RIFF") && ascii.slice(8, 12) === "WEBP") {
+    return "image/webp";
+  }
+  if (
+    bytes.length >= 4 &&
+    bytes[0] === 0x50 &&
+    bytes[1] === 0x4b &&
+    ((bytes[2] === 0x03 && bytes[3] === 0x04) ||
+      (bytes[2] === 0x05 && bytes[3] === 0x06) ||
+      (bytes[2] === 0x07 && bytes[3] === 0x08))
+  ) {
+    return "application/zip";
+  }
+
   const known: Record<string, string> = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -126,9 +176,6 @@ function binaryMimeType(targetPath: string) {
     ".zip": "application/zip",
     ".gz": "application/gzip",
     ".wasm": "application/wasm",
-    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   };
   return known[extension] || "application/octet-stream";
 }
@@ -137,9 +184,12 @@ export async function readBinaryFile(
   targetPath: string,
   offset = 0,
   length = BINARY_DEFAULT_BYTES,
+  expectedRevision?: string,
 ) {
   const stat = await fs.stat(targetPath);
   if (!stat.isFile()) throw new Error("Path is not a file: " + targetPath);
+  const fileRevision = binaryFileRevision(stat);
+  assertBinaryRevision(expectedRevision, fileRevision);
 
   const byteOffset = Number.isFinite(offset) ? Math.max(0, Math.trunc(offset)) : 0;
   const requested = Number.isFinite(length) ? Math.trunc(length) : BINARY_DEFAULT_BYTES;
@@ -154,6 +204,7 @@ export async function readBinaryFile(
       mime_type: binaryMimeType(targetPath),
       encoding: "base64",
       size: stat.size,
+      file_revision: fileRevision,
       offset: byteOffset,
       bytes_read: 0,
       eof: true,
@@ -165,14 +216,30 @@ export async function readBinaryFile(
   const toRead = Math.min(requested, stat.size - byteOffset);
   const handle = await fs.open(targetPath, "r");
   try {
+    const headerBuffer = Buffer.allocUnsafe(Math.min(16, stat.size));
+    const headerResult = await handle.read(
+      headerBuffer,
+      0,
+      headerBuffer.length,
+      0,
+    );
+    const header = headerBuffer.subarray(0, headerResult.bytesRead);
     const buffer = Buffer.allocUnsafe(toRead);
     const result = await handle.read(buffer, 0, toRead, byteOffset);
     const chunk = buffer.subarray(0, result.bytesRead);
+    const afterStat = await fs.stat(targetPath);
+    const afterRevision = binaryFileRevision(afterStat);
+    if (afterRevision !== fileRevision) {
+      throw new Error(
+        "FILE_CHANGED_DURING_READ: Binary file changed while this chunk was being read. Restart from offset 0.",
+      );
+    }
     return {
       path: targetPath,
-      mime_type: binaryMimeType(targetPath),
+      mime_type: binaryMimeType(targetPath, header),
       encoding: "base64",
       size: stat.size,
+      file_revision: fileRevision,
       offset: byteOffset,
       bytes_read: result.bytesRead,
       eof: byteOffset + result.bytesRead >= stat.size,

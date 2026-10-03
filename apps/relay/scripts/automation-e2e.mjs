@@ -103,7 +103,7 @@ try {
   const tokenRes=await fetch(base+"/api/device/token",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({device_code:startBody.device_code,device_secret:startBody.device_secret})});
   const tokenBody=await tokenRes.json(); assert(tokenRes.ok,"token "+JSON.stringify(tokenBody));
 
-  const tools=["list_directory","read_file","get_file_info","write_file","edit_block","list_processes","start_process","process_status","process_output","stop_process"];
+  const tools=["list_directory","read_file","read_binary_file","get_file_info","write_file","edit_block","list_processes","start_process","process_status","process_output","stop_process"];
   const updateTools=await fetch(base+"/api/devices/"+deviceId+"/tools",{method:"POST",headers:authHeaders,body:JSON.stringify({allowed_tools:tools})});
   assert(updateTools.ok,"tools update "+updateTools.status+" "+await updateTools.text());
 
@@ -117,6 +117,8 @@ try {
       try {
         if(m.tool==="read_file"){
           ws.send(JSON.stringify({type:"result",id:m.id,result:{path:String(m.arguments.path),content:"export function value(){ return 1 }",offset:0,length:1,total_lines:1}}));
+        } else if(m.tool==="read_binary_file"){
+          ws.send(JSON.stringify({type:"result",id:m.id,result:{path:String(m.arguments.path),mime_type:"application/octet-stream",encoding:"base64",size:4,offset:Number(m.arguments.offset||0),bytes_read:4,eof:true,chunk_sha256:"fixture",data:"AAECAw=="}}));
         } else if(m.tool==="list_directory"){
           ws.send(JSON.stringify({type:"result",id:m.id,result:{path:String(m.arguments.path),entries:[{name:"src",type:"directory"}]}}));
         } else if(m.tool==="get_file_info"){
@@ -161,6 +163,9 @@ try {
   const tick=async()=>{const res=await fetch(base+"/__scheduled?cron="+encodeURIComponent("* * * * *"));const txt=await res.text();assert(res.ok,"scheduled tick "+res.status+" "+txt);await sleep(650)};
   const poke=async id=>{await api("/api/automations/"+id+"/pause",{method:"POST"});await api("/api/automations/"+id+"/resume",{method:"POST"});};
   const get=async id=>(await api("/api/automations/"+id)).automation;
+  const status=await api("/api/status");
+  const connected=status.devices.find(device=>device.id===deviceId);
+  assert(connected?.available_tools?.includes("read_binary_file"),"Latest agent hello must publish read_binary_file capability");
 
   // Long task: running -> running -> completed.
   let created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E long",kind:"long_task",device_id:deviceId,command:"long-task",interval_seconds:60})});
@@ -206,6 +211,8 @@ try {
   await poke(agentId); await tick(); row=await get(agentId);
   assert(row.status==="completed","agent goal completes "+JSON.stringify(row));
   assert(plannerCalls===6,"agent planner should rethink across six turns, got "+plannerCalls);
+  const meteredStatus=await api("/api/status");
+  assert(meteredStatus.plusUsage?.planner_turns===plannerCalls,"Hosted planner turns must be metered exactly once");
 
   // Permission snapshot: a real security-policy change stops unattended work; it never waits for approval.
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E policy stop",kind:"long_task",device_id:deviceId,command:"policy-test",interval_seconds:60})});

@@ -34,6 +34,9 @@ import {
 import { readAudit } from "./audit.js";
 import { getMonthlyUsage } from "./usage.js";
 import { getAccountEntitlements } from "./entitlements.js";
+import { getMonthlyPlusUsage } from "./plus-usage.js";
+import { handleFileResource } from "./file-resources.js";
+import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
 import {
   handleAutomationCollection,
   handleAutomationItem,
@@ -261,6 +264,11 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return handleLogout(request, env);
     }
 
+    const fileResource = url.pathname.match(/^\/file-resource\/([^/]+)$/);
+    if (fileResource) {
+      return handleFileResource(request, env, decodeURIComponent(fileResource[1]!));
+    }
+
     const automationHook = url.pathname.match(/^\/hooks\/automations\/([^/]+)\/([^/]+)$/);
     if (automationHook) {
       return handleAutomationWebhook(
@@ -284,6 +292,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       const devices = await getDevicesForUser(env, user.id);
       const recent = await readAudit(env, user.id, 8);
       const usage = await getMonthlyUsage(env, user.id);
+      const plusUsage = await getMonthlyPlusUsage(env, user.id);
       const accountEntitlements = await getAccountEntitlements(env, user.id);
       return Response.json({
         googleConfigured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
@@ -293,6 +302,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
         onlineDevices: devices.filter((device) => device.status === "online").length,
         recentActivity: recent,
         usage,
+        plusUsage,
         entitlements: {
           plan: accountEntitlements.plan,
           features: [...accountEntitlements.features],
@@ -302,6 +312,19 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
 
     if (url.pathname === "/api/monitor" && request.method === "GET") {
       return handleMonitorState(request, env);
+    }
+
+    if (url.pathname === "/api/admin/plan-grants") {
+      return handleAdminPlanGrants(request, env);
+    }
+
+    const planGrantRevoke = url.pathname.match(/^\/api\/admin\/plan-grants\/([^/]+)\/revoke$/);
+    if (planGrantRevoke) {
+      return handleAdminPlanGrantRevoke(
+        request,
+        env,
+        decodeURIComponent(planGrantRevoke[1]!),
+      );
     }
 
     if (url.pathname === "/api/automations") {

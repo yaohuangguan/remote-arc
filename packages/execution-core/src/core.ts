@@ -107,13 +107,14 @@ const DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: "read_binary_file",
-    description: "Read a bounded binary file chunk as base64. Offset and length are byte counts.",
+    description: "Read a bounded binary file chunk as base64. Offset and length are byte counts; pass expected_revision on later chunks to detect file changes.",
     inputSchema: {
       type: "object",
       properties: {
         path: { type: "string" },
         offset: { type: "integer", minimum: 0, default: 0 },
         length: { type: "integer", minimum: 1, maximum: 262144, default: 65536 },
+        expected_revision: { type: "string", minLength: 1, maxLength: 128 },
       },
       required: ["path"],
       additionalProperties: false,
@@ -349,6 +350,7 @@ export class RemoteArcExecutionCore {
             target,
             optionalNumber(args, "offset"),
             optionalNumber(args, "length"),
+            optionalString(args, "expected_revision"),
           ),
         );
       }

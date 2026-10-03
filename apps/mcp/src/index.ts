@@ -28,6 +28,7 @@ const schemas = {
     path: z.string(),
     offset: z.number().int().min(0).optional(),
     length: z.number().int().positive().max(262144).optional(),
+    expected_revision: z.string().min(1).max(128).optional(),
   }),
   get_file_info: z.object({ path: z.string() }),
   list_processes: z.object({}),

@@ -14,8 +14,19 @@ const relay = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ts = createRequire(path.join(relay, "package.json"))("typescript");
 const compiled = fs.mkdtempSync(path.join(os.tmpdir(), "remote-arc-goal-test-"));
 fs.writeFileSync(path.join(compiled, "package.json"), '{"type":"module"}');
+const protocolSource = fs.readFileSync(
+  path.resolve(relay, "../../packages/protocol/src/index.ts"),
+  "utf8",
+);
+fs.writeFileSync(
+  path.join(compiled, "protocol.js"),
+  ts.transpileModule(protocolSource, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
+  }).outputText,
+);
 for (const name of fs.readdirSync(path.join(relay, "src")).filter(n => n.endsWith(".ts"))) {
   let input = fs.readFileSync(path.join(relay, "src", name), "utf8");
+  input = input.replaceAll('from "@remotearc/protocol"', 'from "./protocol.js"');
   if (name === "mcp.ts") for (const packageName of ["@modelcontextprotocol/server", "zod"]) {
     input = input.replace('from "' + packageName + '"', 'from "' + pathToFileURL(createRequire(path.join(relay, "package.json")).resolve(packageName)).href + '"');
   }
@@ -32,6 +43,10 @@ try {
   const source = await importSource("source-goals");
   const events = await importSource("task-events");
   const settings = await importSource("device-task-settings");
+  const fileResources = await importSource("file-resources");
+  const authModule = await importSource("auth");
+  const entitlements = await importSource("entitlements");
+  const planAdmin = await importSource("plan-admin");
   const sqlite = new DatabaseSync(":memory:");
   for (const name of fs.readdirSync(path.join(relay, "migrations")).filter(n => n.endsWith(".sql")).sort()) {
     sqlite.exec(fs.readFileSync(path.join(relay, "migrations", name), "utf8"));
@@ -55,25 +70,51 @@ try {
   };
   const now = new Date().toISOString();
   sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at,plan) VALUES(?,?,?,?,\'plus\')").run("owner", "test-owner", "owner@test.invalid", now);
-  const tools = ["read_file", "edit_block", "write_file", "start_process", "process_status", "process_output", "stop_process"];
+  const tools = ["read_file", "read_binary_file", "edit_block", "write_file", "start_process", "process_status", "process_output", "stop_process"];
   sqlite.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools) VALUES(?,?,?,?,?,?,?)")
     .run("device", "owner", "Test device", "linux", "fixture-hash", now, JSON.stringify(tools));
   sqlite.prepare("UPDATE devices SET automation_permissions = ? WHERE id = 'device'").run(JSON.stringify({
     background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: true, keep_awake: false,
   }));
-  let calls = [], processCounter = 0;
+  let calls = [], processCounter = 0, keepAwakeSeconds = [];
+  const binaryFixture = Buffer.from([0, 1, 2, 3]);
+  let binaryRevision = "binary-rev-1";
   let deviceHandler = body => {
     calls.push(body.tool);
     if (body.tool === "start_process") return { process_id: "process-" + (++processCounter) };
     if (body.tool === "process_status") return { status: "completed", exit_code: 0 };
     if (body.tool === "process_output") return { stdout: "PASS: acceptance check", stderr: "" };
     if (body.tool === "read_file") return "implementation contents";
+    if (body.tool === "read_binary_file") {
+      if (body.arguments.expected_revision && body.arguments.expected_revision !== binaryRevision) {
+        throw new Error("FILE_CHANGED_DURING_READ: fixture revision changed");
+      }
+      const offset = Number(body.arguments.offset || 0);
+      const length = Math.max(1, Number(body.arguments.length || 65536));
+      const chunk = binaryFixture.subarray(offset, Math.min(binaryFixture.length, offset + length));
+      return {
+        path: body.arguments.path,
+        mime_type: "image/png",
+        encoding: "base64",
+        size: binaryFixture.length,
+        file_revision: binaryRevision,
+        offset,
+        bytes_read: chunk.length,
+        eof: offset + chunk.length >= binaryFixture.length,
+        chunk_sha256: "fixture",
+        data: chunk.toString("base64"),
+      };
+    }
+    if (body.tool === "set_task_keep_awake") {
+      keepAwakeSeconds.push(Number(body.arguments.seconds));
+      return { supported: true, active: Number(body.arguments.seconds) > 0 };
+    }
     return { ok: true };
   };
   const env = { DB: db, PUBLIC_ORIGIN: "https://relay.test.invalid", REGISTRY: { getByName() { return {
     async fetch(request) { return Response.json({ result: await deviceHandler(await request.json()) }); },
   }; } } };
-  const identity = { userId: "owner", clientId: "source-client", scope: "automation:read automation:write agent:write", resource: env.PUBLIC_ORIGIN + "/mcp" };
+  const identity = { userId: "owner", clientId: "source-client", scope: "automation:read automation:write agent:write computer:read", resource: env.PUBLIC_ORIGIN + "/mcp" };
   const create = async (name, extra = {}) => (await runtime.createAutomation(env, "owner", { name, kind: "agent_goal", device_id: "device", agent_goal: {
     controller: "source", controller_client_id: identity.clientId, objective: "Fix the implementation", success_criteria: "Acceptance check passes",
     allowed_tools: ["read_file", "edit_block", "start_process"], verify_command: "verify", max_iterations: 20,
@@ -96,12 +137,30 @@ try {
   sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
   await runtime.cancelAutomation(env, "owner", downgradeFenceId);
 
+  // Plus downgrade is enforced even for a keep-awake task that is not due.
+  sqlite.prepare("UPDATE devices SET automation_permissions = json_set(automation_permissions, '$.keep_awake', json('true')) WHERE id = 'device'").run();
+  const keepAwakeTaskId = await create("Keep-awake downgrade fence", { keep_awake: true });
+  sqlite.prepare(`UPDATE automations
+    SET status = 'waiting_for_event',
+        next_run_at = NULL,
+        state_json = json_set(COALESCE(state_json, '{}'), '$.run_id', 'lease-run')
+    WHERE id = ?`).run(keepAwakeTaskId);
+  await runtime.runAutomationTick(env);
+  assert.equal(keepAwakeSeconds.at(-1), 180, "Plus task should renew its keep-awake lease");
+  sqlite.prepare("UPDATE users SET plan = 'free' WHERE id = 'owner'").run();
+  await runtime.runAutomationTick(env);
+  assert.equal((await get(keepAwakeTaskId)).status, "paused", "Downgraded Plus task must pause even when it is not otherwise due");
+  assert.equal(keepAwakeSeconds.at(-1), 0, "Downgrade must release the existing keep-awake lease");
+  sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
+  await runtime.cancelAutomation(env, "owner", keepAwakeTaskId);
+
+  const sourceCallsStart = calls.length;
   const taskId = await create("Source protocol");
   await tick(taskId);
   let context = await source.getGoalContext(db, "owner", taskId);
   assert(context.ready_for_decision);
   assert.equal(context.controller, "source");
-  assert.equal(calls.length, 0);
+  assert.equal(calls.length, sourceCallsStart);
   const read = decision("tool", "read_file", { path: "/workspace/app.ts", length: 200 });
   const concurrent = await Promise.all([
     source.submitGoalDecision(db, identity, taskId, context.revision, "read-1", read),
@@ -124,6 +183,8 @@ try {
   assert.equal((await get(taskId)).status, "running", "Completion must wait for verifier");
   await tick(taskId);
   assert.equal((await get(taskId)).status, "completed");
+  const accountedRun = sqlite.prepare("SELECT usage_accounted_at FROM automation_runs WHERE automation_id = ? ORDER BY started_at DESC LIMIT 1").get(taskId);
+  assert(accountedRun?.usage_accounted_at, "Completed automation run must atomically account runtime usage");
   context = await source.getGoalContext(db, "owner", taskId);
   assert(context.completion_evidence.includes("verification succeeded"));
   assert(context.journal.some(e => e.event === "needs_agent"));
@@ -326,6 +387,122 @@ try {
   const toolList = await callMcp("tools/list", {});
   assert(toolList.tools.some(tool => tool.name === "get_goal_context"));
   assert(toolList.tools.some(tool => tool.name === "submit_goal_decision" && tool.securitySchemes));
+  assert(toolList.tools.some(tool => tool.name === "read_binary_file"));
+  const usageCount = () => Number(
+    sqlite.prepare("SELECT COALESCE(SUM(tool_calls), 0) AS n FROM user_monthly_usage WHERE user_id = ?").get("owner").n,
+  );
+
+  // Plan preflight must happen before metering and before a device call.
+  sqlite.prepare("UPDATE users SET plan = 'free' WHERE id = 'owner'").run();
+  const usageBeforeDenied = usageCount();
+  const callsBeforeDenied = calls.length;
+  const deniedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
+    device_id: "device", path: "/workspace/image.png", offset: 0, length: 4,
+  } });
+  assert(deniedBinary.isError, JSON.stringify(deniedBinary));
+  assert.equal(usageCount(), usageBeforeDenied, "Denied Plus binary read must not consume monthly usage");
+  assert.equal(calls.length, callsBeforeDenied, "Denied Plus binary read must not reach the device");
+
+  const deniedGoalPlan = await callMcp("tools/call", { name: "create_agent_goal", arguments: {
+    name: "Denied Free source goal", device_id: "device", controller: "source",
+    objective: "Inspect file", success_criteria: "File inspected", allowed_tools: ["read_file"],
+  } });
+  assert(deniedGoalPlan.isError, JSON.stringify(deniedGoalPlan));
+  assert.equal(usageCount(), usageBeforeDenied, "Denied Plus Agent Goal must not consume monthly usage");
+
+  sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
+  const allowedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
+    device_id: "device", path: "/workspace/image.png", offset: 0, length: 4,
+  } });
+  assert(!allowedBinary.isError, JSON.stringify(allowedBinary));
+  const binaryPayload = JSON.parse(allowedBinary.content[0].text);
+  assert.equal(binaryPayload.data, "AAECAw==");
+  assert.equal(binaryPayload.file_revision, binaryRevision);
+  assert.equal(usageCount(), usageBeforeDenied + 1, "Allowed Plus binary read should consume exactly one MCP call");
+  const continuedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
+    device_id: "device", path: "/workspace/image.png", offset: 2, length: 2,
+    expected_revision: binaryPayload.file_revision,
+  } });
+  assert(!continuedBinary.isError, JSON.stringify(continuedBinary));
+  assert.equal(JSON.parse(continuedBinary.content[0].text).data, "AgM=");
+  assert.equal(calls.at(-1), "read_binary_file");
+  const plusUsageAfterBinary = sqlite.prepare(
+    "SELECT binary_bytes FROM user_monthly_plus_usage WHERE user_id = ? ORDER BY month_key DESC LIMIT 1",
+  ).get("owner");
+  assert.equal(Number(plusUsageAfterBinary?.binary_bytes || 0), 6, "Successful Plus binary chunks must meter returned bytes");
+
+  const resource = await fileResources.createFileResource(
+    env,
+    identity,
+    "device",
+    "/workspace/image.png",
+  );
+  const resourceToken = new URL(resource.url).pathname.split("/").at(-1);
+  assert(resource.resource_id, "Temporary file resource must return a revocation id");
+  assert(resourceToken, "Temporary file resource must return an opaque bearer token");
+  const callsBeforeHead = calls.length;
+  const headResource = await fileResources.handleFileResource(
+    new Request(resource.url, { method: "HEAD" }),
+    env,
+    resourceToken,
+  );
+  assert.equal(headResource.status, 200);
+  assert.equal(headResource.headers.get("accept-ranges"), "bytes");
+  assert.equal(calls.length, callsBeforeHead, "HEAD must not pull file bytes from the device");
+
+  const partial = await fileResources.handleFileResource(
+    new Request(resource.url, { headers: { range: "bytes=1-2" } }),
+    env,
+    resourceToken,
+  );
+  assert.equal(partial.status, 206);
+  assert.equal(partial.headers.get("content-range"), "bytes 1-2/4");
+  assert.deepEqual(Buffer.from(await partial.arrayBuffer()), Buffer.from([1, 2]));
+
+  const downloaded = await fileResources.handleFileResource(
+    new Request(resource.url),
+    env,
+    resourceToken,
+  );
+  assert.deepEqual(
+    Buffer.from(await downloaded.arrayBuffer()),
+    binaryFixture,
+    "Temporary file resource must stream the exact pinned bytes",
+  );
+
+  sqlite.prepare("UPDATE users SET plan = 'free' WHERE id = 'owner'").run();
+  const downgradedResource = await fileResources.handleFileResource(
+    new Request(resource.url),
+    env,
+    resourceToken,
+  );
+  assert.equal(downgradedResource.status, 403, "Plus downgrade must invalidate resource use immediately");
+  sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
+
+  binaryRevision = "binary-rev-2";
+  const changedResource = await fileResources.handleFileResource(
+    new Request(resource.url),
+    env,
+    resourceToken,
+  );
+  await assert.rejects(
+    changedResource.arrayBuffer(),
+    /FILE_CHANGED_DURING_READ/,
+    "Pinned file resource must abort if the file revision changes",
+  );
+  binaryRevision = "binary-rev-1";
+
+  const revoked = await fileResources.revokeFileResource(env, identity, resource.resource_id);
+  assert.equal(revoked.already_revoked, false);
+  const revokedAgain = await fileResources.revokeFileResource(env, identity, resource.resource_id);
+  assert.equal(revokedAgain.already_revoked, true, "Resource revocation should be idempotent");
+  const revokedResource = await fileResources.handleFileResource(
+    new Request(resource.url),
+    env,
+    resourceToken,
+  );
+  assert.equal(revokedResource.status, 404, "Revoked resource must stop working before expiry");
+
   const createdMcp = await callMcp("tools/call", { name: "create_agent_goal", arguments: {
     name: "MCP source goal", device_id: "device", controller: "source", objective: "Inspect file", success_criteria: "File inspected", allowed_tools: ["read_file"],
   } });
@@ -342,6 +519,85 @@ try {
   await assert.rejects(runtime.createAutomation({ ...env, GITHUB_APP_ID: "test", GITHUB_APP_PRIVATE_KEY: "not-used", GITHUB_APP_INSTALLATION_ID: "7" }, "owner", {
     name: "Unauthorized cloud merge", kind: "condition_watch", github_merge: { owner: "owner", repo: "repo", pull_number: 1 },
   }), /permission binding/);
+
+  // Early-access Plus provisioning is auditable, expiring and admin-only.
+  sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at,role,plan) VALUES(?,?,?,?,?,?)")
+    .run("plan-admin", "plan-admin-sub", "admin@test.invalid", now, "admin", "free");
+  sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at,role,plan) VALUES(?,?,?,?,?,?)")
+    .run("plan-user", "plan-user-sub", "plus-target@test.invalid", now, "user", "free");
+  const adminToken = await authModule.createSession("plan-admin", env);
+  const userToken = await authModule.createSession("plan-user", env);
+  const adminHeaders = {
+    cookie: "rl_session=" + encodeURIComponent(adminToken),
+    "content-type": "application/json",
+  };
+  const userHeaders = {
+    cookie: "rl_session=" + encodeURIComponent(userToken),
+    "content-type": "application/json",
+  };
+  assert.equal(await entitlements.getAccountPlan(env, "plan-user"), "free");
+
+  const forbiddenGrant = await planAdmin.handleAdminPlanGrants(
+    new Request(env.PUBLIC_ORIGIN + "/api/admin/plan-grants", {
+      method: "POST",
+      headers: userHeaders,
+      body: JSON.stringify({ email: "plus-target@test.invalid", reason: "self grant denied" }),
+    }),
+    env,
+  );
+  assert.equal(forbiddenGrant.status, 403);
+
+  const firstGrantResponse = await planAdmin.handleAdminPlanGrants(
+    new Request(env.PUBLIC_ORIGIN + "/api/admin/plan-grants", {
+      method: "POST",
+      headers: adminHeaders,
+      body: JSON.stringify({
+        email: "plus-target@test.invalid",
+        reason: "Early access testing",
+        expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+      }),
+    }),
+    env,
+  );
+  assert.equal(firstGrantResponse.status, 201);
+  const firstGrant = (await firstGrantResponse.json()).grant;
+  assert.equal(await entitlements.getAccountPlan(env, "plan-user"), "plus");
+  const grantedSessionUser = await authModule.getSessionUser(
+    new Request(env.PUBLIC_ORIGIN + "/api/me", { headers: { cookie: userHeaders.cookie } }),
+    env,
+  );
+  assert.equal(grantedSessionUser?.plan, "plus", "Session user should reflect an active grant immediately");
+
+  sqlite.prepare("UPDATE plan_grants SET expires_at = ? WHERE id = ?")
+    .run(new Date(Date.now() - 60_000).toISOString(), firstGrant.id);
+  assert.equal(await entitlements.getAccountPlan(env, "plan-user"), "free", "Expired grant must stop authorizing Plus");
+
+  const secondGrantResponse = await planAdmin.handleAdminPlanGrants(
+    new Request(env.PUBLIC_ORIGIN + "/api/admin/plan-grants", {
+      method: "POST",
+      headers: adminHeaders,
+      body: JSON.stringify({
+        email: "plus-target@test.invalid",
+        reason: "Temporary preview access",
+        expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+      }),
+    }),
+    env,
+  );
+  assert.equal(secondGrantResponse.status, 201);
+  const secondGrant = (await secondGrantResponse.json()).grant;
+  assert.equal(await entitlements.getAccountPlan(env, "plan-user"), "plus");
+
+  const revokeResponse = await planAdmin.handleAdminPlanGrantRevoke(
+    new Request(env.PUBLIC_ORIGIN + "/api/admin/plan-grants/" + secondGrant.id + "/revoke", {
+      method: "POST",
+      headers: adminHeaders,
+    }),
+    env,
+    secondGrant.id,
+  );
+  assert.equal(revokeResponse.status, 200);
+  assert.equal(await entitlements.getAccountPlan(env, "plan-user"), "free", "Revoked grant must stop authorizing Plus");
 
   sqlite.close();
   console.log("PASS: source protocol, fences/recovery, verification/retry, recurring goals, device permissions, signed events/retry/revocation, bounded power leases, cloud action ownership");

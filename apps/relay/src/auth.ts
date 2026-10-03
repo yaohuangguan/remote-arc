@@ -103,7 +103,14 @@ export async function getSessionUser(
 
   const tokenHash = await sha256Hex(token);
   const row = await env.DB.prepare(
-    `SELECT u.id, u.email, u.name, u.avatar_url, u.role, u.plan
+    `SELECT u.id, u.email, u.name, u.avatar_url, u.role, u.plan,
+       EXISTS(
+         SELECT 1 FROM plan_grants g
+         WHERE g.user_id = u.id
+           AND g.plan = 'plus'
+           AND g.revoked_at IS NULL
+           AND (g.expires_at IS NULL OR g.expires_at > ?2)
+       ) AS has_plus_grant
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ?1 AND s.expires_at > ?2`,
@@ -116,6 +123,7 @@ export async function getSessionUser(
       avatar_url: string | null;
       role: "user" | "admin";
       plan: "free" | "plus" | null;
+      has_plus_grant: number;
     }>();
 
   if (!row) return null;
@@ -126,7 +134,7 @@ export async function getSessionUser(
     name: row.name,
     avatarUrl: row.avatar_url,
     role: row.role || "user",
-    plan: row.role === "admin" ? "plus" : row.plan === "plus" ? "plus" : "free",
+    plan: row.role === "admin" || row.plan === "plus" || row.has_plus_grant ? "plus" : "free",
     isAdmin: row.role === "admin",
   };
 }

@@ -1,5 +1,5 @@
 import { requireTaskPermission } from "./device-task-policy.js";
-import { isPlanUpgradeRequiredError, requireFeature } from "./entitlements.js";
+import { isPlanUpgradeRequiredError, requireEntitledFeatures, requireFeatures, type AccountFeature, type PlanEntitlements } from "./entitlements.js";
 import { validateAgentToolArguments } from "./agent-tools.js";
 import {
   getSessionUser,
@@ -18,6 +18,7 @@ import {
   type AgentToolName,
 } from "./agent-planner.js";
 import { takeSourceDecision } from "./source-goals.js";
+import { binaryBytesRead, finishAutomationRunWithUsage, recordPlusUsage } from "./plus-usage.js";
 import { sanitizePlan, finishPhase, plannedReport, timeBudget, type GoalPlan, type PlannedState } from "./planned-goals.js";
 import { executePlannedGoal } from "./planned-goal-runtime.js";
 import {
@@ -251,27 +252,34 @@ const parseJson = <T>(value: string | null, fallback: T): T => {
   }
 };
 
+export function requiredAutomationFeatures(input: Pick<CreateAutomationInput, "kind" | "schedule" | "keep_awake">) {
+  const requestedKind = input.kind || "long_task";
+  const features: AccountFeature[] =
+    requestedKind === "agent_goal"
+      ? ["planned_agent_goals", "durable_tasks"]
+      : ["durable_tasks"];
+  if (requestedKind === "schedule_watch" || input.schedule) features.push("scheduled_tasks");
+  if (input.keep_awake) features.push("keep_awake");
+  return features;
+}
+
+function requiredAutomationRowFeatures(automation: AutomationRow) {
+  const features: AccountFeature[] = ["durable_tasks"];
+  const goal = parseJson<GoalSpec | null>(automation.goal_json, null);
+  if (goal?.type === "agent_goal") features.push("planned_agent_goals");
+  const trigger = parseJson<TriggerSpec | null>(automation.trigger_json, null);
+  if (trigger?.type === "interval" || trigger?.type === "at") features.push("scheduled_tasks");
+  const action = parseJson<ActionPlan>(automation.action_json, { steps: [] });
+  if (action.keep_awake) features.push("keep_awake");
+  return features;
+}
+
 async function requireAutomationEntitlements(
   env: AutomationEnv,
   userId: string,
   automation: AutomationRow,
 ) {
-  await requireFeature(env, userId, "durable_tasks");
-
-  const goal = parseJson<GoalSpec | null>(automation.goal_json, null);
-  if (goal?.type === "agent_goal") {
-    await requireFeature(env, userId, "planned_agent_goals");
-  }
-
-  const trigger = parseJson<TriggerSpec | null>(automation.trigger_json, null);
-  if (trigger?.type === "interval" || trigger?.type === "at") {
-    await requireFeature(env, userId, "scheduled_tasks");
-  }
-
-  const action = parseJson<ActionPlan>(automation.action_json, { steps: [] });
-  if (action.keep_awake) {
-    await requireFeature(env, userId, "keep_awake");
-  }
+  return requireFeatures(env, userId, requiredAutomationRowFeatures(automation));
 }
 
 const parseStringArray = (value: string | null) => {
@@ -656,6 +664,7 @@ export async function createAutomation(
   env: AutomationEnv,
   userId: string,
   input: CreateAutomationInput,
+  options?: { entitlements?: PlanEntitlements },
 ) {
   const requestedKind = input.kind || "long_task";
   if (
@@ -666,16 +675,11 @@ export async function createAutomation(
     throw new Error("Unsupported automation kind.");
   }
 
-  if (requestedKind === "agent_goal") {
-    await requireFeature(env, userId, "planned_agent_goals");
+  const requiredFeatures = requiredAutomationFeatures(input);
+  if (options?.entitlements) {
+    requireEntitledFeatures(options.entitlements, requiredFeatures);
   } else {
-    await requireFeature(env, userId, "durable_tasks");
-  }
-  if (requestedKind === "schedule_watch" || input.schedule) {
-    await requireFeature(env, userId, "scheduled_tasks");
-  }
-  if (input.keep_awake) {
-    await requireFeature(env, userId, "keep_awake");
+    await requireFeatures(env, userId, requiredFeatures);
   }
 
   const storedKind: AutomationKind =
@@ -861,6 +865,7 @@ async function updateAutomationStatus(
   status: AutomationStatus,
   nextRunAt: string | null,
   lastError: string | null = null,
+  journalSummary?: string,
 ) {
   const now = nowIso();
   await env.DB.prepare(
@@ -878,8 +883,13 @@ async function updateAutomationStatus(
     .bind(status, nextRunAt, lastError, now, automationId, userId)
     .run();
   const updated = await getAutomation(env, userId, automationId);
-  if (updated) await journalStatement(env.DB, updated, status,
-    "User changed task status to " + status + ".", undefined).run();
+  if (updated) await journalStatement(
+    env.DB,
+    updated,
+    status,
+    journalSummary || "User changed task status to " + status + ".",
+    undefined,
+  ).run();
   return updated;
 }
 
@@ -1185,18 +1195,16 @@ async function markRunFinished(
   error: string | null,
 ) {
   if (!state.run_id) return;
-  await env.DB.prepare(
-    `UPDATE automation_runs
-     SET status = ?1,
-         exit_code = ?2,
-         error = ?3,
-         finished_at = ?4
-     WHERE id = ?5 AND automation_id = ?6
-       AND EXISTS (SELECT 1 FROM automations WHERE id = ?6 AND lease_token = ?7
-         AND lease_until > ?4 AND status IN ('waiting','running','waiting_for_device'))`,
-  )
-    .bind(status, exitCode, error, nowIso(), state.run_id, automation.id, automation.lease_token)
-    .run();
+  await finishAutomationRunWithUsage(env.DB, {
+    run_id: state.run_id,
+    automation_id: automation.id,
+    user_id: automation.user_id,
+    lease_token: automation.lease_token,
+    status,
+    exit_code: exitCode,
+    error,
+    finished_at: nowIso(),
+  });
 }
 
 async function persistRuntime(
@@ -1239,6 +1247,9 @@ async function automationCall(env: AutomationEnv, automation: AutomationRow,
   try {
     result = unwrapAutomationResult(await callDevice(env, automationIdentity(automation, env), automation.device_id!, tool, args,
       ["read_file", "read_binary_file", "list_directory", "get_file_info", "write_file", "edit_block", "start_process"].includes(tool) ? state.planned?.workspace?.path : undefined));
+    if (tool === "read_binary_file") {
+      await recordPlusUsage(env, automation.user_id, { binary_bytes: binaryBytesRead(result) });
+    }
   } catch (error) {
     if (effect) {
       state.inflight_action = undefined;
@@ -1548,6 +1559,9 @@ async function executeAgentGoal(
       memory: state.agent.memory,
       observation: state.agent.observation,
     });
+    if (goal.controller !== "source" && decision) {
+      await recordPlusUsage(env, automation.user_id, { planner_turns: 1 });
+    }
     if (!decision) {
       state.phase = "awaiting_agent";
       await persistRuntime(env, automation, state, "waiting_for_event", null, null,
@@ -2236,9 +2250,32 @@ async function maintainTaskKeepAwake(env: AutomationEnv) {
     AND (expires_at IS NULL OR expires_at > ?1) ORDER BY updated_at LIMIT 100`)
     .bind(nowIso()).all<AutomationRow>();
   for (const task of active.results) {
-    await requireTaskPermission(env.DB, task.user_id, task.device_id!, task.kind,
-      parseJson<GoalSpec | null>(task.goal_json, null), parseJson<TriggerSpec | null>(task.trigger_json, null), true)
-      .then(() => setTaskKeepAwake(env, task, 180)).catch(() => undefined);
+    try {
+      await requireAutomationEntitlements(env, task.user_id, task);
+      await requireTaskPermission(
+        env.DB,
+        task.user_id,
+        task.device_id!,
+        task.kind,
+        parseJson<GoalSpec | null>(task.goal_json, null),
+        parseJson<TriggerSpec | null>(task.trigger_json, null),
+        true,
+      );
+      await setTaskKeepAwake(env, task, 180);
+    } catch (error) {
+      if (isPlanUpgradeRequiredError(error)) {
+        await setTaskKeepAwake(env, task, 0).catch(() => undefined);
+        await updateAutomationStatus(
+          env,
+          task.user_id,
+          task.id,
+          "paused",
+          null,
+          error.message.slice(0, 1000),
+          "Account plan no longer authorizes this Task; keep-awake was released.",
+        ).catch(() => undefined);
+      }
+    }
   }
 }
 

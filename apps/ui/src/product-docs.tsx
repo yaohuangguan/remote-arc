@@ -7,7 +7,7 @@ const engineering = "https://github.com/yaohuangguan/remote-arc/blob/feat/goal-c
 
 export const publicToolGroups = [
   { en: "Device discovery", zh: "设备发现", scope: "devices:read", tools: ["list_devices", "device_tools"] },
-  { en: "Read files and processes", zh: "文件与进程读取", scope: "computer:read", tools: ["list_directory", "read_file", "read_binary_file", "get_file_info", "list_processes"] },
+  { en: "Read files and processes", zh: "文件与进程读取", scope: "computer:read", tools: ["list_directory", "read_file", "read_binary_file", "create_file_resource", "revoke_file_resource", "get_file_info", "list_processes"] },
   { en: "Edit files and run commands", zh: "编辑文件与执行命令", scope: "computer:write", tools: ["write_file", "edit_block", "undo_last_change", "start_process", "process_status", "process_output", "stop_process"] },
   { en: "Explicitly shared browser tabs", zh: "明确共享的浏览器标签页", scope: "browser:read", tools: ["browser_list_tabs", "browser_get_current_tab", "browser_read_page", "browser_get_selected_text", "browser_extract_links", "browser_extract_table"] },
   { en: "Read durable tasks", zh: "读取持久任务", scope: "automation:read", tools: ["list_automations", "get_automation", "get_goal_context"] },
@@ -32,7 +32,7 @@ function ToolReference() {
   const { tr } = useI18n();
   return <>
     <p>{tr(`The current hosted MCP implementation defines ${toolCount} public tools. Availability on a selected computer is further filtered by its permissions and installed agent capabilities. OAuth scope names describe authorization, not every tool's side effects: process_status and process_output currently require computer:write.`, `当前托管 MCP 实现定义了 ${toolCount} 个公开工具。目标电脑实际可用的能力还取决于设备权限和已安装 Agent。OAuth Scope 名称表达授权范围，不能直接当成工具副作用分类；例如 process_status 和 process_output 当前也要求 computer:write。`)}</p>
-    <p>{tr("Plan entitlement is an account-level ceiling in addition to OAuth and device policy. Free can use the core remote-computer tools. Plus additionally authorizes read_binary_file, durable and overnight Tasks, schedules, planned Agent Goals and supported keep-awake. UI visibility never substitutes for this relay-side gate.", "套餐 entitlement 是 OAuth 与设备策略之外的账户级上限。Free 可以使用核心远程电脑工具；Plus 额外授权 read_binary_file、持久与隔夜 Task、定时任务、计划模式 Agent Goal 和受支持的 keep-awake。界面可见性不能替代 Relay 侧的套餐校验。")}</p>
+    <p>{tr("Plan entitlement is an account-level ceiling in addition to OAuth and device policy. Free can use the core remote-computer tools. Plus additionally authorizes binary reads, temporary revision-pinned file resources, durable and overnight Tasks, schedules, planned Agent Goals and supported keep-awake. UI visibility never substitutes for this relay-side gate.", "套餐 entitlement 是 OAuth 与设备策略之外的账户级上限。Free 可以使用核心远程电脑工具；Plus 额外授权二进制读取、绑定文件版本的临时文件资源、持久与隔夜 Task、定时任务、计划模式 Agent Goal 和受支持的 keep-awake。界面可见性不能替代 Relay 侧的套餐校验。")}</p>
     <div className="toolReferenceList">{publicToolGroups.map(group => <div key={group.en}>
       <h3>{tr(group.en, group.zh)}</h3><code>{group.tools.join(" · ")}</code><p>{tr("Required OAuth scope: ", "所需 OAuth Scope：")}{group.scope}</p>
     </div>)}</div>

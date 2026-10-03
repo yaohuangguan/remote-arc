@@ -1,11 +1,11 @@
-export type AccountPlan = "free" | "plus";
+import {
+  ACCOUNT_PLAN_FEATURES,
+  ACCOUNT_PLAN_LABELS,
+  type AccountFeature,
+  type AccountPlan,
+} from "@remotearc/protocol";
 
-export type AccountFeature =
-  | "binary_read"
-  | "durable_tasks"
-  | "scheduled_tasks"
-  | "planned_agent_goals"
-  | "keep_awake";
+export type { AccountFeature, AccountPlan };
 
 export type PlanEntitlements = {
   plan: AccountPlan;
@@ -16,21 +16,7 @@ type EntitlementEnv = {
   DB: D1Database;
 };
 
-const PLAN_FEATURES: Record<AccountPlan, readonly AccountFeature[]> = {
-  free: [],
-  plus: [
-    "binary_read",
-    "durable_tasks",
-    "scheduled_tasks",
-    "planned_agent_goals",
-    "keep_awake",
-  ],
-};
-
-export const PLAN_LABELS: Record<AccountPlan, string> = {
-  free: "Free",
-  plus: "Plus",
-};
+export const PLAN_LABELS = ACCOUNT_PLAN_LABELS;
 
 export class PlanUpgradeRequiredError extends Error {
   readonly code = "PLAN_UPGRADE_REQUIRED";
@@ -61,7 +47,7 @@ export function normalizeAccountPlan(value: unknown): AccountPlan {
 export function planEntitlements(plan: AccountPlan): PlanEntitlements {
   return {
     plan,
-    features: new Set(PLAN_FEATURES[plan]),
+    features: new Set(ACCOUNT_PLAN_FEATURES[plan]),
   };
 }
 
@@ -70,15 +56,26 @@ export async function getAccountPlan(
   userId: string,
 ): Promise<AccountPlan> {
   const row = await env.DB.prepare(
-    "SELECT plan, role FROM users WHERE id = ?1 LIMIT 1",
+    `SELECT u.plan, u.role,
+       EXISTS(
+         SELECT 1 FROM plan_grants g
+         WHERE g.user_id = u.id
+           AND g.plan = 'plus'
+           AND g.revoked_at IS NULL
+           AND (g.expires_at IS NULL OR g.expires_at > ?2)
+       ) AS has_plus_grant
+     FROM users u
+     WHERE u.id = ?1
+     LIMIT 1`,
   )
-    .bind(userId)
-    .first<{ plan: string | null; role: string | null }>();
+    .bind(userId, new Date().toISOString())
+    .first<{ plan: string | null; role: string | null; has_plus_grant: number }>();
 
   if (!row) throw new Error("Account not found.");
 
-  // Admin is an operational override, not a separately marketed customer plan.
-  if (row.role === "admin") return "plus";
+  // Admin is an operational override; base plan and active grants share one
+  // effective-plan calculation so billing/promo/workspace sources can coexist.
+  if (row.role === "admin" || row.has_plus_grant) return "plus";
   return normalizeAccountPlan(row.plan);
 }
 
@@ -97,12 +94,33 @@ export async function hasFeature(
   return (await getAccountEntitlements(env, userId)).features.has(feature);
 }
 
+export function requireEntitledFeatures(
+  entitlements: PlanEntitlements,
+  features: readonly AccountFeature[],
+) {
+  for (const feature of new Set(features)) {
+    if (!entitlements.features.has(feature)) {
+      throw new PlanUpgradeRequiredError(feature);
+    }
+  }
+  return entitlements;
+}
+
+export async function requireFeatures(
+  env: EntitlementEnv,
+  userId: string,
+  features: readonly AccountFeature[],
+) {
+  return requireEntitledFeatures(
+    await getAccountEntitlements(env, userId),
+    features,
+  );
+}
+
 export async function requireFeature(
   env: EntitlementEnv,
   userId: string,
   feature: AccountFeature,
 ) {
-  const entitlements = await getAccountEntitlements(env, userId);
-  if (entitlements.features.has(feature)) return entitlements;
-  throw new PlanUpgradeRequiredError(feature);
+  return requireFeatures(env, userId, [feature]);
 }

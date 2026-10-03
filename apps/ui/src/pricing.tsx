@@ -1,4 +1,5 @@
 import React from "react";
+import { accountPlanHasFeature, type AccountFeature } from "@remotearc/protocol";
 import { useI18n } from "./i18n.js";
 import "./pricing.css";
 
@@ -27,23 +28,26 @@ export function PricingContent({
 
   const plusFeatures = [
     tr("Everything in Free", "包含 Free 的全部能力"),
-    tr("Binary file reads with bounded base64 chunks and MIME metadata", "二进制文件分块读取：base64 + MIME 元数据"),
+    tr("Binary reads plus 10-minute revision-pinned file resources for large transfers", "二进制读取 + 10 分钟绑定文件版本的大文件临时资源"),
     tr("24/7-capable durable Tasks for overnight and long-running work", "支持 24/7 持续编排的持久 Task，用于隔夜与长任务"),
     tr("Condition watches and scheduled / recurring Tasks", "条件监听与定时 / 周期 Task"),
     tr("Planned Agent Goals: fixed, guided and autonomous planning modes", "计划模式 Agent Goal：fixed、guided、autonomous"),
     tr("Keep-awake leases on supported devices", "受支持设备的 Keep-awake 租约"),
   ];
 
-  const comparison = [
-    [tr("Core remote tools", "核心远程工具"), true, true],
-    [tr("Text file reads", "文本文件读取"), true, true],
-    [tr("Binary file reads", "二进制文件读取"), false, true],
-    [tr("Durable / overnight Tasks", "持久 / 隔夜 Task"), false, true],
-    [tr("Long-running Tasks", "长任务"), false, true],
-    [tr("Schedules & condition watches", "定时与条件监听"), false, true],
-    [tr("Planned Agent Goals", "计划模式 Agent Goal"), false, true],
-    [tr("Supported keep-awake", "受支持的保持唤醒"), false, true],
-  ] as const;
+  const comparison: Array<{
+    label: string;
+    feature?: AccountFeature;
+  }> = [
+    { label: tr("Core remote tools", "核心远程工具") },
+    { label: tr("Text file reads", "文本文件读取") },
+    { label: tr("Binary file reads", "二进制文件读取"), feature: "binary_read" },
+    { label: tr("Durable / overnight Tasks", "持久 / 隔夜 Task"), feature: "durable_tasks" },
+    { label: tr("Long-running Tasks", "长任务"), feature: "durable_tasks" },
+    { label: tr("Schedules & condition watches", "定时与条件监听"), feature: "scheduled_tasks" },
+    { label: tr("Planned Agent Goals", "计划模式 Agent Goal"), feature: "planned_agent_goals" },
+    { label: tr("Supported keep-awake", "受支持的保持唤醒"), feature: "keep_awake" },
+  ];
 
   const questions = [
     [
@@ -140,10 +144,10 @@ export function PricingContent({
       <div className="planMatrixWrap">
         <table className="planMatrix">
           <thead><tr><th>{tr("Capability", "能力")}</th><th>Free</th><th>Plus</th></tr></thead>
-          <tbody>{comparison.map(([name, free, plus]) => <tr key={name}>
-            <td>{name}</td>
-            <td>{free ? "✓" : "—"}</td>
-            <td>{plus ? "✓" : "—"}</td>
+          <tbody>{comparison.map(({ label, feature }) => <tr key={label}>
+            <td>{label}</td>
+            <td>{feature ? (accountPlanHasFeature("free", feature) ? "✓" : "—") : "✓"}</td>
+            <td>{feature ? (accountPlanHasFeature("plus", feature) ? "✓" : "—") : "✓"}</td>
           </tr>)}</tbody>
         </table>
       </div>

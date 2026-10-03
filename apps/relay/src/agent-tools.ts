@@ -49,6 +49,9 @@ export function validateAgentToolArguments(
         Number.isInteger(lengthRaw) && lengthRaw > 0
           ? Math.min(lengthRaw, 262144)
           : 65536,
+      ...(typeof args.expected_revision === "string" && args.expected_revision.length <= 128
+        ? { expected_revision: args.expected_revision }
+        : {}),
     };
   }
   if (tool === "get_file_info") {
