@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   canonicalForPath,
   llmsTxt,
@@ -7,6 +8,11 @@ import {
   robotsTxt,
   sitemapXml,
 } from "../src/seo.ts";
+
+const wranglerConfig = readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8");
+assert.ok(wranglerConfig.includes('"/*"'), "all document routes must run through the Worker before SPA asset fallback");
+assert.ok(wranglerConfig.includes('"!/assets/*"'), "hashed assets should stay on the free static-asset path");
+assert.ok(wranglerConfig.includes('"!/demos/*"'), "large demo media should bypass the Worker");
 
 const known = [
   "/",
