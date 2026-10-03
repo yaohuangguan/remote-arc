@@ -27,6 +27,9 @@ try {
   if (!safeNames.includes("browse_directories")) {
     throw new Error("safe mode did not expose dashboard directory browsing");
   }
+  if (!safeNames.includes("read_binary_file")) {
+    throw new Error("safe mode did not advertise read_binary_file to agents");
+  }
   if (
     !developerNames.includes("write_file") ||
     !developerNames.includes("undo_change") ||
@@ -72,6 +75,86 @@ try {
     policy,
   );
   if (!read.content[0]?.text.includes("alpha")) throw new Error("read_file failed");
+
+  const binaryFile = path.join(project, "sample.bin");
+  await fs.writeFile(binaryFile, Buffer.from([0, 1, 2, 3, 4, 255]));
+  const binary = jsonResult<{
+    encoding: string;
+    size: number;
+    file_revision: string;
+    offset: number;
+    bytes_read: number;
+    eof: boolean;
+    data: string;
+  }>(
+    await safe.callTool(
+      "read_binary_file",
+      { path: binaryFile, offset: 1, length: 3 },
+      policy,
+    ),
+  );
+  if (
+    binary.encoding !== "base64" ||
+    binary.size !== 6 ||
+    !binary.file_revision ||
+    binary.offset !== 1 ||
+    binary.bytes_read !== 3 ||
+    binary.eof ||
+    Buffer.from(binary.data, "base64").toString("hex") !== "010203"
+  ) {
+    throw new Error("read_binary_file returned an invalid chunk");
+  }
+  const nextBinary = jsonResult<{ data: string; file_revision: string; eof: boolean }>(
+    await safe.callTool(
+      "read_binary_file",
+      { path: binaryFile, offset: 4, length: 2, expected_revision: binary.file_revision },
+      policy,
+    ),
+  );
+  if (
+    nextBinary.file_revision !== binary.file_revision ||
+    !nextBinary.eof ||
+    Buffer.from(nextBinary.data, "base64").toString("hex") !== "04ff"
+  ) {
+    throw new Error("read_binary_file revision continuation failed");
+  }
+  await fs.writeFile(binaryFile, Buffer.from([9, 8, 0, 6, 5, 4]));
+  await fs.utimes(binaryFile, new Date(), new Date(Date.now() + 2000));
+  let revisionFenceWorked = false;
+  try {
+    await safe.callTool(
+      "read_binary_file",
+      { path: binaryFile, offset: 0, length: 2, expected_revision: binary.file_revision },
+      policy,
+    );
+  } catch (error) {
+    revisionFenceWorked = String(error).includes("FILE_CHANGED_DURING_READ");
+  }
+  if (!revisionFenceWorked) {
+    throw new Error("read_binary_file did not reject a changed file revision");
+  }
+  const disguisedPdf = path.join(project, "unknown.bin");
+  await fs.writeFile(disguisedPdf, Buffer.from("%PDF-1.7\nfixture", "ascii"));
+  const sniffed = jsonResult<{ mime_type: string }>(
+    await safe.callTool(
+      "read_binary_file",
+      { path: disguisedPdf, offset: 0, length: 8 },
+      policy,
+    ),
+  );
+  if (sniffed.mime_type !== "application/pdf") {
+    throw new Error("read_binary_file did not sniff PDF magic bytes");
+  }
+
+  let binaryRejectedByTextReader = false;
+  try {
+    await safe.callTool("read_file", { path: binaryFile }, policy);
+  } catch {
+    binaryRejectedByTextReader = true;
+  }
+  if (!binaryRejectedByTextReader) {
+    throw new Error("read_file should keep rejecting binary content");
+  }
 
   const directoryBrowser = jsonResult<{
     path: string;
@@ -312,6 +395,7 @@ try {
         developer: developerNames.length,
         full: fullNames.length,
         fileOps: "ok",
+        binaryRead: "ok",
         atomicWrite: "ok",
         workspaceScope: "ok",
         sensitivePaths: "ok",

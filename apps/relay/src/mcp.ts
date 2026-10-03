@@ -1,10 +1,22 @@
 import { getGoalContext, submitGoalDecision } from "./source-goals.js";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+const plannedCheckSchema = z.object({ name: z.string().min(1).max(80), command: z.string().min(1).max(4000), cwd: z.string().max(500).optional(), timeout_seconds: z.number().int().min(1).max(3600).default(300) });
+const plannedPhaseSchema = z.object({ id: z.string().min(1).max(80), objective: z.string().min(1).max(2000), success_criteria: z.string().min(1).max(2000),
+  verify_command: z.string().max(4000).optional(), verify_cwd: z.string().max(500).optional(), depends_on: z.array(z.string().max(80)).max(24).optional(),
+  min_duration_seconds: z.number().int().min(1).max(604800).optional(), max_duration_seconds: z.number().int().min(1).max(604800).optional(), execution_slice: z.array(plannedCheckSchema).max(8).optional() });
+const plannedGoalSchema = z.object({ planning_mode: z.enum(["fixed", "guided", "autonomous"]), priorities: z.array(z.string().max(800)).max(16).optional(), phases: z.array(plannedPhaseSchema).max(24).optional(),
+  time_policy: z.object({ min_duration_seconds: z.number().int().min(1).max(604800).optional(), max_duration_seconds: z.number().int().min(1).max(604800).optional(), end_at: z.string().max(64).optional(), timezone: z.string().max(80).optional(), finalization_reserve_seconds: z.number().int().min(0).max(3600).optional() }).optional(),
+  quality_policy: z.object({ promotion: z.literal("green_only"), required_checks: z.array(plannedCheckSchema).min(1).max(8), rollback_on_regression: z.boolean() }).optional(),
+  recovery_policy: z.object({ same_failure_limit: z.number().int().min(1).max(20).optional(), no_progress_iteration_limit: z.number().int().min(1).max(100).optional(), max_strategy_retries: z.number().int().min(0).max(10).optional(), on_stuck: z.literal("replan").optional(), on_repeated_failure: z.literal("rollback_and_switch").optional(), on_blocked: z.literal("park_and_continue").optional() }).optional(),
+  continuation: z.object({ mode: z.enum(["none", "highest_value_safe_work"]) }).optional() });
 import { getDevicesForUser } from "./device.js";
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
 import { consumeToolCall } from "./usage.js";
+import { requireFeature, requireFeatures } from "./entitlements.js";
+import { binaryBytesRead, recordPlusUsage } from "./plus-usage.js";
+import { createFileResource, revokeFileResource } from "./file-resources.js";
 import {
   cancelAutomation,
   createAutomation,
@@ -12,6 +24,7 @@ import {
   listAutomationRuns,
   listAutomations,
   pauseAutomation,
+  requiredAutomationFeatures,
   resumeAutomation,
 } from "./automations.js";
 
@@ -38,6 +51,8 @@ const hasScope = (identity: OAuthIdentity, scope: Scope) =>
 
 const consume = async (env: Env, identity: OAuthIdentity) =>
   consumeToolCall(env, identity.userId);
+const taskDashboardUrl = (env: Env, id: string) =>
+  `${(env.APP_ORIGIN || env.PUBLIC_ORIGIN).replace(/\/$/, "")}/automations?task=${encodeURIComponent(id)}`;
 
 const oauthSchemes = (scope: Scope) => [
   {
@@ -396,6 +411,90 @@ export function createRemoteLinkMcp(
     );
 
     server.registerTool(
+      "read_binary_file",
+      {
+        title: "Read a binary file chunk on a remote computer",
+        description:
+          "Remote Arc Plus: read a bounded binary-file byte range as base64 with MIME metadata. Use offset/length for chunking; text files should use read_file.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          path: z.string(),
+          offset: z.number().int().min(0).default(0),
+          length: z.number().int().min(1).max(262144).default(65536),
+          expected_revision: z.string().min(1).max(128).optional(),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("computer:read"),
+      },
+      async ({ device_id, path, offset, length, expected_revision }) => {
+        if (!identity || !hasScope(identity, "computer:read")) {
+          return authRequired(env, "computer:read");
+        }
+        await requireFeature(env, identity.userId, "binary_read");
+        await consume(env, identity);
+        const result = await callDevice(env, identity, device_id, "read_binary_file", {
+          path,
+          offset,
+          length,
+          ...(expected_revision ? { expected_revision } : {}),
+        });
+        await recordPlusUsage(env, identity.userId, {
+          binary_bytes: binaryBytesRead(result),
+        });
+        return textResult(result);
+      },
+    );
+
+    server.registerTool(
+      "create_file_resource",
+      {
+        title: "Create a temporary file resource",
+        description:
+          "Remote Arc Plus: create a 10-minute bearer URL for a binary file so large files can be transferred outside model context. The resource is pinned to the current file revision and still uses the device's read_binary_file permission while streaming.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          path: z.string(),
+        }),
+        annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("computer:read"),
+      },
+      async ({ device_id, path }) => {
+        if (!identity || !hasScope(identity, "computer:read")) {
+          return authRequired(env, "computer:read");
+        }
+        await requireFeature(env, identity.userId, "binary_read");
+        await consume(env, identity);
+        return textResult(
+          await createFileResource(env, identity, device_id, path),
+        );
+      },
+    );
+
+    server.registerTool(
+      "revoke_file_resource",
+      {
+        title: "Revoke a temporary file resource",
+        description:
+          "Revoke a previously created Remote Arc Plus temporary file resource before its 10-minute expiry.",
+        inputSchema: z.object({
+          resource_id: z.string().min(1).max(128),
+        }),
+        annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false, idempotentHint: true },
+        _meta: oauthToolMeta("computer:read"),
+      },
+      async ({ resource_id }) => {
+        if (!identity || !hasScope(identity, "computer:read")) {
+          return authRequired(env, "computer:read");
+        }
+        await requireFeature(env, identity.userId, "binary_read");
+        await consume(env, identity);
+        return textResult(
+          await revokeFileResource(env, identity, resource_id),
+        );
+      },
+    );
+
+    server.registerTool(
       "get_file_info",
       {
         title: "Get remote file info",
@@ -738,9 +837,15 @@ export function createRemoteLinkMcp(
         if (!identity || !hasScope(identity, "automation:write")) {
           return authRequired(env, "automation:write");
         }
+        const entitlements = await requireFeatures(
+          env,
+          identity.userId,
+          requiredAutomationFeatures(input),
+        );
         await consume(env, identity);
-        const created = await createAutomation(env, identity.userId, input);
+        const created = await createAutomation(env, identity.userId, input, { entitlements });
         return textResult({
+          dashboard_url: created.automation ? taskDashboardUrl(env, created.automation.id) : null,
           automation: created.automation
             ? {
                 id: created.automation.id,
@@ -770,7 +875,7 @@ export function createRemoteLinkMcp(
       {
         title: "Create a self-directed durable Agent Goal",
         description:
-          "Save a user-requested ongoing adaptive goal from chat; no Dashboard form is required. Choose the controller explicitly: source AI uses get_goal_context and submit_goal_decision and needs a continuing host runtime or task events; hosted planner is a separate option (legacy default), not a silent model fallback. Completion needs evidence and configured verification. Device policy, budgets and agent:write scope apply.",
+          "Create user-requested ongoing work directly from the current AI chat; no Dashboard form is required. For reasoning in this conversation, explicitly select controller=source; hosted remains the legacy default, never a source fallback. Return the saved automation.id and dashboard_url to the chat and retain that ID for get_goal_context/submit_goal_decision on later turns. Optional plan persists phases/dependencies, time/reserve, green-only checks and recovery. Saved deterministic slices continue without the chat stream; new reasoning waits for the selected controller or host wakeup. Green-only work uses owned Git worktrees and needs updated remotelink; review accepted work before applying it. Device policy, evidence and agent:write scope apply.",
         inputSchema: z.object({
           name: z.string().min(1).max(120),
           keep_awake: z.boolean().default(false),
@@ -785,6 +890,7 @@ export function createRemoteLinkMcp(
               z.enum([
                 "list_directory",
                 "read_file",
+                "read_binary_file",
                 "get_file_info",
                 "write_file",
                 "edit_block",
@@ -792,8 +898,10 @@ export function createRemoteLinkMcp(
               ]),
             )
             .min(1)
-            .max(6),
+            .max(7),
           controller: z.enum(["hosted", "source"]).default("hosted"),
+          plan: plannedGoalSchema.optional(),
+          source_capabilities: z.object({ durable_context: z.boolean(), resume_on_next_turn: z.boolean(), autonomous_event_wakeup: z.boolean() }).optional(),
           max_iterations: z.number().int().min(1).max(2000).default(30),
           schedule: z.object({
             at: z.string().optional(), every_seconds: z.number().int().min(60).max(86400).optional(),
@@ -825,11 +933,10 @@ export function createRemoteLinkMcp(
         ) {
           return authRequired(env, "agent:write");
         }
-        await consume(env, identity);
-        const created = await createAutomation(env, identity.userId, {
+        const automationInput = {
           name: input.name,
           keep_awake: input.keep_awake,
-          kind: "agent_goal",
+          kind: "agent_goal" as const,
           device_id: input.device_id,
           interval_seconds: input.interval_seconds,
           expires_at: input.expires_at,
@@ -837,6 +944,8 @@ export function createRemoteLinkMcp(
           max_runs: input.max_runs,
           agent_goal: {
             controller: input.controller,
+            plan: input.plan,
+            source_capabilities: input.source_capabilities,
             controller_client_id: input.controller === "source" ? identity.clientId : undefined,
             objective: input.objective,
             success_criteria: input.success_criteria,
@@ -846,8 +955,21 @@ export function createRemoteLinkMcp(
             allowed_tools: input.allowed_tools,
             max_iterations: input.max_iterations,
           },
-        });
+        };
+        const entitlements = await requireFeatures(
+          env,
+          identity.userId,
+          requiredAutomationFeatures(automationInput),
+        );
+        await consume(env, identity);
+        const created = await createAutomation(
+          env,
+          identity.userId,
+          automationInput,
+          { entitlements },
+        );
         return textResult({
+          dashboard_url: created.automation ? taskDashboardUrl(env, created.automation.id) : null,
           automation: created.automation
             ? {
                 id: created.automation.id,
@@ -863,7 +985,7 @@ export function createRemoteLinkMcp(
             : null,
           note:
             input.controller === "source"
-              ? "Use get_goal_context and submit_goal_decision to continue this durable goal. The source host needs a persistent goal runtime or a verified event subscription. Remote Arc does not silently switch to a hosted planner."
+              ? "Show the task ID and dashboard_url in this conversation. This is the same saved task displayed in Dashboard, not a separate plan. Retain its ID; read get_goal_context and submit_goal_decision on this or a later source turn. Saved deterministic slices continue without the chat stream; new judgment waits in needs_reasoning. Autonomous wakeup depends on the host and is not guaranteed. No silent hosted fallback."
               : "The explicitly selected hosted planner continues with bounded observations and compact memory. This may be a different model from the creating chat.",
         });
       },
@@ -996,8 +1118,8 @@ export function createRemoteLinkMcp(
       inputSchema: z.object({
         automation_id: z.string(), expected_revision: z.number().int().min(0),
         idempotency_key: z.string().min(1).max(120),
-        decision: z.enum(["tool", "complete", "pause"]),
-        tool: z.enum(["none", "list_directory", "read_file", "get_file_info", "write_file", "edit_block", "start_process"]),
+        decision: z.enum(["tool", "complete", "pause", "revise_plan", "phase_result", "execution_slice", "needs_reasoning"]),
+        tool: z.enum(["none", "list_directory", "read_file", "read_binary_file", "get_file_info", "write_file", "edit_block", "start_process"]),
         arguments_json: z.string().max(250000).default("{}"),
         decision_summary: z.string().min(1).max(1200),
         memory: z.string().max(8000).default(""), completion_evidence: z.string().max(3000).default(""),

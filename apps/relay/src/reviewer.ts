@@ -104,10 +104,14 @@ export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
   if (!user) {
     const userId = "reviewer-openai-v1";
     await env.DB.prepare(
-      `INSERT INTO users (id, google_sub, email, name, avatar_url, created_at)
-       VALUES (?1, ?2, ?3, ?4, NULL, ?5)`,
+      `INSERT INTO users (id, google_sub, email, name, avatar_url, created_at, plan)
+       VALUES (?1, ?2, ?3, ?4, NULL, ?5, 'plus')`,
     ).bind(userId, "reviewer-openai-v1", email, "OpenAI Reviewer", nowIso()).run();
     user = { id: userId };
+  } else {
+    await env.DB.prepare("UPDATE users SET plan = 'plus' WHERE id = ?1")
+      .bind(user.id)
+      .run();
   }
 
   if (env.REVIEWER_DEMO_DEVICE_ID) {

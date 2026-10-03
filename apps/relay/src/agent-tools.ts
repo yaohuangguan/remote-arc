@@ -39,6 +39,21 @@ export function validateAgentToolArguments(
           : 240,
     };
   }
+  if (tool === "read_binary_file") {
+    const offsetRaw = args.offset === undefined ? 0 : Number(args.offset);
+    const lengthRaw = args.length === undefined ? 65536 : Number(args.length);
+    return {
+      path: text("path", 1000),
+      offset: Number.isInteger(offsetRaw) && offsetRaw >= 0 ? offsetRaw : 0,
+      length:
+        Number.isInteger(lengthRaw) && lengthRaw > 0
+          ? Math.min(lengthRaw, 262144)
+          : 65536,
+      ...(typeof args.expected_revision === "string" && args.expected_revision.length <= 128
+        ? { expected_revision: args.expected_revision }
+        : {}),
+    };
+  }
   if (tool === "get_file_info") {
     return { path: text("path", 1000) };
   }

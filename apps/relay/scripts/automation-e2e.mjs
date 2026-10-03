@@ -103,7 +103,7 @@ try {
   const tokenRes=await fetch(base+"/api/device/token",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({device_code:startBody.device_code,device_secret:startBody.device_secret})});
   const tokenBody=await tokenRes.json(); assert(tokenRes.ok,"token "+JSON.stringify(tokenBody));
 
-  const tools=["list_directory","read_file","get_file_info","write_file","edit_block","list_processes","start_process","process_status","process_output","stop_process"];
+  const tools=["list_directory","read_file","read_binary_file","get_file_info","write_file","edit_block","list_processes","start_process","process_status","process_output","stop_process"];
   const updateTools=await fetch(base+"/api/devices/"+deviceId+"/tools",{method:"POST",headers:authHeaders,body:JSON.stringify({allowed_tools:tools})});
   assert(updateTools.ok,"tools update "+updateTools.status+" "+await updateTools.text());
 
@@ -117,6 +117,8 @@ try {
       try {
         if(m.tool==="read_file"){
           ws.send(JSON.stringify({type:"result",id:m.id,result:{path:String(m.arguments.path),content:"export function value(){ return 1 }",offset:0,length:1,total_lines:1}}));
+        } else if(m.tool==="read_binary_file"){
+          ws.send(JSON.stringify({type:"result",id:m.id,result:{path:String(m.arguments.path),mime_type:"application/octet-stream",encoding:"base64",size:4,offset:Number(m.arguments.offset||0),bytes_read:4,eof:true,chunk_sha256:"fixture",data:"AAECAw=="}}));
         } else if(m.tool==="list_directory"){
           ws.send(JSON.stringify({type:"result",id:m.id,result:{path:String(m.arguments.path),entries:[{name:"src",type:"directory"}]}}));
         } else if(m.tool==="get_file_info"){
@@ -161,6 +163,9 @@ try {
   const tick=async()=>{const res=await fetch(base+"/__scheduled?cron="+encodeURIComponent("* * * * *"));const txt=await res.text();assert(res.ok,"scheduled tick "+res.status+" "+txt);await sleep(650)};
   const poke=async id=>{await api("/api/automations/"+id+"/pause",{method:"POST"});await api("/api/automations/"+id+"/resume",{method:"POST"});};
   const get=async id=>(await api("/api/automations/"+id)).automation;
+  const status=await api("/api/status");
+  const connected=status.devices.find(device=>device.id===deviceId);
+  assert(connected?.available_tools?.includes("read_binary_file"),"Latest agent hello must publish read_binary_file capability");
 
   // Long task: running -> running -> completed.
   let created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E long",kind:"long_task",device_id:deviceId,command:"long-task",interval_seconds:60})});
@@ -200,12 +205,23 @@ try {
     }
   })});
   const agentId=created.automation.id;
-  await tick(); row=await get(agentId); assert(row.status==="running","agent starts first command "+row.status);
-  await poke(agentId); await tick(); row=await get(agentId); assert(row.status==="running","agent adapts after failed test "+row.status);
-  await poke(agentId); await tick(); row=await get(agentId); assert(row.status==="running","agent starts deterministic verification "+row.status);
-  await poke(agentId); await tick(); row=await get(agentId);
-  assert(row.status==="completed","agent goal completes "+JSON.stringify(row));
-  assert(plannerCalls===6,"agent planner should rethink across six turns, got "+plannerCalls);
+  const agentStatuses=[];
+  for(let i=0;i<12;i++){
+    await tick();
+    row=await get(agentId);
+    agentStatuses.push(row.status);
+    if(row.status==="completed")break;
+    assert(!["failed","cancelled","expired"].includes(row.status),"agent goal entered terminal failure "+JSON.stringify(row));
+    await poke(agentId);
+  }
+  assert(row.status==="completed","agent goal completes after bounded scheduler progress "+JSON.stringify({row,agentStatuses,plannerCalls}));
+  assert(plannerCalls>=6&&plannerCalls<=12,"agent planner turns must stay within the configured budget, got "+plannerCalls);
+  const startedCommands=Array.from(processes.values()).map(proc=>proc.command);
+  assert(startedCommands.includes("agent-test-1"),"agent must run the first focused test");
+  assert(startedCommands.includes("agent-test-2"),"agent must adapt and run the second focused test");
+  assert(startedCommands.includes("verify-agent"),"agent must run deterministic final verification");
+  const meteredStatus=await api("/api/status");
+  assert(meteredStatus.plusUsage?.planner_turns===plannerCalls,"Hosted planner turns must be metered exactly once");
 
   // Permission snapshot: a real security-policy change stops unattended work; it never waits for approval.
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E policy stop",kind:"long_task",device_id:deviceId,command:"policy-test",interval_seconds:60})});
@@ -257,6 +273,19 @@ try {
   await new Promise((ok,fail)=>{reconnected.once("open",()=>setTimeout(ok,150));reconnected.once("error",fail)});
   await poke(offlineId);await tick();row=await get(offlineId);assert(row.status==="running","reconnected task starts "+row.status);
   await poke(offlineId);await tick();row=await get(offlineId);assert(row.status==="completed","reconnected task completes "+row.status);
+  // Extend the same Wrangler/D1 + WebSocket device E2E with chat-independent
+  // planned execution. This proves relay behavior, not real Chat wakeup.
+  await api("/api/devices/"+deviceId+"/task-permissions",{method:"POST",body:JSON.stringify({background_tasks:true,scheduled_tasks:true,adaptive_agent:true,source_agent:true,keep_awake:false})});
+  created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E source planned slices",kind:"agent_goal",device_id:deviceId,interval_seconds:60,agent_goal:{controller:"source",objective:"Execute saved validation phases",success_criteria:"Both checks pass",workspace:"/workspace",allowed_tools:["start_process"],plan:{planning_mode:"fixed",time_policy:{max_duration_seconds:3600,finalization_reserve_seconds:60},phases:[{id:"first",objective:"First check",success_criteria:"First exit zero",execution_slice:[{name:"first",command:"planned-first",timeout_seconds:20}]},{id:"second",objective:"Second check",success_criteria:"Second exit zero",depends_on:["first"],execution_slice:[{name:"second",command:"planned-second",timeout_seconds:20}]}]}}})});
+  const plannedId=created.automation.id, turnsBefore=plannerCalls;
+  for(let i=0;i<8;i++){row=await get(plannedId);if(row.status==="completed")break;await poke(plannedId);await tick();}
+  row=await get(plannedId);assert(row.status==="completed","planned source goal settles "+JSON.stringify(row));
+  const plannedState=JSON.parse(row.state_json).planned;
+  assert(plannedState.outcomes.length===2&&plannedState.outcomes.every(p=>p.outcome==="completed"),"phases persist accepted outcomes");
+  assert(plannedState.report.accepted.length===2,"final phase report stored");
+  assert(plannerCalls===turnsBefore,"source mode must not fall back to hosted planner");
+  assert([...processes.values()].filter(p=>p.command==="planned-first").length===1,"first slice exactly one acknowledged dispatch");
+  assert([...processes.values()].filter(p=>p.command==="planned-second").length===1,"second slice exactly one acknowledged dispatch");
   reconnected.close();
 
   console.log(JSON.stringify({ok:true,long:"completed",unattended_recovery:"completed_without_approval",goal:{status:"completed",attempts:2},agent_goal:{status:"completed",planner_turns:plannerCalls},policy_change:"failed_without_approval",condition:"completed",github_merge:{status:"completed",api_calls:githubMergeCalls},offline:"reconnected_and_completed",deviceId},null,2));

@@ -23,6 +23,7 @@ export type AgentPlannerEnv = {
 export type AgentToolName =
   | "list_directory"
   | "read_file"
+  | "read_binary_file"
   | "get_file_info"
   | "write_file"
   | "edit_block"
@@ -37,10 +38,11 @@ export type AgentPlannerInput = {
   allowedTools: AgentToolName[];
   memory: string;
   observation: string;
+  plannedContext?: unknown;
 };
 
 export type AgentPlannerDecision = {
-  decision: "tool" | "complete" | "pause";
+  decision: "tool" | "complete" | "pause" | "revise_plan" | "phase_result" | "execution_slice" | "needs_reasoning";
   tool: AgentToolName | "none";
   arguments: Record<string, unknown>;
   decisionSummary: string;
@@ -54,7 +56,7 @@ const DECISION_SCHEMA = {
   properties: {
     decision: {
       type: "string",
-      enum: ["tool", "complete", "pause"],
+      enum: ["tool", "complete", "pause", "revise_plan", "phase_result", "execution_slice", "needs_reasoning"],
     },
     tool: {
       type: "string",
@@ -62,6 +64,7 @@ const DECISION_SCHEMA = {
         "none",
         "list_directory",
         "read_file",
+        "read_binary_file",
         "get_file_info",
         "write_file",
         "edit_block",
@@ -102,9 +105,11 @@ Critical rules:
 9. decision_summary must be a short operational summary, not private chain-of-thought.
 10. memory must be a compact factual working memory for the next turn: what was learned, what changed, and what remains. Do not copy large raw outputs.
 11. arguments_json must be a JSON object encoded as a string. For complete or pause, use "{}".
-12. For read_file, prefer bounded line ranges when possible. For list_directory, use shallow depth unless more is necessary.
+12. For read_file, prefer bounded line ranges when possible. For read_binary_file, keep chunks bounded and reuse the returned file_revision as expected_revision on every later chunk; if the revision changes, restart the read instead of combining versions. For list_directory, use shallow depth unless more is necessary.
 13. For edit_block, use exact old/new strings and expected_replacements. For write_file, avoid replacing an existing file unless the observation makes the intended full contents clear.
 14. For start_process, use background execution only through Remote Arc; provide command and optional cwd only. The orchestrator handles background mode.
+15. When planned_context exists, follow the active phase and frozen policy. revise_plan uses arguments_json {phases, reason, adaptive?}; phase_result uses {outcome, remaining_work?, blocker?} with concrete completion_evidence. execution_slice uses {steps:[{name,command,cwd?,timeout_seconds}]}. needs_reasoning stops when new authority/judgment is needed. These decisions are valid only for planned goals.
+16. Revisions cannot expand tools, quality policy, controller or time authority. Include settled dependencies and choose only valuable verifiable work that fits safe_seconds. Do not invent edits to fill minimum time. Green checkpoints remain in task-owned isolated worktrees; never reset the user's checkout. Repeated failure requires a different strategy or an independent phase.
 `;
 
 const clip = (value: string, max: number) =>
@@ -156,6 +161,7 @@ export async function planAgentTurn(
     allowed_tools: input.allowedTools,
     working_memory: clip(input.memory || "(none yet)", 8000),
     latest_observation: clip(input.observation || "(initial turn)", 28000),
+    ...(input.plannedContext ? { planned_context: input.plannedContext } : {}),
   };
   const userText =
     "Choose the next bounded action for this durable goal.\n\n" +
@@ -178,7 +184,7 @@ export async function planAgentTurn(
         model,
         store: false,
         reasoning: { effort: "medium" },
-        max_output_tokens: 2200,
+        max_output_tokens: input.plannedContext ? 6000 : 2200,
         input: [
           {
             role: "system",
@@ -230,7 +236,7 @@ export async function planAgentTurn(
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userText },
         ],
-        max_tokens: 2200,
+        max_tokens: input.plannedContext ? 6000 : 2200,
         temperature: 0.2,
         response_format: {
           type: "json_schema",
@@ -271,7 +277,7 @@ export async function planAgentTurn(
 }
 
 export function validateAgentDecision(raw: RawDecision, allowedTools: AgentToolName[]): AgentPlannerDecision {
-  if (!["tool", "complete", "pause"].includes(String(raw.decision))) {
+  if (!["tool", "complete", "pause", "revise_plan", "phase_result", "execution_slice", "needs_reasoning"].includes(String(raw.decision))) {
     throw new Error("Agent planner returned an invalid decision.");
   }
 
@@ -284,6 +290,7 @@ export function validateAgentDecision(raw: RawDecision, allowedTools: AgentToolN
   }
 
   let args: Record<string, unknown> = {};
+  if (String(raw.arguments_json || "{}").length > 250000) throw new Error("Decision arguments exceed bounded payload budget.");
   try {
     const parsed = JSON.parse(String(raw.arguments_json || "{}"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {

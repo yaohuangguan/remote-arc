@@ -165,7 +165,8 @@ function cleanupManagedProcesses() {
   }
 }
 
-export async function startBackgroundProcess(command: string, cwd?: string) {
+export async function startBackgroundProcess(command: string, cwd?: string, maxDurationSeconds?: number) {
+  if (maxDurationSeconds !== undefined && (!Number.isInteger(maxDurationSeconds) || maxDurationSeconds < 1 || maxDurationSeconds > 7 * 86400)) throw new Error("Invalid managed process duration.");
   cleanupManagedProcesses();
   if (managedProcesses.size >= MAX_MANAGED_PROCESSES) {
     throw new Error(
@@ -195,6 +196,11 @@ export async function startBackgroundProcess(command: string, cwd?: string) {
     stderr: "",
   };
   managedProcesses.set(id, item);
+  const deadlineTimer = maxDurationSeconds === undefined ? undefined : setTimeout(() => {
+    item.stderr = appendCapped(item.stderr, "\nRemote Arc: authorized process time budget exhausted.");
+    void terminateTree(child);
+  }, maxDurationSeconds * 1000);
+  deadlineTimer?.unref();
 
   child.stdout?.on("data", (chunk) => {
     item.stdout = appendCapped(item.stdout, chunk);
@@ -203,10 +209,12 @@ export async function startBackgroundProcess(command: string, cwd?: string) {
     item.stderr = appendCapped(item.stderr, chunk);
   });
   child.once("error", (error) => {
+    clearTimeout(deadlineTimer);
     item.stderr = appendCapped(item.stderr, "\n" + error.message);
     item.endedAt = Date.now();
   });
   child.once("close", (code, signal) => {
+    clearTimeout(deadlineTimer);
     item.exitCode = code;
     item.signal = signal;
     item.endedAt = Date.now();

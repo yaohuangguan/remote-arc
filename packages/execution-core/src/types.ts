@@ -4,6 +4,7 @@ export type ToolName =
   | "list_directory"
   | "browse_directories"
   | "read_file"
+  | "read_binary_file"
   | "get_file_info"
   | "list_processes"
   | "write_file"

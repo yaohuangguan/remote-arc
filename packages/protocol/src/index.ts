@@ -18,6 +18,7 @@ export type AgentHelloMessage = {
 
 export type DeviceExecutionPolicy = {
   workspaceRoots?: string[];
+  taskWorkspaceRoot?: string;
   protectSensitivePaths?: boolean;
   sensitivePaths?: string[];
   sensitiveAllowPaths?: string[];
@@ -43,3 +44,36 @@ export type RelayToAgentMessage = AgentCallMessage;
 export type AgentToRelayMessage = AgentHelloMessage | AgentResultMessage;
 
 export const DEFAULT_RELAY_URL = "wss://remotearc.app";
+
+
+export type AccountPlan = "free" | "plus";
+
+export type AccountFeature =
+  | "binary_read"
+  | "durable_tasks"
+  | "scheduled_tasks"
+  | "planned_agent_goals"
+  | "keep_awake";
+
+export const ACCOUNT_PLAN_FEATURES: Record<AccountPlan, readonly AccountFeature[]> = {
+  free: [],
+  plus: [
+    "binary_read",
+    "durable_tasks",
+    "scheduled_tasks",
+    "planned_agent_goals",
+    "keep_awake",
+  ],
+};
+
+export const ACCOUNT_PLAN_LABELS: Record<AccountPlan, string> = {
+  free: "Free",
+  plus: "Plus",
+};
+
+export function accountPlanHasFeature(
+  plan: AccountPlan,
+  feature: AccountFeature,
+) {
+  return ACCOUNT_PLAN_FEATURES[plan].includes(feature);
+}

@@ -1,6 +1,7 @@
 import { HeroHeadline, LandingContent } from "./landing-content.js";
 import type { UseCaseSlug } from "./use-cases.js";
 import { TaskResults, taskNeedsAgent, taskNeedsAttention, taskProgress } from "./dashboard-task-view.js";
+import { newPlannedDraft, buildPlannedContract } from "./planned-goal-form.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider, useI18n } from "./i18n.js";
@@ -10,6 +11,7 @@ import "./styles.css";
 import "./dashboard.css";
 
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
+const PlannedGoalEditor = React.lazy(() => import("./planned-goal-view.js").then(module => ({ default: module.PlannedGoalEditor })));
 
 const Documentation = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.Documentation })));
 const McpReference = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.McpReference })));
@@ -24,6 +26,7 @@ type User = {
   name: string | null;
   avatarUrl: string | null;
   role: "user" | "admin";
+  plan: "free" | "plus";
   isAdmin: boolean;
 };
 
@@ -131,6 +134,10 @@ type ProductStatus = {
   onlineDevices: number;
   recentActivity: AuditEvent[];
   usage: MonthlyUsage;
+  entitlements: {
+    plan: "free" | "plus";
+    features: string[];
+  };
 };
 
 type SecurityGrant = {
@@ -208,7 +215,7 @@ type MonitorState = {
 
 type AutomationKind = "long_task" | "condition_watch" | "schedule_watch" | "goal_loop";
 type AutomationCreateKind = AutomationKind | "agent_goal";
-type AgentGoalTool = "list_directory" | "read_file" | "get_file_info" | "write_file" | "edit_block" | "start_process";
+type AgentGoalTool = "list_directory" | "read_file" | "read_binary_file" | "get_file_info" | "write_file" | "edit_block" | "start_process";
 type AutomationStatus =
   | "waiting" | "running" | "waiting_for_device" | "waiting_for_event"
   | "paused" | "completed" | "failed"
@@ -294,6 +301,7 @@ const dashboardTabFromPath = (pathname: string): DashboardTab =>
 
 const DEVICE_TOOL_CATALOG = [
   "read_file",
+  "read_binary_file",
   "write_file",
   "list_directory",
   "get_file_info",
@@ -309,6 +317,7 @@ const DEVICE_TOOL_CATALOG = [
 const SAFE_DEVICE_TOOLS = [
   "list_directory",
   "read_file",
+  "read_binary_file",
   "get_file_info",
   "list_processes",
 ] as const;
@@ -2543,7 +2552,7 @@ function PricingPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const startHref = user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/google?return_to=/overview";
   const usageHref = user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/google?return_to=/settings";
-  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><PricingContent startHref={startHref} usageHref={usageHref} signedIn={Boolean(user)} /></React.Suspense></PublicLayout>;
+  return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><PricingContent startHref={startHref} usageHref={usageHref} signedIn={Boolean(user)} currentPlan={user?.plan || null} /></React.Suspense></PublicLayout>;
 }
 
 const blogPosts = [
@@ -3082,6 +3091,7 @@ function Dashboard({
   signOut: () => Promise<void>;
 }) {
   const { tr, locale, setLocale } = useI18n();
+  const hasPlus = user.plan === "plus" || user.isAdmin;
   const [showAdd, setShowAdd] = useState(false);
   const [deviceQuery, setDeviceQuery] = useState("");
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
@@ -3092,12 +3102,13 @@ function Dashboard({
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [automationLoading, setAutomationLoading] = useState(false);
   const [automationLoadError, setAutomationLoadError] = useState(false);
-  const [automationQuery, setAutomationQuery] = useState("");
+  const [automationQuery, setAutomationQuery] = useState(() => new URLSearchParams(location.search).get("task") || "");
   const [automationFilter, setAutomationFilter] = useState<"all" | "active" | "attention" | "finished">("all");
   const [deviceTaskBusy, setDeviceTaskBusy] = useState<string | null>(null);
   const [automationBusy, setAutomationBusy] = useState<string | null>(null);
   const [showAutomationCreate, setShowAutomationCreate] = useState(false);
   const [createdWebhook, setCreatedWebhook] = useState<string | null>(null);
+  const [plannedDraft, setPlannedDraft] = useState(newPlannedDraft);
   const [automationDraft, setAutomationDraft] = useState<AutomationDraft>({
     name: "",
     kind: "long_task",
@@ -3343,6 +3354,14 @@ function Dashboard({
       return;
     }
 
+    let plannedContract: ReturnType<typeof buildPlannedContract> | undefined;
+    if (isAgentGoal && plannedDraft.enabled) {
+      try { plannedContract = buildPlannedContract(plannedDraft); }
+      catch (error) {
+        await showNotice(tr("Plan details required", "计划信息不完整"), String(error));
+        return;
+      }
+    }
     const intervalMinutes = Number(automationDraft.interval_minutes || "5");
     const scheduleMinutes = Number(automationDraft.schedule_minutes || "60");
     const maxRunsRaw = automationDraft.max_runs.trim();
@@ -3377,6 +3396,8 @@ function Dashboard({
           Math.max(1, Math.round(Number(automationDraft.agent_max_iterations || "30"))),
         ),
         allowed_tools: automationDraft.agent_allowed_tools,
+        ...(plannedContract ? { plan: plannedContract } : {}),
+        ...(automationDraft.agent_controller === "source" ? { source_capabilities: { durable_context: true, resume_on_next_turn: true, autonomous_event_wakeup: false } } : {}),
       };
       const start = automationDraft.agent_start_at ? new Date(automationDraft.agent_start_at).toISOString() : undefined;
       const repeat = Number(automationDraft.agent_repeat_minutes);
@@ -3459,6 +3480,7 @@ function Dashboard({
       }
       setCreatedWebhook(payload.webhook?.url || null);
       setShowAutomationCreate(false);
+      setPlannedDraft(newPlannedDraft());
       setAutomationDraft((current) => ({
         ...current,
         name: "",
@@ -4102,7 +4124,7 @@ function Dashboard({
       : filter === "finished" ? automationTerminal(item.status)
       : !automationTerminal(item.status) && item.status !== "paused");
   const visibleAutomations = automations.filter((item) => matchesTaskFilter(item, automationFilter))
-    .filter((item) => !automationQuery.trim() || [item.name, deviceNameById.get(item.device_id || ""), automationKindLabel(automationDisplayKind(item))]
+    .filter((item) => !automationQuery.trim() || [item.id, item.name, deviceNameById.get(item.device_id || ""), automationKindLabel(automationDisplayKind(item))]
       .some((value) => value?.toLowerCase().includes(automationQuery.trim().toLowerCase())))
     .sort((a, b) => Number(taskNeedsAttention(b)) - Number(taskNeedsAttention(a)));
   const hasAttention = automationAttentionCount > 0 || devices.some((device) => device.status === "offline") || usagePct >= 80;
@@ -4156,7 +4178,7 @@ function Dashboard({
               </div>
               <div className="overviewActions">
                 <button className="ghostButton" onClick={() => setShowAdd(true)}>+ {tr("Add device", "添加设备")}</button>
-                <button className="addButton goldButton" onClick={() => { navigateTab("automations"); setShowAutomationCreate(true); }}>+ {tr("New task", "新建任务")}</button>
+                <button className="addButton goldButton" onClick={() => { if (!hasPlus) { location.href = MARKETING_ORIGIN + "/pricing"; return; } navigateTab("automations"); setShowAutomationCreate(true); }}>{hasPlus ? "+ " + tr("New task", "新建任务") : tr("Plus tasks", "Plus 任务")}</button>
               </div>
             </section>
             <section className="overviewStatusGrid">
@@ -4386,7 +4408,9 @@ function Dashboard({
                           const enabled = device.allowed_tools == null ? (device.status === "online" ? advertisedTools.includes(tool) : true) : device.allowed_tools.includes(tool);
                           const advertised = device.status === "online" ? advertisedTools.includes(tool) : true;
                           const description =
-                            tool === "undo_last_change"
+                            tool === "read_binary_file"
+                              ? tr("Plus capability: read bounded binary byte ranges. This device switch is still required in addition to the account plan.", "Plus 能力：读取有界的二进制字节区间。除账户套餐外，这个设备开关仍必须开启。")
+                              : tool === "undo_last_change"
                               ? tr("AI permission: lets the connected AI invoke the newest Local Undo snapshot. Snapshot creation is controlled separately under Recovery below.", "AI 权限：允许已连接的 AI 调用最新一条 Local Undo 快照。是否创建快照由下方 Recovery 中的 Local Undo 单独控制。")
                               : tool === "start_process"
                                 ? tr("Run shell commands on this computer.", "在这台电脑上执行 Shell 命令。")
@@ -4784,8 +4808,8 @@ function Dashboard({
                 <span className="eyebrow">{tr("TASKS", "任务")}</span>
                 <h1>{tr("Tasks", "任务")}</h1>
                 <p>{tr(
-                  "Track long-running work, schedules and Agent Goals in one place.",
-                  "在这里管理长任务、定时任务与 Agent 目标，并查看进展和结果。",
+                  "Ask your AI to create ongoing work in chat. Track, inspect and control those same tasks here.",
+                  "在 AI 聊天里提出持续任务，AI 会在授权范围内创建并保存。在这里查看和管理同一条任务。",
                 )}</p>
               </div>
               <div className="automationHeaderActions">
@@ -4793,16 +4817,31 @@ function Dashboard({
                   {automationLoading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}
                 </button>
                 <button
-                  className="addButton"
+                  className="ghostButton"
                   onClick={() => {
+                    if (!hasPlus) { location.href = MARKETING_ORIGIN + "/pricing"; return; }
                     setCreatedWebhook(null);
                     setShowAutomationCreate((value) => !value);
                   }}
                 >
-                  {showAutomationCreate ? tr("Close", "关闭") : "+ " + tr("New task", "新建任务")}
+                  {showAutomationCreate ? tr("Close", "关闭") : hasPlus ? "+ " + tr("Create manually", "手动创建") : tr("Plus · create task", "Plus · 创建任务")}
                 </button>
               </div>
             </section>
+
+            {!hasPlus && (
+              <aside className="automationPlanNotice">
+                <div>
+                  <span className="eyebrow">REMOTE ARC PLUS</span>
+                  <strong>{tr("24/7-capable durable work lives in Plus.", "支持 24/7 持续编排的持久任务属于 Plus。")}</strong>
+                  <p>{tr(
+                    "Plus enables overnight and long Tasks, schedules, planned Agent Goals, keep-awake on supported devices, and binary-file reads. Your device permissions still remain the final execution boundary.",
+                    "Plus 提供隔夜与长任务、定时任务、计划模式 Agent Goal、受支持设备的保持唤醒，以及二进制文件读取；设备权限仍然是最终执行边界。",
+                  )}</p>
+                </div>
+                <a className="ghostButton" href={MARKETING_ORIGIN + "/pricing"}>{tr("Compare Free & Plus", "对比 Free 与 Plus")} →</a>
+              </aside>
+            )}
 
             <section className="automationStats">
               <article>
@@ -4849,12 +4888,12 @@ function Dashboard({
               <section className="automationCreatePanel">
                 <div className="automationCreateIntro">
                   <div>
-                    <span className="eyebrow">{tr("NEW AUTOMATION", "新建自动化")}</span>
-                    <h2>{tr("Persistent execution", "持久执行")}</h2>
+                    <span className="eyebrow">{tr("OPTIONAL · MANUAL CREATION", "可选 · 手动创建")}</span>
+                    <h2>{tr("Create a persistent task", "创建持久任务")}</h2>
                   </div>
                   <p>{tr(
-                    "The plan is frozen when you create it. Long-running work recovers automatically from disconnects and lost local process handles. If you later change the device security policy, Remote Arc stops the unattended task rather than waiting for approval or silently crossing the new boundary.",
-                    "创建后执行计划会被冻结。长任务遇到断线或本地进程句柄丢失时会自动恢复；如果之后你主动修改设备安全策略，Remote Arc 会停止该无人值守任务，而不是等待人工批准，也不会静默跨过新的权限边界。",
+                    "You can ask your connected AI to create this task instead. This form is optional. Tool, time and quality authority stay bounded; an Agent Goal can revise its phases within those limits. Disconnects preserve progress, unknown effects need inspection, and changing device security policy stops affected work.",
+                    "也可以让已连接的 AI 从聊天中创建，不需要再填写这个表单。工具、时间和质量权限保持有界，Agent Goal 可在边界内调整阶段。断线会保留进度，未知执行结果需要先检查，设备安全策略变化会停止受影响的任务。",
                   )}</p>
                 </div>
 
@@ -4994,7 +5033,8 @@ function Dashboard({
                         <div>
                           {([
                             ["list_directory", tr("List folders", "列目录")],
-                            ["read_file", tr("Read files", "读文件")],
+                            ["read_file", tr("Read text files", "读取文本文件")],
+                            ["read_binary_file", tr("Read binary chunks · Plus", "读取二进制分块 · Plus")],
                             ["get_file_info", tr("File metadata", "文件信息")],
                             ["edit_block", tr("Edit existing blocks", "编辑现有代码块")],
                             ["write_file", tr("Write / create files", "写入 / 创建文件")],
@@ -5031,12 +5071,13 @@ function Dashboard({
                           <option value="hosted">{tr("Remote Arc hosted planner", "Remote Arc 托管 Planner")}</option>
                           <option value="source">{tr("Source AI client", "源 AI 客户端")}</option>
                         </select>
-                        <small>{tr("Source mode needs an AI host that can continue the goal or receive task events. It never silently switches models.", "源模式需要能够持续推进目标或接收任务事件的 AI 宿主，不会自动替换模型。")}</small>
+                        <small>{tr("Source mode saves context for the next chat turn. Saved command slices continue locally; new reasoning waits for the AI host. Automatic wakeup is not guaranteed. The controller never changes silently.", "源模式保存上下文供下一轮聊天续接。已保存的命令步骤继续执行，新判断等待 AI 宿主。自动唤醒不作保证，控制器不会悄悄替换。")}</small>
                       </label>
                       <label className="automationField">
                         <span>{tr("Start at (optional)", "启动时间（可选）")}</span>
                         <input type="datetime-local" value={automationDraft.agent_start_at} onChange={event => setAutomationDraft(current => ({ ...current, agent_start_at: event.target.value }))} />
                       </label>
+                      <React.Suspense fallback={<p role="status">{tr("Loading plan controls…", "正在加载计划控件…")}</p>}><PlannedGoalEditor value={plannedDraft} onChange={setPlannedDraft} /></React.Suspense>
                       <label className="automationField">
                         <span>{tr("Repeat after completion (minutes, optional)", "完成后重复间隔（分钟，可选）")}</span>
                         <input type="number" min="1" max="1440" value={automationDraft.agent_repeat_minutes} onChange={event => setAutomationDraft(current => ({ ...current, agent_repeat_minutes: event.target.value }))} />
@@ -5096,7 +5137,10 @@ function Dashboard({
                           placeholder="pnpm typecheck && pnpm test"
                           onChange={(event) => setAutomationDraft((current) => ({ ...current, agent_verify_command: event.target.value }))}
                         />
-                        <small>{tr(
+                        <small>{plannedDraft.enabled ? tr(
+                          "Each phase must pass this check before acceptance. Deadline finalization records failed or unavailable checks in the report.",
+                          "每个阶段通过此检查后才能接受。到期收尾时，报告会记录未通过或无法执行的检查。",
+                        ) : tr(
                           "When provided, the AI cannot mark the goal complete until this command exits 0.",
                           "填写后，AI 不能仅凭自己判断完成；必须等这条命令退出码为 0。",
                         )}</small>
@@ -5249,8 +5293,8 @@ function Dashboard({
                   <div>
                     <strong>{tr("Recovery policy", "恢复策略")}</strong>
                     <span>{tr(
-                      "If the local agent restarts and loses a process handle, Remote Arc asks for approval before rerunning it to avoid duplicate side effects.",
-                      "如果本地 Agent 重启导致进程句柄丢失，Remote Arc 会先要求确认再重跑，避免重复副作用。",
+                      "Fixed tasks use their saved restart/fail policy. Agent Goals preserve unknown outcomes for inspection; they do not blindly replay a lost action.",
+                      "固定任务遵循保存的 restart/fail 策略。Agent Goal 保存未知结果供检查，不会盲目重放丢失的动作。",
                     )}</span>
                   </div>
                   <button
@@ -5274,7 +5318,7 @@ function Dashboard({
               </div>
 
               <div className="taskToolbar">
-                <div className="deviceSearch"><span aria-hidden="true">⌕</span><input aria-label={tr("Search tasks", "搜索任务")} placeholder={tr("Search tasks or devices", "搜索任务或设备")} value={automationQuery} onChange={(event) => setAutomationQuery(event.target.value)} /></div>
+                <div className="deviceSearch"><span aria-hidden="true">⌕</span><input aria-label={tr("Search tasks", "搜索任务")} placeholder={tr("Search tasks, devices or task ID", "搜索任务、设备或任务 ID")} value={automationQuery} onChange={(event) => setAutomationQuery(event.target.value)} /></div>
                 <div className="deviceFilters" role="group" aria-label={tr("Task status filter", "任务状态筛选")}>
                   {(["all", "active", "attention", "finished"] as const).map((filter) => <button key={filter} aria-pressed={automationFilter === filter} className={automationFilter === filter ? "active" : ""} onClick={() => setAutomationFilter(filter)}>{filter === "all" ? tr("All", "全部") : filter === "active" ? tr("Active", "活动") : filter === "attention" ? tr("Needs attention", "待处理") : tr("Finished", "已结束")}<span>{automations.filter((item) => matchesTaskFilter(item, filter)).length}</span></button>)}
                 </div>
@@ -5321,7 +5365,9 @@ function Dashboard({
                         )}
                       </div>
 
-                      <TaskResults task={automation} />
+                      <TaskResults task={automation} referenceControl={<CopyButton label={tr("Copy chat reference", "复制聊天引用")} value={taskNeedsAgent(automation)
+                        ? tr(`Continue Remote Arc task ${automation.id} from its latest saved checkpoint.`, `请从最新保存的检查点继续 Remote Arc 任务 ${automation.id}。`)
+                        : tr(`Review Remote Arc task ${automation.id} using its latest saved checkpoint.`, `请读取最新保存的检查点，查看 Remote Arc 任务 ${automation.id} 的进展。`)} />} />
                     </article>
                   );
                 })}
@@ -5333,7 +5379,7 @@ function Dashboard({
                       "Create one here, or ask an MCP-connected AI to create a long task, watch, schedule, or goal loop.",
                       "可以在这里创建，也可以让已连接 MCP 的 AI 创建长任务、监听、定时任务或目标循环。",
                     )}</span>
-                    <button onClick={() => setShowAutomationCreate(true)}>+ {tr("New task", "新建任务")}</button>
+                    <button onClick={() => { if (!hasPlus) { location.href = MARKETING_ORIGIN + "/pricing"; return; } setShowAutomationCreate(true); }}>{hasPlus ? "+ " + tr("New task", "新建任务") : tr("See Plus", "查看 Plus")}</button>
                   </div>
                 )}
                 {!!automations.length && !visibleAutomations.length && <div className="automationEmpty"><strong>{tr("No matching tasks", "没有匹配任务")}</strong><span>{tr("Try another search or clear the filters.", "尝试其他搜索词，或清除筛选。")}</span><button onClick={() => { setAutomationQuery(""); setAutomationFilter("all"); }}>{tr("Clear filters", "清除筛选")}</button></div>}
@@ -5723,7 +5769,7 @@ function Dashboard({
             <section className="settingsGrid">
               <article className="settingsCard"><div><h2>{tr("Appearance", "外观")}</h2><p>{tr("Choose Light, Dark or System. Your preference is saved in this browser.", "选择浅色、深色或跟随系统；偏好会保存在当前浏览器。")}</p></div><ThemeSwitcher /></article>
               <article className="settingsCard"><div><h2>{tr("Language", "语言")}</h2><p>{tr("Changes apply immediately and are saved in this browser.", "修改后立即生效，并保存在当前浏览器。")}</p></div><div className="languageSetting"><button className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>English</button><button className={locale === "zh" ? "active" : ""} onClick={() => setLocale("zh")}>中文</button></div></article>
-              <article className="settingsCard"><div><h2>{tr("Account & profile", "账号与个人信息")}</h2><p>{user.name || tr("Remote Arc user", "Remote Arc 用户")} · {user.email}</p></div><button className="ghostButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button></article><article className="settingsCard"><div><h2>{tr("MCP connection", "MCP 连接")}</h2><p>{tr("Manage per-device tool access from Devices. Disabled tools are enforced by the relay.", "在设备页管理每台电脑的工具权限；关闭的工具会由 Relay 强制拦截。")}</p><code>{mcpEndpoint}</code></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button></article><article className="settingsCard"><div><h2>{tr("Account allowance", "账户额度")}</h2><p>{usage?.unlimited ? tr("Administrator account with unlimited hosted usage.", "管理员账户，托管调用无限额。") : tr("Your account uses the free monthly hosted allowance. Paid top-ups are not available yet.", "账户使用每月免费托管额度，目前尚未开放付费充值。")}</p></div><div className="planValue">{usage?.unlimited ? tr("Unlimited", "无限") : `${usage?.used ?? 0} / ${usageLimitLabel}`}</div></article>
+              <article className="settingsCard"><div><h2>{tr("Account & profile", "账号与个人信息")}</h2><p>{user.name || tr("Remote Arc user", "Remote Arc 用户")} · {user.email}</p></div><button className="ghostButton" onClick={() => void signOut()}>{tr("Sign out", "退出登录")}</button></article><article className="settingsCard"><div><h2>{tr("MCP connection", "MCP 连接")}</h2><p>{tr("Manage per-device tool access from Devices. Disabled tools are enforced by the relay.", "在设备页管理每台电脑的工具权限；关闭的工具会由 Relay 强制拦截。")}</p><code>{mcpEndpoint}</code></div><button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Manage devices", "管理设备")}</button></article><article className="settingsCard"><div><h2>{tr("Plan & allowance", "套餐与额度")}</h2><p>{hasPlus ? tr("Remote Arc Plus enables binary reads, durable/overnight Tasks, schedules, planned Agent Goals and supported keep-awake.", "Remote Arc Plus 已启用二进制读取、持久/隔夜任务、定时任务、计划模式 Agent Goal 与受支持的保持唤醒。") : tr("Remote Arc Free includes core remote tools. Plus capabilities are enforced by the relay, not only hidden in the UI.", "Remote Arc Free 包含核心远程工具；Plus 能力由 Relay 强制执行，不只是界面隐藏。")}</p></div><div><div className="planValue">{hasPlus ? "Plus" : "Free"} · {usage?.unlimited ? tr("Unlimited", "无限") : `${usage?.used ?? 0} / ${usageLimitLabel}`}</div>{!hasPlus && <a className="pricingUsageLink" href={MARKETING_ORIGIN + "/pricing"}>{tr("Compare plans", "对比套餐")} →</a>}</div></article>
               <article className="settingsCard"><div><h2>{tr("Plans & capacity", "方案与容量")}</h2><p>{tr("Review the current allowance, how calls are counted and the support path for capacity needs.", "了解当前额度、调用计数方式和更多容量的咨询渠道。")}</p></div><a className="ghostButton" href={MARKETING_ORIGIN + "/pricing"}>{tr("View pricing", "查看价格")}</a></article>
             </section>
           </>
