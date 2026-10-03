@@ -205,12 +205,21 @@ try {
     }
   })});
   const agentId=created.automation.id;
-  await tick(); row=await get(agentId); assert(row.status==="running","agent starts first command "+row.status);
-  await poke(agentId); await tick(); row=await get(agentId); assert(row.status==="running","agent adapts after failed test "+row.status);
-  await poke(agentId); await tick(); row=await get(agentId); assert(row.status==="running","agent starts deterministic verification "+row.status);
-  await poke(agentId); await tick(); row=await get(agentId);
-  assert(row.status==="completed","agent goal completes "+JSON.stringify(row));
+  const agentStatuses=[];
+  for(let i=0;i<12;i++){
+    await tick();
+    row=await get(agentId);
+    agentStatuses.push(row.status);
+    if(row.status==="completed")break;
+    assert(!["failed","cancelled","expired"].includes(row.status),"agent goal entered terminal failure "+JSON.stringify(row));
+    await poke(agentId);
+  }
+  assert(row.status==="completed","agent goal completes after bounded scheduler progress "+JSON.stringify({row,agentStatuses,plannerCalls}));
   assert(plannerCalls===6,"agent planner should rethink across six turns, got "+plannerCalls);
+  const startedCommands=Array.from(processes.values()).map(proc=>proc.command);
+  assert(startedCommands.includes("agent-test-1"),"agent must run the first focused test");
+  assert(startedCommands.includes("agent-test-2"),"agent must adapt and run the second focused test");
+  assert(startedCommands.includes("verify-agent"),"agent must run deterministic final verification");
   const meteredStatus=await api("/api/status");
   assert(meteredStatus.plusUsage?.planner_turns===plannerCalls,"Hosted planner turns must be metered exactly once");
 
