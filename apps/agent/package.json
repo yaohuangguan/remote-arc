@@ -12,7 +12,7 @@
     "@remotearc/execution-core": "workspace:*",
     "@remotearc/protocol": "workspace:*",
     "ws": "^8.18.3",
-    "dotenv": "^17.2.3"
+    "dotenv": "^18.0.4"
   },
   "devDependencies": {
     "@types/node": "^24.13.6",
