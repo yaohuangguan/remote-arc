@@ -17,6 +17,7 @@ export type SessionUser = {
   name: string | null;
   avatarUrl: string | null;
   role: "user" | "admin";
+  plan: "free" | "plus";
   isAdmin: boolean;
 };
 
@@ -102,7 +103,7 @@ export async function getSessionUser(
 
   const tokenHash = await sha256Hex(token);
   const row = await env.DB.prepare(
-    `SELECT u.id, u.email, u.name, u.avatar_url, u.role
+    `SELECT u.id, u.email, u.name, u.avatar_url, u.role, u.plan
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ?1 AND s.expires_at > ?2`,
@@ -114,6 +115,7 @@ export async function getSessionUser(
       name: string | null;
       avatar_url: string | null;
       role: "user" | "admin";
+      plan: "free" | "plus" | null;
     }>();
 
   if (!row) return null;
@@ -124,6 +126,7 @@ export async function getSessionUser(
     name: row.name,
     avatarUrl: row.avatar_url,
     role: row.role || "user",
+    plan: row.role === "admin" ? "plus" : row.plan === "plus" ? "plus" : "free",
     isAdmin: row.role === "admin",
   };
 }

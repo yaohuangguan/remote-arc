@@ -225,6 +225,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
           name: "Preview User",
           avatarUrl: null,
           role: "admin",
+          plan: "plus",
           isAdmin: true,
         },
       });
@@ -263,6 +264,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
             created_at: previewAgo(2 * 3600000),
           },
         ],
+        entitlements: { plan: "plus", features: ["binary_read", "durable_tasks", "scheduled_tasks", "planned_agent_goals", "keep_awake"] },
         usage: {
           month: "2026-09",
           used: 1732,

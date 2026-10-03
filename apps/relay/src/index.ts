@@ -33,6 +33,7 @@ import {
 } from "./device.js";
 import { readAudit } from "./audit.js";
 import { getMonthlyUsage } from "./usage.js";
+import { getAccountEntitlements } from "./entitlements.js";
 import {
   handleAutomationCollection,
   handleAutomationItem,
@@ -283,6 +284,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       const devices = await getDevicesForUser(env, user.id);
       const recent = await readAudit(env, user.id, 8);
       const usage = await getMonthlyUsage(env, user.id);
+      const accountEntitlements = await getAccountEntitlements(env, user.id);
       return Response.json({
         googleConfigured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
         mcpEndpoint: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp",
@@ -291,6 +293,10 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
         onlineDevices: devices.filter((device) => device.status === "online").length,
         recentActivity: recent,
         usage,
+        entitlements: {
+          plan: accountEntitlements.plan,
+          features: [...accountEntitlements.features],
+        },
       });
     }
 

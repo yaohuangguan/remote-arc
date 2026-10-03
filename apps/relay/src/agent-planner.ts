@@ -23,6 +23,7 @@ export type AgentPlannerEnv = {
 export type AgentToolName =
   | "list_directory"
   | "read_file"
+  | "read_binary_file"
   | "get_file_info"
   | "write_file"
   | "edit_block"
@@ -63,6 +64,7 @@ const DECISION_SCHEMA = {
         "none",
         "list_directory",
         "read_file",
+        "read_binary_file",
         "get_file_info",
         "write_file",
         "edit_block",

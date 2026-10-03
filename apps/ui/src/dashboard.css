@@ -273,3 +273,10 @@
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme] .appFrame *, .appFrame *::before, .appFrame *::after { animation: none !important; transition: none !important; }
 }
+
+.automationPlanNotice{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:0 0 22px;padding:22px 24px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.automationPlanNotice>div{max-width:850px}
+.automationPlanNotice strong{display:block;margin:7px 0 8px;font-size:19px;line-height:1.35}
+.automationPlanNotice p{margin:0;font-size:15px;line-height:1.7;color:var(--muted)}
+.automationPlanNotice>a{flex-shrink:0;font-size:15px}
+@media(max-width:720px){.automationPlanNotice{align-items:flex-start;flex-direction:column}.automationPlanNotice>a{width:100%;justify-content:center}}

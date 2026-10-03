@@ -14,6 +14,7 @@ import { getDevicesForUser } from "./device.js";
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
 import { consumeToolCall } from "./usage.js";
+import { requireFeature } from "./entitlements.js";
 import {
   cancelAutomation,
   createAutomation,
@@ -401,6 +402,37 @@ export function createRemoteLinkMcp(
             path,
             ...(offset !== undefined ? { offset } : {}),
             ...(length !== undefined ? { length } : {}),
+          }),
+        );
+      },
+    );
+
+    server.registerTool(
+      "read_binary_file",
+      {
+        title: "Read a binary file chunk on a remote computer",
+        description:
+          "Remote Arc Plus: read a bounded binary-file byte range as base64 with MIME metadata. Use offset/length for chunking; text files should use read_file.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          path: z.string(),
+          offset: z.number().int().min(0).default(0),
+          length: z.number().int().min(1).max(262144).default(65536),
+        }),
+        annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+        _meta: oauthToolMeta("computer:read"),
+      },
+      async ({ device_id, path, offset, length }) => {
+        if (!identity || !hasScope(identity, "computer:read")) {
+          return authRequired(env, "computer:read");
+        }
+        await requireFeature(env, identity.userId, "binary_read");
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "read_binary_file", {
+            path,
+            offset,
+            length,
           }),
         );
       },
@@ -797,6 +829,7 @@ export function createRemoteLinkMcp(
               z.enum([
                 "list_directory",
                 "read_file",
+                "read_binary_file",
                 "get_file_info",
                 "write_file",
                 "edit_block",
@@ -804,7 +837,7 @@ export function createRemoteLinkMcp(
               ]),
             )
             .min(1)
-            .max(6),
+            .max(7),
           controller: z.enum(["hosted", "source"]).default("hosted"),
           plan: plannedGoalSchema.optional(),
           source_capabilities: z.object({ durable_context: z.boolean(), resume_on_next_turn: z.boolean(), autonomous_event_wakeup: z.boolean() }).optional(),
@@ -1014,7 +1047,7 @@ export function createRemoteLinkMcp(
         automation_id: z.string(), expected_revision: z.number().int().min(0),
         idempotency_key: z.string().min(1).max(120),
         decision: z.enum(["tool", "complete", "pause", "revise_plan", "phase_result", "execution_slice", "needs_reasoning"]),
-        tool: z.enum(["none", "list_directory", "read_file", "get_file_info", "write_file", "edit_block", "start_process"]),
+        tool: z.enum(["none", "list_directory", "read_file", "read_binary_file", "get_file_info", "write_file", "edit_block", "start_process"]),
         arguments_json: z.string().max(250000).default("{}"),
         decision_summary: z.string().min(1).max(1200),
         memory: z.string().max(8000).default(""), completion_evidence: z.string().max(3000).default(""),

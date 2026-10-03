@@ -26,6 +26,7 @@ type DeviceStartBody = {
 const DEFAULT_ALLOWED_TOOLS = [
   "list_directory",
   "read_file",
+  "read_binary_file",
   "get_file_info",
   "list_processes",
 ] as const;

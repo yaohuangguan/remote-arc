@@ -25,7 +25,7 @@ try {
     return { ...bind([]), bind(...args) { assert(!args.includes(undefined), sql); return bind(args); } };
   }, async batch(statements) { sqlite.exec("BEGIN"); try { const r = statements.map(s => s.runSync()); sqlite.exec("COMMIT"); return r; } catch (e) { sqlite.exec("ROLLBACK"); throw e; } } };
   const now = new Date().toISOString();
-  sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at) VALUES(?,?,?,?)").run("owner", "owner", "owner@test.invalid", now);
+  sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at,plan) VALUES(?,?,?,?,\'plus\')").run("owner", "owner", "owner@test.invalid", now);
   const permissions = { background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: true, keep_awake: false };
   sqlite.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools,automation_permissions) VALUES(?,?,?,?,?,?,?,?)")
     .run("device", "owner", "Test", "linux", "hash", now, JSON.stringify(["read_file", "write_file", "edit_block", "start_process", "process_status", "process_output", "stop_process"]), JSON.stringify(permissions));

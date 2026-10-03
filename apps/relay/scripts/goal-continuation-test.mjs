@@ -54,7 +54,7 @@ try {
     },
   };
   const now = new Date().toISOString();
-  sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at) VALUES(?,?,?,?)").run("owner", "test-owner", "owner@test.invalid", now);
+  sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at,plan) VALUES(?,?,?,?,\'plus\')").run("owner", "test-owner", "owner@test.invalid", now);
   const tools = ["read_file", "edit_block", "write_file", "start_process", "process_status", "process_output", "stop_process"];
   sqlite.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools) VALUES(?,?,?,?,?,?,?)")
     .run("device", "owner", "Test device", "linux", "fixture-hash", now, JSON.stringify(tools));
@@ -81,6 +81,20 @@ try {
   const get = id => runtime.getAutomation(env, "owner", id);
   const tick = async id => { sqlite.prepare("UPDATE automations SET next_run_at = ? WHERE id = ? AND status != 'waiting_for_event'").run(new Date().toISOString(), id); await runtime.runAutomationTick(env); };
   const decision = (kind, tool = "none", args = {}, evidence = "") => ({ decision: kind, tool, arguments_json: JSON.stringify(args), decision_summary: "Next bounded action", memory: "Factual checkpoint", completion_evidence: evidence });
+
+  const downgradeFenceId = await create("Plan downgrade fence");
+  await runtime.pauseAutomation(env, "owner", downgradeFenceId);
+  sqlite.prepare("UPDATE users SET plan = 'free' WHERE id = 'owner'").run();
+  await assert.rejects(
+    create("Free plan must not create Agent Goals"),
+    /Remote Arc Plus is required for planned agent goals/,
+  );
+  await assert.rejects(
+    runtime.resumeAutomation(env, "owner", downgradeFenceId),
+    /Remote Arc Plus is required for durable tasks/,
+  );
+  sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
+  await runtime.cancelAutomation(env, "owner", downgradeFenceId);
 
   const taskId = await create("Source protocol");
   await tick(taskId);

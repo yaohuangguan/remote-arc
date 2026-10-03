@@ -1,4 +1,5 @@
 import { requireTaskPermission } from "./device-task-policy.js";
+import { isPlanUpgradeRequiredError, requireFeature } from "./entitlements.js";
 import { validateAgentToolArguments } from "./agent-tools.js";
 import {
   getSessionUser,
@@ -250,6 +251,29 @@ const parseJson = <T>(value: string | null, fallback: T): T => {
   }
 };
 
+async function requireAutomationEntitlements(
+  env: AutomationEnv,
+  userId: string,
+  automation: AutomationRow,
+) {
+  await requireFeature(env, userId, "durable_tasks");
+
+  const goal = parseJson<GoalSpec | null>(automation.goal_json, null);
+  if (goal?.type === "agent_goal") {
+    await requireFeature(env, userId, "planned_agent_goals");
+  }
+
+  const trigger = parseJson<TriggerSpec | null>(automation.trigger_json, null);
+  if (trigger?.type === "interval" || trigger?.type === "at") {
+    await requireFeature(env, userId, "scheduled_tasks");
+  }
+
+  const action = parseJson<ActionPlan>(automation.action_json, { steps: [] });
+  if (action.keep_awake) {
+    await requireFeature(env, userId, "keep_awake");
+  }
+}
+
 const parseStringArray = (value: string | null) => {
   const parsed = parseJson<unknown>(value, []);
   return Array.isArray(parsed)
@@ -324,6 +348,7 @@ async function devicePolicySnapshot(
 const AGENT_TOOL_NAMES: AgentToolName[] = [
   "list_directory",
   "read_file",
+  "read_binary_file",
   "get_file_info",
   "write_file",
   "edit_block",
@@ -641,6 +666,18 @@ export async function createAutomation(
     throw new Error("Unsupported automation kind.");
   }
 
+  if (requestedKind === "agent_goal") {
+    await requireFeature(env, userId, "planned_agent_goals");
+  } else {
+    await requireFeature(env, userId, "durable_tasks");
+  }
+  if (requestedKind === "schedule_watch" || input.schedule) {
+    await requireFeature(env, userId, "scheduled_tasks");
+  }
+  if (input.keep_awake) {
+    await requireFeature(env, userId, "keep_awake");
+  }
+
   const storedKind: AutomationKind =
     requestedKind === "agent_goal" ? "goal_loop" : requestedKind;
   const name = (input.name || "").trim();
@@ -871,6 +908,7 @@ export async function resumeAutomation(
   if (isTerminalStatus(automation.status)) {
     throw new Error("Completed, failed, cancelled or expired automations cannot be resumed.");
   }
+  await requireAutomationEntitlements(env, userId, automation);
 
   const state = parseJson<RuntimeState>(automation.state_json, {});
   const trigger = parseJson<TriggerSpec | null>(automation.trigger_json, null);
@@ -1200,7 +1238,7 @@ async function automationCall(env: AutomationEnv, automation: AutomationRow,
   let result: unknown;
   try {
     result = unwrapAutomationResult(await callDevice(env, automationIdentity(automation, env), automation.device_id!, tool, args,
-      ["read_file", "list_directory", "get_file_info", "write_file", "edit_block", "start_process"].includes(tool) ? state.planned?.workspace?.path : undefined));
+      ["read_file", "read_binary_file", "list_directory", "get_file_info", "write_file", "edit_block", "start_process"].includes(tool) ? state.planned?.workspace?.path : undefined));
   } catch (error) {
     if (effect) {
       state.inflight_action = undefined;
@@ -2306,13 +2344,27 @@ export async function runAutomationTick(
     if (!automation) continue;
 
     try {
+      await requireAutomationEntitlements(env, automation.user_id, automation);
       await executeAutomation(env, automation);
       executed += 1;
     } catch (error) {
       if (error instanceof LeaseLostError) continue;
-      failed += 1;
       const message = error instanceof Error ? error.message : String(error);
       const state = parseJson<RuntimeState>(automation.state_json, {});
+      if (isPlanUpgradeRequiredError(error)) {
+        await setTaskKeepAwake(env, automation, 0).catch(() => undefined);
+        await persistRuntime(
+          env,
+          automation,
+          state,
+          "paused",
+          null,
+          message.slice(0, 1000),
+          { event: "paused", summary: "Account plan no longer authorizes this Task." },
+        ).catch((failure) => { if (!(failure instanceof LeaseLostError)) throw failure; });
+        continue;
+      }
+      failed += 1;
       if (error instanceof PlannerTransientError && (state.retry_count || 0) < 5) {
         state.retry_count = (state.retry_count || 0) + 1;
         await persistRuntime(env, automation, state, "waiting", addSeconds(nowIso(), Math.min(3600, 60 * 2 ** (state.retry_count - 1))),
@@ -2331,6 +2383,24 @@ export async function runAutomationTick(
   }
 
   return { checked: due.results.length, executed, failed };
+}
+
+function automationErrorResponse(error: unknown) {
+  if (isPlanUpgradeRequiredError(error)) {
+    return Response.json(
+      {
+        error: error.message,
+        code: error.code,
+        feature: error.feature,
+        required_plan: error.required_plan,
+      },
+      { status: 403 },
+    );
+  }
+  return Response.json(
+    { error: error instanceof Error ? error.message : String(error) },
+    { status: 400 },
+  );
 }
 
 export async function handleAutomationCollection(
@@ -2352,10 +2422,7 @@ export async function handleAutomationCollection(
       const created = await createAutomation(env, user.id, body);
       return Response.json(created, { status: 201 });
     } catch (error) {
-      return Response.json(
-        { error: error instanceof Error ? error.message : String(error) },
-        { status: 400 },
-      );
+      return automationErrorResponse(error);
     }
   }
 
@@ -2396,9 +2463,6 @@ export async function handleAutomationItem(
     }
     return new Response("Method not allowed", { status: 405 });
   } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : String(error) },
-      { status: 400 },
-    );
+    return automationErrorResponse(error);
   }
 }

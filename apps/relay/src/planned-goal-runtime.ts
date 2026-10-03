@@ -44,7 +44,7 @@ export function validatePlannedDecision(decision: AgentPlannerDecision, goal: Ag
   }
   if (["complete", "phase_result"].includes(decision.decision) && !decision.completionEvidence.trim()) throw new Error("Phase result requires factual evidence.");
   if (s?.inspection_required && !["pause", "needs_reasoning"].includes(decision.decision) &&
-    !(decision.decision === "tool" && ["read_file", "list_directory", "get_file_info"].includes(decision.tool))) {
+    !(decision.decision === "tool" && ["read_file", "read_binary_file", "list_directory", "get_file_info"].includes(decision.tool))) {
     throw new Error("Unknown prior effect requires a bounded read-only inspection before new effects or completion.");
   }
   const args = decision.arguments;
@@ -293,7 +293,7 @@ export async function executePlannedGoal(env: AutomationEnv, task: AutomationRow
       return;
     }
     if (decision.tool === "none" || !goal.allowed_tools.includes(decision.tool)) throw new Error("Unapproved planned goal tool.");
-    if (!s.active_phase && !["read_file", "list_directory", "get_file_info"].includes(decision.tool)) throw new Error("Persist an authorized phase before significant execution.");
+    if (!s.active_phase && !["read_file", "read_binary_file", "list_directory", "get_file_info"].includes(decision.tool)) throw new Error("Persist an authorized phase before significant execution.");
     const args: Record<string, unknown> = validateAgentToolArguments(decision.tool, decision.arguments);
     for (const key of ["path", "file_path"]) if (args[key] !== undefined) args[key] = mapPath(String(args[key]));
     b = timeBudget(s, nowIso(), task.expires_at);
@@ -306,7 +306,7 @@ export async function executePlannedGoal(env: AutomationEnv, task: AutomationRow
       s.process_started_at = nowIso(); s.process_timeout_seconds = Number(args.max_duration_seconds);
     }
     const result = await ops.call(decision.tool, args); agent.observation = compact(result, 12000);
-    if (["read_file", "list_directory", "get_file_info"].includes(decision.tool)) s.inspection_required = false;
+    if (["read_file", "read_binary_file", "list_directory", "get_file_info"].includes(decision.tool)) s.inspection_required = false;
     if (decision.tool === "start_process") {
       state.process_id = (result as { process_id?: string })?.process_id;
       if (!state.process_id) {

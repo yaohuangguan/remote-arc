@@ -111,6 +111,79 @@ export async function readTextFile(
   return `[Reading ${end - start} lines from ${location} (total: ${lines.length} lines, ${printableSize(stat.size)})]\n\n${chunk}`;
 }
 
+const BINARY_DEFAULT_BYTES = 64 * 1024;
+const BINARY_MAX_BYTES = 256 * 1024;
+
+function binaryMimeType(targetPath: string) {
+  const extension = path.extname(targetPath).toLowerCase();
+  const known: Record<string, string> = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".pdf": "application/pdf",
+    ".zip": "application/zip",
+    ".gz": "application/gzip",
+    ".wasm": "application/wasm",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  };
+  return known[extension] || "application/octet-stream";
+}
+
+export async function readBinaryFile(
+  targetPath: string,
+  offset = 0,
+  length = BINARY_DEFAULT_BYTES,
+) {
+  const stat = await fs.stat(targetPath);
+  if (!stat.isFile()) throw new Error("Path is not a file: " + targetPath);
+
+  const byteOffset = Number.isFinite(offset) ? Math.max(0, Math.trunc(offset)) : 0;
+  const requested = Number.isFinite(length) ? Math.trunc(length) : BINARY_DEFAULT_BYTES;
+  if (requested <= 0) throw new Error("length must be a positive byte count.");
+  if (requested > BINARY_MAX_BYTES) {
+    throw new Error("read_binary_file length cannot exceed " + BINARY_MAX_BYTES + " bytes.");
+  }
+
+  if (byteOffset >= stat.size) {
+    return {
+      path: targetPath,
+      mime_type: binaryMimeType(targetPath),
+      encoding: "base64",
+      size: stat.size,
+      offset: byteOffset,
+      bytes_read: 0,
+      eof: true,
+      chunk_sha256: crypto.createHash("sha256").update(Buffer.alloc(0)).digest("hex"),
+      data: "",
+    };
+  }
+
+  const toRead = Math.min(requested, stat.size - byteOffset);
+  const handle = await fs.open(targetPath, "r");
+  try {
+    const buffer = Buffer.allocUnsafe(toRead);
+    const result = await handle.read(buffer, 0, toRead, byteOffset);
+    const chunk = buffer.subarray(0, result.bytesRead);
+    return {
+      path: targetPath,
+      mime_type: binaryMimeType(targetPath),
+      encoding: "base64",
+      size: stat.size,
+      offset: byteOffset,
+      bytes_read: result.bytesRead,
+      eof: byteOffset + result.bytesRead >= stat.size,
+      chunk_sha256: crypto.createHash("sha256").update(chunk).digest("hex"),
+      data: chunk.toString("base64"),
+    };
+  } finally {
+    await handle.close();
+  }
+}
+
 export async function getFileInfo(targetPath: string) {
   const stat = await fs.lstat(targetPath);
   return {

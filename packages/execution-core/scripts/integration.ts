@@ -73,6 +73,42 @@ try {
   );
   if (!read.content[0]?.text.includes("alpha")) throw new Error("read_file failed");
 
+  const binaryFile = path.join(project, "sample.bin");
+  await fs.writeFile(binaryFile, Buffer.from([0, 1, 2, 3, 4, 255]));
+  const binary = jsonResult<{
+    encoding: string;
+    size: number;
+    offset: number;
+    bytes_read: number;
+    eof: boolean;
+    data: string;
+  }>(
+    await safe.callTool(
+      "read_binary_file",
+      { path: binaryFile, offset: 1, length: 3 },
+      policy,
+    ),
+  );
+  if (
+    binary.encoding !== "base64" ||
+    binary.size !== 6 ||
+    binary.offset !== 1 ||
+    binary.bytes_read !== 3 ||
+    binary.eof ||
+    Buffer.from(binary.data, "base64").toString("hex") !== "010203"
+  ) {
+    throw new Error("read_binary_file returned an invalid chunk");
+  }
+  let binaryRejectedByTextReader = false;
+  try {
+    await safe.callTool("read_file", { path: binaryFile }, policy);
+  } catch {
+    binaryRejectedByTextReader = true;
+  }
+  if (!binaryRejectedByTextReader) {
+    throw new Error("read_file should keep rejecting binary content");
+  }
+
   const directoryBrowser = jsonResult<{
     path: string;
     directories: Array<{ name: string }>;
@@ -312,6 +348,7 @@ try {
         developer: developerNames.length,
         full: fullNames.length,
         fileOps: "ok",
+        binaryRead: "ok",
         atomicWrite: "ok",
         workspaceScope: "ok",
         sensitivePaths: "ok",
