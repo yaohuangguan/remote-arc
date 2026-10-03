@@ -21,6 +21,7 @@ const SUPPORTED_SCOPES = [
   "computer:read",
   "computer:write",
   "browser:read",
+  "browser:interact",
   "automation:read",
   "automation:write",
   "agent:write",

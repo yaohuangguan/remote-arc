@@ -1,5 +1,5 @@
 const API_ORIGIN = "https://mcp.remotearc.app";
-const TOOLS = [
+const READ_TOOLS = [
   "browser_list_tabs",
   "browser_get_current_tab",
   "browser_read_page",
@@ -7,6 +7,11 @@ const TOOLS = [
   "browser_extract_links",
   "browser_extract_table",
 ];
+const INTERACT_TOOLS = [
+  "browser_click",
+  "browser_fill",
+];
+const TOOLS = [...READ_TOOLS, ...INTERACT_TOOLS];
 
 let socket = null;
 let heartbeat = null;
@@ -55,10 +60,10 @@ async function connectSocket() {
         platform: "browser",
         arch: "chrome",
         hostname: "chrome-extension",
-        agentVersion: "browser-0.1.1",
+        agentVersion: "browser-0.2.0",
       },
       tools: TOOLS,
-      capabilities: ["browser_tab_grant_v1", "browser_multi_tab_v1", "browser_read_only_v1"],
+      capabilities: ["browser_tab_grant_v2", "browser_multi_tab_v1", "browser_interact_v1"],
     }));
 
     clearInterval(heartbeat);
@@ -125,7 +130,7 @@ async function resolveSharedTab(tabId) {
     throw new Error("Tab access was revoked because the page navigated.");
   }
 
-  return tab;
+  return { tab, grant };
 }
 
 async function listSharedTabs() {
@@ -138,10 +143,10 @@ async function listSharedTabs() {
     }
     items.push({
       tabId: grant.tabId,
-      title: tab.title || "",
+      title: tab.title || grant.title || "",
       url: tab.url,
       origin: grant.origin,
-      permissions: ["read"],
+      permissions: grant.permissions || ["read"],
     });
   }
   return { tabs: items };
@@ -150,18 +155,21 @@ async function listSharedTabs() {
 async function executeTool(tool, args) {
   if (tool === "browser_list_tabs") return listSharedTabs();
 
-  const tab = await resolveSharedTab(args.tab_id);
+  const { tab, grant } = await resolveSharedTab(args.tab_id);
 
   if (tool === "browser_get_current_tab") {
     return {
       tabId: tab.id,
       url: tab.url,
       title: tab.title,
-      permissions: ["read"],
+      permissions: grant.permissions || ["read"],
     };
   }
 
   if (!TOOLS.includes(tool)) throw new Error("Unsupported browser tool: " + tool);
+  if (INTERACT_TOOLS.includes(tool) && !grant.permissions?.includes("interact")) {
+    throw new Error("Click/fill is not enabled for this tab. Enable Browser Interact in the Remote Arc Browser popup.");
+  }
 
   const response = await chrome.tabs.sendMessage(tab.id, {
     source: "remote-arc-browser",
@@ -200,6 +208,22 @@ async function grantCurrentTab() {
   await chrome.action.setBadgeText({ tabId: tab.id, text: "AI" });
   await chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: "#76b900" });
   return grant;
+}
+
+async function setTabInteract(tabId, enabled) {
+  const id = Number(tabId);
+  const grant = grants.get(id);
+  if (!grant) throw new Error("Share this tab before enabling Browser Interact.");
+
+  const permissions = new Set(grant.permissions || ["read"]);
+  if (enabled) permissions.add("interact");
+  else permissions.delete("interact");
+  permissions.add("read");
+
+  const updated = { ...grant, permissions: Array.from(permissions) };
+  grants.set(id, updated);
+  await chrome.action.setBadgeText({ tabId: id, text: enabled ? "AI+" : "AI" }).catch(() => undefined);
+  return updated;
 }
 
 async function revokeGrant(tabId) {
@@ -273,9 +297,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "browser-state") return currentState();
     if (message?.type === "start-pairing") return startPairing();
     if (message?.type === "grant-current-tab") return grantCurrentTab();
+    if (message?.type === "set-tab-interact") return setTabInteract(message.tabId, Boolean(message.enabled));
+    if (message?.type === "revoke-tab-id") {
+      await revokeGrant(message.tabId);
+      return { ok: true };
+    }
     if (message?.type === "revoke-tab") {
       const tab = await activeTab();
       if (tab?.id) await revokeGrant(tab.id);
+      return { ok: true };
+    }
+    if (message?.type === "revoke-all-tabs") {
+      await revokeAllGrants();
       return { ok: true };
     }
     if (message?.type === "disconnect-browser") {
