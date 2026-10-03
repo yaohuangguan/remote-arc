@@ -10,6 +10,7 @@ export const publicToolGroups = [
   { en: "Read files and processes", zh: "文件与进程读取", scope: "computer:read", tools: ["list_directory", "read_file", "read_binary_file", "create_file_resource", "revoke_file_resource", "get_file_info", "list_processes"] },
   { en: "Edit files and run commands", zh: "编辑文件与执行命令", scope: "computer:write", tools: ["write_file", "edit_block", "undo_last_change", "start_process", "process_status", "process_output", "stop_process"] },
   { en: "Explicitly shared browser tabs", zh: "明确共享的浏览器标签页", scope: "browser:read", tools: ["browser_list_tabs", "browser_get_current_tab", "browser_read_page", "browser_get_selected_text", "browser_extract_links", "browser_extract_table"] },
+  { en: "Per-tab browser interaction", zh: "按标签页授权浏览器交互", scope: "browser:interact", tools: ["browser_click", "browser_fill"] },
   { en: "Read durable tasks", zh: "读取持久任务", scope: "automation:read", tools: ["list_automations", "get_automation", "get_goal_context"] },
   { en: "Create and manage durable tasks", zh: "创建与管理持久任务", scope: "automation:write", tools: ["create_automation", "manage_automation"] },
   { en: "Adaptive goals and source decisions", zh: "自主目标与源 Agent 决策", scope: "automation:write + agent:write", tools: ["create_agent_goal", "submit_goal_decision"] },
@@ -138,7 +139,7 @@ export function Documentation() {
         </section>
         <section id="docs-browser">
           <h2>{tr("Read the tabs you explicitly share", "读取你明确共享的标签页")}</h2>
-          <p>{tr("The Chrome companion adds read-only page context to the same MCP connection. Share individual tabs, then use their IDs to read text, selections, links or tables. It does not expose generic clicking, navigation or form submission. Browser tools are not currently part of the six-tool adaptive goal action set.", "Chrome Companion 为同一 MCP 连接提供只读页面上下文。逐个共享标签页，再通过 ID 读取正文、选中文字、链接或表格。它不提供通用点击、跳转或提交表单，也不属于当前自主目标的六种动作工具。")}</p>
+          <p>{tr("The Chrome companion adds scoped page context to the same MCP connection. Share as many tabs as you need; Remote Arc has no fixed tab-count cap, and every tab starts read-only. You can separately enable Click & fill for one shared tab. Interaction requires a fresh page snapshot, rejects stale element refs, and blocks recognized password, one-time-code, payment-card and file-picker fields. Browser tools are not currently part of the six-tool adaptive goal action set.", "Chrome Companion 为同一 MCP 连接提供受控页面上下文。可以同时共享任意数量的标签页，Remote Arc 不设置固定数量上限，每个标签页默认只读；需要时再对某一个已共享标签页单独开启 Click & fill。交互必须基于最新页面快照，过期元素引用会被拒绝，并阻止能够通过标准字段类型或 autocomplete 元数据识别出的密码、一次性验证码、支付卡与文件选择字段。浏览器工具目前不属于自主目标的六种动作工具。")}</p>
           <a href="/docs/mcp#chrome-browser">{tr("Install the browser companion", "安装浏览器 Companion")} →</a>
         </section>
         <section id="docs-sandbox">
@@ -217,10 +218,10 @@ export function McpReference() {
         <p>{tr("The deployment needs MCP_EVENT_ENCRYPTION_KEY and a secure MCP_EVENT_EGRESS service binding. Without both, events are not advertised. Callbacks are verified, signed and retried with bounded attempts. There is no historical event replay; task context and the journal remain the recovery source. Actual Chat continuation is a separate acceptance test.", "部署需要 MCP_EVENT_ENCRYPTION_KEY 和安全 MCP_EVENT_EGRESS 服务绑定，缺少任一项便不会声明事件能力。回调经过验证、签名并有界重试；当前不提供历史事件重放，恢复依据是任务上下文与日志。真实 Chat 续接仍需独立验收。")}</p>
         <a href="https://developers.openai.com/plugins/build/mcp-events" target="_blank" rel="noreferrer">{tr("Official MCP Events reference", "官方 MCP Events 参考")} ↗</a>
       </section>
-      <section id="chrome-browser"><h2>{tr("Install the read-only Chrome companion", "安装只读 Chrome Companion")}</h2>
+      <section id="chrome-browser"><h2>{tr("Install the scoped Chrome companion", "安装受控 Chrome Companion")}</h2>
         <p>{tr("Download and unzip the extension. In chrome://extensions, enable Developer mode, choose Load unpacked and select the extracted directory. Link it to the local agent, then explicitly share a tab. This beta is distributed as an unpacked extension, not through the Chrome Web Store.", "下载并解压扩展。在 chrome://extensions 开启 Developer mode，选择 Load unpacked 并选中解压目录。连接本地 Agent 后明确共享标签页。此 Beta 通过未打包扩展分发，未上架 Chrome Web Store。")}</p>
         <p><a href="/downloads/remote-arc-browser.zip" download>{tr("Download Chrome companion (.zip)", "下载 Chrome Companion (.zip)")} ↓</a></p>
-        <p>{tr("Use browser_list_tabs to select tab_id. Page reads return simplified text and element labels, not raw HTML or form values. The extension does not grant general browser control.", "使用 browser_list_tabs 选择 tab_id。页面读取返回简化正文与元素标签，不返回原始 HTML 或表单值；扩展不会授予通用浏览器控制。")}</p>
+        <p>{tr("Use browser_list_tabs to select tab_id when several tabs are shared. browser_read_page returns a snapshotId plus stable refs for that snapshot. browser_click and browser_fill require both that snapshot and an explicit per-tab Click & fill grant; a click invalidates the snapshot and the page must be read again.", "同时共享多个标签页时，用 browser_list_tabs 选择 tab_id。browser_read_page 会返回 snapshotId 和当前快照内的元素 ref；browser_click 与 browser_fill 只有在该标签页明确开启 Click & fill 后才能使用。每次点击都会使当前快照失效，下一次交互前必须重新读取页面。")}</p>
       </section>
       <footer className="articleEndLinks"><a href="/docs">{tr("Product documentation", "产品文档")} →</a><a href="/security-model">{tr("Security model", "安全模型")} →</a></footer>
     </article></div>
