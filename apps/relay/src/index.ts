@@ -1,3 +1,5 @@
+import { handleDeviceTaskSettings } from "./device-task-settings.js";
+import { deliverTaskEvents, handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
 import { DeviceRegistry } from "./registry.js";
 import { renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
 import { createRemoteLinkMcp } from "./mcp.js";
@@ -60,7 +62,7 @@ import {
 
 export { DeviceRegistry };
 
-type Env = {
+type Env = TaskEventEnv & {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   ASSETS: Fetcher;
@@ -182,6 +184,10 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
     ) {
       const canonical = new URL(url.pathname + url.search, env.PUBLIC_ORIGIN);
       return Response.redirect(canonical.toString(), 301);
+    }
+
+    if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/resources") {
+      return Response.redirect(new URL("/docs", url.origin).toString(), 301);
     }
 
     if (url.pathname === "/.well-known/openai-apps-challenge") {
@@ -399,6 +405,10 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return handleDeviceRevoke(request, env);
     }
 
+    if (/^\/api\/devices\/[^/]+\/task-permissions$/.test(url.pathname) && request.method === "POST") {
+      return handleDeviceTaskSettings(request, env);
+    }
+
     if (
       /^\/api\/devices\/[^/]+\/tools$/.test(url.pathname) &&
       request.method === "POST"
@@ -515,6 +525,8 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
         }
       }
 
+      const eventResponse = await handleTaskEventRpc(request, env, validIdentity);
+      if (eventResponse) return eventResponse;
       const handler = createRemoteLinkMcp(env, validIdentity);
       const response = await handler.fetch(request);
 
@@ -639,7 +651,7 @@ export default {
     ctx: ExecutionContext,
   ) {
     if (controller.cron === "* * * * *") {
-      ctx.waitUntil(runAutomationTick(env));
+      ctx.waitUntil(runAutomationTick(env).then(() => deliverTaskEvents(env)));
     }
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(runSyntheticMonitor(env));

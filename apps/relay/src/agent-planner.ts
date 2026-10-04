@@ -1,3 +1,15 @@
+export type RawDecision = {
+    decision?: unknown;
+    tool?: unknown;
+    arguments_json?: unknown;
+    decision_summary?: unknown;
+    memory?: unknown;
+    completion_evidence?: unknown;
+  };
+
+
+export class PlannerTransientError extends Error {}
+
 export type AgentPlannerEnv = {
   OPENAI_API_KEY?: string;
   AGENT_MODEL?: string;
@@ -149,14 +161,6 @@ export async function planAgentTurn(
     "Choose the next bounded action for this durable goal.\n\n" +
     JSON.stringify(userPayload);
 
-  type RawDecision = {
-    decision?: unknown;
-    tool?: unknown;
-    arguments_json?: unknown;
-    decision_summary?: unknown;
-    memory?: unknown;
-    completion_evidence?: unknown;
-  };
 
   let raw: RawDecision;
 
@@ -165,6 +169,7 @@ export async function planAgentTurn(
     const base = (env.AGENT_MODEL_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
     const response = await fetch(base + "/responses", {
       method: "POST",
+      signal: AbortSignal.timeout(90_000),
       headers: {
         authorization: "Bearer " + env.OPENAI_API_KEY,
         "content-type": "application/json",
@@ -193,14 +198,15 @@ export async function planAgentTurn(
           },
         },
       }),
-    });
+    }).catch((error) => { throw new PlannerTransientError("Planner transport failed: " + String(error)); });
 
     const payload = (await response.json().catch(() => ({}))) as {
       error?: { message?: string };
       status?: string;
     };
     if (!response.ok) {
-      throw new Error(
+      const ErrorType = response.status === 429 || response.status >= 500 ? PlannerTransientError : Error;
+      throw new ErrorType(
         "Agent planner request failed: " +
           (payload.error?.message || response.status + " " + response.statusText),
       );
@@ -216,7 +222,8 @@ export async function planAgentTurn(
       throw new Error("Agent planner returned invalid JSON.");
     }
   } else {
-    const result = (await env.AI!.run(
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const result = (await Promise.race([env.AI!.run(
       env.WORKERS_AI_MODEL || "@cf/openai/gpt-oss-120b",
       {
         messages: [
@@ -230,7 +237,7 @@ export async function planAgentTurn(
           json_schema: DECISION_SCHEMA,
         },
       },
-    )) as {
+    ), new Promise((_, reject) => { timeout = setTimeout(() => reject(new PlannerTransientError("Workers AI planner timed out.")), 90_000); })]).catch((error) => { throw new PlannerTransientError("Workers AI transport failed: " + String(error)); }).finally(() => clearTimeout(timeout))) as {
       response?: unknown;
       errors?: Array<{ message?: string }>;
     };
@@ -260,12 +267,16 @@ export async function planAgentTurn(
     }
   }
 
+  return validateAgentDecision(raw, input.allowedTools);
+}
+
+export function validateAgentDecision(raw: RawDecision, allowedTools: AgentToolName[]): AgentPlannerDecision {
   if (!["tool", "complete", "pause"].includes(String(raw.decision))) {
     throw new Error("Agent planner returned an invalid decision.");
   }
 
   const tool = String(raw.tool || "none") as AgentToolName | "none";
-  if (raw.decision === "tool" && !input.allowedTools.includes(tool as AgentToolName)) {
+  if (raw.decision === "tool" && !allowedTools.includes(tool as AgentToolName)) {
     throw new Error("Agent planner selected a tool that is not approved for this goal.");
   }
   if (raw.decision !== "tool" && tool !== "none") {

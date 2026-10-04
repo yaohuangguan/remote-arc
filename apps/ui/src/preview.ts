@@ -45,6 +45,8 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       background_enabled: true,
       background_service: "launchd",
       background_seen_at: previewAgo(18000),
+      automation_permissions: { background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: true, keep_awake: true },
+      keep_awake_available: true,
     },
     {
       id: "preview-win",
@@ -69,10 +71,12 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       background_enabled: false,
       background_service: "schtasks",
       background_seen_at: previewAgo(4 * 3600000),
+      automation_permissions: { background_tasks: true, scheduled_tasks: true, adaptive_agent: false, source_agent: false, keep_awake: false },
+      keep_awake_available: false,
     },
   ];
 
-  const automations = [
+  const baseAutomations = [
     {
       id: "preview-goal",
       user_id: "preview-user",
@@ -121,7 +125,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       name: "Nightly build",
       kind: "schedule_watch",
       status: "waiting_for_device",
-      device_id: "preview-mac",
+      device_id: "preview-win",
       trigger_json: JSON.stringify({ type: "interval", every_seconds: 86400 }),
       action_json: JSON.stringify({ steps: [{ type: "device_command", command: "pnpm build" }] }),
       goal_json: null,
@@ -137,6 +141,29 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       updated_at: previewAgo(20 * 60000),
     },
   ];
+
+  const automations = [...baseAutomations, {
+    ...baseAutomations[0]!,
+    id: "preview-source",
+    name: "Investigate intermittent test failures",
+    kind: "goal_loop",
+    status: "waiting_for_event",
+    goal_json: JSON.stringify({ type: "agent_goal", controller: "source", objective: "Find the cause and verify the fix.", success_criteria: "The previously failing test passes.", allowed_tools: ["read_file", "start_process"] }),
+    state_json: JSON.stringify({ phase: "awaiting_agent", agent: { iteration: 4, last_decision_summary: "Reproduced the failure; inspect the affected module next." } }),
+    run_count: 1,
+    next_run_at: null,
+    updated_at: previewAgo(60000),
+  }, {
+    ...baseAutomations[0]!,
+    id: "preview-completed",
+    name: "Verify release build",
+    status: "completed",
+    goal_json: JSON.stringify({ type: "agent_goal", controller: "hosted" }),
+    state_json: JSON.stringify({ phase: "idle", agent: { iteration: 6, completion_evidence: "Typecheck and integration tests passed. The release build exited with code 0." } }),
+    run_count: 1,
+    next_run_at: null,
+    updated_at: previewAgo(10 * 60000),
+  }];
 
   const json = (value: unknown, status = 200) =>
     Promise.resolve(
@@ -299,6 +326,18 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
 
     if (url.pathname === "/api/devices") return json(devices);
     if (url.pathname === "/api/automations") return json({ automations });
+    const taskId = url.pathname.match(/^\/api\/automations\/([^/]+)$/)?.[1];
+    if (taskId) {
+      const automation = automations.find((item) => item.id === taskId);
+      if (!automation) return json({ error: "not_found" }, 404);
+      return json({ automation, runs: automation.run_count ? [{
+        id: taskId + "-run", attempt: automation.run_count,
+        status: automation.status === "completed" ? "completed" : "running",
+        exit_code: automation.status === "completed" ? 0 : null,
+        output_summary: automation.status === "completed" ? "Typecheck: passed\nIntegration tests: passed\nRelease build: exit 0" : "Latest observation: tests reproduced; task remains in progress.",
+        error: null, started_at: automation.last_run_at || automation.created_at,
+      }] : [] });
+    }
     return json({ ok: true });
   }) as typeof window.fetch;
 }

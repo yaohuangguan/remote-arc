@@ -1,3 +1,4 @@
+import { getGoalContext, submitGoalDecision } from "./source-goals.js";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { getDevicesForUser } from "./device.js";
@@ -653,7 +654,7 @@ export function createRemoteLinkMcp(
       {
         title: "Create a persistent Remote Arc automation",
         description:
-          "Create a durable Remote Arc task that continues after this chat tool call ends. Supports long-running commands, webhook condition watches, recurring schedules, and goal loops that retry until a verification command succeeds.",
+          "Save user-requested ongoing or scheduled work as a durable task; the user can ask in chat and need not fill a Dashboard form. Use ordinary tools for immediate one-off operations. Supports long commands, webhook watches, interval schedules and fixed-plan goal loops; use create_agent_goal when each result may require a different next action.",
         inputSchema: z.object({
           name: z.string().min(1).max(120),
           kind: z.enum([
@@ -662,6 +663,7 @@ export function createRemoteLinkMcp(
             "schedule_watch",
             "goal_loop",
           ]),
+          keep_awake: z.boolean().default(false),
           device_id: z.string().optional(),
           command: z.string().max(4000).optional(),
           cwd: z.string().max(500).optional(),
@@ -768,9 +770,10 @@ export function createRemoteLinkMcp(
       {
         title: "Create a self-directed durable Agent Goal",
         description:
-          "Create a persistent coding/work goal whose hosted planner can inspect tool results, choose a different next action, and continue until the goal is verified, paused, expired, cancelled, or its iteration limit is reached. This is more powerful than a deterministic goal loop and requires the separate agent:write scope.",
+          "Save a user-requested ongoing adaptive goal from chat; no Dashboard form is required. Choose the controller explicitly: source AI uses get_goal_context and submit_goal_decision and needs a continuing host runtime or task events; hosted planner is a separate option (legacy default), not a silent model fallback. Completion needs evidence and configured verification. Device policy, budgets and agent:write scope apply.",
         inputSchema: z.object({
           name: z.string().min(1).max(120),
+          keep_awake: z.boolean().default(false),
           device_id: z.string(),
           objective: z.string().min(1).max(6000),
           success_criteria: z.string().min(1).max(4000),
@@ -790,7 +793,13 @@ export function createRemoteLinkMcp(
             )
             .min(1)
             .max(6),
-          max_iterations: z.number().int().min(1).max(100).default(30),
+          controller: z.enum(["hosted", "source"]).default("hosted"),
+          max_iterations: z.number().int().min(1).max(2000).default(30),
+          schedule: z.object({
+            at: z.string().optional(), every_seconds: z.number().int().min(60).max(86400).optional(),
+            start_at: z.string().optional(),
+          }).optional(),
+          max_runs: z.number().int().min(0).max(10000).optional(),
           interval_seconds: z.number().int().min(60).max(3600).default(60),
           expires_at: z.string().nullable().optional(),
         }),
@@ -819,11 +828,16 @@ export function createRemoteLinkMcp(
         await consume(env, identity);
         const created = await createAutomation(env, identity.userId, {
           name: input.name,
+          keep_awake: input.keep_awake,
           kind: "agent_goal",
           device_id: input.device_id,
           interval_seconds: input.interval_seconds,
           expires_at: input.expires_at,
+          schedule: input.schedule,
+          max_runs: input.max_runs,
           agent_goal: {
+            controller: input.controller,
+            controller_client_id: input.controller === "source" ? identity.clientId : undefined,
             objective: input.objective,
             success_criteria: input.success_criteria,
             workspace: input.workspace,
@@ -839,6 +853,7 @@ export function createRemoteLinkMcp(
                 id: created.automation.id,
                 name: created.automation.name,
                 kind: "agent_goal",
+                controller: input.controller,
                 stored_kind: created.automation.kind,
                 status: created.automation.status,
                 device_id: created.automation.device_id,
@@ -847,7 +862,9 @@ export function createRemoteLinkMcp(
               }
             : null,
           note:
-            "The goal plan is durable. Each planner turn sees bounded tool observations and compact working memory; raw managed-process output is not stored in the automation table.",
+            input.controller === "source"
+              ? "Use get_goal_context and submit_goal_decision to continue this durable goal. The source host needs a persistent goal runtime or a verified event subscription. Remote Arc does not silently switch to a hosted planner."
+              : "The explicitly selected hosted planner continues with bounded observations and compact memory. This may be a different model from the creating chat.",
         });
       },
     );
@@ -935,6 +952,8 @@ export function createRemoteLinkMcp(
             trigger: parse(row.trigger_json),
             plan: parse(row.action_json),
             goal: parse(row.goal_json),
+            revision: row.revision,
+            runtime: parse(row.state_json),
             run_count: row.run_count,
             max_runs: row.max_runs,
             next_run_at: row.next_run_at,
@@ -951,12 +970,46 @@ export function createRemoteLinkMcp(
             process_id: run.process_id,
             exit_code: run.exit_code,
             error: run.error,
+            output_summary: run.output_summary,
             started_at: run.started_at,
             finished_at: run.finished_at,
           })),
         });
       },
     );
+
+    server.registerTool("get_goal_context", {
+      title: "Read durable Agent Goal context",
+      description: "Read the objective, revision, latest observation, factual working memory, completion evidence and ordered progress journal. Use after a pause or a new conversation to continue without replaying uncertain actions.",
+      inputSchema: z.object({ automation_id: z.string(), after_sequence: z.number().int().min(0).default(0) }),
+      annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
+      _meta: oauthToolMeta("automation:read"),
+    }, async ({ automation_id, after_sequence }) => {
+      if (!identity || !hasScope(identity, "automation:read")) return authRequired(env, "automation:read");
+      await consume(env, identity);
+      return textResult(await getGoalContext(env.DB, identity.userId, automation_id, after_sequence));
+    });
+
+    server.registerTool("submit_goal_decision", {
+      title: "Submit the next source Agent Goal decision",
+      description: "Submit one bounded next action for a source-controlled goal using the current context revision and a unique idempotency key. Reuse the same key and payload on network retry. After a revision conflict, read context again. A complete decision requires concrete evidence and configured verification must pass.",
+      inputSchema: z.object({
+        automation_id: z.string(), expected_revision: z.number().int().min(0),
+        idempotency_key: z.string().min(1).max(120),
+        decision: z.enum(["tool", "complete", "pause"]),
+        tool: z.enum(["none", "list_directory", "read_file", "get_file_info", "write_file", "edit_block", "start_process"]),
+        arguments_json: z.string().max(250000).default("{}"),
+        decision_summary: z.string().min(1).max(1200),
+        memory: z.string().max(8000).default(""), completion_evidence: z.string().max(3000).default(""),
+      }),
+      annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true, idempotentHint: true },
+      _meta: { securitySchemes: [{ type: "oauth2", scopes: ["automation:write", "agent:write"] }] },
+    }, async (input) => {
+      if (!identity || !hasScope(identity, "automation:write") || !hasScope(identity, "agent:write")) return authRequired(env, "agent:write");
+      await consume(env, identity);
+      return textResult(await submitGoalDecision(env.DB, identity, input.automation_id,
+        input.expected_revision, input.idempotency_key, input));
+    });
 
     server.registerTool(
       "manage_automation",
