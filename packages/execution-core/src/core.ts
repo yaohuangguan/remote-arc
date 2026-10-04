@@ -3,6 +3,7 @@ import {
   editTextBlock,
   getFileInfo,
   listDirectory,
+  readBinaryFile,
   readTextFile,
   writeTextFile,
 } from "./filesystem.js";
@@ -41,6 +42,7 @@ const SAFE_TOOLS = new Set<ToolName>([
   "list_directory",
   "browse_directories",
   "read_file",
+  "read_binary_file",
   "get_file_info",
   "list_processes",
   "list_undo_actions",
@@ -98,6 +100,21 @@ const DEFINITIONS: ToolDefinition[] = [
         path: { type: "string" },
         offset: { type: "integer" },
         length: { type: "integer", minimum: 1 },
+      },
+      required: ["path"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "read_binary_file",
+    description: "Read a bounded binary file chunk as base64. Offset and length are byte counts; pass expected_revision on later chunks to detect file changes.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        offset: { type: "integer", minimum: 0, default: 0 },
+        length: { type: "integer", minimum: 1, maximum: 262144, default: 65536 },
+        expected_revision: { type: "string", minLength: 1, maxLength: 128 },
       },
       required: ["path"],
       additionalProperties: false,
@@ -326,6 +343,17 @@ export class RemoteArcExecutionCore {
           ),
         );
       }
+      case "read_binary_file": {
+        const target = await enforcePathPolicy(requiredString(args, "path"), policy);
+        return textResult(
+          await readBinaryFile(
+            target,
+            optionalNumber(args, "offset"),
+            optionalNumber(args, "length"),
+            optionalString(args, "expected_revision"),
+          ),
+        );
+      }
       case "get_file_info": {
         const target = await enforcePathPolicy(requiredString(args, "path"), policy);
         return textResult(await getFileInfo(target));
@@ -382,7 +410,7 @@ export class RemoteArcExecutionCore {
         }
         const cwd = cwdInput ? await enforcePathPolicy(cwdInput, policy) : undefined;
         if (args.background === true) {
-          return textResult(await startBackgroundProcess(command, cwd));
+          return textResult(await startBackgroundProcess(command, cwd, optionalNumber(args, "max_duration_seconds")));
         }
         return textResult(
           await runShellCommand(

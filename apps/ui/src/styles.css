@@ -11670,7 +11670,7 @@ body{font-size:18px;line-height:1.6}
   grid-column:1 / -1;
   margin:-2px 0 0 20px;
 }
-.automationDetails summary{
+.automationDetails > summary{
   display:flex;
   gap:6px;
   align-items:center;
@@ -11680,10 +11680,10 @@ body{font-size:18px;line-height:1.6}
   font-size:11px;
   list-style:none;
 }
-.automationDetails summary::-webkit-details-marker{
+.automationDetails > summary::-webkit-details-marker{
   display:none;
 }
-.automationDetails[open] summary span{
+.automationDetails[open] > summary > span{
   transform:rotate(90deg);
 }
 .automationDetailGrid{
@@ -11772,7 +11772,7 @@ body{font-size:18px;line-height:1.6}
 :root[data-theme="dark"] .automationListHeader>span,
 :root[data-theme="dark"] .automationIdentity span,
 :root[data-theme="dark"] .automationRunMeta span,
-:root[data-theme="dark"] .automationDetails summary,
+:root[data-theme="dark"] .automationDetails > summary,
 :root[data-theme="dark"] .automationEmpty span{
   color:#9bb1b8;
 }

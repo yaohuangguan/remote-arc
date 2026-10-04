@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
+import type { PlannedProgress } from "./planned-goal-view.js";
+const PlannedGoalProgress = React.lazy(() => import("./planned-goal-view.js").then(module => ({ default: module.PlannedGoalProgress })));
 
 type Task = {
   id: string;
@@ -12,6 +14,7 @@ type Task = {
   last_error: string | null;
 };
 type Progress = {
+  planned?: PlannedProgress;
   phase?: string;
   process_id?: string;
   agent?: {
@@ -37,20 +40,27 @@ export function taskProgress(task: Pick<Task, "state_json">): Progress {
 }
 
 export function taskNeedsAgent(task: Pick<Task, "state_json" | "status">) {
-  return task.status === "waiting_for_event" && taskProgress(task).phase === "awaiting_agent";
+  return task.status === "waiting_for_event" && ["awaiting_agent", "needs_reasoning"].includes(taskProgress(task).phase || "");
 }
 
 export function taskNeedsAttention(task: Pick<Task, "state_json" | "status">) {
   return taskNeedsAgent(task) || ["waiting_for_device", "failed", "expired"].includes(task.status);
 }
 
-export function TaskResults({ task }: { task: Task }) {
+export function TaskResults({ task, referenceControl }: { task: Task; referenceControl?: React.ReactNode }) {
   const { tr, locale } = useI18n();
-  const [open, setOpen] = useState(false);
+  const linked = new URLSearchParams(location.search).get("task") === task.id;
+  const [open, setOpen] = useState(linked);
+  const details = useRef<HTMLDetailsElement>(null);
   const [runs, setRuns] = useState<Run[] | null>(null);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
   const progress = taskProgress(task);
+  useEffect(() => {
+    if (!linked) return;
+    const frame = requestAnimationFrame(() => details.current?.scrollIntoView({ block: "start" }));
+    return () => cancelAnimationFrame(frame);
+  }, [linked]);
 
   useEffect(() => {
     if (!open) return;
@@ -78,7 +88,7 @@ export function TaskResults({ task }: { task: Task }) {
 
   const timestamp = (value: string | null) => value
     ? new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-US") : "—";
-  const phaseLabel = progress.phase === "awaiting_agent" ? tr("Waiting for the source AI", "等待来源 AI 决策")
+  const phaseLabel = ["awaiting_agent", "needs_reasoning"].includes(progress.phase || "") ? tr("Waiting for the source AI", "等待来源 AI 决策")
     : task.status === "waiting_for_device" ? tr("Waiting for the computer to reconnect", "等待电脑重新连接")
     : task.status === "waiting_for_event" ? tr("Waiting for a matching event", "等待匹配事件")
     : task.status === "paused" ? tr("Task paused", "任务已暂停")
@@ -87,9 +97,11 @@ export function TaskResults({ task }: { task: Task }) {
     : tr("Ready for the next step", "等待下一步");
 
   return (
-    <details className="automationDetails" onToggle={(event) => setOpen(event.currentTarget.open)}>
+    <details ref={details} open={open} className="automationDetails" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>{tr("Progress & results", "进度与结果")}<span aria-hidden="true">›</span></summary>
       <div className="taskResultsBody">
+        <div className="taskChatReference"><strong>{tr("This task's chat reference", "这条任务的聊天引用")}</strong><code>{task.id}</code>{referenceControl}<p>{tr("Paste the reference into your connected AI chat to read this task's saved progress. It is the same task shown here.", "将引用粘贴到已连接的 AI 聊天中，即可读取这条任务保存的进度。聊天与这里管理的是同一条任务。")}</p></div>
+        {progress.planned && <React.Suspense fallback={<p role="status">{tr("Loading saved plan…", "正在加载保存的计划…")}</p>}><PlannedGoalProgress value={progress.planned} expiresAt={task.expires_at} /></React.Suspense>}
         {!['completed', 'failed', 'cancelled', 'expired'].includes(task.status) && (
           <div className="taskProgressPanel">
             <strong>{phaseLabel}</strong>

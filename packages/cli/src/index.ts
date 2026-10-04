@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { createTaskKeepAwakeManager } from "./keep-awake.js";
+import { goalWorkspace } from "./goal-workspace.js";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
@@ -290,7 +291,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
   );
 
   const tools = await core.tools();
-  const internalTools = ["background_agent_status", "set_background_agent", "set_task_keep_awake"];
+  const internalTools = ["background_agent_status", "set_background_agent", "set_task_keep_awake", "goal_workspace"];
   let keepAwake = createTaskKeepAwakeManager();
   logLine("success", `Local tools ready: ${tools.length} exposed`);
   process.stdout.write("       " + dim(tools.map((tool) => tool.name).join(" · ")) + "\n");
@@ -481,7 +482,10 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
             let result: unknown;
             let exitAfterResponse = false;
 
-            if (message.tool === "set_task_keep_awake") {
+            if (message.tool === "goal_workspace") {
+              if (!(await core.tools()).some(tool => tool.name === "start_process")) throw new Error("Goal checkpoints require terminal mode.");
+              result = await goalWorkspace(message.arguments || {}, message.policy);
+            } else if (message.tool === "set_task_keep_awake") {
               result = await keepAwake.set(String(message.arguments?.task_id || ""), Number(message.arguments?.seconds || 0));
             } else if (message.tool === "background_agent_status") {
               const status = await backgroundAgentStatus();

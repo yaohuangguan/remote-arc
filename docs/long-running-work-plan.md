@@ -143,8 +143,9 @@ retries, revocation/expiry and unsubscribe. Delivery acknowledgement means the
 host received the event, not that reasoning ran or the goal completed.
 
 Work/Codex can use the same context/decision tools inside a persistent goal.
-Chat needs verified event-triggered continuation; the plugin alone does not
-extend a normal turn indefinitely. Host account/model availability, quotas and
+Automatic Chat wakeup needs verified event-triggered continuation; ordinary
+next-turn handoff and saved deterministic slices do not. The plugin alone does
+not extend a normal turn indefinitely. Host account/model availability, quotas and
 autonomy limits remain host responsibilities. Keep the real host test pending
 until observed. Sources:
 
@@ -254,3 +255,11 @@ The original PR #43 remains stacked on #41 and on HOLD for Plugin review / the
 branch commits and CI/preview. Do not apply production D1 migrations, deploy
 production, merge, publish npm, tag v0.4.0 or ship plugin metadata. Record the
 remaining release acceptance separately from implementation completion.
+# Active extension (2026-10-03)
+
+PR55 on `feat/chat-first-planned-goals` extends Agent Goal, stacked on PR44.
+Read [the concrete plan](chat-first-planned-goals-plan.md) and
+[the implemented technical reference](chat-first-planned-goals.md).
+Normal Chat can save plans/slices and resume factual context on a later turn;
+automatic event wakeup remains optional and needs real host acceptance.
+The PR44 design below is historical background. Release HOLD is unchanged.

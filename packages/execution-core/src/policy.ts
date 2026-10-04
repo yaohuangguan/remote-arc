@@ -4,6 +4,7 @@ import path from "node:path";
 
 export type ExecutionPolicy = {
   workspaceRoots?: string[];
+  taskWorkspaceRoot?: string;
   protectSensitivePaths?: boolean;
   sensitivePaths?: string[];
   sensitiveAllowPaths?: string[];
@@ -131,6 +132,9 @@ export async function enforcePathPolicy(
       "Blocked by Remote Arc Workspace Scope: path is outside the allowed workspace roots.",
     );
   }
+  if (policy.taskWorkspaceRoot && !isInside(target, await canonicalTarget(policy.taskWorkspaceRoot))) {
+    throw new Error("Blocked by Remote Arc Task Workspace: path escapes the owned candidate.");
+  }
 
   if (policy.protectSensitivePaths !== false) {
     const sensitiveInputs = [
@@ -176,5 +180,6 @@ export function normalizePolicy(policy?: ExecutionPolicy): ExecutionPolicy {
       new Set((policy?.sensitiveAllowPaths || []).filter((item) => typeof item === "string" && item.trim())),
     ).slice(0, 32),
     undoEnabled: policy?.undoEnabled !== false,
+    ...(typeof policy?.taskWorkspaceRoot === "string" && policy.taskWorkspaceRoot.trim() ? { taskWorkspaceRoot: policy.taskWorkspaceRoot } : {}),
   };
 }

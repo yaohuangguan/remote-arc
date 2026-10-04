@@ -1,0 +1,20 @@
+.plannedEditor{min-width:0;border:1px solid var(--line);border-radius:14px;padding:24px;background:var(--panel)}
+.plannedEditor legend,.plannedProgress h3{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.plannedEditor p,.plannedProgress p{font-size:16px;line-height:1.7;color:var(--muted);overflow-wrap:anywhere}
+.plannedEditor small{display:block;font-size:14px;line-height:1.6;color:var(--muted);margin:12px 0}
+.plannedToggle{display:flex!important;align-items:center;gap:12px;font-size:17px;font-weight:600;margin:16px 0}
+.plannedToggle input,.plannedDependencies input{width:18px!important;height:18px!important;flex:none}
+.plannedFields,.plannedSummary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:18px 0}
+.plannedEditor label:not(.plannedToggle),.plannedSummary>div{display:flex;flex-direction:column;gap:9px;min-width:0;font-size:16px;line-height:1.5}
+.plannedEditor input:not([type=checkbox]),.plannedEditor select,.plannedEditor textarea{width:100%;box-sizing:border-box;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;min-height:46px}
+.plannedEditor h3,.plannedProgress h4{font-size:19px;margin:24px 0 14px}
+.plannedPhases fieldset{min-width:0;border:1px solid var(--line);border-radius:10px;padding:20px;margin:16px 0;display:grid;gap:16px}
+.plannedPhases legend{font-size:18px}.plannedPhases .plannedFields{margin:0}
+.plannedDependencies{display:flex;flex-direction:column;gap:10px}.plannedDependencies label{flex-direction:row!important;align-items:center}
+.plannedCheck{display:grid;grid-template-columns:1fr 2fr auto;gap:12px;align-items:end;margin:16px 0}
+.plannedProgress{border:1px solid var(--line);border-radius:12px;padding:24px;min-width:0}.plannedProgress h3{margin:0 0 20px}
+.plannedSummary span{color:var(--muted);font-size:14px}.plannedSummary strong{font-size:17px;line-height:1.5;overflow-wrap:anywhere}
+.plannedProgress code{font-size:14px;overflow-wrap:anywhere}.plannedReason{border-left:3px solid #ca8c4c;padding:12px 16px;background:var(--bg);color:var(--text)!important}
+.plannedEvidence{display:block;font-size:14px;line-height:1.65;margin-top:8px;white-space:pre-wrap;max-height:160px;overflow:auto}
+.plannedProgress details{border-top:1px solid var(--line);padding:14px 0}.plannedProgress summary{display:flex;justify-content:space-between;gap:16px;cursor:pointer;line-height:1.5;font-size:16px}.plannedProgress summary strong{min-width:0;overflow-wrap:anywhere}.plannedProgress summary span{color:var(--muted);flex:none}.plannedProgress pre{font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow:auto;line-height:1.6}
+@media(max-width:700px){.plannedEditor,.plannedProgress{padding:18px}.plannedFields,.plannedSummary,.plannedCheck{grid-template-columns:1fr}.plannedProgress summary{flex-direction:column;gap:6px}.plannedPhases fieldset{padding:16px}}

@@ -52,6 +52,10 @@
 }
 :root[data-theme] .appFrame .overviewActions .addButton,
 :root[data-theme] .appFrame .automationHeaderActions .addButton { padding: 12px 20px; font-size: 16px; }
+.taskChatReference { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:20px; padding:18px; border:1px solid var(--line); border-radius:12px; }
+.taskChatReference strong { font-size:16px; }
+.taskChatReference code { min-width:0; font-size:14px; overflow-wrap:anywhere; }
+.taskChatReference p { flex-basis:100%; margin:0; font-size:15px; line-height:1.6; color:var(--muted); }
 :root[data-theme] .appFrame :is(button, a, summary, input, select, textarea):focus-visible {
   outline: 3px solid var(--dash-accent);
   outline-offset: 3px;
@@ -269,3 +273,10 @@
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme] .appFrame *, .appFrame *::before, .appFrame *::after { animation: none !important; transition: none !important; }
 }
+
+.automationPlanNotice{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:0 0 22px;padding:22px 24px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.automationPlanNotice>div{max-width:850px}
+.automationPlanNotice strong{display:block;margin:7px 0 8px;font-size:19px;line-height:1.35}
+.automationPlanNotice p{margin:0;font-size:15px;line-height:1.7;color:var(--muted)}
+.automationPlanNotice>a{flex-shrink:0;font-size:15px}
+@media(max-width:720px){.automationPlanNotice{align-items:flex-start;flex-direction:column}.automationPlanNotice>a{width:100%;justify-content:center}}

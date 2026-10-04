@@ -15,7 +15,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @remotearc/execution-core test:integration && pnpm --filter @remotearc/mcp test:smoke",
     "test:automations": "node apps/relay/scripts/automation-e2e.mjs",
-    "test:goals": "node apps/relay/scripts/goal-continuation-test.mjs",
+    "test:goals": "node apps/relay/scripts/goal-continuation-test.mjs && node apps/relay/scripts/planned-goal-test.mjs && pnpm --filter @remotearc/execution-core exec tsx ../cli/scripts/goal-workspace-test.ts",
     "ci": "pnpm typecheck && pnpm test && pnpm test:goals",
     "build:ui": "pnpm --filter @remotearc/ui build",
     "deploy:relay": "pnpm build:ui && pnpm --filter @remotearc/relay run deploy",

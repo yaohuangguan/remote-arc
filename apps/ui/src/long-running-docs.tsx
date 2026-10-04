@@ -20,7 +20,7 @@ export function LongRunningWorkDocs() {
         <div className="articleMetaLinks">
           <a href="/docs">{tr("All documentation", "全部文档")} →</a>
           <a href="/security-model">{tr("Security model", "安全模型")} →</a>
-          <a href="https://github.com/yaohuangguan/remote-arc/blob/feat/goal-continuation/docs/system-architecture.md" target="_blank" rel="noreferrer">{tr("Engineering reference", "系统技术参考")} ↗</a>
+          <a href="https://github.com/yaohuangguan/remote-arc/blob/feat/chat-first-planned-goals/docs/chat-first-planned-goals.md" target="_blank" rel="noreferrer">{tr("Engineering reference", "系统技术参考")} ↗</a>
         </div>
       </header>
       <TaskAvailability />
@@ -33,6 +33,7 @@ export function LongRunningWorkDocs() {
             ["permissions", tr("Device task settings", "设备任务设置")],
             ["agent", tr("Who keeps reasoning", "谁继续判断下一步")],
             ["prepare", tr("Prepare an overnight goal", "准备过夜目标")],
+            ["plan", tr("Phases, quality and chat handoff", "阶段、质量与聊天续接")],
             ["schedule", tr("Scheduled goals", "定时目标")],
             ["recovery", tr("Interruptions and recovery", "中断与恢复")],
             ["status", tr("States and limits", "状态与限制")],
@@ -45,6 +46,8 @@ export function LongRunningWorkDocs() {
           <section id="work-overview">
             <h2>{tr("One goal, many decisions", "一个目标，多轮推进")}</h2>
             <p>{tr("Keep using your AI chat. Reading a file or running an ordinary command is a tool call, not a persistent task. When you ask for ongoing, overnight or scheduled work, the AI can create and manage a task under your existing permissions. You do not need to open Dashboard for every operation; use it to inspect progress, pause work or change device permissions.", "继续从 AI 聊天入口使用即可。读文件或执行普通命令是工具调用，不是持久任务。你要求持续、过夜或定时工作时，AI 可以在已有权限内创建和管理任务；不需要每次操作都打开 Dashboard。控制台主要用于看进度、暂停任务和管理设备权限。")}</p>
+            <p><strong>Remote Arc Plus.</strong> {tr("Durable Tasks, overnight and long-running work, schedules, planned Agent Goals and supported keep-awake require a Plus account entitlement in addition to the normal OAuth and device permission checks.", "持久 Task、隔夜与长任务、定时任务、计划模式 Agent Goal 以及受支持的 keep-awake，除常规 OAuth 与设备权限检查外，还要求账户具备 Plus entitlement。")}</p>
+            <p>{tr("The AI receives a task ID and a Dashboard link when it creates the work. Chat and Dashboard refer to the same saved task; the link opens its progress directly. A later chat turn uses that ID to read the checkpoint. You can also copy the task's chat reference from Dashboard. One chat may have several tasks: this is not an automatic binding to a private ChatGPT conversation ID.", "AI 创建工作后会得到任务 ID 和 Dashboard 链接。聊天与 Dashboard 对应同一条保存的任务，链接可直接打开它的进度；后续聊天用该 ID 读取检查点。也可从 Dashboard 复制任务的聊天引用。一段聊天可以有多个任务，这不等于自动绑定 ChatGPT 私有的对话 ID。")}</p>
             <p>{tr("A useful overnight task includes observation, action, checks and changes of strategy. Remote Arc stores the objective, permissions, progress and results. A continuing agent can use each new result to decide what to do next until the acceptance criteria are met or a real blocker appears.", "有效的过夜任务包含观察、操作、检查和策略调整。Remote Arc 保存目标、权限、进度与结果，持续运行的 Agent 根据每个新结果判断下一步，直到满足验收标准或遇到真正的阻塞。")}</p>
             <p>{tr("A long-running command can wait without a model thinking continuously. Adaptive work also needs a continuing reasoning controller. Connecting the Plugin enables access to tools; the AI host determines how and when reasoning continues.", "长时间运行的命令可以在模型没有持续推理时继续等待。需要动态调整的工作还需要持续推理控制器。连接 Plugin 提供工具访问，AI 宿主决定推理如何以及何时继续。")}</p>
           </section>
@@ -61,7 +64,7 @@ export function LongRunningWorkDocs() {
           </section>
           <section id="work-agent">
             <h2>{tr("Choose the reasoning controller", "选择推理控制器")}</h2>
-            <p>{tr("Source agent keeps decisions in the AI client you are using. Work or Codex can use a persistent goal runtime to keep reading progress and submitting the next action. Chat needs a working task-event subscription so new results can prompt further processing. The host's available features, quotas and autonomy limits still apply.", "源 Agent 模式由你正在使用的 AI 客户端继续判断。Work 或 Codex 可以通过持续目标运行环境读取进度并提交下一步；Chat 需要可用的任务事件订阅，让新结果触发后续处理。宿主的功能、额度和自主运行限制仍然适用。")}</p>
+            <p>{tr("Source mode keeps reasoning in your current AI conversation. Normal Chat can save a plan, authorize bounded command slices and resume from get_goal_context on a later turn. If the turn disappears, those saved deterministic steps continue; new judgment waits in needs_reasoning. Automatic source wakeup needs real host support and is not assumed. Work, Codex and other hosts use the same capability-based protocol.", "源模式让推理留在你当前的 AI 对话。普通 Chat 可以保存计划、授权有界命令步骤，并在后续轮次通过 get_goal_context 续接。轮次消失后，已保存的确定性步骤继续，新判断等待在 needs_reasoning。自动唤醒需要真实宿主支持，不能预先假定。Work、Codex 与其他宿主使用同一套按能力建模的协议。")}</p>
             <p>{tr("Hosted planner is a separate option: the configured Remote Arc planner selects actions after the creating chat ends. Its model may differ from your chat model. Remote Arc does not silently change controllers if your source agent stops.", "托管 Planner 是独立选项：由 Remote Arc 配置的 Planner 在创建对话结束后继续选择动作，它的模型可能与聊天模型不同。源 Agent 停止时，Remote Arc 不会悄悄替换控制器。")}</p>
             <p>{tr("Codex /plan prepares an approach; /goal continues toward a verifiable objective across turns. Host documentation describes multi-hour work, rather than a fixed twenty-hour guarantee.", "Codex 的 /plan 用于准备方案，/goal 用于跨轮次推进可验证目标。宿主文档描述的是多小时工作能力，并非固定二十小时的保证。")} <a href="https://learn.chatgpt.com/use-cases/follow-goals" target="_blank" rel="noreferrer">{tr("Goal mode reference", "目标模式参考")} ↗</a></p>
           </section>
@@ -75,6 +78,14 @@ export function LongRunningWorkDocs() {
               <li>{tr("Review the saved goal, then let the agent inspect, act and verify. Check the result and evidence when you return.", "确认保存的目标，让 Agent 检查、操作与验收；回来后阅读结果和证据。")}</li>
             </ol>
             <div className="articleCallout"><strong>{tr("Example goal", "目标示例")}</strong><p>{tr("Fix the failing tests in this repository. Stay within the selected workspace, inspect failures before editing, run the focused tests after each change, and complete only after the full verification command passes. Record changes and any blocker. Stop at the configured deadline.", "修复这个仓库中的失败测试。限定在所选工作区内，修改前检查失败原因，每次修改后运行相关测试，完整验收命令通过后才完成。记录修改和阻塞，到配置的期限停止。")}</p></div>
+          </section>
+          <section id="work-plan">
+            <h2>{tr("Phases, quality and a durable chat handoff", "阶段、质量与持久聊天续接")}</h2>
+            <p>{tr("An optional plan extends Agent Goal. Fixed mode follows provided phases; guided mode uses priorities; autonomous mode asks the selected controller to inspect and propose a bounded plan. Phases have objectives, success criteria, dependencies and optional verification or deterministic execution slices. Completed prerequisites gate downstream work. Partial or blocked work is recorded while independent authorized phases can continue.", "可选计划扩展现有 Agent Goal。固定模式遵循提供的阶段，引导模式按优先级规划，自主模式由所选控制器检查状态并提出有界计划。阶段包含目标、成功标准、依赖，以及可选验证或确定性执行步骤。下游要求前置阶段完成；部分完成或阻塞会记录，独立的已授权阶段可以继续。")}</p>
+            <p>{tr("Minimum time means useful work, never filler edits. Maximum time and an ISO stop-at time bound the run; the earliest limit applies. Finalization reserve closes risky new work and allows process settlement, final checks and a saved report. Phase limits yield partial outcomes. Known incomplete dependencies are never advanced just because a timer expired.", "最少时间指有用工作，不要求凑数修改。最长时间和带时区偏移的 ISO 停止时间限制运行，以最早限制为准。预留收尾时间停止风险较大的新工作，用于处理进程、最终检查和保存报告。阶段超时记录为部分完成，不能因计时结束而推进尚未满足的依赖。")}</p>
+            <div className="articleCallout"><strong>{tr("Green-only quality", "只接受通过检查的版本")}</strong><p>{tr("Configure required test, typecheck, build, benchmark or invariant commands. Requires updated remotelink and a clean Git repository root. Remote Arc creates a task-owned detached worktree, checks its baseline and evaluates candidates before promoting an accepted checkpoint. The checked tree must stay unchanged through validation. A rejected attempt stays in its old worktree; recovery creates a new candidate from the accepted frontier. Your original branch and existing files are not reset. Accepted work needs review before application to that branch.", "可配置必需的测试、类型、构建、基准或不变量检查。需要新版 remotelink 和干净的 Git 仓库根目录。Remote Arc 创建任务拥有的独立 worktree，检查基线，候选通过验收后才推进已接受版本。验证期间被检查的代码树必须保持一致。失败尝试保留在旧 worktree，恢复时从已验收版本创建新候选，不重置原分支和已有文件。将成果应用到原分支前仍需审查。")}</p></div>
+            <p>{tr("Repeated equivalent failures and turns without material progress trigger replanning or parking. Optional highest-value continuation requires justified candidates with value, risk, effort, confidence and a way to verify; oversized work is rejected. No safe useful work means waiting for reasoning or safely finalizing. Plan facts survive phase changes while detailed phase memory resets; private chain of thought is never stored.", "等价失败重复出现、轮次缺乏实质进展时，会重新规划或搁置。可选的高价值续作要求候选给出价值、风险、工作量、信心与验证方式，超出剩余安全时间的工作不接受。没有安全有用工作时等待判断或安全收尾。计划事实跨阶段保留，阶段详细记忆重置，不保存私有思维过程。")}</p>
+            <p>{tr("The next source turn reads the saved plan, phase, elapsed/remaining time, frontier, candidate, quality results, observations, blockers and bounded journal. It submits a revision and idempotency key. A source timeout does not erase the goal and never silently selects another model. Final reports separate accepted work, rejected attempts, partial work, blockers, untouched phases and unavailable checks. A finalized task is not a claim that every objective passed.", "下一轮源对话读取保存的计划、阶段、已用与剩余时间、已验收版本、候选、质量结果、观察、阻塞和有界日志，再使用 revision 和幂等 key 提交。源轮次超时不删除目标，也不会悄悄选择另一模型。最终报告区分已接受成果、失败尝试、部分完成、阻塞、未处理阶段与未执行检查。任务收尾不等于每个目标都已通过。")}</p>
           </section>
           <section id="work-schedule">
             <h2>{tr("Schedule the same goal loop", "定时启动同一目标循环")}</h2>
