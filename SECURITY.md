@@ -10,8 +10,9 @@ Remote Arc gives AI clients access to real computers. Treat the relay, OAuth ser
 4. **Cloudflare Worker + D1** verifies account/device ownership.
 5. **Durable Object** routes only within the authenticated user boundary.
 6. **Local capability mode** controls which native Remote Arc tools are advertised by a device.
-7. **Workspace Scope** constrains native filesystem tools to configured canonical roots.
-8. **Sensitive Path Policy** blocks built-in and user-defined private paths locally before filesystem execution.
+7. **Trusted Write Locations** constrain persistent supported file mutation to configured canonical roots.
+8. **Approval Broker** pauses supported out-of-scope writes before execution and can grant narrowly scoped temporary authority.
+9. **Sensitive Path Policy** independently blocks built-in and user-defined private paths locally before filesystem execution.
 
 ## Credential handling
 
@@ -37,16 +38,19 @@ recursive deletion, disk formatting or raw-disk overwrite, fork bombs, and
 machine shutdown/reboot. It intentionally does not turn normal development
 commands into an approval workflow.
 
-Workspace Scope and Sensitive Path Policy are enforced again inside the native
-execution core immediately before filesystem operations. The core canonicalizes
-existing ancestors so a symlink inside an allowed workspace cannot be used to
-escape into another directory.
+Trusted Write Locations and Sensitive Path Policy are enforced again inside the
+native execution core immediately before filesystem operations. Ordinary
+non-sensitive read-only operations may inspect files outside Trusted Write
+Locations. Supported file mutations are canonicalized and must stay inside a
+trusted root unless the relay has attached a matching, unexpired Approval
+Broker grant. Sensitive paths remain an independent boundary.
 
 Neither preset is a full operating-system sandbox. Once terminal execution is
 enabled, commands can access resources with the permissions of the local OS
-user. When workspace roots exist, Remote Arc requires terminal calls to provide
-an in-scope working directory, but this does not prevent the shell command from
-referencing another absolute path or an external service.
+user. When Trusted Write Locations exist, Remote Arc requires terminal calls to
+provide an in-scope working directory, but this does not prevent the shell
+command from referencing another absolute path, credential, child process or
+external service.
 
 ## Local Undo
 
@@ -63,8 +67,11 @@ publishes, network calls, or remote database mutations.
 
 The dashboard retrieves undo metadata from the device only on demand. Undo
 history and snapshot contents are not persisted in the cloud. Per-device
-workspace roots and protected-path strings are stored as explicit control-plane
-policy metadata.
+Trusted Write Location roots and protected-path strings are stored as explicit
+control-plane policy metadata. Pending write approvals additionally store only
+the minimum routing and policy metadata needed to bind a decision to the
+specific account, device, OAuth grant, tool, path and request; resolved approval
+rows are short-retained.
 
 ## Durable automation security
 

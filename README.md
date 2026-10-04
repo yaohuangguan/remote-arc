@@ -25,7 +25,7 @@ Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients t
 - **Read-only by default** — newly paired devices start with safe inspection capabilities.
 - **Per-device skill controls** — independently enable file edits, terminal execution, process controls, and recovery.
 - **Outbound-only connectivity** — no public IP, VPN, router port forwarding, or inbound listener on your computer.
-- **Local safety boundaries** — workspace scope, protected sensitive paths, local undo, and a terminal Safety Guard.
+- **Local safety boundaries** — Trusted Write Locations, boundary approvals, protected sensitive paths, local undo, and a terminal Safety Guard.
 - **Open MCP interoperability** — one OAuth-protected Remote MCP endpoint for supported AI clients.
 - **Native execution core** — Remote Arc owns its filesystem, process, and terminal execution path rather than proxying another computer-control MCP server.
 
@@ -278,35 +278,41 @@ browser profile directories
 Users can add additional protected paths per device in the dashboard. When a
 specific project genuinely needs a protected file such as one `.env`, users can
 add a narrow sensitive-path exception for that exact file or directory without
-turning off protection globally. Workspace Scope still applies to exceptions.
+turning off protection globally. A sensitive-path exception grants visibility
+only; it does not create write authority outside Trusted Write Locations.
 
 Path checks happen again on the local device immediately before filesystem
-execution, including canonical-path checks that prevent a symlink inside an
-allowed workspace from escaping into a protected or out-of-scope directory.
+execution. Canonical-path checks prevent a symlink inside a trusted write
+location from turning a permitted mutation into an out-of-scope write.
 
-The selected workspace/protected-path strings are control-plane policy metadata
-stored in D1; saving a path does not copy its file contents. Durable Agent Goals
-can separately persist bounded file/process observations needed for continuation.
+The selected trusted-write/protected-path strings are control-plane policy
+metadata stored in D1; saving a path does not copy its file contents. Durable
+Agent Goals can separately persist bounded file/process observations needed for
+continuation.
 
-## Workspace Scope
+## Trusted Write Locations and boundary approvals
 
-A device can optionally define one or more allowed workspace roots. The
-dashboard supports both manual path entry and a device-backed directory picker;
-the picker is loaded from the authenticated computer and keeps protected
-sensitive directories hidden.
+A device can define one or more Trusted Write Locations. These are the folders
+where supported file mutations may happen repeatedly without asking for a new
+approval every time. The dashboard supports manual path entry and a
+device-backed directory picker.
 
-When workspace roots are configured, Remote Arc filesystem tools can only
-operate on canonical paths under those roots. An empty workspace list means
-filesystem access is unrestricted except for Sensitive Path Policy.
+Trusted Write Locations are deliberately **not** the AI's visible world.
+Read-only filesystem tools may inspect ordinary non-sensitive files outside
+those locations. Supported mutations such as `write_file` and `edit_block`
+must stay inside a Trusted Write Location or receive a narrowly scoped boundary
+approval before execution.
 
-For Full mode, `start_process` accepts an optional `cwd`. If Workspace Scope
-is enabled, terminal calls must provide an in-scope `cwd`.
+An out-of-scope write can be approved once, allowed briefly for the same
+file/tool, promoted by trusting the parent folder, or denied. One-shot approvals
+are consumed after successful execution. Approval metadata is bound to the
+account, device, OAuth client/grant, tool, target path and request details.
 
-Workspace Scope is a hard boundary for Remote Arc filesystem tools. It is
-**not** an operating-system sandbox for arbitrary shell commands: a command
-running from an allowed working directory may still reference other paths or
-external services. Use Developer mode without terminal access when strict file
-confinement matters.
+For Full mode, `start_process` remains a separate high-risk capability. When
+Trusted Write Locations exist, terminal calls require an in-scope `cwd`, but
+that check is **not** an operating-system sandbox: a shell running from an
+allowed directory may still reference other paths, credentials, network
+services or child processes.
 
 ## Native-core reliability
 
@@ -441,7 +447,7 @@ get_automation
 manage_automation
 ```
 
-The automation tools create and manage durable control-plane state. They do not grant new device capabilities: when an automation executes on a computer, the normal device ownership, skill policy, Workspace Scope and Sensitive Path Policy checks still apply. Per-device task permissions independently govern background, scheduled, adaptive, source-controlled and keep-awake capabilities.
+The automation tools create and manage durable control-plane state. They do not grant new device capabilities: when an automation executes on a computer, the normal device ownership, skill policy, Trusted Write Locations, boundary approvals and Sensitive Path Policy checks still apply. Per-device task permissions independently govern background, scheduled, adaptive, source-controlled and keep-awake capabilities.
 
 Agent Goals support two explicit controllers: the existing hosted planner
 (default), or the source AI client using context/revision-based decisions. Source
@@ -567,7 +573,7 @@ Current protections include:
 - Local Undo for supported file changes
 - on-demand Local Undo history from the device
 - Sensitive Path Policy enabled by default
-- configurable Workspace Scope
+- configurable Trusted Write Locations and boundary approvals
 - canonical/symlink-safe filesystem path enforcement
 - atomic rewrite/edit operations
 - local Safety Guard for catastrophic terminal commands
@@ -597,7 +603,7 @@ Still planned before broader public use:
 - [x] Local Undo
 - [x] targeted Local Undo history UI
 - [x] Sensitive Path Policy
-- [x] Workspace Scope
+- [x] Trusted Write Locations + boundary approvals
 - [x] atomic file rewrites
 - [x] Safety Guard
 - [x] native Remote Arc execution core
