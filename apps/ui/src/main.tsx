@@ -1456,8 +1456,17 @@ function PublicLayout({
       {children}
       <footer className="publicFooter">
         <Brand compact />
-        <span>© 2026 Remote Arc · Proprietary</span>
-        <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
+        <nav className="publicFooterLinks" aria-label="Remote Arc guides">
+          <a href="/mcp-computer-access">Remote MCP</a>
+          <a href="/chatgpt-computer-access">ChatGPT</a>
+          <a href="/claude-computer-access">Claude</a>
+          <a href="/docs/mcp">MCP Docs</a>
+          <a href="/security-model">Security</a>
+        </nav>
+        <div className="publicFooterMeta">
+          <span>© 2026 Remote Arc · Proprietary</span>
+          <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
+        </div>
       </footer>
     </main>
   );
@@ -2546,6 +2555,67 @@ function ChatGptComputerAccessPage({ user }: { user?: User | null }) {
           <details><summary>{tr("Can I keep a computer read-only?", "可以让某台电脑保持只读吗？")}</summary><p>{tr("Yes. Tool availability is configured per device, so terminal and write tools can remain disabled.", "可以。工具能力按设备配置，因此可以一直关闭终端和写入类工具。")}</p></details>
           <details><summary>{tr("Do I have to use only ChatGPT?", "只能使用 ChatGPT 吗？")}</summary><p>{tr("No. The same Remote Arc endpoint can also be used by Claude, Cursor and compatible Remote MCP clients.", "不是。同一个 Remote Arc Endpoint 也可以被 Claude、Cursor 与兼容 Remote MCP 的客户端使用。")}</p></details>
         </div>
+      </section>
+    </PublicLayout>
+  );
+}
+
+
+function ClaudeComputerAccessPage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  return (
+    <PublicLayout user={user}>
+      <section className="publicHero compactHero seoLandingHero">
+        <span className="eyebrow">CLAUDE + REMOTE ARC</span>
+        <h1>{tr("Give Claude controlled access to your computer through Remote MCP.", "通过 Remote MCP，让 Claude 在受控权限下使用你的电脑。")}</h1>
+        <p>{tr("Remote Arc connects Claude to explicitly paired Windows, macOS and Linux computers while keeping operating-system execution on the device you control.", "Remote Arc 把 Claude 连接到你明确配对的 Windows、macOS 与 Linux 电脑，同时让真正的系统执行留在你控制的设备上。")}</p>
+        <div className="heroActions"><a className="primaryButton" href="/install/claude">{tr("Install Remote Arc for Claude", "为 Claude 安装 Remote Arc")} →</a><a className="ghostButton" href="/docs/mcp">{tr("Read the MCP docs", "查看 MCP 文档")}</a></div>
+      </section>
+      <section className="seoSteps">
+        <article><span>01</span><h2>{tr("Pair the computer once", "先配对电脑")}</h2><p>{tr("Run npx remotelink on the target computer and approve the pairing in your Remote Arc account.", "在目标电脑运行 npx remotelink，并在 Remote Arc 账户中批准配对。")}</p></article>
+        <article><span>02</span><h2>{tr("Connect Claude over Remote MCP", "通过 Remote MCP 连接 Claude")}</h2><p>{tr("Add the Remote Arc endpoint to Claude and complete OAuth. Claude connects to a hosted MCP server while the paired device remains a separate execution boundary.", "在 Claude 中添加 Remote Arc Endpoint 并完成 OAuth。Claude 连接的是托管 MCP 服务，而配对设备仍然是独立执行边界。")}</p></article>
+        <article><span>03</span><h2>{tr("Keep device policy independent", "设备权限独立控制")}</h2><p>{tr("Tool access, workspace roots, sensitive paths and revocation stay attached to the paired device rather than to one AI vendor.", "工具权限、工作区、敏感路径与撤销能力都绑定在配对设备上，而不是绑定某一家 AI。")}</p></article>
+      </section>
+      <section className="faqSection">
+        <div className="sectionIntro"><span className="eyebrow">RELATED</span><h2>{tr("Continue with the technical details.", "继续查看技术细节。")}</h2></div>
+        <div className="sectionResourceLinks"><a href="/mcp-computer-access">{tr("Remote MCP computer access", "Remote MCP 电脑访问")} →</a><a href="/security-model">{tr("Security model", "安全模型")} →</a><a href="/chatgpt-computer-access">{tr("ChatGPT computer access", "ChatGPT 电脑访问")} →</a></div>
+      </section>
+    </PublicLayout>
+  );
+}
+
+function McpComputerAccessPage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  return (
+    <PublicLayout user={user}>
+      <section className="publicHero compactHero seoLandingHero">
+        <span className="eyebrow">REMOTE MCP + COMPUTER ACCESS</span>
+        <h1>{tr("Remote MCP computer access for AI agents.", "面向 AI Agent 的 Remote MCP 电脑访问。")}</h1>
+        <p>{tr("Remote Arc is a hosted Remote MCP bridge that lets compatible AI clients discover and invoke approved capabilities on Windows, macOS and Linux computers you pair.", "Remote Arc 是一个托管的 Remote MCP Bridge，让兼容 AI 客户端发现并调用你配对的 Windows、macOS 与 Linux 电脑上的已授权能力。")}</p>
+        <div className="heroActions"><a className="primaryButton" href="/docs/mcp">{tr("Open the MCP reference", "查看 MCP Reference")} →</a><a className="ghostButton" href="/security-model">{tr("Security model", "安全模型")}</a></div>
+      </section>
+      <section className="seoSteps">
+        <article><span>01</span><h2>{tr("One hosted MCP endpoint", "一个托管 MCP Endpoint")}</h2><p>{tr("Your AI client connects to Remote Arc over OAuth instead of requiring a publicly reachable MCP server on every computer.", "AI 客户端通过 OAuth 连接 Remote Arc，不需要每台电脑都暴露一个公网可访问的 MCP Server。")}</p></article>
+        <article><span>02</span><h2>{tr("Outbound device connections", "设备主动出站连接")}</h2><p>{tr("Each paired computer connects outward to the control plane and receives only routed calls for the device selected by the AI workflow.", "每台配对电脑主动连接控制面，只接收被路由到该设备的调用。")}</p></article>
+        <article><span>03</span><h2>{tr("Per-device capabilities", "按设备配置能力")}</h2><p>{tr("Read files, edit supported content, inspect processes, run approved commands, share browser-tab context or keep a device read-only depending on its policy.", "根据设备策略，可以读取文件、编辑受支持内容、检查进程、运行已授权命令、共享浏览器标签页上下文，也可以让设备始终保持只读。")}</p></article>
+      </section>
+      <section className="faqSection">
+        <div className="sectionIntro"><span className="eyebrow">CONNECT</span><h2>{tr("Use the same device boundary with different AI clients.", "不同 AI 客户端复用同一套设备权限边界。")}</h2></div>
+        <div className="sectionResourceLinks"><a href="/install/chatgpt">ChatGPT →</a><a href="/install/claude">Claude →</a><a href="/install/cursor">Cursor →</a><a href="/use-cases">{tr("Use cases", "使用场景")} →</a></div>
+      </section>
+    </PublicLayout>
+  );
+}
+
+function NotFoundPage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  return (
+    <PublicLayout user={user}>
+      <section className="publicHero compactHero">
+        <span className="eyebrow">404</span>
+        <h1>{tr("Page not found.", "页面不存在。")}</h1>
+        <p>{tr("The Remote Arc page you requested does not exist.", "你访问的 Remote Arc 页面不存在。")}</p>
+        <div className="heroActions"><a className="primaryButton" href="/">{tr("Back to Remote Arc", "返回 Remote Arc")} →</a><a className="ghostButton" href="/docs">{tr("Documentation", "文档")}</a></div>
       </section>
     </PublicLayout>
   );
@@ -6392,6 +6462,8 @@ function App() {
     return <UseCaseDetailPage slug={useCaseMatch[1] as UseCaseSlug} user={user === undefined ? null : user} />;
   }
   if (location.pathname === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
   if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
   if (location.pathname === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
@@ -6416,6 +6488,7 @@ function App() {
     return <Dashboard user={user} devices={devices} status={status} refreshAll={loadAll} signOut={signOut} />;
   }
 
+  if (!isDashboardHost && location.pathname !== "/") return <NotFoundPage user={user === undefined ? null : user} />;
   return <Landing user={user === undefined ? null : user} />;
 }
 
