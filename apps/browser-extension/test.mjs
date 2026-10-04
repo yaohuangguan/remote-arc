@@ -204,7 +204,7 @@ assert.match(workerSource, /const grants = new Map\(\)/);
 assert.doesNotMatch(workerSource, /MAX_SHARED_TABS|sharedTabsLimit|grantLimit/);
 
 const manifest = JSON.parse(fs.readFileSync(new URL("./manifest.json", import.meta.url), "utf8"));
-assert.equal(manifest.version, "0.2.0");
+assert.equal(manifest.version, "0.3.0");
 assert.deepEqual(manifest.permissions.sort(), ["activeTab", "scripting", "storage"].sort());
 assert.equal(manifest.host_permissions.includes("<all_urls>"), false);
 
