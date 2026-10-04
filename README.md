@@ -20,6 +20,40 @@ Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients t
   </a>
 </p>
 
+## v0.4.0 — safer remote computer access
+
+Remote Arc 0.4.0 tightens the boundary between what an AI can **see**, what it can
+**change**, and what always requires explicit user approval.
+
+- **Trusted Write Locations** define persistent folders where supported file
+  mutations can happen without repeated prompts. They are not the AI's entire
+  visible filesystem.
+- **Boundary approvals** turn an out-of-scope `write_file` or `edit_block`
+  request into a pending approval instead of silently broadening access.
+- **Approval Broker** supports `Allow once`, `Allow 10 min`, `Trust this
+  folder`, and `Deny`, with the Dashboard as the canonical approval surface
+  and interactive `remotelink` terminals as a local convenience surface.
+- **Sensitive Path Protection** is always enforced for remote MCP access;
+  narrow exceptions can be added without globally disabling protection.
+- **Per-grant OAuth controls and audit attribution** distinguish individual AI
+  authorizations and correlate requests by client, grant, device, tool and
+  outcome.
+- **Safety Guard matching is narrower** so benign commands that merely contain
+  words such as `shutdown` are not treated as destructive operations.
+- **Terminal access remains high risk.** Trusted Write Locations constrain the
+  normal file-tool path and require an in-scope working directory for terminal
+  launch, but they are not an operating-system sandbox.
+
+Install or run the current CLI:
+
+```bash
+npx remotelink@0.4.0
+```
+
+Existing paired devices keep their device identity. After upgrading the CLI,
+restart the local agent so the latest local enforcement and terminal approval
+UI are active.
+
 ## Why Remote Arc
 
 - **Read-only by default** — newly paired devices start with safe inspection capabilities.
