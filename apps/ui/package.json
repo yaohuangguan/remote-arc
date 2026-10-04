@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@remotearc/protocol": "workspace:*",
     "@vitejs/plugin-react": "^5.0.4",
     "vite": "^7.1.7",
     "typescript": "^6.0.3",

@@ -24,6 +24,12 @@ const schemas = {
     offset: z.number().int().optional(),
     length: z.number().int().positive().optional(),
   }),
+  read_binary_file: z.object({
+    path: z.string(),
+    offset: z.number().int().min(0).optional(),
+    length: z.number().int().positive().max(262144).optional(),
+    expected_revision: z.string().min(1).max(128).optional(),
+  }),
   get_file_info: z.object({ path: z.string() }),
   list_processes: z.object({}),
   write_file: z.object({
@@ -66,6 +72,7 @@ const readOnlyTools = new Set([
   "list_directory",
   "browse_directories",
   "read_file",
+  "read_binary_file",
   "get_file_info",
   "list_processes",
   "list_undo_actions",

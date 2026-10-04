@@ -45,6 +45,8 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       background_enabled: true,
       background_service: "launchd",
       background_seen_at: previewAgo(18000),
+      automation_permissions: { background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: true, keep_awake: true },
+      keep_awake_available: true,
     },
     {
       id: "preview-win",
@@ -69,8 +71,115 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       background_enabled: false,
       background_service: "schtasks",
       background_seen_at: previewAgo(4 * 3600000),
+      automation_permissions: { background_tasks: true, scheduled_tasks: true, adaptive_agent: false, source_agent: false, keep_awake: false },
+      keep_awake_available: false,
     },
   ];
+
+  const baseAutomations = [
+    {
+      id: "preview-goal",
+      user_id: "preview-user",
+      name: "Stabilize overnight integration tests",
+      kind: "goal_loop",
+      status: "running",
+      device_id: "preview-mac",
+      trigger_json: JSON.stringify({ type: "immediate" }),
+      action_json: JSON.stringify({ steps: [{ type: "device_command", command: "pnpm test:integration", cwd: "/Users/sam/work/remote-arc" }] }),
+      goal_json: JSON.stringify({ type: "command_exit", command: "pnpm test:integration", cwd: "/Users/sam/work/remote-arc", expected_exit_code: 0 }),
+      state_json: JSON.stringify({ phase: "step_running" }),
+      interval_seconds: 300,
+      next_run_at: new Date(Date.now() + 4 * 60000).toISOString(),
+      expires_at: new Date(Date.now() + 11 * 3600000).toISOString(),
+      max_runs: 0,
+      run_count: 3,
+      last_run_at: previewAgo(12 * 60000),
+      last_error: null,
+      created_at: previewAgo(2 * 3600000),
+      updated_at: previewAgo(20000),
+    },
+    {
+      id: "preview-ci",
+      user_id: "preview-user",
+      name: "Merge after CI passes",
+      kind: "condition_watch",
+      status: "waiting_for_event",
+      device_id: "preview-mac",
+      trigger_json: JSON.stringify({ type: "webhook", source: "github", event: "workflow_run", match: { "workflow_run.name": "CI", "workflow_run.conclusion": "success" } }),
+      action_json: JSON.stringify({ steps: [{ type: "device_command", command: "gh pr merge 52 --merge", cwd: "/Users/sam/work/remote-arc" }] }),
+      goal_json: null,
+      state_json: JSON.stringify({ phase: "idle" }),
+      interval_seconds: 300,
+      next_run_at: null,
+      expires_at: null,
+      max_runs: 1,
+      run_count: 0,
+      last_run_at: null,
+      last_error: null,
+      created_at: previewAgo(45 * 60000),
+      updated_at: previewAgo(45 * 60000),
+    },
+    {
+      id: "preview-offline",
+      user_id: "preview-user",
+      name: "Nightly build",
+      kind: "schedule_watch",
+      status: "waiting_for_device",
+      device_id: "preview-win",
+      trigger_json: JSON.stringify({ type: "interval", every_seconds: 86400 }),
+      action_json: JSON.stringify({ steps: [{ type: "device_command", command: "pnpm build" }] }),
+      goal_json: null,
+      state_json: JSON.stringify({ phase: "idle" }),
+      interval_seconds: 300,
+      next_run_at: null,
+      expires_at: null,
+      max_runs: 0,
+      run_count: 5,
+      last_run_at: previewAgo(22 * 3600000),
+      last_error: "Device offline; the task will resume automatically after reconnect.",
+      created_at: previewAgo(6 * 86400000),
+      updated_at: previewAgo(20 * 60000),
+    },
+  ];
+
+  const automations = [...baseAutomations, {
+    ...baseAutomations[0]!,
+    id: "preview-planned",
+    name: "Improve the project until morning",
+    kind: "goal_loop",
+    status: "waiting_for_event",
+    goal_json: JSON.stringify({ type: "agent_goal", controller: "source" }),
+    state_json: JSON.stringify({ phase: "needs_reasoning", agent: { iteration: 8, last_decision_summary: "Independent validation passed. Next architectural choice needs source reasoning." }, planned: {
+      started_at: previewAgo(55 * 60000), active_phase: "foundation", needs_reasoning: "Tests revealed a new architecture decision. Candidate is preserved; the next chat turn can inspect saved context.",
+      plan: { phases: [{ id: "website", objective: "Verify the website" }, { id: "foundation", objective: "Investigate the foundation" }, { id: "next", objective: "Implement the dependent feature" }], time_policy: { max_duration_seconds: 8 * 3600 } },
+      outcomes: [{ id: "website", outcome: "completed", spent_seconds: 900, evidence: "Website tests and build passed.", remaining_work: "", checkpoint: "example-green-checkpoint" }],
+      green_frontier: { checkpoint: "example-green-checkpoint", at: previewAgo(40 * 60000) }, candidate: { status: "working", path: "/Users/sam/work/project/.remotearc-goals/example/candidate-0" },
+      workspace: { path: "/Users/sam/work/project/.remotearc-goals/example/candidate-0" }, checks: [{ name: "typecheck", passed: true, exit_code: 0, evidence: "Example: exit code 0" }, { name: "tests", passed: true, exit_code: 0, evidence: "Example: focused tests passed" }], rejected: [],
+    } }),
+    next_run_at: new Date(Date.now() + 7 * 3600000).toISOString(),
+    updated_at: previewAgo(20000),
+  }, {
+    ...baseAutomations[0]!,
+    id: "preview-source",
+    name: "Investigate intermittent test failures",
+    kind: "goal_loop",
+    status: "waiting_for_event",
+    goal_json: JSON.stringify({ type: "agent_goal", controller: "source", objective: "Find the cause and verify the fix.", success_criteria: "The previously failing test passes.", allowed_tools: ["read_file", "start_process"] }),
+    state_json: JSON.stringify({ phase: "awaiting_agent", agent: { iteration: 4, last_decision_summary: "Reproduced the failure; inspect the affected module next." } }),
+    run_count: 1,
+    next_run_at: null,
+    updated_at: previewAgo(60000),
+  }, {
+    ...baseAutomations[0]!,
+    id: "preview-completed",
+    name: "Verify release build",
+    status: "completed",
+    goal_json: JSON.stringify({ type: "agent_goal", controller: "hosted" }),
+    state_json: JSON.stringify({ phase: "idle", agent: { iteration: 6, completion_evidence: "Typecheck and integration tests passed. The release build exited with code 0." } }),
+    run_count: 1,
+    next_run_at: null,
+    updated_at: previewAgo(10 * 60000),
+  }];
 
   const json = (value: unknown, status = 200) =>
     Promise.resolve(
@@ -116,6 +225,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
           name: "Preview User",
           avatarUrl: null,
           role: "admin",
+          plan: "plus",
           isAdmin: true,
         },
       });
@@ -154,6 +264,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
             created_at: previewAgo(2 * 3600000),
           },
         ],
+        entitlements: { plan: "plus", features: ["binary_read", "durable_tasks", "scheduled_tasks", "planned_agent_goals", "keep_awake"] },
         usage: {
           month: "2026-09",
           used: 1732,
@@ -232,6 +343,19 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     }
 
     if (url.pathname === "/api/devices") return json(devices);
+    if (url.pathname === "/api/automations") return json({ automations });
+    const taskId = url.pathname.match(/^\/api\/automations\/([^/]+)$/)?.[1];
+    if (taskId) {
+      const automation = automations.find((item) => item.id === taskId);
+      if (!automation) return json({ error: "not_found" }, 404);
+      return json({ automation, runs: automation.run_count ? [{
+        id: taskId + "-run", attempt: automation.run_count,
+        status: automation.status === "completed" ? "completed" : "running",
+        exit_code: automation.status === "completed" ? 0 : null,
+        output_summary: automation.status === "completed" ? "Typecheck: passed\nIntegration tests: passed\nRelease build: exit 0" : "Latest observation: tests reproduced; task remains in progress.",
+        error: null, started_at: automation.last_run_at || automation.created_at,
+      }] : [] });
+    }
     return json({ ok: true });
   }) as typeof window.fetch;
 }

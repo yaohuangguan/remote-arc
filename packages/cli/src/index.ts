@@ -1,20 +1,29 @@
 #!/usr/bin/env node
+import { createTaskKeepAwakeManager } from "./keep-awake.js";
+import { goalWorkspace } from "./goal-workspace.js";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { spawn } from "node:child_process";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 import WebSocket from "ws";
+import {
+  backgroundAgentStatus,
+  disableBackgroundAgent,
+  enableBackgroundAgent,
+} from "./background.js";
 import {
   RemoteArcExecutionCore,
   type ExecutionPolicy,
 } from "@remotearc/execution-core";
 
-const VERSION = "0.3.14";
+const VERSION = "0.4.0";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
 const LEGACY_CONFIG_PATH = path.join(os.homedir(), ".remote-link", "config.json");
+const SELF_PATH = fileURLToPath(import.meta.url);
 
 type Mode = "managed" | "safe" | "developer";
 
@@ -24,6 +33,7 @@ type SavedConfig = {
   deviceName: string;
   origin: string;
   mode: Mode;
+  backgroundEnabled?: boolean;
 };
 
 class RevokedDeviceCredentialError extends Error {
@@ -281,6 +291,8 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
   );
 
   const tools = await core.tools();
+  const internalTools = ["background_agent_status", "set_background_agent", "set_task_keep_awake", "goal_workspace"];
+  let keepAwake = createTaskKeepAwakeManager();
   logLine("success", `Local tools ready: ${tools.length} exposed`);
   process.stdout.write("       " + dim(tools.map((tool) => tool.name).join(" · ")) + "\n");
   try {
@@ -303,6 +315,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
 
   const shutdown = async () => {
     stopped = true;
+    keepAwake.close();
     await core.close().catch(() => undefined);
   };
   process.on("SIGINT", shutdown);
@@ -372,8 +385,13 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
             hostname: os.hostname(),
             agentVersion: VERSION,
           },
-          tools: tools.map((tool) => tool.name),
-          capabilities: ["native_core_v1", "device_policy_v1", "undo_history_v1"],
+          tools: [...tools.map((tool) => tool.name), ...internalTools],
+          capabilities: [
+            "native_core_v1",
+            "device_policy_v1",
+            "undo_history_v1",
+            "background_agent_v1",
+          ],
         }),
       );
 
@@ -384,9 +402,21 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
 
       const sendHeartbeat = async () => {
         try {
+          const background =
+            config.backgroundEnabled === undefined
+              ? null
+              : await backgroundAgentStatus().catch(() => null);
           await fetch(new URL("/api/device/heartbeat", config.origin), {
             method: "POST",
-            headers: { Authorization: "Bearer " + config.deviceToken },
+            headers: {
+              Authorization: "Bearer " + config.deviceToken,
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              background_enabled: background?.enabled,
+              background_process: argFlag("--agent"),
+              background_service: background?.service,
+            }),
           });
         } catch {
           // WebSocket reconnect logic remains the source of truth for connectivity.
@@ -398,8 +428,32 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
         15 * 60_000,
       );
 
+      // Sleep/resume and network transitions can occasionally leave the local
+      // socket in OPEN state even though the remote path is no longer usable.
+      // A protocol ping/pong watchdog makes that stale state bounded: after
+      // wake, a stale socket is terminated and the normal exponential-backoff
+      // reconnect loop takes over on macOS, Windows and Linux.
+      let lastSocketActivity = Date.now();
+      ws.on("pong", () => {
+        lastSocketActivity = Date.now();
+      });
+      const livenessTimer = setInterval(() => {
+        if (ws.readyState !== WebSocket.OPEN) return;
+        if (Date.now() - lastSocketActivity > 75_000) {
+          logLine("warn", "Relay connection became stale · reconnecting…");
+          ws.terminate();
+          return;
+        }
+        try {
+          ws.ping();
+        } catch {
+          ws.terminate();
+        }
+      }, 30_000);
+
       await new Promise<void>((resolve) => {
         ws.on("message", async (raw) => {
+          lastSocketActivity = Date.now();
           let message: {
             type?: string;
             id?: string;
@@ -425,11 +479,56 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
           const callStarted = Date.now();
           logLine("event", `tool.call ${bold(message.tool)} · ${dim(message.id.slice(0, 8))}`);
           try {
-            const result = await core.call(
-              message.tool,
-              message.arguments || {},
-              message.policy,
-            );
+            let result: unknown;
+            let exitAfterResponse = false;
+
+            if (message.tool === "goal_workspace") {
+              if (!(await core.tools()).some(tool => tool.name === "start_process")) throw new Error("Goal checkpoints require terminal mode.");
+              result = await goalWorkspace(message.arguments || {}, message.policy);
+            } else if (message.tool === "set_task_keep_awake") {
+              result = await keepAwake.set(String(message.arguments?.task_id || ""), Number(message.arguments?.seconds || 0));
+            } else if (message.tool === "background_agent_status") {
+              const status = await backgroundAgentStatus();
+              result = {
+                ...status,
+                enabled: status.enabled,
+                desired_enabled: config.backgroundEnabled ?? null,
+              };
+            } else if (message.tool === "set_background_agent") {
+              const enabled = message.arguments?.enabled;
+              if (typeof enabled !== "boolean") {
+                throw new Error("enabled must be a boolean");
+              }
+
+              config.backgroundEnabled = enabled;
+              await writeConfig(config);
+
+              if (enabled) {
+                const current = await backgroundAgentStatus();
+                result = current.enabled
+                  ? { ...current, desired_enabled: true }
+                  : {
+                      ...(await enableBackgroundAgent(SELF_PATH, {
+                        preserveCurrent: argFlag("--agent"),
+                      })),
+                      desired_enabled: true,
+                    };
+                exitAfterResponse = !argFlag("--agent");
+              } else {
+                result = {
+                  ...(await disableBackgroundAgent({ stopCurrent: false })),
+                  desired_enabled: false,
+                };
+                exitAfterResponse = false;
+              }
+            } else {
+              result = await core.call(
+                message.tool,
+                message.arguments || {},
+                message.policy,
+              );
+            }
+
             logLine("success", `tool.done ${message.tool} · ${Date.now() - callStarted}ms`);
             ws.send(
               JSON.stringify({
@@ -438,6 +537,9 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
                 result,
               }),
             );
+            if (exitAfterResponse) {
+              setTimeout(() => process.exit(0), 500);
+            }
           } catch (error) {
             logLine("error", `tool.fail ${message.tool} · ${error instanceof Error ? error.message : String(error)}`);
             ws.send(
@@ -454,6 +556,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
         ws.once("error", resolve);
       });
       clearInterval(heartbeatTimer);
+      clearInterval(livenessTimer);
     } catch (error) {
       if (error instanceof RevokedDeviceCredentialError) {
         logLine("warn", error.message);
@@ -469,6 +572,8 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
           (error instanceof Error ? error.message : String(error)),
       );
     } finally {
+      keepAwake.close();
+      if (!stopped) keepAwake = createTaskKeepAwakeManager();
       ws.removeAllListeners("message");
       ws.removeAllListeners("open");
       ws.removeAllListeners("unexpected-response");
@@ -510,10 +615,13 @@ async function main() {
         "  npx remotelink",
         "",
         "Options:",
-        "  --safe        Hard local read-only cap; dashboard cannot enable write tools",
-        "  --developer   Legacy alias for dashboard-managed capabilities",
-        "  --reset       Remove this computer's saved pairing",
-        "  --version     Print CLI version",
+        "  --safe          Hard local read-only cap; dashboard cannot enable write tools",
+        "  --developer     Legacy alias for dashboard-managed capabilities",
+        "  --foreground    Keep this session attached to the terminal instead of background mode",
+        "  --background    Enable the login background agent",
+        "  --no-background Disable login background mode and run this session in the foreground",
+        "  --reset         Remove local pairing and background-agent registration",
+        "  --version       Print CLI version",
         "  --help        Show this help",
         "",
       ].join("\n"),
@@ -527,6 +635,7 @@ async function main() {
   }
 
   if (argFlag("--reset")) {
+    await disableBackgroundAgent({ stopCurrent: true }).catch(() => undefined);
     await resetConfig();
     return;
   }
@@ -536,6 +645,10 @@ async function main() {
     process.argv.find((value) => value.startsWith("--origin="))?.slice(9) ||
     DEFAULT_ORIGIN;
 
+  const agentMode = argFlag("--agent");
+  const foregroundMode = argFlag("--foreground");
+  const disableBackground = argFlag("--no-background");
+  const enableBackground = argFlag("--background");
   let config = await readConfig();
 
   while (true) {
@@ -546,13 +659,63 @@ async function main() {
     }
 
     if (!config) {
+      if (agentMode) return;
       config = await pair(origin, selectedMode());
     } else if (argFlag("--safe") || argFlag("--developer")) {
       config.mode = argFlag("--safe") ? "safe" : "managed";
       await writeConfig(config);
     }
 
+    if (disableBackground) {
+      config.backgroundEnabled = false;
+      await writeConfig(config);
+      await disableBackgroundAgent({ stopCurrent: true }).catch(() => undefined);
+    } else if (enableBackground) {
+      config.backgroundEnabled = true;
+      await writeConfig(config);
+    }
+
     logLine("info", `Using paired device identity ${dim(config.deviceId.slice(0, 8))}…`);
+
+    if (agentMode) {
+      if (config.backgroundEnabled !== true) return;
+      const result = await connectAgent(config);
+      if (result !== "rePair") return;
+      return;
+    }
+
+    if (!foregroundMode && config.backgroundEnabled === true) {
+      try {
+        const status = await enableBackgroundAgent(SELF_PATH);
+        if (status.supported && status.enabled) {
+          banner();
+          logLine("success", "Background connection enabled.");
+          logLine(
+            "info",
+            `Service: ${status.service} · starts automatically at login`,
+          );
+          logLine(
+            "info",
+            "Use the Remote Arc dashboard or --no-background to disable it.",
+          );
+          return;
+        }
+        logLine("warn", status.detail || "Background services are unavailable on this system.");
+      } catch (error) {
+        logLine(
+          "warn",
+          "Could not enable background mode; keeping this terminal session connected: " +
+            (error instanceof Error ? error.message : String(error)),
+        );
+      }
+    }
+
+    if (config.backgroundEnabled === undefined) {
+      logLine(
+        "info",
+        "Background connection is not configured yet · finish setup in the browser or Devices.",
+      );
+    }
     const result = await connectAgent(config);
     if (result !== "rePair") return;
 

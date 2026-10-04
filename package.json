@@ -1,6 +1,6 @@
 {
   "name": "remotearc-monorepo",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.17.1",
@@ -13,12 +13,15 @@
     "dev:relay": "pnpm --filter @remotearc/relay dev",
     "dev:ui": "pnpm --filter @remotearc/ui dev",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm --filter @remotearc/execution-core test:integration && pnpm --filter @remotearc/mcp test:smoke",
-    "ci": "pnpm typecheck && pnpm test && pnpm test:seo",
+    "test": "pnpm --filter @remotearc/execution-core test:integration && pnpm --filter @remotearc/mcp test:smoke && pnpm test:browser",
+    "test:automations": "node apps/relay/scripts/automation-e2e.mjs",
+    "test:goals": "node apps/relay/scripts/goal-continuation-test.mjs && node apps/relay/scripts/planned-goal-test.mjs && pnpm --filter @remotearc/execution-core exec tsx ../cli/scripts/goal-workspace-test.ts",
+    "ci": "pnpm typecheck && pnpm test && pnpm test:goals && pnpm test:seo",
     "build:ui": "pnpm --filter @remotearc/ui build",
     "deploy:relay": "pnpm build:ui && pnpm --filter @remotearc/relay run deploy",
     "build:cli": "pnpm --filter remotelink build",
     "publish:cli": "pnpm build:cli && CLI_VERSION=$(node -p \"require('./packages/cli/package.json').version\") && grep -q \"$CLI_VERSION\" packages/cli/dist/index.js && grep -q 'https://mcp.remotearc.app' packages/cli/dist/index.js && grep -q '/api/device/heartbeat' packages/cli/dist/index.js && cd packages/cli && npm publish",
+    "test:browser": "node apps/browser-extension/test.mjs",
     "test:seo": "pnpm --filter @remotearc/relay test:seo"
   }
 }

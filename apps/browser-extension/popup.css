@@ -1,14 +1,26 @@
 :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
-body { margin: 0; width: 330px; min-height: 220px; }
+body { margin: 0; width: 390px; min-height: 260px; }
 main { padding: 18px; }
 header { display:flex; align-items:baseline; gap:8px; margin-bottom:16px; }
 header strong { font-size:18px; }
-header span { opacity:.6; font-size:12px; }
-section { padding: 12px 0; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
-button { width:100%; border:0; border-radius:10px; padding:11px 12px; font:inherit; font-weight:650; cursor:pointer; }
+header span { opacity:.68; font-size:13px; }
+section { padding: 14px 0; border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+button { width:100%; border:0; border-radius:10px; padding:11px 12px; font:inherit; font-size:14px; font-weight:650; cursor:pointer; }
+button:disabled { cursor:not-allowed; opacity:.45; }
 button.primary { background:#b7f34a; color:#111; }
 button.secondary { background:color-mix(in srgb, currentColor 10%, transparent); color:inherit; }
-.meta { font-size:12px; opacity:.65; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:6px 0 10px; }
-.permission { display:flex; justify-content:space-between; font-size:13px; margin:8px 0; }
+button.icon-button { width:34px; height:34px; padding:0; border-radius:9px; flex:0 0 auto; font-size:20px; line-height:1; background:color-mix(in srgb, currentColor 9%, transparent); color:inherit; }
+.meta { font-size:13px; opacity:.7; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:6px 0 10px; }
+.permission { display:flex; justify-content:space-between; gap:16px; font-size:14px; margin:8px 0; }
 .on { color:#76b900; font-weight:700; }
-#status { min-height:18px; font-size:12px; opacity:.75; margin:8px 0 0; }
+.hint { font-size:13px; line-height:1.45; opacity:.72; margin:8px 0 12px; }
+.top-gap { margin-top:8px; }
+.shared-list { display:flex; flex-direction:column; gap:8px; max-height:230px; overflow:auto; }
+.shared-item { display:flex; align-items:center; gap:10px; padding:10px; border-radius:10px; background:color-mix(in srgb, currentColor 7%, transparent); }
+.shared-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
+.shared-copy strong, .shared-copy span, .shared-copy small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.shared-copy strong { font-size:13px; }
+.shared-copy span { font-size:13px; opacity:.67; }
+.shared-copy small { font-size:13px; opacity:.76; }
+.empty { font-size:13px; opacity:.67; margin:4px 0; }
+#status { min-height:19px; font-size:13px; line-height:1.4; opacity:.8; margin:10px 0 0; }

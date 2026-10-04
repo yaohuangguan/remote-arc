@@ -1,3 +1,5 @@
+import { handleDeviceTaskSettings } from "./device-task-settings.js";
+import { deliverTaskEvents, handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
 import { DeviceRegistry } from "./registry.js";
 import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
 import { createRemoteLinkMcp } from "./mcp.js";
@@ -22,6 +24,7 @@ import {
   handleDeviceUndoList,
   handleDeviceUndoAction,
   handleDeviceDirectoryBrowse,
+  handleDeviceBackgroundUpdate,
   handleDeviceManagedProcesses,
   handleDeviceManagedProcessOutput,
   handleDeviceManagedProcessStop,
@@ -30,6 +33,16 @@ import {
 } from "./device.js";
 import { readAudit } from "./audit.js";
 import { getMonthlyUsage } from "./usage.js";
+import { getAccountEntitlements } from "./entitlements.js";
+import { getMonthlyPlusUsage } from "./plus-usage.js";
+import { handleFileResource } from "./file-resources.js";
+import { handleAdminPlanGrantRevoke, handleAdminPlanGrants } from "./plan-admin.js";
+import {
+  handleAutomationCollection,
+  handleAutomationItem,
+  handleAutomationWebhook,
+  runAutomationTick,
+} from "./automations.js";
 import {
   handleGrantRevoke,
   handleMcpPause,
@@ -53,7 +66,7 @@ import {
 
 export { DeviceRegistry };
 
-type Env = {
+type Env = TaskEventEnv & {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   ASSETS: Fetcher;
@@ -147,6 +160,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       url.pathname === "/dashboard" ||
       url.pathname === "/overview" ||
       url.pathname === "/devices" ||
+      url.pathname === "/automations" ||
       url.pathname === "/connect" ||
       url.pathname === "/security" ||
       url.pathname === "/settings" ||
@@ -185,6 +199,10 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return Response.redirect(canonical.toString(), 301);
     }
 
+    if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/resources") {
+      return Response.redirect(new URL("/docs", url.origin).toString(), 301);
+    }
+
     if (url.pathname === "/.well-known/openai-apps-challenge") {
       if (!env.OPENAI_APPS_CHALLENGE) {
         return new Response("Not configured", { status: 404 });
@@ -201,7 +219,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return Response.json({
         ok: true,
         service: "remotearc-relay",
-        version: "0.3.14",
+        version: "0.4.0",
         auth: "oauth2-pkce",
       });
     }
@@ -255,6 +273,21 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return handleLogout(request, env);
     }
 
+    const fileResource = url.pathname.match(/^\/file-resource\/([^/]+)$/);
+    if (fileResource) {
+      return handleFileResource(request, env, decodeURIComponent(fileResource[1]!));
+    }
+
+    const automationHook = url.pathname.match(/^\/hooks\/automations\/([^/]+)\/([^/]+)$/);
+    if (automationHook) {
+      return handleAutomationWebhook(
+        request,
+        env,
+        decodeURIComponent(automationHook[1]!),
+        decodeURIComponent(automationHook[2]!),
+      );
+    }
+
     if (url.pathname === "/api/me" && request.method === "GET") {
       const user = await getSessionUser(request, env);
       return user
@@ -268,6 +301,8 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       const devices = await getDevicesForUser(env, user.id);
       const recent = await readAudit(env, user.id, 8);
       const usage = await getMonthlyUsage(env, user.id);
+      const plusUsage = await getMonthlyPlusUsage(env, user.id);
+      const accountEntitlements = await getAccountEntitlements(env, user.id);
       return Response.json({
         googleConfigured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
         mcpEndpoint: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp",
@@ -276,11 +311,43 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
         onlineDevices: devices.filter((device) => device.status === "online").length,
         recentActivity: recent,
         usage,
+        plusUsage,
+        entitlements: {
+          plan: accountEntitlements.plan,
+          features: [...accountEntitlements.features],
+        },
       });
     }
 
     if (url.pathname === "/api/monitor" && request.method === "GET") {
       return handleMonitorState(request, env);
+    }
+
+    if (url.pathname === "/api/admin/plan-grants") {
+      return handleAdminPlanGrants(request, env);
+    }
+
+    const planGrantRevoke = url.pathname.match(/^\/api\/admin\/plan-grants\/([^/]+)\/revoke$/);
+    if (planGrantRevoke) {
+      return handleAdminPlanGrantRevoke(
+        request,
+        env,
+        decodeURIComponent(planGrantRevoke[1]!),
+      );
+    }
+
+    if (url.pathname === "/api/automations") {
+      return handleAutomationCollection(request, env);
+    }
+
+    const automationApi = url.pathname.match(/^\/api\/automations\/([^/]+)(?:\/([^/]+))?$/);
+    if (automationApi) {
+      return handleAutomationItem(
+        request,
+        env,
+        decodeURIComponent(automationApi[1]!),
+        automationApi[2] ? decodeURIComponent(automationApi[2]) : undefined,
+      );
     }
 
     if (url.pathname === "/api/activity" && request.method === "GET") {
@@ -308,9 +375,37 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
     if (url.pathname === "/api/device/heartbeat" && request.method === "POST") {
       const identity = await authenticateDevice(request, env);
       if (!identity) return Response.json({ error: "unauthorized" }, { status: 401 });
+      const heartbeat = (await request.json().catch(() => ({}))) as {
+        background_enabled?: unknown;
+        background_process?: unknown;
+        background_service?: unknown;
+      };
+      const backgroundEnabled =
+        typeof heartbeat.background_enabled === "boolean"
+          ? heartbeat.background_enabled
+          : null;
+      const backgroundService =
+        typeof heartbeat.background_service === "string" &&
+        heartbeat.background_service.length <= 40
+          ? heartbeat.background_service
+          : null;
+      const now = new Date().toISOString();
       await env.DB.prepare(
-        "UPDATE devices SET last_seen = ?1 WHERE id = ?2 AND user_id = ?3 AND revoked_at IS NULL",
-      ).bind(new Date().toISOString(), identity.id, identity.user_id).run();
+        `UPDATE devices
+         SET last_seen = ?1,
+             background_enabled = COALESCE(?2, background_enabled),
+             background_service = COALESCE(?3, background_service),
+             background_seen_at = CASE WHEN ?2 IS NULL THEN background_seen_at ELSE ?1 END
+         WHERE id = ?4 AND user_id = ?5 AND revoked_at IS NULL`,
+      )
+        .bind(
+          now,
+          backgroundEnabled === null ? null : backgroundEnabled ? 1 : 0,
+          backgroundService,
+          identity.id,
+          identity.user_id,
+        )
+        .run();
       return new Response(null, { status: 204 });
     }
 
@@ -348,6 +443,10 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return handleDeviceRevoke(request, env);
     }
 
+    if (/^\/api\/devices\/[^/]+\/task-permissions$/.test(url.pathname) && request.method === "POST") {
+      return handleDeviceTaskSettings(request, env);
+    }
+
     if (
       /^\/api\/devices\/[^/]+\/tools$/.test(url.pathname) &&
       request.method === "POST"
@@ -367,6 +466,13 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       request.method === "GET"
     ) {
       return handleDeviceDirectoryBrowse(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/background$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDeviceBackgroundUpdate(request, env);
     }
 
     if (
@@ -457,6 +563,8 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
         }
       }
 
+      const eventResponse = await handleTaskEventRpc(request, env, validIdentity);
+      if (eventResponse) return eventResponse;
       const handler = createRemoteLinkMcp(env, validIdentity);
       const response = await handler.fetch(request);
 
@@ -604,10 +712,15 @@ export default {
   },
 
   async scheduled(
-    _controller: ScheduledController,
+    controller: ScheduledController,
     env: Env,
     ctx: ExecutionContext,
   ) {
-    ctx.waitUntil(runSyntheticMonitor(env));
+    if (controller.cron === "* * * * *") {
+      ctx.waitUntil(runAutomationTick(env).then(() => deliverTaskEvents(env)));
+    }
+    if (controller.cron === "*/5 * * * *") {
+      ctx.waitUntil(runSyntheticMonitor(env));
+    }
   },
 };
