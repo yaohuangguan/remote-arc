@@ -5,6 +5,17 @@ Connect a Windows, macOS, or Linux computer to **Remote Arc** with one command.
 Remote Arc lets authorized AI clients such as ChatGPT, Claude, and Codex reach
 the computers you explicitly pair through a secure outbound connection.
 
+## v0.4.1
+
+0.4.1 is the packaging/documentation refresh for the 0.4 security release. It
+ships the current Trusted Write Locations, Approval Broker, Sensitive Path
+Protection, per-grant OAuth attribution, and narrowed Safety Guard behavior,
+with the npm README aligned to the GitHub documentation.
+
+```bash
+npx remotelink@0.4.1
+```
+
 ## v0.4.0
 
 Version 0.4.0 introduces Remote Arc's current security model for computer access:
