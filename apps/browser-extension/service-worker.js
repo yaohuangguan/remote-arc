@@ -60,7 +60,7 @@ async function connectSocket() {
         platform: "browser",
         arch: "chrome",
         hostname: "chrome-extension",
-        agentVersion: "browser-0.2.0",
+        agentVersion: "browser-0.3.0",
       },
       tools: TOOLS,
       capabilities: ["browser_tab_grant_v2", "browser_multi_tab_v1", "browser_interact_v1"],
