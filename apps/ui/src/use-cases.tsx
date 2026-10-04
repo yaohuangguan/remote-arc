@@ -16,7 +16,7 @@ function cases(tr: Tr) {
       tools: "list_devices · device_tools · read_file · edit_block · start_process", permission: tr("File reads, file editing and terminal for tests", "文件读取、文件编辑，以及用于测试的终端权限"),
       steps: [tr("Resolve the named device and inspect its available tools and checkout.", "确认目标设备、可用工具和仓库状态。"), tr("Read the failing implementation before editing; run commands in the selected workspace.", "编辑前读取失败实现，在所选工作区运行命令。"), tr("Use focused checks, inspect the diff and report the result.", "运行相关检查、检查 diff 并汇报结果。")],
       proof: tr("A concrete diff, focused test output and a clear statement of remaining failures.", "具体 diff、相关测试结果，以及仍未解决的失败。"),
-      limit: tr("Terminal runs as the local OS user. Workspace Scope does not sandbox shell commands. Local Undo covers supported file-tool edits, not shell edits or git history.", "终端以本机 OS 用户运行，Workspace Scope 不会隔离 Shell。Local Undo 覆盖受支持文件工具的修改，不覆盖 Shell 编辑或 git 历史。"), durable: false,
+      limit: tr("Terminal runs as the local OS user. Trusted Write Locations do not sandbox shell commands. Local Undo covers supported file-tool edits, not shell edits or git history.", "终端以本机 OS 用户运行，可信写入区域不会隔离 Shell。Local Undo 覆盖受支持文件工具的修改，不覆盖 Shell 编辑或 git 历史。"), durable: false,
     },
     {
       slug: "file-organization", category: tr("FILES", "文件"), title: tr("Organize files with a reviewed move plan", "按确认的整理计划归类文件"),

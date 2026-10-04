@@ -134,7 +134,7 @@ export async function enforcePathPolicy(
     !roots.some((root) => isInside(target, root))
   ) {
     throw new Error(
-      "Blocked by Remote Arc Workspace Scope: path is outside the allowed workspace roots.",
+      "Blocked by Remote Arc Trusted Write Locations: path is outside the allowed write roots.",
     );
   }
   if (policy.taskWorkspaceRoot && !isInside(target, await canonicalTarget(policy.taskWorkspaceRoot))) {

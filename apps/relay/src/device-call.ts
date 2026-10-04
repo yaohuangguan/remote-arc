@@ -187,7 +187,7 @@ export async function callDevice(
     !success &&
     mutationTarget &&
     !approvedWrite &&
-    payload.error?.startsWith("Blocked by Remote Arc Workspace Scope:")
+    payload.error?.startsWith("Blocked by Remote Arc Trusted Write Locations:")
   ) {
     const approval = await requestWriteApproval(env, {
       identity,

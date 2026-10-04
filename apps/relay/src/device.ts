@@ -562,7 +562,7 @@ export async function handleDeviceToolsUpdate(request: Request, env: DeviceEnv) 
       return Response.json(
         {
           error:
-            "Workspace Scope is required before enabling file mutation or terminal execution.",
+            "Trusted Write Locations are required before enabling file mutation or terminal execution.",
         },
         { status: 409 },
       );
@@ -759,7 +759,7 @@ export async function handleDevicePolicyUpdate(
       return Response.json(
         {
           error:
-            "Disable file mutation and terminal tools before removing the last Workspace Scope.",
+            "Disable file mutation and terminal tools before removing the last Trusted Write Location.",
         },
         { status: 409 },
       );

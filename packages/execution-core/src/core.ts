@@ -417,7 +417,7 @@ export class RemoteArcExecutionCore {
         const cwdInput = optionalString(args, "cwd");
         if ((policy.workspaceRoots || []).length && !cwdInput) {
           throw new Error(
-            "Workspace Scope is enabled. start_process requires an in-scope cwd. Terminal commands are not an OS sandbox and may still access paths outside that directory.",
+            "Trusted Write Locations are enabled. start_process requires an in-scope cwd. Terminal commands are not an OS sandbox and may still access paths outside that directory.",
           );
         }
         const cwd = cwdInput ? await enforcePathPolicy(cwdInput, policy) : undefined;

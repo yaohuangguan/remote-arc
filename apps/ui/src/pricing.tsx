@@ -23,7 +23,7 @@ export function PricingContent({
     tr("Text files, folders, metadata and process inspection", "文本文件、目录、元数据与进程检查"),
     tr("File editing and terminal tools when you explicitly enable them", "明确授权后可使用文件编辑与终端工具"),
     tr("Explicitly shared browser-tab context", "明确共享的浏览器标签页上下文"),
-    tr("Per-device permissions, Workspace Scope and Sensitive Path Policy", "每设备权限、Workspace Scope 与 Sensitive Path Policy"),
+    tr("Per-device permissions, Trusted Write Locations and Sensitive Path Policy", "每设备权限、可信写入区域与 Sensitive Path Policy"),
   ];
 
   const plusFeatures = [

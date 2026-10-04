@@ -98,7 +98,7 @@ const registry = {
           return Response.json(
             {
               error:
-                "Blocked by Remote Arc Workspace Scope: path is outside the allowed workspace roots.",
+                "Blocked by Remote Arc Trusted Write Locations: path is outside the allowed write roots.",
             },
             { status: 403 },
           );
