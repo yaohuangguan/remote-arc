@@ -302,12 +302,13 @@ async function enableWindows(
     "add", WINDOWS_RUN_KEY, "/v", WINDOWS_RUN_VALUE, "/t", "REG_SZ", "/d", command, "/f",
   ]);
   if (!preserveCurrent && !(await windowsAgentPid())) {
-    const child = spawn(process.execPath, [AGENT_BUNDLE, "--agent"], {
-      detached: true,
-      stdio: "ignore",
-      windowsHide: true,
-    });
-    child.unref();
+    await powershell(
+      "Start-Process -FilePath " +
+        psQuote(process.execPath) +
+        " -ArgumentList @(" +
+        psQuote(AGENT_BUNDLE) +
+        ", '--agent') -WindowStyle Hidden | Out-Null",
+    );
     await new Promise((resolve) => setTimeout(resolve, 350));
   }
   return backgroundAgentStatus();
