@@ -19,7 +19,7 @@ import {
   type ExecutionPolicy,
 } from "@remotearc/execution-core";
 
-const VERSION = "0.4.0";
+const VERSION = "0.4.1";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
