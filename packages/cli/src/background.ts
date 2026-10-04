@@ -307,12 +307,19 @@ async function enableWindows(
     "add", WINDOWS_RUN_KEY, "/v", WINDOWS_RUN_VALUE, "/t", "REG_SZ", "/d", command, "/f",
   ]);
   if (!preserveCurrent && !(await windowsAgentPid())) {
+    const stdoutPath = path.join(LOG_DIR, "agent.log");
+    const stderrPath = path.join(LOG_DIR, "agent-error.log");
     await powershell(
       "Start-Process -FilePath " +
         psQuote(process.execPath) +
         " -ArgumentList @(" +
         psQuote(AGENT_BUNDLE) +
-        ", '--agent') -WindowStyle Hidden | Out-Null",
+        ", '--agent') -WindowStyle Hidden" +
+        " -RedirectStandardOutput " +
+        psQuote(stdoutPath) +
+        " -RedirectStandardError " +
+        psQuote(stderrPath) +
+        " | Out-Null",
     );
     await new Promise((resolve) => setTimeout(resolve, 350));
   }
