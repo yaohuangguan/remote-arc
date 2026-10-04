@@ -5,10 +5,16 @@ on:
   push:
     tags:
       - "remotelink-v*"
+    branches:
+      - "release/remotelink-v*"
 
 permissions:
   contents: write
   id-token: write
+
+concurrency:
+  group: remotelink-release-${{ github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   publish:
@@ -31,6 +37,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify release ref
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          if [[ "$GITHUB_REF" == refs/heads/release/remotelink-v* ]]; then
+            REF_VERSION="${GITHUB_REF_NAME#release/remotelink-v}"
+          else
+            REF_VERSION="${GITHUB_REF_NAME#remotelink-v}"
+          fi
+          test "$CLI_VERSION" = "$REF_VERSION" || {
+            echo "Release ref version $REF_VERSION does not match package version $CLI_VERSION"
+            exit 1
+          }
+
       - name: Verify
         run: pnpm --filter remotelink typecheck
 
@@ -45,16 +65,34 @@ jobs:
           grep -q 'https://mcp.remotearc.app' packages/cli/dist/index.js
           ! grep -qi 'desktop.commander\|wonderwhy' packages/cli/dist/index.js
 
+      - name: Check whether version is already published
+        id: npm_version
+        run: |
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          if npm view "remotelink@$CLI_VERSION" version >/dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "remotelink@$CLI_VERSION already exists; skipping npm publish."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish
+        if: steps.npm_version.outputs.publish == 'true'
         working-directory: packages/cli
         run: npm publish --access public --provenance
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/remotelink-v')
+        if: github.event_name != 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
-            gh release create "$GITHUB_REF_NAME" \
-              --title "remotelink ${GITHUB_REF_NAME#remotelink-v}" \
+          if [[ "$GITHUB_REF" == refs/heads/release/remotelink-v* ]]; then
+            TAG_NAME="${GITHUB_REF_NAME#release/}"
+          else
+            TAG_NAME="$GITHUB_REF_NAME"
+          fi
+          gh release view "$TAG_NAME" >/dev/null 2>&1 || \
+            gh release create "$TAG_NAME" \
+              --target "$GITHUB_SHA" \
+              --title "remotelink ${TAG_NAME#remotelink-v}" \
               --generate-notes
