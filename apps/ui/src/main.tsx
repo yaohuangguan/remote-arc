@@ -4605,8 +4605,8 @@ function Dashboard({
                               <HelpTip
                                 label={tr("About Workspace Scope", "了解工作区范围")}
                                 text={tr(
-                                  "Remote Arc file mutation and terminal tools require one of these roots. With no workspace configured, only read-only inspection of non-sensitive paths remains available.",
-                                  "Remote Arc 的文件修改与终端工具必须绑定至少一个工作区根目录；未配置工作区时，只保留对非敏感路径的只读检查。",
+                                  "These are trusted mutation roots. Read-only tools may inspect other non-sensitive paths, but file changes and terminal execution require a configured workspace.",
+                                  "这些目录是长期可信的修改区域。只读工具仍可查看其他非敏感路径，但文件修改与终端执行必须先配置工作区。",
                                 )}
                               />
                             </div>
@@ -4631,8 +4631,8 @@ function Dashboard({
                             ))}
                             {!(device.workspace_roots || []).length && (
                               <span className="policyEmpty">{tr(
-                                "No workspace selected. File mutation and terminal execution are blocked.",
-                                "尚未选择工作区；文件修改与终端执行已阻止。",
+                                "No trusted write workspace yet. Read-only access to non-sensitive paths still works.",
+                                "尚未设置可信写入工作区；仍可只读访问其他非敏感路径。",
                               )}</span>
                             )}
                           </div>

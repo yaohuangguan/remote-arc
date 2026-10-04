@@ -119,6 +119,7 @@ function looksLikeSensitiveFile(target: string) {
 export async function enforcePathPolicy(
   targetPath: string,
   policy: ExecutionPolicy = {},
+  options: { enforceWorkspace?: boolean } = {},
 ) {
   const target = await canonicalTarget(targetPath);
 
@@ -127,7 +128,11 @@ export async function enforcePathPolicy(
   );
   const roots = await Promise.all(workspaceInputs.map(canonicalTarget));
 
-  if (roots.length && !roots.some((root) => isInside(target, root))) {
+  if (
+    options.enforceWorkspace !== false &&
+    roots.length &&
+    !roots.some((root) => isInside(target, root))
+  ) {
     throw new Error(
       "Blocked by Remote Arc Workspace Scope: path is outside the allowed workspace roots.",
     );

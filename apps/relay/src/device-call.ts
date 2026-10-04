@@ -98,6 +98,17 @@ export async function callDevice(
     );
   }
 
+  const readOnlyPathTools = new Set([
+    "read_file",
+    "read_binary_file",
+    "list_directory",
+    "get_file_info",
+    "browse_directories",
+  ]);
+  const effectiveWorkspaceRoots = readOnlyPathTools.has(tool)
+    ? []
+    : workspaceRoots;
+
   const requestId = crypto.randomUUID();
 
   const registryRequest = () =>
@@ -114,7 +125,7 @@ export async function callDevice(
         arguments: args,
         policy: {
           ...(taskWorkspaceRoot ? { taskWorkspaceRoot } : {}),
-          workspaceRoots,
+          workspaceRoots: effectiveWorkspaceRoots,
           sensitivePaths: parseStoredStringArray(ownedDevice.sensitive_paths),
           sensitiveAllowPaths: parseStoredStringArray(ownedDevice.sensitive_allow_paths),
           // Remote MCP always keeps built-in sensitive locations protected.

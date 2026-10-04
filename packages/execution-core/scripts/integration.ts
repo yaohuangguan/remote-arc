@@ -166,14 +166,26 @@ try {
     throw new Error("browse_directories did not return child directories");
   }
 
-  let outsideBlocked = false;
   await fs.writeFile(outside, "outside");
-  try {
-    await safe.callTool("read_file", { path: outside }, policy);
-  } catch {
-    outsideBlocked = true;
+
+  const outsideRead = await safe.callTool("read_file", { path: outside }, policy);
+  if (!outsideRead.content[0]?.text.includes("outside")) {
+    throw new Error("Read-only access outside the trusted write workspace failed");
   }
-  if (!outsideBlocked) throw new Error("Workspace Scope did not block outside path");
+
+  let outsideWriteBlocked = false;
+  try {
+    await developer.callTool(
+      "write_file",
+      { path: outside, content: "mutated" },
+      policy,
+    );
+  } catch {
+    outsideWriteBlocked = true;
+  }
+  if (!outsideWriteBlocked) {
+    throw new Error("Workspace Scope did not block an out-of-scope mutation");
+  }
 
   const envFile = path.join(project, ".env");
   await fs.writeFile(envFile, "SECRET=test");
@@ -197,17 +209,29 @@ try {
   if (process.platform !== "win32") {
     const escapeLink = path.join(project, "escape-link");
     await fs.symlink(root, escapeLink, "dir");
-    let symlinkBlocked = false;
+
+    const linkedRead = await safe.callTool(
+      "read_file",
+      { path: path.join(escapeLink, "outside.txt") },
+      policy,
+    );
+    if (!linkedRead.content[0]?.text.includes("outside")) {
+      throw new Error("Read-only symlink target outside workspace was unexpectedly hidden");
+    }
+
+    let symlinkMutationBlocked = false;
     try {
-      await safe.callTool(
-        "read_file",
-        { path: path.join(escapeLink, "outside.txt") },
+      await developer.callTool(
+        "write_file",
+        { path: path.join(escapeLink, "outside.txt"), content: "mutated" },
         policy,
       );
     } catch {
-      symlinkBlocked = true;
+      symlinkMutationBlocked = true;
     }
-    if (!symlinkBlocked) throw new Error("Workspace Scope allowed symlink escape");
+    if (!symlinkMutationBlocked) {
+      throw new Error("Workspace Scope allowed a mutation through symlink escape");
+    }
   }
 
   await developer.callTool(
