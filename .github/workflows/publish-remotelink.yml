@@ -81,6 +81,16 @@ jobs:
             exit 1
           }
 
+          # Background mode copies the built entry file to ~/.remotearc/agent
+          # without its package directory. Verify that copied artifact is truly
+          # self-contained and can start from an isolated directory.
+          cp "$GITHUB_WORKSPACE/packages/cli/dist/index.js" "$TMP_DIR/remotelink.mjs"
+          STANDALONE="$(node "$TMP_DIR/remotelink.mjs" --version)"
+          test "$STANDALONE" = "$CLI_VERSION" || {
+            echo "Standalone background bundle reported $STANDALONE, expected $CLI_VERSION"
+            exit 1
+          }
+
       - name: Check whether version is already published
         id: npm_version
         run: |
