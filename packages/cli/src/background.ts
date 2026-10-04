@@ -286,10 +286,13 @@ async function powershell(script: string, ignoreFailure = false) {
 
 async function windowsAgentPid() {
   const escapedBundle = AGENT_BUNDLE.replaceAll("'", "''");
+  const escapedNode = process.execPath.replaceAll("'", "''");
   const script =
-    "$p = Get-CimInstance Win32_Process | Where-Object { $_.Name -ieq 'node.exe' -and $_.CommandLine -like '*" +
-    escapedBundle +
-    "*' -and $_.CommandLine -like '*--agent*' } | Select-Object -First 1 -ExpandProperty ProcessId; " +
+    "$p = Get-CimInstance Win32_Process | Where-Object { " +
+    "$_.Name -ieq 'node.exe' -and " +
+    "$_.ExecutablePath -ieq '" + escapedNode + "' -and " +
+    "$_.CommandLine -like '*" + escapedBundle + "*--agent*' " +
+    "} | Select-Object -First 1 -ExpandProperty ProcessId; " +
     "if ($null -ne $p) { Write-Output $p }";
   const result = await powershell(script, true);
   const pid = Number(result.stdout.trim());
