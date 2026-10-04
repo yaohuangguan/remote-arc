@@ -60,7 +60,7 @@ const articles: Record<string, SeoPage> = {
       { heading: "2. Pairing creates a device identity, not a shared master password.", text: "Every paired computer receives its own revocable credential. The hosted database stores only the credential hash, so a device can be revoked independently." },
       { heading: "3. OAuth controls the AI client separately from the device.", text: "A paired computer and an authorized AI client are two different trust relationships. Revoking an AI client does not require re-pairing the computer, and revoking a computer does not require changing every AI connection." },
       { heading: "4. Permission is per device, not one global agent switch.", text: "A work laptop, gaming PC and home server should not expose the same capabilities. Safe access can stay read-only, Developer access can add targeted file edits, and Full access can add terminal execution only where it is genuinely required." },
-      { heading: "5. Sensitive paths and workspace roots reduce accidental reach.", text: "File-oriented workflows can be constrained to configured workspace roots and protected sensitive paths. These controls do not replace operating-system sandboxing once unrestricted terminal access is enabled, but they provide an important first boundary for normal AI file work." },
+      { heading: "5. Read visibility and write authority are separate.", text: "Ordinary non-sensitive files can remain available to read-only tools while persistent mutations stay inside Trusted Write Locations. A write outside those locations pauses for a narrowly scoped approval, and sensitive paths remain independently protected. Terminal access is still not an operating-system sandbox." },
       { heading: "6. Supported edits can be undone locally.", text: "The local agent can keep a bounded undo snapshot on the device itself, providing a recovery path without turning the hosted service into a backup of your file contents." },
       { heading: "7. Audit metadata is useful without becoming content retention.", text: "Remote Arc records operational metadata such as tool, device, result and time while intentionally avoiding persistence of file contents, raw command arguments, OAuth tokens and raw device credentials." },
       { heading: "The important limitation: permissions are not magic.", text: "Once unrestricted terminal execution is explicitly enabled, the shell inherits the permissions of the local operating-system user. The honest security model is layered control plus explicit user choice, not pretending that powerful execution has no consequences." }
@@ -155,7 +155,7 @@ const crawlPages: Record<string, CrawlPage> = {
     intro: "Remote Arc connects ChatGPT, Claude, Cursor and other compatible AI clients to Windows, macOS and Linux computers that you explicitly pair.",
     sections: [
       { heading: "Use the computer where the work already lives", text: "Your repositories, files, runtimes and command-line tools stay on your own machine. Remote Arc provides a controlled Remote MCP path for reading, editing and running approved work there." },
-      { heading: "Separate AI authorization from device permission", text: "OAuth authorizes the AI client. Each paired computer separately controls which tools, workspace roots, sensitive paths and long-running task capabilities are available." },
+      { heading: "Separate AI authorization from device permission", text: "OAuth authorizes the AI client. Each paired computer separately controls tools, Trusted Write Locations, boundary approvals, sensitive paths and long-running task capabilities." },
       { heading: "No inbound Remote Arc port", text: "The local agent establishes an outbound connection to the hosted control plane, so normal setup does not require exposing a Remote Arc listener on your router or machine." }
     ],
     links: [["/install/chatgpt", "Install for ChatGPT"], ["/install/claude", "Install for Claude"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"], ["/docs", "Documentation"]]
@@ -186,7 +186,7 @@ const crawlPages: Record<string, CrawlPage> = {
     sections: [
       { heading: "Pair the target computer", text: "Run npx remotelink and approve the device before connecting Cursor." },
       { heading: "Install the MCP connection", text: "Add Remote Arc to Cursor using the remote MCP configuration and complete OAuth." },
-      { heading: "Limit what Cursor can reach", text: "Configure device tools, workspace roots and sensitive-path rules so the connection exposes only the capabilities needed for the project." }
+      { heading: "Limit what Cursor can change", text: "Configure device tools, Trusted Write Locations and sensitive-path rules. Ordinary non-sensitive reads may remain broad, while out-of-scope writes pause for explicit approval." }
     ],
     links: [["/docs/mcp", "MCP reference"], ["/use-cases/remote-development", "Remote development workflow"], ["/security-model", "Security model"]]
   },
@@ -195,7 +195,7 @@ const crawlPages: Record<string, CrawlPage> = {
     intro: "Remote Arc gives ChatGPT a controlled route to a real Windows, macOS or Linux computer without sharing an operating-system password or opening a Remote Arc inbound port.",
     sections: [
       { heading: "ChatGPT sees tools, not a raw desktop login", text: "The MCP connection exposes named capabilities such as file inspection, file editing and managed commands according to the policy of the selected device." },
-      { heading: "Your computer remains a separate trust boundary", text: "The device can be read-only, developer-oriented or terminal-enabled. Workspace roots, protected paths and Local Undo add narrower controls for supported file workflows." }
+      { heading: "Your computer remains a separate trust boundary", text: "The device can be read-only, developer-oriented or terminal-enabled. Trusted Write Locations, boundary approvals, protected paths and Local Undo add narrower controls for supported file workflows." }
     ],
     links: [["/install/chatgpt", "Install for ChatGPT"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"]]
   },
@@ -204,7 +204,7 @@ const crawlPages: Record<string, CrawlPage> = {
     intro: "Remote Arc connects Claude to explicitly paired Windows, macOS and Linux computers through an OAuth-protected remote MCP endpoint.",
     sections: [
       { heading: "Remote connector, local execution", text: "Claude connects to Remote Arc over MCP while file and command execution still terminates on the paired computer through the local agent." },
-      { heading: "Device permissions stay independent", text: "Changing AI clients does not change the computer policy. Tool access, workspace scope, sensitive paths and revocation remain attached to the paired device and account." }
+      { heading: "Device permissions stay independent", text: "Changing AI clients does not change the computer policy. Tool access, Trusted Write Locations, approvals, sensitive paths and revocation remain attached to the paired device and account." }
     ],
     links: [["/install/claude", "Install for Claude"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"]]
   },
@@ -609,7 +609,7 @@ export function llmsFullTxt() {
     "AI clients connect to the hosted Remote Arc MCP endpoint over OAuth. The hosted control plane handles identity, policy and routing. Each paired computer keeps an outbound connection to Remote Arc, receives only routed tool calls for that device, and executes them through the local agent.",
     "",
     "## Security summary",
-    "AI-client authorization and device authorization are separate. Device policies can limit tools, workspace roots, sensitive paths, browser interaction and long-running task capabilities. Terminal access, when enabled, inherits the permissions of the local operating-system user and is not presented as an OS sandbox.",
+    "AI-client authorization and device authorization are separate. Device policies can limit tools, Trusted Write Locations, sensitive paths, browser interaction and long-running task capabilities. Ordinary non-sensitive reads can remain broad; supported writes outside trusted locations pause for approval. Terminal access, when enabled, inherits the permissions of the local operating-system user and is not presented as an OS sandbox.",
     "",
     "## Data-flow summary",
     "Requested tool arguments, selected file content and tool output can pass through the hosted relay to the connected AI provider. Local Undo snapshots for supported file edits stay on the device. See the privacy policy and security model for current details.",
