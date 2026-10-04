@@ -45,10 +45,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify Cloudflare credentials
+      - name: Verify Cloudflare production account access
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: test -n "$CLOUDFLARE_API_TOKEN"
+          CLOUDFLARE_ACCOUNT_ID: 6b1d0dd4e6f7f30df92753cd1e2ee12d
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          RESPONSE="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID")"
+          RESPONSE="$RESPONSE" node -e '
+            const payload = JSON.parse(process.env.RESPONSE || "{}");
+            if (payload.success !== true || payload.result?.id !== process.env.CLOUDFLARE_ACCOUNT_ID) {
+              console.error("Cloudflare token cannot access the Remote Arc production account.");
+              process.exit(1);
+            }
+            console.log("Verified Remote Arc production Cloudflare account:", payload.result.id);
+          '
 
       - name: Apply production D1 migrations
         working-directory: apps/relay
