@@ -511,6 +511,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
             agentVersion: VERSION,
             pid: process.pid,
             backgroundProcess: argFlag("--agent"),
+            connectedAt: new Date().toISOString(),
           },
           tools: [...tools.map((tool) => tool.name), ...internalTools],
           capabilities: [
