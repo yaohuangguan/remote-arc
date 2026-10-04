@@ -111,12 +111,24 @@ export class DeviceRegistry {
       const socket = this.preferredSocket(sockets);
       const attachment =
         socket?.deserializeAttachment() as SocketAttachment | null;
+      const backgroundSocket = sockets
+        .map((candidate) => candidate.deserializeAttachment() as SocketAttachment | null)
+        .filter((candidate) => candidate?.device?.backgroundProcess === true)
+        .sort((left, right) => {
+          const leftTime = Date.parse(left?.device?.connectedAt || "") || 0;
+          const rightTime = Date.parse(right?.device?.connectedAt || "") || 0;
+          return rightTime - leftTime;
+        })[0];
       return {
         id: deviceId,
         ...(attachment?.device || {}),
         tools: attachment?.tools || [],
         capabilities: attachment?.capabilities || [],
         status: "online",
+        background_active: Boolean(backgroundSocket),
+        background_pid: backgroundSocket?.device?.pid ?? null,
+        background_agent_version: backgroundSocket?.device?.agentVersion ?? null,
+        background_connected_at: backgroundSocket?.device?.connectedAt ?? null,
       };
     });
   }

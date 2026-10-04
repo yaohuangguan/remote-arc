@@ -2,6 +2,15 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.4.3
+
+- Fixed background-agent packaging so the copied standalone agent bundle includes its WebSocket runtime and no longer crash-loops on macOS.
+- Windows background connection now uses the current user's Startup registry entry instead of Task Scheduler, avoiding administrator-only `Register-ScheduledTask` failures.
+- Background agents now advertise whether the live socket is the background process, plus PID, version, and connection time for Dashboard observability.
+- Dashboard distinguishes configured-vs-running background state and can repair or stop the live background agent.
+- Disabling background mode can stop the background process immediately rather than only removing login autostart.
+- Release CI now executes the copied standalone background bundle in addition to the installed npm package.
+
 ## 0.4.2
 
 - Fixed the published ESM bundle so the `ws` runtime dependency remains external instead of being incorrectly bundled with CommonJS dynamic requires.

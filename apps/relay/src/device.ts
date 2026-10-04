@@ -345,6 +345,13 @@ export async function getDevicesForUser(
     tools?: string[];
     capabilities?: string[];
     status?: string;
+    agentVersion?: string;
+    pid?: number;
+    connectedAt?: string;
+    background_active?: boolean;
+    background_pid?: number | null;
+    background_agent_version?: string | null;
+    background_connected_at?: string | null;
   };
 
   const registryRequest = () =>
@@ -378,7 +385,7 @@ export async function getDevicesForUser(
   const onlineById = new Map(online.map((device) => [device.id, device]));
 
   return storedDevices.map((device) => {
-    const reviewerFixture =
+    const reviewerFixture: OnlineDevice | undefined =
       env.REVIEWER_DEMO_DEVICE_ID && device.id === env.REVIEWER_DEMO_DEVICE_ID
         ? {
             id: device.id,
@@ -444,6 +451,23 @@ export async function getDevicesForUser(
           : device.background_enabled !== 0,
       background_service: device.background_service,
       background_seen_at: device.background_seen_at,
+      background_active: live?.background_active === true,
+      background_pid:
+        typeof live?.background_pid === "number" ? live.background_pid : null,
+      background_agent_version:
+        typeof live?.background_agent_version === "string"
+          ? live.background_agent_version
+          : null,
+      background_connected_at:
+        typeof live?.background_connected_at === "string"
+          ? live.background_connected_at
+          : null,
+      agent_version:
+        typeof live?.agentVersion === "string" ? live.agentVersion : null,
+      agent_pid:
+        typeof live?.pid === "number" ? live.pid : null,
+      connected_at:
+        typeof live?.connectedAt === "string" ? live.connectedAt : null,
       automation_permissions: parseTaskPermissions(device.automation_permissions),
       keep_awake_available: (live?.tools || []).includes("set_task_keep_awake"),
       status: live ? "online" : "offline",
@@ -898,6 +922,7 @@ export async function handleDeviceBackgroundUpdate(
 
   const body = (await request.json().catch(() => ({}))) as {
     enabled?: unknown;
+    stop_current?: unknown;
   };
   if (typeof body.enabled !== "boolean") {
     return Response.json({ error: "enabled must be a boolean" }, { status: 400 });
@@ -911,7 +936,12 @@ export async function handleDeviceBackgroundUpdate(
     user.id,
     device,
     "set_background_agent",
-    { enabled: body.enabled },
+    {
+      enabled: body.enabled,
+      ...(body.enabled === false && body.stop_current === true
+        ? { stop_current: true }
+        : {}),
+    },
   );
 
   if (!call.ok) {

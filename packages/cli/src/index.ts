@@ -19,7 +19,7 @@ import {
   type ExecutionPolicy,
 } from "@remotearc/execution-core";
 
-const VERSION = "0.4.2";
+const VERSION = "0.4.3";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -509,6 +509,9 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
             arch: process.arch,
             hostname: os.hostname(),
             agentVersion: VERSION,
+            pid: process.pid,
+            backgroundProcess: argFlag("--agent"),
+            connectedAt: new Date().toISOString(),
           },
           tools: [...tools.map((tool) => tool.name), ...internalTools],
           capabilities: [
@@ -636,21 +639,26 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
 
               if (enabled) {
                 const current = await backgroundAgentStatus();
-                result = current.enabled
+                result = current.enabled && current.active
                   ? { ...current, desired_enabled: true }
                   : {
                       ...(await enableBackgroundAgent(SELF_PATH, {
                         preserveCurrent: argFlag("--agent"),
+                        version: VERSION,
                       })),
                       desired_enabled: true,
                     };
                 exitAfterResponse = !argFlag("--agent");
               } else {
+                const stopCurrent = message.arguments?.stop_current === true;
+                const runningAsBackgroundAgent = argFlag("--agent");
                 result = {
-                  ...(await disableBackgroundAgent({ stopCurrent: false })),
+                  ...(await disableBackgroundAgent({
+                    stopCurrent: stopCurrent && !runningAsBackgroundAgent,
+                  })),
                   desired_enabled: false,
                 };
-                exitAfterResponse = false;
+                exitAfterResponse = stopCurrent && runningAsBackgroundAgent;
               }
             } else {
               result = await core.call(
@@ -818,7 +826,7 @@ async function main() {
 
     if (!foregroundMode && config.backgroundEnabled === true) {
       try {
-        const status = await enableBackgroundAgent(SELF_PATH);
+        const status = await enableBackgroundAgent(SELF_PATH, { version: VERSION });
         if (status.supported && status.enabled) {
           banner();
           logLine("success", "Background connection enabled.");

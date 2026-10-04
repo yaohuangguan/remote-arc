@@ -56,6 +56,13 @@ type Device = {
   background_enabled?: boolean | null;
   background_service?: string | null;
   background_seen_at?: string | null;
+  background_active?: boolean;
+  background_pid?: number | null;
+  background_agent_version?: string | null;
+  background_connected_at?: string | null;
+  agent_version?: string | null;
+  agent_pid?: number | null;
+  connected_at?: string | null;
   automation_permissions?: DeviceTaskPermissions;
   keep_awake_available?: boolean;
 };
@@ -3800,7 +3807,11 @@ function Dashboard({
     return true;
   }
 
-  async function updateDeviceBackground(device: Device, enabled: boolean) {
+  async function updateDeviceBackground(
+    device: Device,
+    enabled: boolean,
+    stopCurrent = !enabled,
+  ) {
     if (device.status !== "online") {
       await showNotice(
         tr("Computer is offline", "电脑当前离线"),
@@ -3827,7 +3838,10 @@ function Dashboard({
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ enabled }),
+        body: JSON.stringify({
+          enabled,
+          ...(enabled === false && stopCurrent ? { stop_current: true } : {}),
+        }),
       },
     );
     const payload = await response.json().catch(() => ({})) as { error?: string };
@@ -4483,42 +4497,71 @@ function Dashboard({
                           <HelpTip
                             label={tr("About background connection", "了解后台连接")}
                             text={tr(
-                              "macOS uses launchd, Windows uses Task Scheduler, and Linux uses systemd --user. Locking the screen does not stop the agent. During sleep the network is unavailable; after wake, Wi-Fi changes, or transient Relay disconnects, a WebSocket liveness watchdog detects stale connections and the agent reconnects with exponential backoff from 1 to 30 seconds. On Windows, the task starts at user logon, StartWhenAvailable is enabled, and task failures are retried. A powered-off or still-sleeping computer remains unavailable until the OS resumes. Turning this off removes login autostart; an offline device cannot be re-enabled from the cloud.",
-                              "macOS 使用 launchd，Windows 使用 Task Scheduler，Linux 使用 systemd --user。锁屏不会停止 Agent。电脑睡眠期间网络不可用；唤醒后、Wi-Fi 切换或 Relay 短暂断开时，WebSocket 存活检测会识别失效连接，并按 1 到 30 秒的指数退避自动重连。Windows 会在用户登录时启动任务，同时启用 StartWhenAvailable，并在任务异常失败后重试。电脑如果仍在睡眠或已经关机，则必须等操作系统恢复后才能重新在线。关闭此开关会移除登录自启动；设备已经离线时无法从云端重新开启。",
+                              "macOS uses launchd, Windows uses the current user's Startup registry entry, and Linux uses systemd --user. No administrator permission is required for the Windows background connection. Locking the screen does not stop the agent. During sleep the network is unavailable; after wake, Wi-Fi changes, or transient Relay disconnects, the agent reconnects. Dashboard status is based on a live background-agent connection, not only on whether autostart is configured. Turning this off removes login autostart and stops the background agent now.",
+                              "macOS 使用 launchd，Windows 使用当前用户的启动注册项，Linux 使用 systemd --user。Windows 后台连接不需要管理员权限。锁屏不会停止 Agent；睡眠期间网络不可用，唤醒、Wi-Fi 切换或 Relay 短暂断开后会自动重连。Dashboard 的运行状态来自真实后台 Agent 连接，而不是只看自启动配置是否存在。关闭此开关会移除登录自启动，并立即停止后台 Agent。",
                             )}
                           />
                         </div>
                         <span>
                           {!device.background_agent_available
-                            ? tr("Requires the next remotelink release", "需要新版 remotelink")
-                            : device.background_enabled === true
+                            ? tr("Requires the latest remotelink client", "需要最新版 remotelink")
+                            : device.background_enabled === true && device.background_active === true
                               ? tr(
-                                  "Starts at login · auto reconnect" +
-                                    (device.background_service ? " · " + device.background_service : ""),
-                                  "登录自启 · 自动重连" +
-                                    (device.background_service ? " · " + device.background_service : ""),
-                                )
-                              : device.background_enabled === false
+                                  "Running in background",
+                                  "后台运行中",
+                                ) +
+                                (device.background_pid ? " · PID " + device.background_pid : "") +
+                                (device.background_agent_version ? " · v" + device.background_agent_version : "") +
+                                (device.background_service ? " · " + device.background_service : "")
+                              : device.background_enabled === true
                                 ? tr(
-                                    "Off · use npx remotelink locally to reconnect after this session ends",
-                                    "已关闭 · 当前会话结束后需在本机运行 npx remotelink 重新连接",
-                                  )
-                                : tr(
-                                    "Not configured · current session only",
-                                    "尚未配置 · 仅当前会话",
-                                  )}
+                                    "Configured, but no live background agent is connected",
+                                    "已配置，但当前没有真实后台 Agent 在线",
+                                  ) +
+                                  (device.background_service ? " · " + device.background_service : "")
+                                : device.background_active === true
+                                  ? tr("Background agent is running for this session", "后台 Agent 当前仍在运行")
+                                  : device.background_enabled === false
+                                    ? tr(
+                                        "Off · run npx remotelink locally to reconnect when no foreground session remains",
+                                        "已关闭 · 没有前台会话时需在本机运行 npx remotelink 重新连接",
+                                      )
+                                    : tr(
+                                        "Not configured · current session only",
+                                        "尚未配置 · 仅当前会话",
+                                      )}
                         </span>
                       </div>
-                      <label className="compactSwitch">
-                        <input
-                          type="checkbox"
-                          aria-label={tr("Background connection", "后台连接")}
-                          checked={device.background_enabled === true}
-                          disabled={device.status !== "online" || !device.background_agent_available}
-                          onChange={(event) => void updateDeviceBackground(device, event.target.checked)}
-                        />
-                        <span />
-                      </label>
+                      <div className="managedProcessActions">
+                        {device.background_enabled === true &&
+                          device.background_active !== true &&
+                          device.status === "online" && (
+                            <button
+                              className="ghostButton small"
+                              onClick={() => void updateDeviceBackground(device, true, false)}
+                            >
+                              {tr("Repair", "修复")}
+                            </button>
+                          )}
+                        {device.background_active === true && (
+                          <button
+                            className="dangerButton small"
+                            onClick={() => void updateDeviceBackground(device, false, true)}
+                          >
+                            {tr("Stop now", "立即停止")}
+                          </button>
+                        )}
+                        <label className="compactSwitch">
+                          <input
+                            type="checkbox"
+                            aria-label={tr("Background connection", "后台连接")}
+                            checked={device.background_enabled === true}
+                            disabled={device.status !== "online" || !device.background_agent_available}
+                            onChange={(event) => void updateDeviceBackground(device, event.target.checked)}
+                          />
+                          <span />
+                        </label>
+                      </div>
                     </div>
 
                     <details className="deviceTaskSettings">
@@ -4900,8 +4943,8 @@ function Dashboard({
                             <HelpTip
                               label={tr("About managed background processes", "了解后台进程管理")}
                               text={tr(
-                                "Only background processes started with Remote Arc's managed process mode appear here. This is not a list of every process on your computer.",
-                                "这里只显示通过 Remote Arc 后台进程模式启动的进程，并不是这台电脑上所有系统进程的列表。",
+                                "Only workload processes started with Remote Arc's managed process mode appear here. The Remote Arc connection agent itself is shown separately under Background connection above.",
+                                "这里只显示通过 Remote Arc 后台进程模式启动的工作负载。Remote Arc 自己的连接 Agent 会单独显示在上方“后台连接”区域。",
                               )}
                             />
                           </div>
