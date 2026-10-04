@@ -6,6 +6,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { spawn } from "node:child_process";
 import process from "node:process";
+import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import WebSocket from "ws";
 import {
@@ -79,7 +80,131 @@ type PairingToken = {
   relay_url: string;
 };
 
+type DeviceApproval = {
+  id: string;
+  device_id: string;
+  client_id: string | null;
+  client_name: string | null;
+  request_id: string;
+  tool_name: string;
+  target_path: string;
+  expires_at: string;
+};
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+let approvalPromptActive = false;
+
+async function promptPendingApproval(config: SavedConfig) {
+  if (
+    approvalPromptActive ||
+    argFlag("--agent") ||
+    !process.stdin.isTTY ||
+    !process.stdout.isTTY
+  ) {
+    return;
+  }
+
+  approvalPromptActive = true;
+  try {
+    const response = await fetch(
+      new URL("/api/device/approvals/pending", config.origin),
+      { headers: { Authorization: "Bearer " + config.deviceToken } },
+    );
+    if (!response.ok) return;
+
+    const approvals = (await response.json()) as DeviceApproval[];
+    const approval = approvals[0];
+    if (!approval) return;
+
+    process.stdout.write("\n");
+    logLine(
+      "warn",
+      `Approval required · ${bold(approval.tool_name)} · ${dim(approval.request_id.slice(0, 8))}`,
+    );
+    process.stdout.write("       " + bold(approval.target_path) + "\n");
+    process.stdout.write(
+      "       " +
+        dim(
+          (approval.client_name || approval.client_id?.slice(0, 12) || "AI client") +
+            " · expires " +
+            new Date(approval.expires_at).toLocaleTimeString(),
+        ) +
+        "\n",
+    );
+
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    let answer = "";
+    try {
+      answer = (
+        await rl.question(
+          "       [1] Allow once  [2] Allow 10 min  [3] Trust folder  [d] Deny  [Enter] Later\n       > ",
+        )
+      )
+        .trim()
+        .toLowerCase();
+    } finally {
+      rl.close();
+    }
+
+    const decision =
+      answer === "1"
+        ? "allow_once"
+        : answer === "2"
+          ? "allow_10m"
+          : answer === "3"
+            ? "always_folder"
+            : answer === "d" || answer === "deny"
+              ? "deny"
+              : null;
+
+    if (!decision) {
+      logLine("info", "Approval left pending · use Dashboard → Security anytime.");
+      return;
+    }
+
+    const decisionResponse = await fetch(
+      new URL(
+        "/api/device/approvals/" +
+          encodeURIComponent(approval.id) +
+          "/decision",
+        config.origin,
+      ),
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + config.deviceToken,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ decision }),
+      },
+    );
+
+    if (!decisionResponse.ok) {
+      const payload = (await decisionResponse.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      logLine(
+        "error",
+        "Approval failed · " + (payload.error || String(decisionResponse.status)),
+      );
+      return;
+    }
+
+    logLine(
+      decision === "deny" ? "warn" : "success",
+      decision === "deny"
+        ? "Approval denied."
+        : decision === "always_folder"
+          ? "Folder added to Trusted Write Locations."
+          : "Temporary write approval granted.",
+    );
+  } catch {
+    // Dashboard remains the canonical approval surface if terminal polling fails.
+  } finally {
+    approvalPromptActive = false;
+  }
+}
 
 const supportsColor = process.stdout.isTTY && !process.env.NO_COLOR;
 const paint = (code: string, value: string) =>
@@ -428,6 +553,12 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
         15 * 60_000,
       );
 
+      void promptPendingApproval(config);
+      const approvalTimer = setInterval(
+        () => void promptPendingApproval(config),
+        4_000,
+      );
+
       // Sleep/resume and network transitions can occasionally leave the local
       // socket in OPEN state even though the remote path is no longer usable.
       // A protocol ping/pong watchdog makes that stale state bounded: after
@@ -556,6 +687,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
         ws.once("error", resolve);
       });
       clearInterval(heartbeatTimer);
+      clearInterval(approvalTimer);
       clearInterval(livenessTimer);
     } catch (error) {
       if (error instanceof RevokedDeviceCredentialError) {

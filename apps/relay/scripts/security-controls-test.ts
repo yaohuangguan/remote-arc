@@ -157,21 +157,24 @@ function sessionDb(options?: {
     resource: APP_ORIGIN + "/mcp",
   };
 
-  for (const [tool, args] of [
-    ["start_process", { command: "echo hello" }],
-    ["write_file", { path: "/tmp/example.txt", content: "hello" }],
-  ] as const) {
-    let blocked = false;
-    try {
-      await callDevice(env as never, identity, "device-1", tool, args);
-    } catch (error) {
-      blocked = String(error).includes("requires an explicit Workspace Scope");
-    }
-    if (!blocked) throw new Error(tool + " was not fail-closed without a Workspace Scope");
+  let terminalBlocked = false;
+  try {
+    await callDevice(
+      env as never,
+      identity,
+      "device-1",
+      "start_process",
+      { command: "echo hello" },
+    );
+  } catch (error) {
+    terminalBlocked = String(error).includes("requires a Trusted Write Location");
+  }
+  if (!terminalBlocked) {
+    throw new Error("start_process was not fail-closed without a Trusted Write Location");
   }
 
   if (registryTouched) {
-    throw new Error("unscoped privileged call reached the device registry");
+    throw new Error("unscoped terminal call reached the device registry");
   }
 }
 
