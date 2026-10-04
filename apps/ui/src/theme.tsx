@@ -17,8 +17,10 @@ function resolveTheme(theme: ThemePreference): "light" | "dark" {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(() => {
-    const saved = localStorage.getItem("remote-arc-theme");
-    return saved === "light" || saved === "dark" || saved === "system" ? saved : "light";
+    try {
+      const saved = localStorage.getItem("remote-arc-theme");
+      return saved === "light" || saved === "dark" || saved === "system" ? saved : "dark";
+    } catch { return "dark"; }
   });
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => resolveTheme(theme));
 
@@ -31,7 +33,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.style.colorScheme = resolved;
       document.querySelector('meta[name="theme-color"]')?.setAttribute(
         "content",
-        resolved === "light" ? "#f8fbff" : "#020617",
+        resolved === "light" ? "#f8fbff" : "#080b0e",
       );
     };
     apply();
@@ -43,7 +45,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     theme,
     resolvedTheme,
     setTheme(next) {
-      localStorage.setItem("remote-arc-theme", next);
+      try { localStorage.setItem("remote-arc-theme", next); } catch { /* Keep the in-memory preference when storage is unavailable. */ }
       setThemeState(next);
     },
   }), [theme, resolvedTheme]);

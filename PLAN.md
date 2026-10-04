@@ -1,6 +1,17 @@
 # Remote Arc: long-running, overnight and scheduled work
 
-## Active follow-up: chat-first planned goals (2026-10-03)
+## Active follow-up: task and device experience (2026-10-05)
+
+Work from default branch `master` (the repository has no `main`), baseline
+`81e36248a8dd215885c83cf08e943e9080a19730`, on
+`feat/dashboard-task-device-ux`. The user requested clearer task creation and
+execution states, compact device management, a dark default, a new Safety Guard
+example and a corrected dark-mode ChatGPT logo. Read
+[the review and implementation plan](docs/dashboard-task-device-ux.md).
+Preserve the execution, permission, entitlement and recovery contracts. Do not
+merge, publish packages or deploy production as part of this UI change.
+
+## Historical follow-up: chat-first planned goals (2026-10-03)
 
 Continue on `feat/chat-first-planned-goals`, stacked on PR44
 `feat/goal-continuation`; do not modify PR44. Read

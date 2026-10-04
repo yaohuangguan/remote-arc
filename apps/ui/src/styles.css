@@ -12269,3 +12269,9 @@ body{font-size:18px;line-height:1.6}
     padding-left:12px;
   }
 }
+
+/* Dark first visit and monochrome client marks in the public connection guide. */
+:root[data-theme="dark"]{--bg:#080b0e}
+:root[data-theme="dark"] body{background:radial-gradient(ellipse at 30% 0,rgba(56,189,248,.06),transparent 46rem),#080b0e}
+:root[data-theme="dark"] .publicPage .clientGuideRows img.monoLogo{filter:invert(1)}
+:root[data-theme="light"] .publicPage .clientGuideRows img.monoLogo{filter:none}

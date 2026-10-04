@@ -343,7 +343,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     }
 
     if (url.pathname === "/api/devices") return json(devices);
-    if (url.pathname === "/api/automations") return json({ automations });
+    if (url.pathname === "/api/automations") return json({ automations, capabilities: { hosted_planner: true, github_merge: true } });
     const taskId = url.pathname.match(/^\/api\/automations\/([^/]+)$/)?.[1];
     if (taskId) {
       const automation = automations.find((item) => item.id === taskId);

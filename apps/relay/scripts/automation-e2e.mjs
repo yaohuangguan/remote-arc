@@ -171,6 +171,9 @@ try {
   const status=await api("/api/status");
   const connected=status.devices.find(device=>device.id===deviceId);
   assert(connected?.available_tools?.includes("read_binary_file"),"Latest agent hello must publish read_binary_file capability");
+  const collection=await api("/api/automations");
+  assert(collection.capabilities?.hosted_planner===true && collection.capabilities?.github_merge===true,"Task creation must expose configured providers without their credentials");
+  assert(!JSON.stringify(collection).includes("e2e-key") && !JSON.stringify(collection).includes("PRIVATE KEY"),"Task capability metadata must not expose provider credentials");
 
   // Long task: running -> running -> completed.
   let created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E long",kind:"long_task",device_id:deviceId,command:"long-task",interval_seconds:60})});
@@ -281,6 +284,14 @@ try {
   // Extend the same Wrangler/D1 + WebSocket device E2E with chat-independent
   // planned execution. This proves relay behavior, not real Chat wakeup.
   await api("/api/devices/"+deviceId+"/task-permissions",{method:"POST",body:JSON.stringify({background_tasks:true,scheduled_tasks:true,adaptive_agent:true,source_agent:true,keep_awake:false})});
+  // A Dashboard-created source goal is saved but cannot invent a chat decision.
+  const manualSource=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E manual source without chat",kind:"agent_goal",device_id:deviceId,interval_seconds:60,agent_goal:{controller:"source",objective:"Inspect the project",success_criteria:"Explain the result",workspace:"/workspace",allowed_tools:["read_file"]}})});
+  await tick();
+  const sourceWaiting=await get(manualSource.automation.id);
+  assert(sourceWaiting.status==="waiting_for_event" && JSON.parse(sourceWaiting.state_json).phase==="awaiting_agent","A source goal without a chat decision must wait for its AI");
+  assert(sourceWaiting.run_count===0,"Saving a source goal alone must not execute an action");
+  await api("/api/automations/"+manualSource.automation.id+"/cancel",{method:"POST"});
+
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E source planned slices",kind:"agent_goal",device_id:deviceId,interval_seconds:60,agent_goal:{controller:"source",objective:"Execute saved validation phases",success_criteria:"Both checks pass",workspace:"/workspace",allowed_tools:["start_process"],plan:{planning_mode:"fixed",time_policy:{max_duration_seconds:3600,finalization_reserve_seconds:60},phases:[{id:"first",objective:"First check",success_criteria:"First exit zero",execution_slice:[{name:"first",command:"planned-first",timeout_seconds:20}]},{id:"second",objective:"Second check",success_criteria:"Second exit zero",depends_on:["first"],execution_slice:[{name:"second",command:"planned-second",timeout_seconds:20}]}]}}})});
   const plannedId=created.automation.id, turnsBefore=plannerCalls;
   for(let i=0;i<8;i++){row=await get(plannedId);if(row.status==="completed")break;await poke(plannedId);await tick();}

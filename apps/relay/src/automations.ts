@@ -2451,6 +2451,10 @@ export async function handleAutomationCollection(
   if (request.method === "GET") {
     return Response.json({
       automations: await listAutomations(env, user.id),
+      capabilities: {
+        hosted_planner: agentPlannerConfigured(env),
+        github_merge: githubAutomationConfigured(env),
+      },
     });
   }
 

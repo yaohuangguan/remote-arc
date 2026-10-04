@@ -3,7 +3,7 @@ import { useI18n } from "./i18n.js";
 import "./public-docs.css";
 
 const endpoint = "https://mcp.remotearc.app/mcp";
-const engineering = "https://github.com/yaohuangguan/remote-arc/blob/feat/goal-continuation/docs/";
+const engineering = "https://github.com/yaohuangguan/remote-arc/blob/master/docs/";
 
 export const publicToolGroups = [
   { en: "Device discovery", zh: "设备发现", scope: "devices:read", tools: ["list_devices", "device_tools"] },
@@ -21,7 +21,7 @@ export function TaskAvailability() {
   const { tr } = useI18n();
   return <aside className="docsAvailability">
     <strong>{tr("About availability", "关于可用状态")}</strong>
-    <p>{tr("This documentation covers the current development implementation. Persistent tasks and source-agent continuation are staged for release. Your deployment must include the matching relay and local agent. Real Chat/Work overnight acceptance and secure task-event delivery remain release checks; a UI preview is not a live execution service.", "本文覆盖当前开发实现。持久任务与源 Agent 续接正在准备发布，部署需要匹配的 Relay 和本地 Agent。真实 Chat/Work 过夜验收与安全任务事件投递仍属于发布检查；界面预览不提供真实执行服务。")}</p>
+    <p>{tr("Tasks require Plus, the matching local agent and enabled device permissions. Hosted AI goals additionally need a configured model. Goals using an AI chat wait for that client to submit new decisions; Remote Arc cannot automatically wake ChatGPT. Saved command steps can continue independently. A UI preview does not execute tasks.", "任务需要 Plus、匹配的本地 Agent 和已开启的设备权限。托管 AI 目标还需要配置好的模型。使用聊天 AI 的目标等待该客户端提交新决策，Remote Arc 无法自动唤起 ChatGPT；已保存的命令步骤可以独立继续。界面预览不会执行任务。")}</p>
   </aside>;
 }
 
@@ -115,11 +115,11 @@ export function Documentation() {
         <section id="docs-automations">
           <h2>{tr("Five ways to save ongoing work", "五种持续工作方式")}</h2>
           <div className="docsTableWrap"><table className="articleTable"><thead><tr><th>{tr("Mode", "模式")}</th><th>{tr("Behavior", "行为")}</th></tr></thead><tbody>
-            <tr><td>Long Task</td><td>{tr("Track an approved command until it exits.", "跟踪已批准命令直到退出。")}</td></tr>
-            <tr><td>Condition Watch</td><td>{tr("Run a fixed plan after a matching webhook.", "收到匹配 Webhook 后执行固定计划。")}</td></tr>
-            <tr><td>Schedule Watch</td><td>{tr("Run a fixed plan later or at a completion-based interval.", "稍后执行，或按上轮完成后的间隔执行固定计划。")}</td></tr>
-            <tr><td>Goal Loop</td><td>{tr("Repeat the same plan and verification until the check passes or a limit stops it.", "重复同一计划与验证，直到检查通过或触及停止限制。")}</td></tr>
-            <tr><td>Agent Goal</td><td>{tr("Observe, choose an approved tool, adapt to results and verify completion.", "观察、选择已批准工具、根据结果调整并验证完成。")}</td></tr>
+            <tr><td>{tr("Run once", "运行一次")}</td><td>{tr("Track an approved command until it exits.", "跟踪已批准命令直到退出。")}</td></tr>
+            <tr><td>{tr("After an event", "事件触发")}</td><td>{tr("Run a fixed plan after a matching webhook.", "收到匹配 Webhook 后执行固定计划。")}</td></tr>
+            <tr><td>{tr("On a timer", "定时运行")}</td><td>{tr("Run a fixed plan later or at a completion-based interval.", "稍后执行，或按上轮完成后的间隔执行固定计划。")}</td></tr>
+            <tr><td>{tr("Repeat & check", "重复并验证")}</td><td>{tr("Repeat the same plan and verification until the check passes or a limit stops it.", "重复同一计划与验证，直到检查通过或触及停止限制。")}</td></tr>
+            <tr><td>{tr("AI goal", "AI 完成目标")}</td><td>{tr("Observe, choose an approved tool, adapt to results and verify completion.", "观察、选择已批准工具、根据结果调整并验证完成。")}</td></tr>
           </tbody></table></div>
           <p>{tr("A one-minute cloud scheduler advances due tasks with persisted leases and revisions. The interval controls when work becomes due, not an exact execution second. Task creation freezes the plan or objective, tools, device-policy snapshot and limits. Pause, cancel, expiry and stale-worker checks prevent an old execution turn from overwriting newer task state.", "每分钟云端调度器通过持久租约和 revision 推进到期任务。间隔控制何时进入待执行状态，不保证精确到某一秒。创建时会冻结计划或目标、工具、设备策略快照和限制；暂停、取消、到期及旧 Worker 检查阻止旧轮次覆盖新状态。")}</p>
           <p>{tr("A GitHub merge action runs in the cloud and needs an explicit account, installation and repository permission binding. A configured installation ID alone is not authorization to merge any user's repository. A condition callback is a secret URL; the current inbound condition hook does not claim GitHub HMAC verification.", "GitHub 合并动作在云端运行，需要明确的账户、安装和仓库权限绑定；配置 Installation ID 本身不代表有权合并任何用户仓库。条件回调采用秘密 URL，当前入站条件 Hook 不声称已实现 GitHub HMAC 校验。")}</p>

@@ -17,6 +17,24 @@
   --dash-subtle: #10232e;
   --dash-accent: #79d8f5;
 }
+
+/* Device overview and task creation use progressive disclosure. */
+:root[data-theme] .appFrame .deviceManagementGrid { grid-template-columns: minmax(0,1fr) !important; }
+:root[data-theme] .appFrame .deviceCard.managed { padding: 24px; min-width: 0; min-height:0; }
+:root[data-theme] .appFrame .deviceOverviewActions { display:flex; align-items:center; gap:16px; }
+:root[data-theme] .appFrame .deviceOverviewFacts { display:flex; flex-wrap:wrap; gap:12px 24px; margin-top:20px; color:var(--dash-muted); font-size:14px; }
+:root[data-theme] .appFrame .deviceOverviewFacts span:first-child { color:var(--dash-text); font-weight:650; }
+:root[data-theme] .appFrame .deviceOverviewFacts i { color:var(--dash-accent); margin-right:8px; font-style:normal; }
+:root[data-theme] .appFrame .deviceOfflineHint { margin:16px 0 0; font-size:14px; color:var(--dash-muted); }
+:root[data-theme] .appFrame .deviceManagementPanel { margin-top:24px; padding-top:20px; border-top:1px solid var(--dash-line); }
+:root[data-theme] .appFrame .deviceManagementPanel[hidden] { display:none; }
+:root[data-theme] .appFrame .deviceManagementTabs { display:flex; flex-wrap:wrap; gap:8px; padding-bottom:20px; }
+:root[data-theme] .appFrame .deviceManagementTabs button { min-height:44px; padding:10px 16px; border:1px solid var(--dash-line); border-radius:8px; background:var(--dash-surface); color:var(--dash-muted); font:inherit; font-size:15px; }
+:root[data-theme] .appFrame .deviceManagementTabs button.active { color:var(--dash-accent); border-color:var(--dash-accent); background:var(--dash-subtle); }
+:root[data-theme] .appFrame .deviceTechnicalIdentity { display:flex; flex-wrap:wrap; gap:16px 32px; font-size:14px; color:var(--dash-muted); }
+:root[data-theme] .appFrame .deviceTechnicalIdentity code { margin-left:8px; color:var(--dash-text); overflow-wrap:anywhere; }
+:root[data-theme] .appFrame .deviceManagementPanel section[hidden] { display:none; }
+:root[data-theme="dark"] .appFrame .connectAgentLaunchers .connectClientIdentity img.monoLogo { filter:invert(1); }
 :root[data-theme] .appFrame .dashboardMain { padding-top: 28px; }
 :root[data-theme] .appFrame .overviewTopbar { margin-bottom: 24px; padding-bottom: 20px; gap: 20px; }
 :root[data-theme] .appFrame .overviewTopbar h1,
@@ -280,3 +298,55 @@
 .automationPlanNotice p{margin:0;font-size:15px;line-height:1.7;color:var(--muted)}
 .automationPlanNotice>a{flex-shrink:0;font-size:15px}
 @media(max-width:720px){.automationPlanNotice{align-items:flex-start;flex-direction:column}.automationPlanNotice>a{width:100%;justify-content:center}}
+
+:root[data-theme] .appFrame :is(.taskStartGuide,.taskCreationOutcome,.taskCreatedNotice) { border:1px solid var(--dash-line); border-radius:12px; padding:20px 24px; margin-bottom:24px; background:var(--dash-surface); color:var(--dash-text); }
+:root[data-theme] .appFrame .taskStartGuide > summary { font-size:16px; font-weight:600; cursor:pointer; min-height:32px; }
+:root[data-theme] .appFrame .taskStartGuide p { color:var(--dash-muted); font-size:15px; line-height:1.7; max-width:900px; }
+:root[data-theme] .appFrame .taskStartGuide a { display:inline-flex; align-items:center; min-height:44px; color:var(--dash-accent); font-size:14px; }
+:root[data-theme] .appFrame .taskCreationOutcome { background:var(--dash-subtle); border-left:3px solid var(--dash-accent); }
+:root[data-theme] .appFrame .taskCreationOutcome strong { display:block; margin:8px 0; font-size:18px; }
+:root[data-theme] .appFrame .taskCreationOutcome p { margin:0; font-size:15px; line-height:1.7; color:var(--dash-muted); max-width:900px; }
+:root[data-theme] .appFrame .taskCreationOutcome small { display:block; margin-top:12px; font-size:14px; color:var(--dash-muted); }
+:root[data-theme] .appFrame .taskCreatedNotice { display:flex; justify-content:space-between; align-items:center; gap:20px; border-left:3px solid var(--dash-accent); }
+:root[data-theme] .appFrame .taskCreatedNotice p { margin:8px 0 0; color:var(--dash-muted); }
+:root[data-theme] .appFrame .automationKindTabs { grid-template-columns:repeat(3,minmax(0,1fr)); }
+:root[data-theme] .appFrame .automationKindTabs button { min-height:112px; display:grid; align-content:start; gap:10px; text-align:left; color:var(--dash-text); background:var(--dash-surface); border-color:var(--dash-line); }
+:root[data-theme] .appFrame .automationKindTabs button.active { border-color:var(--dash-accent); box-shadow:inset 0 0 0 1px var(--dash-accent); background:var(--dash-subtle); }
+:root[data-theme] .appFrame .automationKindTabs small { color:var(--dash-muted); }
+:root[data-theme] .appFrame .taskAdvancedControls { min-width:0; padding:0 20px; border:1px solid var(--dash-line); border-radius:10px; background:var(--dash-subtle); }
+:root[data-theme] .appFrame :is(.taskAdvancedControls,.taskTechnicalDetails) > summary { cursor:pointer; min-height:52px; font-size:15px; font-weight:600; padding:14px 0; }
+:root[data-theme] .appFrame .taskAdvancedControls > summary span { margin-left:16px; font-weight:400; font-size:14px; color:var(--dash-muted); }
+:root[data-theme] .appFrame .taskAdvancedControls > .automationForm { padding-bottom:20px; }
+:root[data-theme] .appFrame .taskAdvancedControls .automationAgentTools > div { grid-template-columns:repeat(2,minmax(0,1fr)); }
+:root[data-theme] .appFrame .taskAwakeHelp { display:block; margin-top:8px; font-size:14px; color:var(--dash-muted); }
+:root[data-theme] .appFrame .automationRow { grid-template-columns:minmax(0,1fr) auto auto; row-gap:8px; }
+:root[data-theme] .appFrame .taskRunSummary { grid-column:1; grid-row:2; display:flex; flex-wrap:wrap; gap:16px; padding-left:20px; font-size:13px; color:var(--dash-muted); }
+:root[data-theme] .appFrame .automationStatusBadge { grid-column:2; grid-row:1; }
+:root[data-theme] .appFrame .automationActions { grid-column:3; grid-row:1; }
+:root[data-theme] .appFrame .taskActivityLabel { margin:6px 0 0; font-size:15px; line-height:1.5; color:var(--dash-text); }
+:root[data-theme] .appFrame .taskTechnicalDetails { border-top:1px solid var(--dash-line); }
+:root[data-theme] .appFrame .taskTechnicalDetails .taskChatReference { margin:20px 0 0; }
+:root[data-theme] .appFrame .taskChatReference { margin-bottom:0; border-color:var(--dash-line); background:var(--dash-surface); }
+
+@media(max-width:1000px) {
+  :root[data-theme] .appFrame .automationRow { grid-template-columns:minmax(0,1fr) auto; }
+  :root[data-theme] .appFrame .automationActions { grid-column:1 / -1; grid-row:3; padding-left:20px; justify-content:flex-start; }
+}
+@media(max-width:620px) {
+  :root[data-theme] .appFrame .deviceOverviewActions { gap:10px; flex-wrap:wrap; }
+  :root[data-theme] .appFrame .deviceTop { flex-wrap:wrap; gap:16px; }
+  :root[data-theme] .appFrame .deviceOverviewFacts { gap:10px 16px; }
+  :root[data-theme] .appFrame .deviceManagementTabs { display:grid; grid-template-columns:1fr; }
+  :root[data-theme] .appFrame :is(.taskStartGuide,.taskCreationOutcome,.taskCreatedNotice) { padding:18px; }
+  :root[data-theme] .appFrame .taskCreatedNotice { align-items:flex-start; flex-direction:column; }
+  :root[data-theme] .appFrame .automationKindTabs { grid-template-columns:1fr; }
+  :root[data-theme] .appFrame .automationKindTabs button { min-height:0; padding:14px 16px; gap:4px; }
+  :root[data-theme] .appFrame .taskAdvancedControls { padding:0 14px; }
+  :root[data-theme] .appFrame .taskAdvancedControls > summary span { display:block; margin:4px 0 0; }
+  :root[data-theme] .appFrame .taskAdvancedControls .automationAgentTools > div { grid-template-columns:1fr; }
+  :root[data-theme] .appFrame .automationRow { grid-template-columns:minmax(0,1fr); }
+  :root[data-theme] .appFrame .automationStatusBadge { grid-column:1; grid-row:2; justify-self:start; margin-left:20px; }
+  :root[data-theme] .appFrame .taskRunSummary { grid-row:3; }
+  :root[data-theme] .appFrame .automationActions { grid-row:4; }
+  :root[data-theme] .appFrame .taskResultsBody { padding:14px; }
+}

@@ -1,4 +1,14 @@
 .landingContent{--landing-muted:var(--muted);color:var(--text)}
+.platformCapabilities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:38px}
+.platformCapabilities article{display:flex;flex-direction:column;min-width:0;padding:28px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+.platformCapabilityIndex{font-size:12px;letter-spacing:.09em;color:var(--accent);font-weight:700}
+.platformCapabilities h3{font-size:23px;line-height:1.3;letter-spacing:-.025em;margin:24px 0 14px}
+.platformCapabilities p{font-size:16px;line-height:1.75;color:var(--landing-muted);margin:0 0 24px}
+.platformCapabilityTags{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:12px}
+.platformCapabilityTags span{font-size:12px;padding:6px 9px;border-radius:6px;border:1px solid var(--line);color:var(--landing-muted)}
+.platformCapabilities a{display:inline-flex;align-items:center;min-height:44px;margin-top:14px;font-size:14px;font-weight:650;color:var(--accent)}
+.referenceManual .connectionFilm{--landing-muted:var(--muted)}
+@media(max-width:900px){.platformCapabilities{grid-template-columns:1fr}.platformCapabilities article{padding:24px}.platformCapabilities h3{margin-top:16px}}
 .heroHeadlineGroup{display:flow-root;position:relative}
 .landingHero .heroCopy .heroHeadline{font-size:clamp(38px,4.6vw,64px);line-height:1.13;letter-spacing:-.045em;margin-bottom:15px}
 .heroAccessible{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
@@ -101,13 +111,21 @@
 .safetyTerminal{margin:0;border:1px solid #33444f;border-radius:14px;background:#101b24;color:#d7e4eb;overflow:hidden;box-shadow:0 20px 45px rgba(0,0,0,.12)}
 .safetyTerminal figcaption{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 22px;border-bottom:1px solid #33444f;font-size:13px;color:#a5b6c3}
 .safetyTerminal figcaption>span:first-child{letter-spacing:4px;color:#69808e}
-.safetyTerminalBody{padding:24px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:15px;line-height:1.75}
-.safetyTool{color:#95bacd;font-size:13px;margin-bottom:12px}
 .safetyTerminal code{font:inherit;color:#e8f2f7;overflow-wrap:anywhere}
-.safetyBlocked{color:#ffbc80;font-size:12px;font-weight:700;letter-spacing:.07em;margin-top:24px}
 .safetyTerminal pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;color:#ffd0a9;margin:10px 0 18px}
 .safetyTerminal p{font:inherit;font-size:13px;color:#a5b6c3;margin:0}
-@media(max-width:800px){.safetyExample{grid-template-columns:1fr;gap:24px}.safetyTerminalBody{padding:20px;font-size:14px}}
+.safetyLearnLink{display:inline-flex;align-items:center;min-height:44px;margin-bottom:16px;font-size:15px;font-weight:600;color:var(--accent)}
+.safetyPolicyBody{display:grid;gap:16px;padding:20px;font-size:15px;line-height:1.7}
+.safetyPolicyRequest{padding:18px;border:1px solid #34434c;border-radius:10px;background:#0c151c;min-width:0}
+.safetyPolicyRequest>div{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.safetyPolicyRequest>div code,.safetyPolicyRequest .safetyPath,.safetyPolicyRequest pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:14px}
+.safetyPolicyRequest>div span{font-size:11px;letter-spacing:.08em;font-weight:700;padding:4px 8px;border-radius:5px}
+.safetyPolicyRequest.allowed>div span{color:#a4eac5;background:#123a2b}
+.safetyPolicyRequest.blocked>div span{color:#ffcc99;background:#403023}
+.safetyPolicyRequest .safetyPath{display:block;margin-bottom:12px;color:#e5eef2}
+.safetyPolicyRequest p{font-family:inherit;font-size:14px;line-height:1.65;color:#b8c8d1}
+.safetyPolicyRequest pre{font-size:13px;line-height:1.7;padding:12px;border-left:2px solid #f3b87c;background:#241e19}
+@media(max-width:800px){.safetyExample{grid-template-columns:1fr;gap:24px}.safetyPolicyBody{padding:14px}.safetyPolicyRequest{padding:14px}}
 .landingQuestions{display:grid;grid-template-columns:.65fr 1fr;gap:72px}
 .landingQuestions .modernSectionIntro{margin:0}
 .modernFaq details{border-bottom:1px solid var(--line);padding:20px 0}
