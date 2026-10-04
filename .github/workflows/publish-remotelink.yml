@@ -65,6 +65,22 @@ jobs:
           grep -q 'https://mcp.remotearc.app' packages/cli/dist/index.js
           ! grep -qi 'desktop.commander\|wonderwhy' packages/cli/dist/index.js
 
+      - name: Smoke-test packed CLI
+        run: |
+          set -euo pipefail
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          PACK_JSON="$(cd packages/cli && npm pack --json --ignore-scripts)"
+          TARBALL="$(PACK_JSON="$PACK_JSON" node -e 'const p=JSON.parse(process.env.PACK_JSON); process.stdout.write(p[0].filename)')"
+          TMP_DIR="$(mktemp -d)"
+          cd "$TMP_DIR"
+          npm init -y >/dev/null 2>&1
+          npm install "$GITHUB_WORKSPACE/packages/cli/$TARBALL" --ignore-scripts >/dev/null
+          ACTUAL="$(./node_modules/.bin/remotelink --version)"
+          test "$ACTUAL" = "$CLI_VERSION" || {
+            echo "Packed CLI reported $ACTUAL, expected $CLI_VERSION"
+            exit 1
+          }
+
       - name: Check whether version is already published
         id: npm_version
         run: |
