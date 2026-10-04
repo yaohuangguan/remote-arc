@@ -509,6 +509,8 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
             arch: process.arch,
             hostname: os.hostname(),
             agentVersion: VERSION,
+            pid: process.pid,
+            backgroundProcess: argFlag("--agent"),
           },
           tools: [...tools.map((tool) => tool.name), ...internalTools],
           capabilities: [
@@ -636,21 +638,26 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
 
               if (enabled) {
                 const current = await backgroundAgentStatus();
-                result = current.enabled
+                result = current.enabled && current.active
                   ? { ...current, desired_enabled: true }
                   : {
                       ...(await enableBackgroundAgent(SELF_PATH, {
                         preserveCurrent: argFlag("--agent"),
+                        version: VERSION,
                       })),
                       desired_enabled: true,
                     };
                 exitAfterResponse = !argFlag("--agent");
               } else {
+                const stopCurrent = message.arguments?.stop_current === true;
+                const runningAsBackgroundAgent = argFlag("--agent");
                 result = {
-                  ...(await disableBackgroundAgent({ stopCurrent: false })),
+                  ...(await disableBackgroundAgent({
+                    stopCurrent: stopCurrent && !runningAsBackgroundAgent,
+                  })),
                   desired_enabled: false,
                 };
-                exitAfterResponse = false;
+                exitAfterResponse = stopCurrent && runningAsBackgroundAgent;
               }
             } else {
               result = await core.call(

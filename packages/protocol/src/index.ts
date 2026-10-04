@@ -5,6 +5,8 @@ export type DeviceMetadata = {
   arch?: string;
   hostname?: string;
   agentVersion: string;
+  pid?: number;
+  backgroundProcess?: boolean;
   connectedAt?: string;
   lastSeen?: string;
 };
