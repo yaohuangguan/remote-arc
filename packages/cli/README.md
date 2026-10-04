@@ -5,6 +5,34 @@ Connect a Windows, macOS, or Linux computer to **Remote Arc** with one command.
 Remote Arc lets authorized AI clients such as ChatGPT, Claude, and Codex reach
 the computers you explicitly pair through a secure outbound connection.
 
+## v0.4.0
+
+Version 0.4.0 introduces Remote Arc's current security model for computer access:
+
+- read-only access to ordinary non-sensitive files can work outside Trusted
+  Write Locations;
+- supported file mutations outside Trusted Write Locations require a boundary
+  approval;
+- approvals can be granted once, for 10 minutes, by trusting the parent folder,
+  or denied;
+- Sensitive Path Protection stays enabled for remote MCP and supports only
+  narrow exceptions;
+- OAuth authorizations are tracked and revoked per grant;
+- audit records correlate requests with the OAuth client, grant, device, tool
+  and outcome;
+- Safety Guard avoids broad keyword-only false positives while continuing to
+  block catastrophic terminal patterns.
+
+Upgrade or run this exact release:
+
+```bash
+npx remotelink@0.4.0
+```
+
+If you already have a paired device, pairing is preserved. Restart
+`remotelink` after upgrading so the device uses the 0.4.0 local execution
+core and interactive approval UI.
+
 ## Quick start
 
 ```bash
