@@ -146,6 +146,7 @@ type ProductStatus = {
 };
 
 type SecurityGrant = {
+  grantId: string;
   clientId: string;
   clientName: string;
   scopes: string[];
@@ -3656,7 +3657,7 @@ function Dashboard({
   }
 
   async function revokeGrant(grant: SecurityGrant) {
-    const shortId = grant.clientId.slice(0, 12) + "…";
+    const shortId = grant.grantId.slice(0, 12) + "…";
     const expired = grant.status === "expired";
     const confirmed = await askConfirm(
       expired
@@ -3678,7 +3679,7 @@ function Dashboard({
 
     setSecurityBusy(true);
     try {
-      const response = await fetch("/api/security/grants/" + encodeURIComponent(grant.clientId) + "/revoke", { method: "POST" });
+      const response = await fetch("/api/security/grants/" + encodeURIComponent(grant.grantId) + "/revoke", { method: "POST" });
       if (!response.ok) {
         await showNotice(
           tr("Authorization was not revoked", "授权未撤销"),
@@ -3792,6 +3793,22 @@ function Dashboard({
   }
 
   async function updateDeviceTools(device: Device, tool: string, enabled: boolean) {
+    const workspaceRequired = new Set([
+      "write_file",
+      "edit_block",
+      "undo_last_change",
+      "start_process",
+    ]);
+    if (enabled && workspaceRequired.has(tool) && !(device.workspace_roots || []).length) {
+      await showNotice(
+        tr("Choose a Workspace Scope first", "请先选择工作区范围"),
+        tr(
+          "Remote Arc requires an explicit workspace before enabling file mutation or terminal execution. Add a workspace root under File boundaries & recovery, then enable this tool again.",
+          "Remote Arc 在开启文件修改或终端执行前必须先指定工作区。请先在“文件边界与恢复”中添加工作区根目录，再重新开启该工具。",
+        ),
+      );
+      return;
+    }
     if (enabled && tool === "start_process") {
       const confirmed = await askConfirm(
         tr("Enable terminal execution on " + device.name + "?", "在 " + device.name + " 上开启终端执行？"),
@@ -3814,6 +3831,16 @@ function Dashboard({
   }
 
   async function applyDevicePreset(device: Device, preset: Exclude<DeviceAccessPreset, "custom">) {
+    if (preset !== "safe" && !(device.workspace_roots || []).length) {
+      await showNotice(
+        tr("Choose a Workspace Scope first", "请先选择工作区范围"),
+        tr(
+          "Developer and Full Access are unavailable until this device has an explicit workspace root.",
+          "为设备指定明确的工作区根目录后，才能开启 Developer 或 Full Access。",
+        ),
+      );
+      return;
+    }
     if (preset === "full") {
       const confirmed = await askConfirm(
         tr("Switch " + device.name + " to Full Access?", "将 " + device.name + " 切换为 Full Access？"),
@@ -4546,7 +4573,7 @@ function Dashboard({
                           {" · "}
                           {(device.workspace_roots || []).length
                             ? (device.workspace_roots || []).length + " " + tr("workspaces", "个工作区")
-                            : tr("all non-sensitive paths", "全部非敏感路径")}
+                            : tr("read-only until scoped", "未设范围时仅只读")}
                         </span>
                       </summary>
 
@@ -4563,21 +4590,12 @@ function Dashboard({
                             <HelpTip
                               label={tr("About Sensitive Path Policy", "了解敏感路径策略")}
                               text={tr(
-                                "Blocks built-in credential locations such as .ssh, .aws, browser profiles and .env files before local execution.",
-                                "在本机执行前阻止 .ssh、.aws、浏览器配置、.env 等内置敏感位置。",
+                                "Always protects built-in credential locations such as .ssh, .aws, browser profiles and .env files for remote MCP. Use a narrow exception below when one specific path must be accessible.",
+                                "远程 MCP 始终保护 .ssh、.aws、浏览器配置、.env 等内置敏感位置；确需访问某个路径时，请在下方添加窄范围例外。",
                               )}
                             />
                           </div>
-                          <label className="compactSwitch">
-                            <input
-                              type="checkbox"
-                              checked={device.protect_sensitive_paths ?? true}
-                              onChange={(event) => void saveDevicePolicy(device, {
-                                protect_sensitive_paths: event.target.checked,
-                              })}
-                            />
-                            <span />
-                          </label>
+                          <span className="privacyPill">{tr("Always on", "始终开启")}</span>
                         </div>
 
                         <div className="policyBlock">
@@ -4587,8 +4605,8 @@ function Dashboard({
                               <HelpTip
                                 label={tr("About Workspace Scope", "了解工作区范围")}
                                 text={tr(
-                                  "When configured, Remote Arc file tools can only touch these roots. Empty means all non-sensitive paths.",
-                                  "配置后，Remote Arc 文件工具只能访问这些根目录；留空表示可访问全部非敏感路径。",
+                                  "Remote Arc file mutation and terminal tools require one of these roots. With no workspace configured, only read-only inspection of non-sensitive paths remains available.",
+                                  "Remote Arc 的文件修改与终端工具必须绑定至少一个工作区根目录；未配置工作区时，只保留对非敏感路径的只读检查。",
                                 )}
                               />
                             </div>
@@ -4613,8 +4631,8 @@ function Dashboard({
                             ))}
                             {!(device.workspace_roots || []).length && (
                               <span className="policyEmpty">{tr(
-                                "No workspace restriction yet.",
-                                "当前未限制工作区。",
+                                "No workspace selected. File mutation and terminal execution are blocked.",
+                                "尚未选择工作区；文件修改与终端执行已阻止。",
                               )}</span>
                             )}
                           </div>
@@ -5681,12 +5699,12 @@ function Dashboard({
                         ? tr("The short-lived access token expired, but the refresh authorization can still obtain a new one without asking you again.", "短期 Access Token 已过期，但 Refresh 授权仍可在无需再次询问你的情况下换取新 Token。")
                         : tr("Both access and refresh authorization have expired. This grant can no longer access Remote Arc.", "Access 与 Refresh 授权均已过期，这条 Grant 已无法继续访问 Remote Arc。");
                   return (
-                    <div className={"securityGrantRow " + grant.status} key={grant.clientId}>
+                    <div className={"securityGrantRow " + grant.status} key={grant.grantId}>
                       <div className="securityGrantIdentity">
                         <span className="securityGrantIcon">AI</span>
                         <div>
                           <strong>{grant.clientName}</strong>
-                          <small>{tr("Authorization", "授权")} {grant.clientId.slice(0,12)}…</small>
+                          <small>{tr("Authorization", "授权")} {grant.grantId.slice(0,12)}… · {tr("Client", "客户端")} {grant.clientId.slice(0,8)}…</small>
                         </div>
                       </div>
                       <div className="securityGrantState">

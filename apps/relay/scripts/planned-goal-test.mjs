@@ -39,8 +39,8 @@ try {
   const now = new Date().toISOString();
   sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at,plan) VALUES(?,?,?,?,\'plus\')").run("owner", "owner", "owner@test.invalid", now);
   const permissions = { background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: true, keep_awake: false };
-  sqlite.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools,automation_permissions) VALUES(?,?,?,?,?,?,?,?)")
-    .run("device", "owner", "Test", "linux", "hash", now, JSON.stringify(["read_file", "write_file", "edit_block", "start_process", "process_status", "process_output", "stop_process"]), JSON.stringify(permissions));
+  sqlite.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools,workspace_roots,automation_permissions) VALUES(?,?,?,?,?,?,?,?,?)")
+    .run("device", "owner", "Test", "linux", "hash", now, JSON.stringify(["read_file", "write_file", "edit_block", "start_process", "process_status", "process_output", "stop_process"]), JSON.stringify(["/workspace"]), JSON.stringify(permissions));
   let calls = [], counter = 0, frontier = "initial", generation = 0, exit = 0, running = false, offline = false, nativeEnvelope = false;
   let unknownDispatch = false, unknownWrite = false, unknownCapture = false, lostProcess = false, cancelOnStart;
   const env = { DB: db, PUBLIC_ORIGIN: "https://relay.test.invalid", REGISTRY: { getByName() { return { async fetch(req) {

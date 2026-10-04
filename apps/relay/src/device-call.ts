@@ -80,6 +80,24 @@ export async function callDevice(
     }
   }
 
+  const workspaceRoots = parseStoredStringArray(ownedDevice.workspace_roots);
+  const workspaceRequiredTools = new Set([
+    "write_file",
+    "edit_block",
+    "undo_last_change",
+    "undo_change",
+    "start_process",
+  ]);
+  if (
+    workspaceRequiredTools.has(tool) &&
+    workspaceRoots.length === 0 &&
+    !taskWorkspaceRoot
+  ) {
+    throw new Error(
+      'tool "' + tool + '" requires an explicit Workspace Scope on this device',
+    );
+  }
+
   const requestId = crypto.randomUUID();
 
   const registryRequest = () =>
@@ -96,10 +114,12 @@ export async function callDevice(
         arguments: args,
         policy: {
           ...(taskWorkspaceRoot ? { taskWorkspaceRoot } : {}),
-          workspaceRoots: parseStoredStringArray(ownedDevice.workspace_roots),
+          workspaceRoots,
           sensitivePaths: parseStoredStringArray(ownedDevice.sensitive_paths),
           sensitiveAllowPaths: parseStoredStringArray(ownedDevice.sensitive_allow_paths),
-          protectSensitivePaths: ownedDevice.protect_sensitive_paths !== 0,
+          // Remote MCP always keeps built-in sensitive locations protected.
+          // Narrow exceptions belong in sensitiveAllowPaths instead of a global bypass.
+          protectSensitivePaths: true,
           undoEnabled: ownedDevice.undo_enabled !== 0,
         },
       }),
