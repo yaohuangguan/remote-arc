@@ -19,7 +19,7 @@ import {
   type ExecutionPolicy,
 } from "@remotearc/execution-core";
 
-const VERSION = "0.4.2";
+const VERSION = "0.4.3";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -825,7 +825,7 @@ async function main() {
 
     if (!foregroundMode && config.backgroundEnabled === true) {
       try {
-        const status = await enableBackgroundAgent(SELF_PATH);
+        const status = await enableBackgroundAgent(SELF_PATH, { version: VERSION });
         if (status.supported && status.enabled) {
           banner();
           logLine("success", "Background connection enabled.");
