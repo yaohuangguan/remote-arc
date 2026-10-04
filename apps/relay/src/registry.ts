@@ -128,6 +128,7 @@ export class DeviceRegistry {
     }
 
     const body = (await request.json()) as {
+      requestId?: string;
       deviceId?: string;
       tool?: string;
       arguments?: Record<string, unknown>;
@@ -163,7 +164,10 @@ export class DeviceRegistry {
       );
     }
 
-    const id = crypto.randomUUID();
+    const id =
+      body.requestId && /^[0-9a-f-]{36}$/i.test(body.requestId)
+        ? body.requestId
+        : crypto.randomUUID();
     const message: AgentCallMessage = {
       type: "call",
       id,

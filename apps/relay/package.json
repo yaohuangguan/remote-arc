@@ -7,15 +7,17 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "test:seo": "node scripts/seo-smoke.mjs"
+    "test:seo": "node scripts/seo-smoke.mjs",
+    "test:security": "tsx scripts/oauth-security-test.ts"
   },
   "dependencies": {
-    "@remotearc/protocol": "workspace:*",
     "@modelcontextprotocol/server": "^2.1.0",
+    "@remotearc/protocol": "workspace:*",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260924.1",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "wrangler": "^4.38.0"
   }

@@ -314,6 +314,7 @@ const automationIdentity = (
 ): OAuthIdentity => ({
   userId: automation.user_id,
   clientId: "automation:" + automation.id,
+  grantId: null,
   scope: "devices:read computer:read computer:write",
   resource: env.PUBLIC_ORIGIN + "/mcp",
 });

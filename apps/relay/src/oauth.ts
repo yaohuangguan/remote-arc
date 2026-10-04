@@ -31,7 +31,7 @@ const appOrigin = (env: OAuthEnv) => env.APP_ORIGIN || env.PUBLIC_ORIGIN;
 const mcpResource = (env: OAuthEnv) => appOrigin(env) + "/mcp";
 
 function normalizeScope(value: string | null) {
-  const requested = (value || "devices:read computer:read computer:write browser:read")
+  const requested = (value || "devices:read computer:read browser:read")
     .split(/\s+/)
     .filter(Boolean);
   const allowed = requested.filter((scope) =>
@@ -145,11 +145,8 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
   const redirectUri = url.searchParams.get("redirect_uri");
   const codeChallenge = url.searchParams.get("code_challenge");
   const codeChallengeMethod = url.searchParams.get("code_challenge_method");
-  const state = url.searchParams.get("state") || undefined;
   const resource = url.searchParams.get("resource") || mcpResource(env);
   const scope = normalizeScope(url.searchParams.get("scope"));
-  const approved = url.searchParams.get("approved") === "1";
-  const denied = url.searchParams.get("denied") === "1";
 
   if (
     responseType !== "code" ||
@@ -162,11 +159,7 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
   }
 
   if (resource !== mcpResource(env)) {
-    return redirectWith(redirectUri, {
-      error: "invalid_target",
-      error_description: "Unsupported resource",
-      state,
-    });
+    return new Response("Unsupported OAuth resource", { status: 400 });
   }
 
   const client = await env.DB.prepare(
@@ -195,29 +188,108 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
     );
   }
 
-  if (denied) {
-    return redirectWith(redirectUri, {
-      error: "access_denied",
-      error_description: "The user denied the Remote Arc authorization request.",
-      state,
-    });
+  // Consent is never accepted from query-string flags. A top-level cross-site
+  // navigation may carry a SameSite=Lax session cookie, so trusting an
+  // approval flag here would let a crafted URL bypass the consent UI.
+  const consent = new URL(appOrigin(env) + "/oauth/consent");
+  for (const [key, value] of url.searchParams.entries()) {
+    if (key === "approved" || key === "denied") continue;
+    consent.searchParams.append(key, value);
+  }
+  consent.searchParams.set("scope", scope);
+  return Response.redirect(consent.toString(), 302);
+}
+
+export async function handleOAuthDecision(request: Request, env: OAuthEnv) {
+  const expectedOrigin = new URL(appOrigin(env)).origin;
+  if (request.headers.get("origin") !== expectedOrigin) {
+    return Response.json({ error: "invalid_consent_origin" }, { status: 403 });
   }
 
-  if (!approved) {
-    const consent = new URL(appOrigin(env) + "/oauth/consent");
-    for (const [key, value] of url.searchParams.entries()) {
-      consent.searchParams.append(key, value);
-    }
-    consent.searchParams.set("scope", scope);
-    return Response.redirect(consent.toString(), 302);
+  const contentType = request.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().startsWith("application/json")) {
+    return Response.json({ error: "invalid_request" }, { status: 415 });
+  }
+
+  const user = await getSessionUser(request, env);
+  if (!user) {
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json().catch(() => ({}))) as {
+    decision?: unknown;
+    response_type?: unknown;
+    client_id?: unknown;
+    redirect_uri?: unknown;
+    code_challenge?: unknown;
+    code_challenge_method?: unknown;
+    state?: unknown;
+    resource?: unknown;
+    scope?: unknown;
+  };
+
+  const decision = body.decision;
+  const responseType = typeof body.response_type === "string" ? body.response_type : "";
+  const clientId = typeof body.client_id === "string" ? body.client_id : "";
+  const redirectUri = typeof body.redirect_uri === "string" ? body.redirect_uri : "";
+  const codeChallenge = typeof body.code_challenge === "string" ? body.code_challenge : "";
+  const codeChallengeMethod =
+    typeof body.code_challenge_method === "string" ? body.code_challenge_method : "";
+  const state = typeof body.state === "string" ? body.state : undefined;
+  const resource =
+    typeof body.resource === "string" && body.resource
+      ? body.resource
+      : mcpResource(env);
+  const scope = normalizeScope(typeof body.scope === "string" ? body.scope : null);
+
+  if (
+    (decision !== "allow" && decision !== "deny") ||
+    responseType !== "code" ||
+    !clientId ||
+    !redirectUri ||
+    !codeChallenge ||
+    codeChallengeMethod !== "S256"
+  ) {
+    return Response.json({ error: "invalid_request" }, { status: 400 });
+  }
+
+  if (resource !== mcpResource(env)) {
+    return Response.json({ error: "invalid_target" }, { status: 400 });
+  }
+
+  const client = await env.DB.prepare(
+    "SELECT redirect_uris FROM oauth_clients WHERE client_id = ?1",
+  )
+    .bind(clientId)
+    .first<{ redirect_uris: string }>();
+
+  if (!client) {
+    return Response.json({ error: "invalid_client" }, { status: 400 });
+  }
+
+  const allowedRedirects = JSON.parse(client.redirect_uris) as string[];
+  if (!allowedRedirects.includes(redirectUri)) {
+    return Response.json({ error: "invalid_redirect_uri" }, { status: 400 });
+  }
+
+  if (decision === "deny") {
+    const target = new URL(redirectUri);
+    target.searchParams.set("error", "access_denied");
+    target.searchParams.set(
+      "error_description",
+      "The user denied the Remote Arc authorization request.",
+    );
+    if (state !== undefined) target.searchParams.set("state", state);
+    return Response.json({ redirect_to: target.toString() });
   }
 
   const code = randomToken();
+  const grantId = crypto.randomUUID();
   await env.DB.prepare(
     `INSERT INTO oauth_codes
       (code_hash, client_id, user_id, redirect_uri, code_challenge,
-       resource, scope, expires_at, created_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`,
+       resource, scope, expires_at, created_at, grant_id)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
   )
     .bind(
       await sha256Hex(code),
@@ -229,14 +301,15 @@ export async function handleOAuthAuthorize(request: Request, env: OAuthEnv) {
       scope,
       addSecondsIso(300),
       nowIso(),
+      grantId,
     )
     .run();
 
-  return redirectWith(redirectUri, {
-    code,
-    state,
-    iss: appOrigin(env),
-  });
+  const target = new URL(redirectUri);
+  target.searchParams.set("code", code);
+  if (state !== undefined) target.searchParams.set("state", state);
+  target.searchParams.set("iss", appOrigin(env));
+  return Response.json({ redirect_to: target.toString() });
 }
 
 async function issueTokens(
@@ -246,6 +319,7 @@ async function issueTokens(
     userId: string;
     resource: string;
     scope: string;
+    grantId: string | null;
   },
 ) {
   const accessToken = "rla_" + randomToken();
@@ -255,8 +329,8 @@ async function issueTokens(
   await env.DB.prepare(
     `INSERT INTO oauth_tokens
       (access_token_hash, refresh_token_hash, client_id, user_id,
-       resource, scope, expires_at, refresh_expires_at, created_at, revoked_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL)`,
+       resource, scope, expires_at, refresh_expires_at, created_at, revoked_at, grant_id)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, ?10)`,
   )
     .bind(
       await sha256Hex(accessToken),
@@ -268,6 +342,7 @@ async function issueTokens(
       addSecondsIso(3600),
       addSecondsIso(60 * 60 * 24 * 30),
       createdAt,
+      input.grantId,
     )
     .run();
 
@@ -310,7 +385,7 @@ export async function handleOAuthToken(request: Request, env: OAuthEnv) {
 
     const codeHash = await sha256Hex(code);
     const row = await env.DB.prepare(
-      `SELECT client_id, user_id, redirect_uri, code_challenge, resource, scope
+      `SELECT client_id, user_id, redirect_uri, code_challenge, resource, scope, grant_id
        FROM oauth_codes
        WHERE code_hash = ?1 AND expires_at > ?2`,
     )
@@ -322,6 +397,7 @@ export async function handleOAuthToken(request: Request, env: OAuthEnv) {
         code_challenge: string;
         resource: string;
         scope: string;
+        grant_id: string | null;
       }>();
 
     if (
@@ -344,6 +420,7 @@ export async function handleOAuthToken(request: Request, env: OAuthEnv) {
         userId: row.user_id,
         resource: row.resource,
         scope: row.scope,
+        grantId: row.grant_id,
       }),
     );
   }
@@ -356,7 +433,7 @@ export async function handleOAuthToken(request: Request, env: OAuthEnv) {
 
     const refreshHash = await sha256Hex(refreshToken);
     const row = await env.DB.prepare(
-      `SELECT access_token_hash, user_id, client_id, resource, scope
+      `SELECT access_token_hash, user_id, client_id, resource, scope, grant_id
        FROM oauth_tokens
        WHERE refresh_token_hash = ?1
          AND refresh_expires_at > ?2
@@ -369,6 +446,7 @@ export async function handleOAuthToken(request: Request, env: OAuthEnv) {
         client_id: string;
         resource: string;
         scope: string;
+        grant_id: string | null;
       }>();
 
     if (!row || row.client_id !== clientId || row.resource !== resource) {
@@ -387,6 +465,7 @@ export async function handleOAuthToken(request: Request, env: OAuthEnv) {
         userId: row.user_id,
         resource: row.resource,
         scope: row.scope,
+        grantId: row.grant_id,
       }),
     );
   }

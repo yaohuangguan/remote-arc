@@ -67,7 +67,8 @@ const baseConfig=JSON.parse(fs.readFileSync(repo+"/apps/relay/wrangler.jsonc","u
 baseConfig.routes=[];
 delete baseConfig.ai;
 baseConfig.vars={...(baseConfig.vars||{}),OPENAI_API_KEY:"e2e-key",AGENT_MODEL_BASE_URL:mockBase,AGENT_MODEL:"gpt-5.6-luna",GITHUB_APP_ID:"12345",GITHUB_APP_PRIVATE_KEY:privateKey,GITHUB_APP_INSTALLATION_ID:"67890",GITHUB_API_BASE_URL:mockBase};
-if(baseConfig.assets&&Array.isArray(baseConfig.assets.run_worker_first)&&!baseConfig.assets.run_worker_first.includes("/__scheduled"))baseConfig.assets.run_worker_first.push("/__scheduled");
+// "/*" already routes /__scheduled through the Worker. Newer Wrangler rejects
+// a redundant explicit /__scheduled entry when the wildcard is present.
 const e2eConfig=repo+"/apps/relay/wrangler.e2e.json";
 fs.writeFileSync(e2eConfig,JSON.stringify(baseConfig,null,2));
 

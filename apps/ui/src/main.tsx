@@ -115,6 +115,11 @@ type AuditEvent = {
   event_type: string;
   tool_name: string | null;
   success: number;
+  request_id?: string | null;
+  client_id?: string | null;
+  client_name?: string | null;
+  grant_id?: string | null;
+  outcome?: string | null;
   created_at: string;
 };
 
@@ -1360,16 +1365,37 @@ function PairDevice({
 function OAuthConsent({ user }: { user: User | null | undefined }) {
   const { tr } = useI18n();
   const [showSignIn, setShowSignIn] = useState(false);
+  const [decisionBusy, setDecisionBusy] = useState(false);
+  const [decisionError, setDecisionError] = useState("");
   const params = new URLSearchParams(location.search);
   const scopes = (params.get("scope") || "").split(/\s+/).filter(Boolean);
   const clientId = params.get("client_id") || "MCP client";
 
-  function continueAuthorization(mode: "allow" | "deny") {
-    const next = new URLSearchParams(params);
-    next.delete("approved");
-    next.delete("denied");
-    next.set(mode === "allow" ? "approved" : "denied", "1");
-    location.assign("/oauth/authorize?" + next.toString());
+  async function continueAuthorization(mode: "allow" | "deny") {
+    if (decisionBusy) return;
+    setDecisionBusy(true);
+    setDecisionError("");
+    try {
+      const body = Object.fromEntries(params.entries());
+      delete body.approved;
+      delete body.denied;
+      const response = await fetch("/oauth/decision", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...body, decision: mode }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        redirect_to?: string;
+        error?: string;
+      };
+      if (!response.ok || !payload.redirect_to) {
+        throw new Error(payload.error || tr("Authorization failed.", "授权失败。"));
+      }
+      location.assign(payload.redirect_to);
+    } catch (error) {
+      setDecisionError(error instanceof Error ? error.message : String(error));
+      setDecisionBusy(false);
+    }
   }
 
   if (user === undefined) {
@@ -1434,9 +1460,10 @@ function OAuthConsent({ user }: { user: User | null | undefined }) {
         <div className="consentNotice">
           {tr("Local permission modes still apply. OAuth cannot enable a tool that the device did not advertise.", "本机权限模式始终生效。OAuth 无法启用设备未开放的工具。")}
         </div>
+        {decisionError && <p className="errorText">{decisionError}</p>}
         <div className="consentActions">
-          <button className="ghostButton" onClick={() => continueAuthorization("deny")}>{tr("Deny", "拒绝")}</button>
-          <button className="approveButton" onClick={() => continueAuthorization("allow")}>{tr("Allow access", "允许访问")}</button>
+          <button className="ghostButton" disabled={decisionBusy} onClick={() => void continueAuthorization("deny")}>{tr("Deny", "拒绝")}</button>
+          <button className="approveButton" disabled={decisionBusy} onClick={() => void continueAuthorization("allow")}>{decisionBusy ? tr("Authorizing…", "正在授权…") : tr("Allow access", "允许访问")}</button>
         </div>
       </section>
     </main>
@@ -4304,7 +4331,7 @@ function Dashboard({
                 <div className="blockHeader"><div><span className="eyebrow">{tr("RECENT ACTIVITY", "最近活动")}</span><h2>{tr("What Remote Arc did", "Remote Arc 最近做了什么")}</h2></div><span className="privacyPill">{tr("Arguments not logged", "不记录参数")}</span></div>
                 <div className="activityList">
                   {(status?.recentActivity || []).map((event) => (
-                    <div className="activityItem" key={event.id}><i className={event.success ? "eventIcon success" : "eventIcon failed"}>{event.success ? "✓" : "!"}</i><div><strong>{eventLabel(event)}</strong><span>{event.device_id ? deviceNameById.get(event.device_id) || event.device_id.slice(0,8) : tr("Account", "账户")} · {timeAgo(event.created_at)}</span></div></div>
+                    <div className="activityItem" key={event.id}><i className={event.success ? "eventIcon success" : "eventIcon failed"}>{event.success ? "✓" : "!"}</i><div><strong>{eventLabel(event)}</strong><span>{event.client_name || event.client_id?.slice(0,12) || tr("Unknown client", "未知客户端")} · {event.device_id ? deviceNameById.get(event.device_id) || event.device_id.slice(0,8) : tr("Account", "账户")} · {timeAgo(event.created_at)}{event.request_id ? " · req " + event.request_id.slice(0,8) : ""}</span></div></div>
                   ))}
                   {!status?.recentActivity?.length && <div className="activityEmpty"><strong>{tr("No activity yet", "暂无活动")}</strong><span>{tr("Pair a device or call a tool from your AI client.", "配对设备或从 AI 客户端发起工具调用。")}</span></div>}
                 </div>
@@ -5731,7 +5758,7 @@ function Dashboard({
                   {(status?.recentActivity || []).slice(0,6).map((event) => (
                     <div className="securityAuditRow" key={event.id}>
                       <i className={event.success ? "eventIcon success" : "eventIcon failed"}>{event.success ? "✓" : "!"}</i>
-                      <div><strong>{eventLabel(event)}</strong><span>{event.device_id ? deviceNameById.get(event.device_id) || event.device_id.slice(0,8) : tr("Account", "账户")} · {timeAgo(event.created_at)}</span></div>
+                      <div><strong>{eventLabel(event)}</strong><span>{event.client_name || event.client_id?.slice(0,12) || tr("Unknown client", "未知客户端")} · {event.device_id ? deviceNameById.get(event.device_id) || event.device_id.slice(0,8) : tr("Account", "账户")} · {timeAgo(event.created_at)}{event.request_id ? " · req " + event.request_id.slice(0,8) : ""}</span></div>
                       <b>{event.success ? tr("Allowed", "已允许") : tr("Failed", "失败")}</b>
                     </div>
                   ))}
@@ -5742,7 +5769,7 @@ function Dashboard({
               <article className="securityPanel securityPrivacyPanel">
                 <div className="securityPanelHeader"><div><span className="eyebrow">{tr("PRIVACY BOUNDARY", "隐私边界")}</span><h2>{tr("What the audit log keeps", "审计日志记录什么")}</h2></div></div>
                 <div className="privacyBoundaryGrid">
-                  <div className="kept"><span>✓</span><p><strong>{tr("Operational metadata", "运行元数据")}</strong><small>{tr("Tool name, device, success state and time.", "工具名称、设备、结果状态与时间。")}</small></p></div>
+                  <div className="kept"><span>✓</span><p><strong>{tr("Operational metadata", "运行元数据")}</strong><small>{tr("Tool, device, OAuth client, request ID, outcome and time.", "工具、设备、OAuth 客户端、Request ID、结果与时间。")}</small></p></div>
                   <div className="notKept"><span>×</span><p><strong>{tr("File contents", "文件内容")}</strong><small>{tr("Not intentionally stored in audit records.", "不会有意保存在审计记录中。")}</small></p></div>
                   <div className="notKept"><span>×</span><p><strong>{tr("Command arguments", "命令参数")}</strong><small>{tr("Not intentionally stored in audit records.", "不会有意保存在审计记录中。")}</small></p></div>
                   <div className="notKept"><span>×</span><p><strong>{tr("OAuth tokens & device credentials", "OAuth Token 与设备凭证")}</strong><small>{tr("Never exposed in the activity feed.", "不会暴露在活动记录中。")}</small></p></div>

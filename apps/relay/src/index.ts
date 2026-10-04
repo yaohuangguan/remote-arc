@@ -59,6 +59,7 @@ import {
   authorizationServerMetadata,
   handleDynamicClientRegistration,
   handleOAuthAuthorize,
+  handleOAuthDecision,
   handleOAuthToken,
   mcpUnauthorized,
   protectedResourceMetadata,
@@ -119,6 +120,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
     const authSensitive =
       url.pathname === "/oauth/register" ||
       url.pathname === "/oauth/authorize" ||
+      url.pathname === "/oauth/decision" ||
       url.pathname === "/oauth/token" ||
       url.pathname === "/auth/reviewer" ||
       url.pathname === "/api/device/start" ||
@@ -244,6 +246,10 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
 
     if (url.pathname === "/oauth/authorize" && request.method === "GET") {
       return handleOAuthAuthorize(request, env);
+    }
+
+    if (url.pathname === "/oauth/decision" && request.method === "POST") {
+      return handleOAuthDecision(request, env);
     }
 
     if (url.pathname === "/oauth/token" && request.method === "POST") {

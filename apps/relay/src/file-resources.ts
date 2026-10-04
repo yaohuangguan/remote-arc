@@ -261,6 +261,7 @@ export async function handleFileResource(
   const identity: OAuthIdentity = {
     userId: resource.user_id,
     clientId: "file-resource",
+    grantId: null,
     scope: "computer:read",
     resource: env.PUBLIC_ORIGIN + "/mcp",
   };
