@@ -76,8 +76,9 @@ while the relay enforces the saved per-device policy before forwarding a call.
 Use `--safe` when you want an additional local hard cap that prevents write
 skills from running even if they are enabled in the dashboard.
 
-Device permissions, Workspace Scope, Sensitive Path settings, and Undo policy are
-managed from Remote Arc Cloud and enforced again by the local execution core. The
+Device permissions, Trusted Write Locations, Sensitive Path settings, Approval
+Broker decisions, and Undo policy are managed from Remote Arc Cloud and enforced
+again by the local execution core. The
 CLI does not keep a second editable copy of those policies. Local options such as
 `--safe` may only make access stricter; they cannot silently broaden Dashboard
 permissions.
@@ -104,20 +105,28 @@ Local Undo covers Remote Arc file writes only. It cannot reverse external side
 effects such as publishing a package, deploying cloud infrastructure, sending a
 request to another service, or mutating a remote database.
 
-## Workspace and sensitive-path policy
+## Trusted Write Locations, approvals and sensitive paths
 
-The dashboard can configure allowed workspace roots, additional protected
+The dashboard can configure Trusted Write Locations, additional protected
 paths, and narrow sensitive-path exceptions per device. Online devices also
-support a local directory picker so workspace roots can be selected without
-typing paths manually. Sensitive-path
-protection stays on by default for common credential locations and `.env`
-files; an exception bypasses only sensitive-path protection, not Workspace
-Scope.
+support a local directory picker so trusted write roots can be selected without
+typing paths manually.
+
+Ordinary non-sensitive read-only file tools may inspect paths outside Trusted
+Write Locations. Supported mutations stay inside trusted write roots unless an
+out-of-scope write receives a matching Approval Broker grant. The dashboard and
+an interactive remotelink terminal can approve once, allow the same file
+briefly, trust the parent folder, or deny the request.
+
+Sensitive-path protection remains independent and stays enabled for common
+credential locations and `.env` files. A sensitive-path exception grants
+visibility to that path; it does not grant write authority outside Trusted Write
+Locations.
 
 Filesystem paths are canonicalized and checked locally immediately before
-execution. If workspace roots are configured, file operations must stay under
-those roots. Full terminal mode requires an in-scope `cwd`, but shell commands
-are not an OS sandbox and can still reference other paths.
+execution. Full terminal mode requires an in-scope `cwd` when trusted write
+roots are configured, but shell commands are not an OS sandbox and can still
+reference other paths, credentials, processes or network services.
 
 ## Safety Guard
 
