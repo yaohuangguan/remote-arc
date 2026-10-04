@@ -42,6 +42,7 @@ type Scope =
   | "computer:read"
   | "computer:write"
   | "browser:read"
+  | "browser:interact"
   | "automation:read"
   | "automation:write"
   | "agent:write";
@@ -349,6 +350,68 @@ export function createRemoteLinkMcp(
           await callDevice(env, identity, device_id, "browser_extract_table", {
             ...(tab_id !== undefined ? { tab_id } : {}),
             table_index,
+          }),
+        );
+      },
+    );
+
+    server.registerTool(
+      "browser_click",
+      {
+        title: "Click an element in a shared browser tab",
+        description:
+          "Click one element from the most recent browser_read_page snapshot. Requires the user to enable Click & fill for that specific tab. Clicks can navigate, submit forms, or trigger other page actions, so read the page again after each click.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          tab_id: z.number().int().optional(),
+          snapshot_id: z.string().min(1).max(120),
+          ref: z.string().regex(/^e[1-9]\d*$/),
+        }),
+        annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true },
+        _meta: oauthToolMeta("browser:interact"),
+      },
+      async ({ device_id, tab_id, snapshot_id, ref }) => {
+        if (!identity || !hasScope(identity, "browser:interact")) {
+          return authRequired(env, "browser:interact");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "browser_click", {
+            ...(tab_id !== undefined ? { tab_id } : {}),
+            snapshot_id,
+            ref,
+          }),
+        );
+      },
+    );
+
+    server.registerTool(
+      "browser_fill",
+      {
+        title: "Fill a field in a shared browser tab",
+        description:
+          "Fill a non-sensitive field from the most recent browser_read_page snapshot. Requires the user to enable Click & fill for that specific tab. Recognized password, one-time-code, payment-card, and file fields remain blocked by the browser companion.",
+        inputSchema: z.object({
+          device_id: z.string(),
+          tab_id: z.number().int().optional(),
+          snapshot_id: z.string().min(1).max(120),
+          ref: z.string().regex(/^e[1-9]\d*$/),
+          value: z.string().max(20000),
+        }),
+        annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: false },
+        _meta: oauthToolMeta("browser:interact"),
+      },
+      async ({ device_id, tab_id, snapshot_id, ref, value }) => {
+        if (!identity || !hasScope(identity, "browser:interact")) {
+          return authRequired(env, "browser:interact");
+        }
+        await consume(env, identity);
+        return textResult(
+          await callDevice(env, identity, device_id, "browser_fill", {
+            ...(tab_id !== undefined ? { tab_id } : {}),
+            snapshot_id,
+            ref,
+            value,
           }),
         );
       },

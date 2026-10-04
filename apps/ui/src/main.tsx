@@ -1419,7 +1419,9 @@ function OAuthConsent({ user }: { user: User | null | undefined }) {
                         ? tr("Edit files and run commands on devices that allow it.", "在允许的设备上编辑文件并运行命令。")
                         : scope === "browser:read"
                           ? tr("Read content from browser tabs you explicitly share.", "读取你明确共享的浏览器标签页内容。")
-                          : scope === "automation:read"
+                          : scope === "browser:interact"
+                            ? tr("Click or fill non-sensitive controls only on shared tabs where you separately enable interaction.", "仅在你对已共享标签页单独开启交互后，点击或填写非敏感控件。")
+                            : scope === "automation:read"
                             ? tr("View persistent tasks, watches and their run state.", "查看持久任务、监听及其运行状态。")
                             : scope === "automation:write"
                               ? tr("Create and manage persistent tasks that can continue after this chat ends.", "创建和管理可在当前聊天结束后继续运行的持久任务。")
@@ -2237,6 +2239,7 @@ function ConnectPage({ user }: { user?: User | null }) {
     ["computer:read", tr("Read files, directories and process metadata when the selected device allows it.", "在目标设备允许时读取文件、目录和进程元数据。")],
     ["computer:write", tr("Request edit and terminal tools; the selected device policy still decides whether they are available.", "请求编辑和终端工具；最终是否可用仍由目标设备策略决定。")],
     ["browser:read", tr("Read content from browser tabs explicitly shared by the user.", "读取用户明确共享的浏览器标签页内容。")],
+    ["browser:interact", tr("Click or fill non-sensitive controls only on shared tabs where the user separately enabled interaction.", "仅在用户对已共享标签页单独开启交互后，点击或填写非敏感控件。")],
     ["automation:read", tr("View persistent tasks, watches and run state.", "查看持久任务、监听与运行状态。")],
     ["automation:write", tr("Create and manage persistent work that can continue after the creating chat ends.", "创建和管理可在原聊天结束后继续运行的持久任务。")],
     ["agent:write", tr("Allow durable Agent Goals to inspect results and adapt their next approved action over time.", "允许 Durable Agent Goal 根据执行结果持续调整后续已授权动作。")],
@@ -2490,7 +2493,7 @@ function SecurityModelPage({ user }: { user?: User | null }) {
                 <li>{tr("Terminal execution is not sandboxed by Remote Arc when Full access is enabled.", "开启 Full 后，终端执行不会被 Remote Arc 变成沙箱。")}</li>
                 <li>{tr("Local Undo is not a general transaction rollback system.", "Local Undo 不是通用事务回滚系统。")}</li>
                 <li>{tr("Direct process handles are local to the agent. Durable Tasks preserve progress across interruptions; recovery may inspect or start a new attempt rather than preserve the same OS process.", "直接进程句柄属于本地 Agent；持久 Task 可跨中断保存进度，恢复时可能检查或启动新尝试，不保留同一个 OS 进程。")}</li>
-                <li>{tr("Browser context is currently read-only rather than full browser automation.", "浏览器上下文当前只读，而不是完整浏览器自动化。")}</li>
+                <li>{tr("Browser tabs start read-only; click/fill is a separate per-tab opt-in rather than unrestricted browser automation.", "浏览器标签页默认只读；点击/填写需按标签页单独授权，而不是无限制浏览器自动化。")}</li>
                 <li>{tr("Adaptive Agent Goals may choose different next actions over time, but only inside the approved objective, tool set, device policy, iteration/expiry limits and optional deterministic verification boundary.", "Adaptive Agent Goal 可以随执行结果调整下一步，但只能在已批准目标、Tool Set、设备策略、迭代/到期限制与可选确定性验证边界内行动。")}</li>
                 <li>{tr("Login background connection is separate from task keep-awake. Opted-in active tasks can request temporary sleep inhibition; power loss, forced sleep and network loss still make the device unavailable.", "登录后台连接与任务保持唤醒不同。已授权活动任务可临时申请抑制休眠，断电、强制休眠和断网仍会使设备不可用。")}</li>
               </ul>

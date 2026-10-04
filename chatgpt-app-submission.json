@@ -4,7 +4,7 @@
   "app_info": {
     "display_name": "Remote Arc",
     "subtitle": "Access your computer remotely",
-    "description": "Remote Arc securely connects ChatGPT and Codex to Windows, macOS, and Linux computers that the user explicitly pairs. It can list paired devices, inspect directories and files, read process information, read explicitly shared browser tabs, run terminal commands when enabled, modify files, manage Remote Arc background processes, and restore supported local file edits. Each device has an independent revocable credential and per-device tool policy. Remote Arc uses an OAuth-protected Universal Remote MCP endpoint and an outbound-only device connection. Use it only with computers, files, accounts, and services you own or are authorized to administer.",
+    "description": "Remote Arc securely connects ChatGPT and Codex to Windows, macOS, Linux, and explicitly shared Chrome tabs. It can inspect directories and files, read process information, read shared browser tabs, and\u2014only when the user separately enables the required permission\u2014run terminal commands, modify files, or click/fill non-sensitive controls in a specific shared tab. Browser interaction is per-tab, stale snapshot refs are rejected, and recognized password, one-time-code, payment-card, and file-picker fields remain blocked. Each device has an independent revocable credential and policy. Remote Arc uses an OAuth-protected Universal Remote MCP endpoint and an outbound-only device connection. Use it only with computers, files, accounts, and services you own or are authorized to administer.",
     "category": "DEVELOPER_TOOLS"
   },
   "tools": {
@@ -234,6 +234,30 @@
         "read_only_justification": "Restores the previous local file state from a Remote Arc undo snapshot, so it mutates the filesystem and is not read-only.",
         "open_world_justification": "Restoration is performed only on the user's paired computer using a local snapshot and does not target external internet services.",
         "destructive_justification": "The operation is specifically a recovery action that restores a prior Remote Arc-created file state and refuses unsafe restoration when the file has changed again, so it is not classified as destructive."
+      }
+    },
+    "browser_click": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Clicks an element in an explicitly shared browser tab and can change page or external state, so it is not read-only.",
+        "open_world_justification": "A click may navigate, submit a form, activate a third-party control, or otherwise interact with an external website.",
+        "destructive_justification": "A clicked control can trigger consequential or irreversible website actions; Remote Arc therefore requires an explicit per-tab interaction grant and treats the tool as destructive."
+      }
+    },
+    "browser_fill": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Changes a field in the explicitly shared page, so it is not read-only, even though it does not submit the form by itself.",
+        "open_world_justification": "It types into a control on an external website and may influence subsequent actions on that service.",
+        "destructive_justification": "The tool only fills an allowed non-sensitive control and does not itself submit or click; recognized password, OTP, payment-card, and file fields are blocked."
       }
     }
   },

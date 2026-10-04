@@ -38,6 +38,8 @@ const BROWSER_DEFAULT_ALLOWED_TOOLS = [
   "browser_get_selected_text",
   "browser_extract_links",
   "browser_extract_table",
+  "browser_click",
+  "browser_fill",
 ] as const;
 
 const parseJsonStringArray = (value: string | null) => {

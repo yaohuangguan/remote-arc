@@ -97,7 +97,7 @@ const pages: Record<string, SeoPage> = {
   "/demo": { title: "Remote Arc Plugin Demo — ChatGPT to a real computer", description: "Watch a real Remote Arc demo showing ChatGPT connecting to a paired Mac, inspecting a Node.js project and running its tests.", canonical: SITE + "/demo" },
   "/docs": { title: "Remote Arc Documentation", description: "Set up Remote Arc, connect your AI, understand 29 MCP tools, device permissions, durable goals, restart recovery, scheduling, isolation and task data.", canonical: SITE + "/docs" },
   "/docs/long-running-work": { title: "Remote Arc Long-running Work — Overnight goals and scheduled tasks", description: "Learn how persistent goals, source agents, device task permissions, recovery and completion evidence support long-running work.", canonical: SITE + "/docs/long-running-work" },
-  "/docs/mcp": { title: "Remote Arc MCP Reference", description: "Remote MCP connection, OAuth scopes, 29 tools, source-goal decisions, conditional task events and browser companion setup for Remote Arc.", canonical: SITE + "/docs/mcp" },
+  "/docs/mcp": { title: "Remote Arc MCP Reference", description: "Remote MCP connection, OAuth scopes, 31 tools, source-goal decisions, conditional task events and browser companion setup for Remote Arc.", canonical: SITE + "/docs/mcp" },
   "/connect-ai": { title: "Connect an AI client to Remote Arc", description: "Pair a computer, choose its device permissions, then connect ChatGPT, Claude, Cursor or another compatible MCP client through OAuth.", canonical: SITE + "/connect-ai" },
   "/security-model": { title: "Remote Arc Security and Trust Model", description: "Remote Arc trust boundaries, per-device skills, directory and sensitive-path controls, encrypted transport, data handling, Local Undo and revocation.", canonical: SITE + "/security-model" },
   "/blogs": { title: "Remote Arc Blog", description: "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.", canonical: SITE + "/blogs" },
@@ -117,7 +117,7 @@ const useCaseSeo: Record<string, [string, string]> = {
   "ci-follow-up": ["Run an authorized CI follow-up", "Use a Condition Watch with explicit event matching, authorized actions and recorded outcomes."],
   "data-work": ["Process data in your local environment", "Use installed runtimes to analyze local files, validate results and understand task-data handling."],
   "home-lab": ["Inspect a headless host", "Inspect logs and services through an outbound device connection without opening an inbound Remote Arc port."],
-  "browser-research": ["Read explicitly shared browser context", "Extract text, selections, links and tables from Chrome tabs you explicitly share."],
+  "browser-research": ["Work with explicitly shared browser tabs", "Read text, selections, links and tables, then optionally enable scoped click and fill on individual shared Chrome tabs."],
   "remote-support": ["Diagnose an authorized computer", "Read real logs and processes while keeping diagnosis and repair authorization separate."],
 };
 for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
