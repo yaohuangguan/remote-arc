@@ -385,7 +385,7 @@ export async function getDevicesForUser(
   const onlineById = new Map(online.map((device) => [device.id, device]));
 
   return storedDevices.map((device) => {
-    const reviewerFixture =
+    const reviewerFixture: OnlineDevice | undefined =
       env.REVIEWER_DEMO_DEVICE_ID && device.id === env.REVIEWER_DEMO_DEVICE_ID
         ? {
             id: device.id,
