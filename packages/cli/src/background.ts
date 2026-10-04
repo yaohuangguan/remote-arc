@@ -136,6 +136,11 @@ async function enableMac(
     <key>SuccessfulExit</key><false/>
   </dict>
   <key>ProcessType</key><string>Background</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>${xmlEscape(process.env.PATH || "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")}</string>
+    <key>HOME</key><string>${xmlEscape(os.homedir())}</string>
+  </dict>
   <key>ThrottleInterval</key><integer>5</integer>
   <key>StandardOutPath</key><string>${xmlEscape(stdoutPath)}</string>
   <key>StandardErrorPath</key><string>${xmlEscape(stderrPath)}</string>
