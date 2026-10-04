@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Remote Arc Browser",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Share selected browser tabs with AI, with per-tab read and interaction permission.",
   "permissions": [
     "activeTab",
