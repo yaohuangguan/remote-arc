@@ -17,11 +17,12 @@
     "test:automations": "node apps/relay/scripts/automation-e2e.mjs",
     "test:goals": "node apps/relay/scripts/goal-continuation-test.mjs && node apps/relay/scripts/planned-goal-test.mjs && pnpm --filter @remotearc/execution-core exec tsx ../cli/scripts/goal-workspace-test.ts",
     "ci": "pnpm typecheck && pnpm test && pnpm test:goals && pnpm test:seo && pnpm --filter @remotearc/relay test:security",
-    "build:ui": "pnpm --filter @remotearc/ui build",
+    "build:ui": "pnpm package:browser && pnpm --filter @remotearc/ui build",
     "deploy:relay": "pnpm build:ui && pnpm --filter @remotearc/relay run deploy",
     "build:cli": "pnpm --filter remotelink build",
     "publish:cli": "pnpm build:cli && CLI_VERSION=$(node -p \"require('./packages/cli/package.json').version\") && grep -q \"$CLI_VERSION\" packages/cli/dist/index.js && grep -q 'https://mcp.remotearc.app' packages/cli/dist/index.js && grep -q '/api/device/heartbeat' packages/cli/dist/index.js && cd packages/cli && npm publish",
     "test:browser": "node apps/browser-extension/test.mjs",
-    "test:seo": "pnpm --filter @remotearc/relay test:seo"
+    "test:seo": "pnpm --filter @remotearc/relay test:seo",
+    "package:browser": "node scripts/package-browser-extension.mjs"
   }
 }
