@@ -80,6 +80,8 @@ export async function callDevice(
     }
   }
 
+  const requestId = crypto.randomUUID();
+
   const registryRequest = () =>
     new Request("https://registry/call", {
       method: "POST",
@@ -88,6 +90,7 @@ export async function callDevice(
         "x-remote-link-user-id": identity.userId,
       },
       body: JSON.stringify({
+        requestId,
         deviceId,
         tool,
         arguments: args,
@@ -110,12 +113,22 @@ export async function callDevice(
   const payload = (await response.json()) as { result?: unknown; error?: string };
   const success = response.ok && !payload.error;
 
+  const outcome = success
+    ? "allowed"
+    : payload.error?.startsWith("Blocked by Remote Arc Safety Guard:")
+      ? "safety_guard_block"
+      : "device_error";
+
   await writeAudit(env, {
     userId: identity.userId,
     deviceId,
     eventType: "mcp.tool_call",
     toolName: tool,
     success,
+    requestId,
+    clientId: identity.clientId,
+    grantId: identity.grantId,
+    outcome,
   }).catch(() => undefined);
 
   if (!success) {

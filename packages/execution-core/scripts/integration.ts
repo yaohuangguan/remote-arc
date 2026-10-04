@@ -379,6 +379,26 @@ try {
   }
   if (!blocked) throw new Error("Safety Guard did not block a catastrophic command");
 
+  // Read-only inspection must not be confused with executing the destructive
+  // command text being searched for.
+  assertCommandAllowed('grep -R "shutdown" .');
+  assertCommandAllowed('printf "%s\\n" "rm -rf /"');
+  assertCommandAllowed(
+    'powershell -NoProfile -Command "Select-String shutdown file.txt"',
+  );
+
+  let wrappedBlocked = false;
+  try {
+    assertCommandAllowed(
+      'powershell -NoProfile -Command "shutdown /s /t 0"',
+    );
+  } catch {
+    wrappedBlocked = true;
+  }
+  if (!wrappedBlocked) {
+    throw new Error("Safety Guard did not block a wrapped system power command");
+  }
+
   let safeBlocked = false;
   try {
     await safe.callTool("write_file", { path: file, content: "nope" }, policy);

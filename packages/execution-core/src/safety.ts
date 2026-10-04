@@ -294,7 +294,7 @@ const DESTRUCTIVE_COMMAND_RULES: GuardRule[] = [
     reason: "recursive deletion of a root or home path",
   },
   {
-    pattern: /\b(?:mkfs(?:\.\w+)?|wipefs|fdisk|parted)\b/i,
+    pattern: /(?:^|(?:&&|\|\||[;&|])\s*|(?:-Command|-c)\s+["']?\s*)(?:sudo\s+)?(?:mkfs(?:\.\w+)?|wipefs|fdisk|parted)\b/i,
     reason: "disk or filesystem destructive operation",
   },
   {
@@ -306,19 +306,19 @@ const DESTRUCTIVE_COMMAND_RULES: GuardRule[] = [
     reason: "disk erase",
   },
   {
-    pattern: /\b(?:format(?:\.com)?\s+[a-z]:|diskpart\b|clear-disk\b|initialize-disk\b)/i,
+    pattern: /(?:^|(?:&&|\|\||[;&|])\s*|(?:-Command|-c)\s+["']?\s*)(?:format(?:\.com)?\s+[a-z]:|diskpart\b|clear-disk\b|initialize-disk\b)/i,
     reason: "Windows disk destructive operation",
   },
   {
-    pattern: /\b(?:shutdown|reboot|halt|poweroff)\b/i,
+    pattern: /(?:^|(?:&&|\|\||[;&|])\s*|(?:-Command|-c)\s+["']?\s*)(?:sudo\s+)?(?:shutdown(?:\.exe)?|reboot|halt|poweroff)\b/i,
     reason: "system shutdown or reboot",
   },
   {
-    pattern: /\bremove-item\b[^\n]*(?:-recurse[^\n]*-force|-force[^\n]*-recurse)[^\n]*(?:[a-z]:\\(?:\*|\s|$)|\$env:systemdrive)/i,
+    pattern: /(?:^|(?:&&|\|\||[;&|])\s*|(?:-Command|-c)\s+["']?\s*)remove-item\b[^\n]*(?:-recurse[^\n]*-force|-force[^\n]*-recurse)[^\n]*(?:[a-z]:\\(?:\*|\s|$)|\$env:systemdrive)/i,
     reason: "recursive forced deletion of a drive root",
   },
   {
-    pattern: /\b(?:del|erase|rd|rmdir)\b[^\n]*\/s[^\n]*\/q[^\n]*[a-z]:\\/i,
+    pattern: /(?:^|(?:&&|\|\||[;&|])\s*|(?:-Command|-c)\s+["']?\s*)(?:del|erase|rd|rmdir)\b[^\n]*\/s[^\n]*\/q[^\n]*[a-z]:\\/i,
     reason: "recursive Windows drive deletion",
   },
   {

@@ -24,6 +24,7 @@ export type SessionUser = {
 export type OAuthIdentity = {
   userId: string;
   clientId: string;
+  grantId: string | null;
   scope: string;
   resource: string;
 };
@@ -419,7 +420,7 @@ export async function authenticateMcp(
 
   const tokenHash = await sha256Hex(header.slice(7));
   const row = await env.DB.prepare(
-    `SELECT user_id, client_id, scope, resource
+    `SELECT user_id, client_id, grant_id, scope, resource
      FROM oauth_tokens
      WHERE access_token_hash = ?1
        AND expires_at > ?2
@@ -429,6 +430,7 @@ export async function authenticateMcp(
     .first<{
       user_id: string;
       client_id: string;
+      grant_id: string | null;
       scope: string;
       resource: string;
     }>();
@@ -437,6 +439,7 @@ export async function authenticateMcp(
   return {
     userId: row.user_id,
     clientId: row.client_id,
+    grantId: row.grant_id,
     scope: row.scope,
     resource: row.resource,
   };
