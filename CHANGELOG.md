@@ -2,11 +2,16 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.4.2
+
+- Fixed the published ESM bundle so the `ws` runtime dependency remains external instead of being incorrectly bundled with CommonJS dynamic requires.
+- Added a release smoke test that packs the npm artifact, installs it into a clean temporary project, and executes `remotelink --version` before publication.
+- Carries the current 0.4 security model and evergreen npm/GitHub product documentation.
+
 ## 0.4.1
 
-- Refreshed the published `remotelink` package documentation so npm matches the current product and security model.
-- Includes the current Trusted Write Locations, Approval Broker, Sensitive Path Protection, OAuth attribution, and Safety Guard documentation.
-- No intentional product behavior change beyond shipping the current 0.4 security release state.
+- **Broken release:** the published CLI could install but failed at startup with `Dynamic require of "events" is not supported` because `ws` was incorrectly bundled into the ESM artifact.
+- Superseded by 0.4.2.
 
 ## 0.4.0
 
