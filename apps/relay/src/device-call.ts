@@ -1,5 +1,11 @@
 import type { OAuthIdentity } from "./auth.js";
 import { writeAudit } from "./audit.js";
+import {
+  approvalTargetPath,
+  consumeWriteApproval,
+  findApprovedWriteApproval,
+  requestWriteApproval,
+} from "./approvals.js";
 import { REVIEWER_DEMO_TOOLS, reviewerDemoResult } from "./reviewer-fixture.js";
 
 export type DeviceCallEnv = {
@@ -80,7 +86,64 @@ export async function callDevice(
     }
   }
 
+  const workspaceRoots = parseStoredStringArray(ownedDevice.workspace_roots);
+  const workspaceRequiredTools = new Set([
+    "undo_last_change",
+    "undo_change",
+    "start_process",
+  ]);
+  if (
+    workspaceRequiredTools.has(tool) &&
+    workspaceRoots.length === 0 &&
+    !taskWorkspaceRoot
+  ) {
+    throw new Error(
+      'tool "' + tool + '" requires a Trusted Write Location on this device',
+    );
+  }
+
   const requestId = crypto.randomUUID();
+  const mutationTarget = approvalTargetPath(tool, args);
+  const approvedWrite = mutationTarget
+    ? await findApprovedWriteApproval(env, identity, deviceId, tool, args)
+    : null;
+
+  if (
+    mutationTarget &&
+    workspaceRoots.length === 0 &&
+    !approvedWrite &&
+    !taskWorkspaceRoot
+  ) {
+    const approval = await requestWriteApproval(env, {
+      identity,
+      deviceId,
+      requestId,
+      tool,
+      args,
+    });
+    throw new Error(
+      approval
+        ? "Remote Arc approval required (" +
+            approval.id +
+            ") before writing " +
+            mutationTarget
+        : "Remote Arc approval required before this out-of-scope write",
+    );
+  }
+
+  const readOnlyPathTools = new Set([
+    "read_file",
+    "read_binary_file",
+    "list_directory",
+    "get_file_info",
+    "browse_directories",
+  ]);
+  const effectiveWorkspaceRoots = readOnlyPathTools.has(tool)
+    ? []
+    : [
+        ...workspaceRoots,
+        ...(approvedWrite ? [approvedWrite.target_path] : []),
+      ];
 
   const registryRequest = () =>
     new Request("https://registry/call", {
@@ -96,10 +159,12 @@ export async function callDevice(
         arguments: args,
         policy: {
           ...(taskWorkspaceRoot ? { taskWorkspaceRoot } : {}),
-          workspaceRoots: parseStoredStringArray(ownedDevice.workspace_roots),
+          workspaceRoots: effectiveWorkspaceRoots,
           sensitivePaths: parseStoredStringArray(ownedDevice.sensitive_paths),
           sensitiveAllowPaths: parseStoredStringArray(ownedDevice.sensitive_allow_paths),
-          protectSensitivePaths: ownedDevice.protect_sensitive_paths !== 0,
+          // Remote MCP always keeps built-in sensitive locations protected.
+          // Narrow exceptions belong in sensitiveAllowPaths instead of a global bypass.
+          protectSensitivePaths: true,
           undoEnabled: ownedDevice.undo_enabled !== 0,
         },
       }),
@@ -112,12 +177,34 @@ export async function callDevice(
 
   const payload = (await response.json()) as { result?: unknown; error?: string };
   const success = response.ok && !payload.error;
-
-  const outcome = success
+  let outcome = success
     ? "allowed"
     : payload.error?.startsWith("Blocked by Remote Arc Safety Guard:")
       ? "safety_guard_block"
       : "device_error";
+
+  if (
+    !success &&
+    mutationTarget &&
+    !approvedWrite &&
+    payload.error?.startsWith("Blocked by Remote Arc Trusted Write Locations:")
+  ) {
+    const approval = await requestWriteApproval(env, {
+      identity,
+      deviceId,
+      requestId,
+      tool,
+      args,
+    });
+    if (approval) {
+      payload.error =
+        "Remote Arc approval required (" +
+        approval.id +
+        ") before writing " +
+        mutationTarget;
+      outcome = "approval_required";
+    }
+  }
 
   await writeAudit(env, {
     userId: identity.userId,
@@ -135,5 +222,6 @@ export async function callDevice(
     throw new Error(payload.error || `device call failed: ${response.status}`);
   }
 
+  await consumeWriteApproval(env, approvedWrite).catch(() => undefined);
   return payload.result;
 }

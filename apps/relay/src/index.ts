@@ -50,6 +50,12 @@ import {
   isMcpPaused,
 } from "./security.js";
 import {
+  handleApprovalDecision,
+  handleApprovalList,
+  handleDeviceApprovalDecision,
+  handleDeviceApprovalList,
+} from "./approvals.js";
+import {
   handleMonitorState,
   incidentFromRequest,
   recordServiceIncident,
@@ -376,6 +382,31 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       request.method === "POST"
     ) {
       return handleGrantRevoke(request, env);
+    }
+
+    if (url.pathname === "/api/approvals" && request.method === "GET") {
+      return handleApprovalList(request, env);
+    }
+
+    if (
+      /^\/api\/approvals\/[^/]+\/decision$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleApprovalDecision(request, env);
+    }
+
+    if (
+      url.pathname === "/api/device/approvals/pending" &&
+      request.method === "GET"
+    ) {
+      return handleDeviceApprovalList(request, env);
+    }
+
+    if (
+      /^\/api\/device\/approvals\/[^/]+\/decision$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDeviceApprovalDecision(request, env);
     }
 
     if (url.pathname === "/api/device/heartbeat" && request.method === "POST") {

@@ -104,6 +104,10 @@ try {
   const tokenRes=await fetch(base+"/api/device/token",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({device_code:startBody.device_code,device_secret:startBody.device_secret})});
   const tokenBody=await tokenRes.json(); assert(tokenRes.ok,"token "+JSON.stringify(tokenBody));
 
+  const trustedRoot="/workspace";
+  const policy=await fetch(base+"/api/devices/"+deviceId+"/policy",{method:"POST",headers:authHeaders,body:JSON.stringify({workspace_roots:[trustedRoot],sensitive_paths:[],sensitive_allow_paths:[],protect_sensitive_paths:true,undo_enabled:true})});
+  assert(policy.ok,"policy update "+policy.status+" "+await policy.text());
+
   const tools=["list_directory","read_file","read_binary_file","get_file_info","write_file","edit_block","list_processes","start_process","process_status","process_output","stop_process"];
   const updateTools=await fetch(base+"/api/devices/"+deviceId+"/tools",{method:"POST",headers:authHeaders,body:JSON.stringify({allowed_tools:tools})});
   assert(updateTools.ok,"tools update "+updateTools.status+" "+await updateTools.text());

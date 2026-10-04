@@ -71,8 +71,8 @@ try {
   const now = new Date().toISOString();
   sqlite.prepare("INSERT INTO users(id,google_sub,email,created_at,plan) VALUES(?,?,?,?,\'plus\')").run("owner", "test-owner", "owner@test.invalid", now);
   const tools = ["read_file", "read_binary_file", "edit_block", "write_file", "start_process", "process_status", "process_output", "stop_process"];
-  sqlite.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools) VALUES(?,?,?,?,?,?,?)")
-    .run("device", "owner", "Test device", "linux", "fixture-hash", now, JSON.stringify(tools));
+  sqlite.prepare("INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,allowed_tools,workspace_roots) VALUES(?,?,?,?,?,?,?,?)")
+    .run("device", "owner", "Test device", "linux", "fixture-hash", now, JSON.stringify(tools), JSON.stringify(["/workspace"]));
   sqlite.prepare("UPDATE devices SET automation_permissions = ? WHERE id = 'device'").run(JSON.stringify({
     background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: true, keep_awake: false,
   }));

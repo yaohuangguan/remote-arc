@@ -541,6 +541,34 @@ export async function handleDeviceToolsUpdate(request: Request, env: DeviceEnv) 
   const allowedTools = [...new Set(body.allowed_tools)]
     .filter((tool): tool is string => typeof tool === "string" && /^[a-zA-Z0-9_.:-]{1,80}$/.test(tool));
 
+  const privilegedTools = new Set([
+    "write_file",
+    "edit_block",
+    "undo_last_change",
+    "undo_change",
+    "start_process",
+  ]);
+  if (allowedTools.some((tool) => privilegedTools.has(tool))) {
+    const policy = await env.DB.prepare(
+      `SELECT workspace_roots FROM devices
+       WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
+    )
+      .bind(deviceId, user.id)
+      .first<{ workspace_roots: string | null }>();
+    if (!policy) {
+      return Response.json({ error: "device not found" }, { status: 404 });
+    }
+    if (parseJsonStringArray(policy.workspace_roots).length === 0) {
+      return Response.json(
+        {
+          error:
+            "Trusted Write Locations are required before enabling file mutation or terminal execution.",
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   const result = await env.DB.prepare(
     `UPDATE devices SET allowed_tools = ?1
      WHERE id = ?2 AND user_id = ?3 AND revoked_at IS NULL`,
@@ -699,6 +727,44 @@ export async function handleDevicePolicyUpdate(
       { status: 400 },
     );
   }
+  if (body.protect_sensitive_paths === false) {
+    return Response.json(
+      {
+        error:
+          "Built-in sensitive path protection cannot be disabled for remote MCP. Add a narrow sensitive_allow_paths exception instead.",
+      },
+      { status: 409 },
+    );
+  }
+
+  if (workspaceRoots.length === 0) {
+    const current = await env.DB.prepare(
+      `SELECT allowed_tools FROM devices
+       WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
+    )
+      .bind(deviceId, user.id)
+      .first<{ allowed_tools: string | null }>();
+    if (!current) {
+      return Response.json({ error: "device not found" }, { status: 404 });
+    }
+    const enabledTools = parseJsonStringArray(current.allowed_tools);
+    const privilegedTools = new Set([
+      "write_file",
+      "edit_block",
+      "undo_last_change",
+      "undo_change",
+      "start_process",
+    ]);
+    if (enabledTools.some((tool) => privilegedTools.has(tool))) {
+      return Response.json(
+        {
+          error:
+            "Disable file mutation and terminal tools before removing the last Trusted Write Location.",
+        },
+        { status: 409 },
+      );
+    }
+  }
 
   const result = await env.DB.prepare(
     `UPDATE devices
@@ -713,7 +779,7 @@ export async function handleDevicePolicyUpdate(
       JSON.stringify(workspaceRoots),
       JSON.stringify(sensitivePaths),
       JSON.stringify(sensitiveAllowPaths),
-      body.protect_sensitive_paths ? 1 : 0,
+      1,
       body.undo_enabled ? 1 : 0,
       deviceId,
       user.id,
@@ -735,7 +801,7 @@ export async function handleDevicePolicyUpdate(
     workspace_roots: workspaceRoots,
     sensitive_paths: sensitivePaths,
     sensitive_allow_paths: sensitiveAllowPaths,
-    protect_sensitive_paths: body.protect_sensitive_paths,
+    protect_sensitive_paths: true,
     undo_enabled: body.undo_enabled,
   });
 }

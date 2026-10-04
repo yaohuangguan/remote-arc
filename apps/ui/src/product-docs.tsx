@@ -89,7 +89,7 @@ export function Documentation() {
           <div className="docsTableWrap"><table className="articleTable"><thead><tr><th>{tr("Control", "控制项")}</th><th>{tr("What it governs", "控制什么")}</th></tr></thead><tbody>
             <tr><td>OAuth scopes</td><td>{tr("The AI client's account-level authorization. Device policy still applies.", "AI 客户端的账户级授权，仍需遵守设备策略。")}</td></tr>
             <tr><td>{tr("Allowed tools", "允许的工具")}</td><td>{tr("Read, edit, terminal and browser capabilities. Read-only, Developer and Full are convenience presets; individual tools remain controllable.", "读取、编辑、终端和浏览器能力。只读、Developer 和 Full 是快捷预设，工具仍可逐项控制。")}</td></tr>
-            <tr><td>Workspace Scope</td><td>{tr("Canonical directory roots for file tools; an in-scope cwd is also required for scoped commands.", "文件工具的规范化目录范围；受目录限制的命令也要求范围内的 cwd。")}</td></tr>
+            <tr><td>Trusted Write Locations</td><td>{tr("Persistent roots where file mutation can happen without per-request approval; scoped terminal commands also require an in-scope cwd.", "可无需逐次审批进行文件修改的长期可信目录；受范围限制的终端命令也要求 cwd 位于这些目录内。")}</td></tr>
             <tr><td>Sensitive Path Policy</td><td>{tr("Credential and browser-profile paths, with narrow explicit exceptions.", "凭证和浏览器 Profile 路径保护，可配置窄范围例外。")}</td></tr>
             <tr><td>{tr("Task permissions", "任务权限")}</td><td>{tr("Background work, scheduling, adaptive goals, source-agent continuation and task keep-awake, each with its own switch.", "后台工作、定时、自主目标、源 Agent 续接和任务保持唤醒各有独立开关。")}</td></tr>
             <tr><td>{tr("Local ceiling", "本机权限上限")}</td><td>{tr("npx remotelink --safe keeps a local read-only ceiling that Dashboard cannot expand.", "npx remotelink --safe 设置本机只读上限，Dashboard 无法远程扩大。")}</td></tr>

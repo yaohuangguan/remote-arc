@@ -146,6 +146,7 @@ type ProductStatus = {
 };
 
 type SecurityGrant = {
+  grantId: string;
   clientId: string;
   clientName: string;
   scopes: string[];
@@ -171,6 +172,19 @@ type DashboardDialog = {
 type SecurityState = {
   mcpPaused: boolean;
   grants: SecurityGrant[];
+};
+
+type PendingApproval = {
+  id: string;
+  device_id: string;
+  client_id: string | null;
+  client_name: string | null;
+  grant_id: string | null;
+  request_id: string;
+  tool_name: string;
+  target_path: string;
+  requested_at: string;
+  expires_at: string;
 };
 
 type MonitorIncident = {
@@ -801,7 +815,7 @@ function PairDevice({
       );
       if (!policyResponse.ok) {
         const payload = (await policyResponse.json().catch(() => ({}))) as { error?: string };
-        throw new Error(payload.error || tr("Could not save Workspace Scope.", "无法保存 Workspace Scope。"));
+        throw new Error(payload.error || tr("Could not save Trusted Write Locations.", "无法保存可信写入区域。"));
       }
 
       setPairedDevice((current) =>
@@ -1070,8 +1084,8 @@ function PairDevice({
       <CenteredCard
         title={tr("Choose a workspace", "选择工作区")}
         body={tr(
-          "Workspace Scope is optional. If you choose a folder, Remote Arc will limit normal file reads and edits to that folder while sensitive paths stay protected.",
-          "Workspace Scope 是可选的。选择目录后，Remote Arc 会把普通文件读取和编辑限制在该目录内，同时继续保护敏感路径。",
+          "Trusted Write Locations are optional for read-only use. Add a folder when you want AI to edit files there without asking each time; ordinary non-sensitive reads can still happen elsewhere.",
+          "只读使用时无需设置可信写入区域。需要 AI 在某个目录内持续修改文件时再添加；其他普通非敏感位置仍可只读访问。",
         )}
       >
         <div className="pairWorkspacePath">
@@ -1228,8 +1242,8 @@ function PairDevice({
               {fileEditingEnabled && <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>}
             </div>
             <p>{tr(
-              "Create and edit files with Sensitive Path Protection and Local Undo. You can optionally add a Workspace Scope to limit normal file access to one folder.",
-              "开启文件创建与编辑，并继续使用 Sensitive Path Protection 和 Local Undo。你也可以选择添加 Workspace Scope，把普通文件访问限制在一个目录内。",
+              "Create and edit files with Sensitive Path Protection and Local Undo. Trusted Write Locations define where edits can happen without a per-request approval.",
+              "开启文件创建与编辑，并继续使用 Sensitive Path Protection 和 Local Undo。可信写入区域决定哪些目录可以无需逐次审批地修改。",
             )}</p>
             {!fileEditingEnabled ? (
               <button
@@ -1244,7 +1258,7 @@ function PairDevice({
             ) : (
               <div className="pairWorkspaceControl">
                 <div>
-                  <span>{tr("Workspace Scope", "Workspace Scope")}</span>
+                  <span>{tr("Trusted Write Locations", "Trusted Write Locations")}</span>
                   <code>
                     {pairedDevice?.workspace_roots?.[0] ||
                       tr("All non-sensitive paths", "所有非敏感路径")}
@@ -1271,8 +1285,8 @@ function PairDevice({
               {terminalEnabled && <span className="pairPermissionState">{tr("Enabled", "已开启")}</span>}
             </div>
             <p>{tr(
-              "Allow AI to run shell commands. Commands can modify local state or external services, and Workspace Scope is not a complete OS sandbox.",
-              "允许 AI 执行 Shell 命令。命令可能修改本地状态或外部服务，Workspace Scope 也不是完整的操作系统沙箱。",
+              "Allow AI to run shell commands. Commands can modify local state or external services, and Trusted Write Locations is not a complete OS sandbox.",
+              "允许 AI 执行 Shell 命令。命令可能修改本地状态或外部服务，Trusted Write Locations 也不是完整的操作系统沙箱。",
             )}</p>
             {!terminalEnabled && !terminalConfirm && (
               <button
@@ -2029,7 +2043,7 @@ function ClientInstallPage({
                   <span>2</span>
                   <div>
                     <h3>{tr("Approve the computer and choose its permissions", "确认电脑并选择权限")}</h3>
-                    <p>{tr("Match the short code. Start read-oriented, then enable file editing, terminal access, Workspace Scope or background connection only where needed.", "核对短码。默认从读取能力开始，只在需要时开启文件编辑、终端、Workspace Scope 或后台连接。")}</p>
+                    <p>{tr("Match the short code. Start read-oriented, then add Trusted Write Locations, file editing, terminal access or background connection only where needed.", "核对短码。默认从读取能力开始，只在需要时添加可信写入区域、文件编辑、终端或后台连接。")}</p>
                   </div>
                 </li>
                 <li>
@@ -2050,8 +2064,8 @@ function ClientInstallPage({
               <div className="manualNote">
                 <strong>{tr("Permission boundary", "权限边界")}</strong>
                 <p>{tr(
-                  "Changing AI clients does not change the device policy. Workspace Scope, Sensitive Path Policy, Local Undo and the per-device skill list still apply.",
-                  "更换 AI 客户端不会改变设备策略。Workspace Scope、Sensitive Path Policy、Local Undo 和逐设备 Skill 列表仍然生效。",
+                  "Changing AI clients does not change the device policy. Trusted Write Locations, Sensitive Path Policy, Local Undo and the per-device skill list still apply.",
+                  "更换 AI 客户端不会改变设备策略。可信写入区域、Sensitive Path Policy、Local Undo 和逐设备 Skill 列表仍然生效。",
                 )}</p>
               </div>
             </section>
@@ -2443,8 +2457,8 @@ function SecurityModelPage({ user }: { user?: User | null }) {
             <section id="security-paths">
               <h2>{tr("Filesystem confinement happens below the skill level", "文件系统约束发生在 Skill 之下")}</h2>
               <p>{tr(
-                "Allowing read_file or edit_block does not necessarily allow those tools everywhere. Workspace Scope may restrict normal filesystem operations to one or more configured roots. Sensitive Path Policy separately protects credential-bearing paths such as .ssh, .aws, .gnupg, browser profiles and environment files.",
-                "允许 read_file 或 edit_block 并不意味着这些工具可以访问任意位置。Workspace Scope 可以把普通文件操作限制到一个或多个指定 Root；Sensitive Path Policy 则独立保护 .ssh、.aws、.gnupg、浏览器 Profile 与环境文件等可能包含凭证的位置。",
+                "Read-only tools may inspect ordinary non-sensitive files outside Trusted Write Locations. File mutation outside those locations requires approval. Sensitive Path Policy separately protects credential-bearing paths such as .ssh, .aws, .gnupg, browser profiles and environment files.",
+                "只读工具可以查看可信写入区域之外的普通非敏感文件；超出可信写入区域的文件修改需要审批。Sensitive Path Policy 会独立保护 .ssh、.aws、.gnupg、浏览器 Profile 与环境文件等可能包含凭证的位置。",
               )}</p>
               <p>{tr(
                 "Existing path ancestors are canonicalized on the device before execution. The goal is to prevent an apparently allowed path from trivially escaping through a symlink. When a protected project genuinely needs one sensitive file or directory, a narrow exception can be added instead of disabling protection globally.",
@@ -3034,10 +3048,10 @@ function PowerfulAccessArticlePage({ user }: { user?: User | null }) {
             <span><b>OS user</b><small>{tr("The final operating-system boundary", "最终的操作系统权限边界")}</small></span>
           </div>
 
-          <h2>{tr("5. Sensitive paths and workspace roots reduce accidental reach.", "5. 敏感路径和工作区根目录减少误操作范围。")}</h2>
+          <h2>{tr("5. Sensitive paths and trusted write locations reduce accidental reach.", "5. 敏感路径和可信写入区域减少误操作范围。")}</h2>
           <p>{tr(
-            "Remote Arc can constrain file-oriented workflows to configured workspace roots and protect sensitive paths. These controls are not a replacement for operating-system sandboxing, especially once arbitrary terminal execution is enabled, but they provide an important first boundary for normal AI file work.",
-            "Remote Arc 可以把文件类工作流限制在配置好的 Workspace Root 中，并保护敏感路径。这些控制并不能替代操作系统级沙箱——尤其当任意终端执行被开启后——但对于日常 AI 文件操作来说，它们构成了非常重要的第一层边界。",
+            "Remote Arc separates read visibility from write authority: ordinary non-sensitive files can be inspected broadly, while persistent mutation is limited to Trusted Write Locations and temporary approvals. Sensitive paths remain separately protected. These controls are not a replacement for operating-system sandboxing, especially once arbitrary terminal execution is enabled.",
+            "Remote Arc 将“可读取范围”和“可写入权限”分开：普通非敏感文件可以广泛只读查看，持续修改仅允许在可信写入区域或临时审批范围内；敏感路径继续独立保护。这些控制不能替代操作系统级沙箱，尤其是在开启任意终端执行之后。",
           )}</p>
 
           <h2>{tr("6. Supported edits can be undone locally.", "6. 支持的修改可以在本机撤销。")}</h2>
@@ -3196,6 +3210,7 @@ function Dashboard({
   const [deviceQuery, setDeviceQuery] = useState("");
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
   const [securityState, setSecurityState] = useState<SecurityState | null>(null);
+  const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
   const [securityBusy, setSecurityBusy] = useState(false);
   const [monitorState, setMonitorState] = useState<MonitorState | null>(null);
   const [monitorLoading, setMonitorLoading] = useState(false);
@@ -3341,13 +3356,52 @@ function Dashboard({
   }
 
   async function refreshSecurity() {
-    const response = await fetch("/api/security");
-    if (!response.ok) return;
-    setSecurityState(await response.json() as SecurityState);
+    const [securityResponse, approvalsResponse] = await Promise.all([
+      fetch("/api/security"),
+      fetch("/api/approvals"),
+    ]);
+    if (securityResponse.ok) {
+      setSecurityState(await securityResponse.json() as SecurityState);
+    }
+    if (approvalsResponse.ok) {
+      setPendingApprovals(await approvalsResponse.json() as PendingApproval[]);
+    }
+  }
+
+  async function decidePendingApproval(
+    approval: PendingApproval,
+    decision: "allow_once" | "allow_10m" | "always_folder" | "deny",
+  ) {
+    setSecurityBusy(true);
+    try {
+      const response = await fetch(
+        "/api/approvals/" + encodeURIComponent(approval.id) + "/decision",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ decision }),
+        },
+      );
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({})) as { error?: string };
+        await showNotice(
+          tr("Approval was not updated", "审批未更新"),
+          payload.error || tr("Please refresh and try again.", "请刷新后重试。"),
+        );
+        return;
+      }
+      await refreshSecurity();
+      await refreshAll();
+    } finally {
+      setSecurityBusy(false);
+    }
   }
 
   useEffect(() => {
-    if (active === "security") void refreshSecurity();
+    if (active !== "security") return;
+    void refreshSecurity();
+    const timer = window.setInterval(() => void refreshSecurity(), 5_000);
+    return () => window.clearInterval(timer);
   }, [active]);
 
   async function refreshMonitor() {
@@ -3656,7 +3710,7 @@ function Dashboard({
   }
 
   async function revokeGrant(grant: SecurityGrant) {
-    const shortId = grant.clientId.slice(0, 12) + "…";
+    const shortId = grant.grantId.slice(0, 12) + "…";
     const expired = grant.status === "expired";
     const confirmed = await askConfirm(
       expired
@@ -3678,7 +3732,7 @@ function Dashboard({
 
     setSecurityBusy(true);
     try {
-      const response = await fetch("/api/security/grants/" + encodeURIComponent(grant.clientId) + "/revoke", { method: "POST" });
+      const response = await fetch("/api/security/grants/" + encodeURIComponent(grant.grantId) + "/revoke", { method: "POST" });
       if (!response.ok) {
         await showNotice(
           tr("Authorization was not revoked", "授权未撤销"),
@@ -3792,6 +3846,22 @@ function Dashboard({
   }
 
   async function updateDeviceTools(device: Device, tool: string, enabled: boolean) {
+    const workspaceRequired = new Set([
+      "write_file",
+      "edit_block",
+      "undo_last_change",
+      "start_process",
+    ]);
+    if (enabled && workspaceRequired.has(tool) && !(device.workspace_roots || []).length) {
+      await showNotice(
+        tr("Choose a Trusted Write Location first", "请先选择可信写入区域"),
+        tr(
+          "Remote Arc requires a Trusted Write Location before enabling this capability. Add one under File boundaries & recovery, then enable the tool again.",
+          "Remote Arc 在开启此能力前必须先设置可信写入区域。请先在“文件边界与恢复”中添加目录，再重新开启。",
+        ),
+      );
+      return;
+    }
     if (enabled && tool === "start_process") {
       const confirmed = await askConfirm(
         tr("Enable terminal execution on " + device.name + "?", "在 " + device.name + " 上开启终端执行？"),
@@ -3814,6 +3884,16 @@ function Dashboard({
   }
 
   async function applyDevicePreset(device: Device, preset: Exclude<DeviceAccessPreset, "custom">) {
+    if (preset !== "safe" && !(device.workspace_roots || []).length) {
+      await showNotice(
+        tr("Choose a Trusted Write Location first", "请先选择可信写入区域"),
+        tr(
+          "Developer and Full Access are unavailable until this device has a Trusted Write Location.",
+          "为设备指定可信写入区域后，才能开启 Developer 或 Full Access。",
+        ),
+      );
+      return;
+    }
     if (preset === "full") {
       const confirmed = await askConfirm(
         tr("Switch " + device.name + " to Full Access?", "将 " + device.name + " 切换为 Full Access？"),
@@ -4546,7 +4626,7 @@ function Dashboard({
                           {" · "}
                           {(device.workspace_roots || []).length
                             ? (device.workspace_roots || []).length + " " + tr("workspaces", "个工作区")
-                            : tr("all non-sensitive paths", "全部非敏感路径")}
+                            : tr("read-only until scoped", "未设范围时仅只读")}
                         </span>
                       </summary>
 
@@ -4563,32 +4643,23 @@ function Dashboard({
                             <HelpTip
                               label={tr("About Sensitive Path Policy", "了解敏感路径策略")}
                               text={tr(
-                                "Blocks built-in credential locations such as .ssh, .aws, browser profiles and .env files before local execution.",
-                                "在本机执行前阻止 .ssh、.aws、浏览器配置、.env 等内置敏感位置。",
+                                "Always protects built-in credential locations such as .ssh, .aws, browser profiles and .env files for remote MCP. Use a narrow exception below when one specific path must be accessible.",
+                                "远程 MCP 始终保护 .ssh、.aws、浏览器配置、.env 等内置敏感位置；确需访问某个路径时，请在下方添加窄范围例外。",
                               )}
                             />
                           </div>
-                          <label className="compactSwitch">
-                            <input
-                              type="checkbox"
-                              checked={device.protect_sensitive_paths ?? true}
-                              onChange={(event) => void saveDevicePolicy(device, {
-                                protect_sensitive_paths: event.target.checked,
-                              })}
-                            />
-                            <span />
-                          </label>
+                          <span className="privacyPill">{tr("Always on", "始终开启")}</span>
                         </div>
 
                         <div className="policyBlock">
                           <div className="policyBlockHead">
                             <div className="labelWithHelp">
-                              <strong>{tr("Workspace Scope", "工作区范围")}</strong>
+                              <strong>{tr("Trusted Write Locations", "可信写入区域")}</strong>
                               <HelpTip
-                                label={tr("About Workspace Scope", "了解工作区范围")}
+                                label={tr("About Trusted Write Locations", "了解可信写入区域")}
                                 text={tr(
-                                  "When configured, Remote Arc file tools can only touch these roots. Empty means all non-sensitive paths.",
-                                  "配置后，Remote Arc 文件工具只能访问这些根目录；留空表示可访问全部非敏感路径。",
+                                  "These are trusted mutation roots. Read-only tools may inspect other non-sensitive paths, but file changes and terminal execution require a configured workspace.",
+                                  "这些目录是长期可信的修改区域。只读工具仍可查看其他非敏感路径，但文件修改与终端执行必须先配置工作区。",
                                 )}
                               />
                             </div>
@@ -4613,8 +4684,8 @@ function Dashboard({
                             ))}
                             {!(device.workspace_roots || []).length && (
                               <span className="policyEmpty">{tr(
-                                "No workspace restriction yet.",
-                                "当前未限制工作区。",
+                                "No trusted write workspace yet. Read-only access to non-sensitive paths still works.",
+                                "尚未设置可信写入工作区；仍可只读访问其他非敏感路径。",
                               )}</span>
                             )}
                           </div>
@@ -4668,8 +4739,8 @@ function Dashboard({
                               <HelpTip
                                 label={tr("About sensitive path exceptions", "了解敏感路径例外")}
                                 text={tr(
-                                  "Keep protection enabled globally, but explicitly allow only the sensitive files or folders this device truly needs. Exceptions still remain inside Workspace Scope.",
-                                  "保持整体敏感路径保护开启，只对确实需要访问的敏感文件或目录做窄范围例外；例外仍受 Workspace Scope 限制。",
+                                  "Keep protection enabled globally, but explicitly allow only the sensitive files or folders this device truly needs. A sensitive-path exception grants visibility only; it does not create write authority outside Trusted Write Locations.",
+                                  "保持整体敏感路径保护开启，只对确实需要访问的敏感文件或目录做窄范围例外；敏感路径例外只授予可见性，不会自动获得可信写入区域之外的修改权限。",
                                 )}
                               />
                             </div>
@@ -5652,6 +5723,58 @@ function Dashboard({
             <section className="securityPanel securityGrantsPanel">
               <div className="securityPanelHeader">
                 <div>
+                  <span className="eyebrow">{tr("PENDING APPROVALS", "待审批")}</span>
+                  <div className="headingWithHelp">
+                    <h2>{tr("Boundary requests", "越界访问请求")}</h2>
+                    <HelpTip
+                      label={tr("About boundary approvals", "了解越界审批")}
+                      text={tr(
+                        "Remote Arc can read ordinary non-sensitive files outside Trusted Write Locations. File changes outside those locations pause and ask you for a narrowly scoped approval.",
+                        "Remote Arc 可以读取可信写入区域之外的普通非敏感文件；如果要在这些区域之外修改文件，会暂停并请求一份最小范围的授权。",
+                      )}
+                    />
+                  </div>
+                </div>
+                <button className="ghostButton" disabled={securityBusy} onClick={() => void refreshSecurity()}>{tr("Refresh", "刷新")}</button>
+              </div>
+              <div className="securityGrantList">
+                {pendingApprovals.map((approval) => (
+                  <div className="securityGrantRow active" key={approval.id}>
+                    <div className="securityGrantIdentity">
+                      <span className="securityGrantIcon">!</span>
+                      <div>
+                        <strong>{approval.tool_name}</strong>
+                        <small>{approval.client_name || approval.client_id?.slice(0, 12) || tr("AI client", "AI 客户端")} · {deviceNameById.get(approval.device_id) || approval.device_id.slice(0, 8)}</small>
+                      </div>
+                    </div>
+                    <div className="securityGrantState">
+                      <span className="grantState refreshable">{tr("Waiting for you", "等待确认")}</span>
+                    </div>
+                    <div className="securityGrantDetails">
+                      <span>{tr("Target", "目标")} <strong><code>{approval.target_path}</code></strong></span>
+                      <span>{tr("Request", "请求")} <strong>{approval.request_id.slice(0, 8)}</strong></span>
+                      <span>{tr("Expires", "过期")} <strong>{new Date(approval.expires_at).toLocaleTimeString(locale === "zh" ? "zh-CN" : "en-NZ", { hour: "2-digit", minute: "2-digit" })}</strong></span>
+                    </div>
+                    <div className="securityGrantScopes">
+                      <button className="goldButton" disabled={securityBusy} onClick={() => void decidePendingApproval(approval, "allow_once")}>{tr("Allow once", "仅允许一次")}</button>
+                      <button className="ghostButton" disabled={securityBusy} onClick={() => void decidePendingApproval(approval, "allow_10m")}>{tr("Allow 10 min", "允许 10 分钟")}</button>
+                      <button className="ghostButton" disabled={securityBusy} onClick={() => void decidePendingApproval(approval, "always_folder")}>{tr("Trust this folder", "信任此文件夹")}</button>
+                      <button className="dangerButton" disabled={securityBusy} onClick={() => void decidePendingApproval(approval, "deny")}>{tr("Deny", "拒绝")}</button>
+                    </div>
+                  </div>
+                ))}
+                {!pendingApprovals.length && (
+                  <div className="securityEmptyState compact">
+                    <strong>{tr("No pending approvals", "暂无待审批请求")}</strong>
+                    <span>{tr("Out-of-scope file changes will appear here and in an interactive remotelink terminal.", "超出可信写入范围的文件修改会显示在这里，也会显示在交互式 remotelink 终端中。")}</span>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="securityPanel securityGrantsPanel">
+              <div className="securityPanelHeader">
+                <div>
                   <span className="eyebrow">{tr("CONNECTED AI ACCESS", "已连接 AI 访问")}</span>
                   <div className="headingWithHelp">
                     <h2>{tr("AI authorizations", "AI 授权")}</h2>
@@ -5681,12 +5804,12 @@ function Dashboard({
                         ? tr("The short-lived access token expired, but the refresh authorization can still obtain a new one without asking you again.", "短期 Access Token 已过期，但 Refresh 授权仍可在无需再次询问你的情况下换取新 Token。")
                         : tr("Both access and refresh authorization have expired. This grant can no longer access Remote Arc.", "Access 与 Refresh 授权均已过期，这条 Grant 已无法继续访问 Remote Arc。");
                   return (
-                    <div className={"securityGrantRow " + grant.status} key={grant.clientId}>
+                    <div className={"securityGrantRow " + grant.status} key={grant.grantId}>
                       <div className="securityGrantIdentity">
                         <span className="securityGrantIcon">AI</span>
                         <div>
                           <strong>{grant.clientName}</strong>
-                          <small>{tr("Authorization", "授权")} {grant.clientId.slice(0,12)}…</small>
+                          <small>{tr("Authorization", "授权")} {grant.grantId.slice(0,12)}… · {tr("Client", "客户端")} {grant.clientId.slice(0,8)}…</small>
                         </div>
                       </div>
                       <div className="securityGrantState">
@@ -5901,8 +6024,8 @@ function Dashboard({
             <span className="eyebrow">{tr("CHOOSE WORKSPACE", "选择工作区")}</span>
             <h2>{tr("Choose a folder on " + directoryPicker.device.name, "选择 " + directoryPicker.device.name + " 上的目录")}</h2>
             <p>{tr(
-              "Remote Arc will add the selected folder as an allowed Workspace Scope root. Sensitive paths remain protected.",
-              "Remote Arc 会把所选目录加入 Workspace Scope 允许根目录；敏感路径保护仍然生效。",
+              "Remote Arc will add the selected folder to Trusted Write Locations. Sensitive paths remain protected.",
+              "Remote Arc 会把所选目录加入可信写入区域；敏感路径保护仍然生效。",
             )}</p>
 
             {directoryPicker.browser && (
@@ -6111,7 +6234,7 @@ const PRODUCT_RELEASES: ProductRelease[] = [
     title: "Path policy and Local Undo history",
     summary: "Introduced practical filesystem boundaries and user-visible recovery state for supported edits.",
     changes: [
-      "Workspace Scope and sensitive-path policy for normal file tools.",
+      "Trusted Write Locations and sensitive-path policy for normal file tools.",
       "Local-only Undo history with conflict-safe restore semantics.",
     ],
   },

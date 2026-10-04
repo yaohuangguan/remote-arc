@@ -301,14 +301,18 @@ export class RemoteArcExecutionCore {
 
     switch (toolName) {
       case "list_directory": {
-        const target = await enforcePathPolicy(requiredString(args, "path"), policy);
+        const target = await enforcePathPolicy(requiredString(args, "path"), policy, {
+          enforceWorkspace: false,
+        });
         return textResult(
           await listDirectory(
             target,
             optionalNumber(args, "depth") ?? 2,
             async (candidate) => {
               try {
-                await enforcePathPolicy(candidate, policy);
+                await enforcePathPolicy(candidate, policy, {
+                  enforceWorkspace: false,
+                });
                 return true;
               } catch {
                 return false;
@@ -318,7 +322,9 @@ export class RemoteArcExecutionCore {
         );
       }
       case "browse_directories": {
-        const target = await enforcePathPolicy(requiredString(args, "path"), policy);
+        const target = await enforcePathPolicy(requiredString(args, "path"), policy, {
+          enforceWorkspace: false,
+        });
         return textResult(
           await browseDirectories(
             target,
@@ -334,7 +340,9 @@ export class RemoteArcExecutionCore {
         );
       }
       case "read_file": {
-        const target = await enforcePathPolicy(requiredString(args, "path"), policy);
+        const target = await enforcePathPolicy(requiredString(args, "path"), policy, {
+          enforceWorkspace: false,
+        });
         return textResult(
           await readTextFile(
             target,
@@ -344,7 +352,9 @@ export class RemoteArcExecutionCore {
         );
       }
       case "read_binary_file": {
-        const target = await enforcePathPolicy(requiredString(args, "path"), policy);
+        const target = await enforcePathPolicy(requiredString(args, "path"), policy, {
+          enforceWorkspace: false,
+        });
         return textResult(
           await readBinaryFile(
             target,
@@ -355,7 +365,9 @@ export class RemoteArcExecutionCore {
         );
       }
       case "get_file_info": {
-        const target = await enforcePathPolicy(requiredString(args, "path"), policy);
+        const target = await enforcePathPolicy(requiredString(args, "path"), policy, {
+          enforceWorkspace: false,
+        });
         return textResult(await getFileInfo(target));
       }
       case "list_processes":
@@ -405,7 +417,7 @@ export class RemoteArcExecutionCore {
         const cwdInput = optionalString(args, "cwd");
         if ((policy.workspaceRoots || []).length && !cwdInput) {
           throw new Error(
-            "Workspace Scope is enabled. start_process requires an in-scope cwd. Terminal commands are not an OS sandbox and may still access paths outside that directory.",
+            "Trusted Write Locations are enabled. start_process requires an in-scope cwd. Terminal commands are not an OS sandbox and may still access paths outside that directory.",
           );
         }
         const cwd = cwdInput ? await enforcePathPolicy(cwdInput, policy) : undefined;
