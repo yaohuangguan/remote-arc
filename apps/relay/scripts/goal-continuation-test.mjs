@@ -508,6 +508,7 @@ try {
   } });
   assert(!createdMcp.isError, JSON.stringify(createdMcp));
   const mcpTask = JSON.parse(createdMcp.content[0].text).automation.id;
+  assert.equal(JSON.parse((await runtime.getAutomation(env, "owner", mcpTask)).goal_json).max_iterations, 30, "Legacy MCP default remains unchanged");
   await tick(mcpTask);
   const contextMcp = await callMcp("tools/call", { name: "get_goal_context", arguments: { automation_id: mcpTask } });
   assert(JSON.parse(contextMcp.content[0].text).ready_for_decision);
@@ -515,6 +516,24 @@ try {
     automation_id: mcpTask, expected_revision: 0, idempotency_key: "denied", decision: "pause", tool: "none", decision_summary: "Blocked",
   } }, { ...identity, scope: "computer:write" });
   assert(deniedMcp.isError);
+
+  const goalArgs = { name: "MCP unified goal", device_id: "device", controller: "source", objective: "Inspect file", success_criteria: "File inspected", allowed_tools: ["read_file"] };
+  const unifiedMcp = await callMcp("tools/call", { name: "create_agent_goal", arguments: { ...goalArgs, task_version: 1, trigger: { type: "now" } } });
+  assert(!unifiedMcp.isError, JSON.stringify(unifiedMcp));
+  const unifiedId = JSON.parse(unifiedMcp.content[0].text).automation.id;
+  const unified = await runtime.getAutomation(env, "owner", unifiedId);
+  const unifiedGoal = JSON.parse(unified.goal_json);
+  assert.equal(unifiedGoal.max_iterations, 720);
+  assert.equal(unifiedGoal.plan.time_policy.max_duration_seconds, 86400);
+  assert.equal(unifiedGoal.controller_client_id, identity.clientId, "Unified source goals remain bound to the authorizing OAuth client");
+  assert.equal(unified.next_run_at, null);
+  assert.equal((await runtime.listAutomationRuns(env, "owner", unifiedId)).length, 0, "Saving a goal must not invent an execution record");
+  const unifiedContext = await callMcp("tools/call", { name: "get_goal_context", arguments: { automation_id: unifiedId } });
+  assert(JSON.parse(unifiedContext.content[0].text).ready_for_decision, "An immediate source goal accepts its first decision without a fake scheduler run");
+  const missingExecutor = await callMcp("tools/call", { name: "create_agent_goal", arguments: { ...goalArgs, controller: undefined, task_version: 1 } });
+  assert(missingExecutor.isError, "New contract requires explicit executor selection");
+  const mixedTrigger = await callMcp("tools/call", { name: "create_agent_goal", arguments: { ...goalArgs, trigger: { type: "now" } } });
+  assert(mixedTrigger.isError, "Legacy and new trigger semantics cannot be silently mixed");
 
   await assert.rejects(runtime.createAutomation({ ...env, GITHUB_APP_ID: "test", GITHUB_APP_PRIVATE_KEY: "not-used", GITHUB_APP_INSTALLATION_ID: "7" }, "owner", {
     name: "Unauthorized cloud merge", kind: "condition_watch", github_merge: { owner: "owner", repo: "repo", pull_number: 1 },
@@ -599,6 +618,22 @@ try {
   assert.equal(revokeResponse.status, 200);
   assert.equal(await entitlements.getAccountPlan(env, "plan-user"), "free", "Revoked grant must stop authorizing Plus");
 
+  const scheduler = await importSource("task-scheduler");
+  sqlite.prepare("DELETE FROM task_scheduler_health").run();
+  assert.equal((await scheduler.taskSchedulerHealth(db, "owner")).state, "unavailable");
+  const oldConsoleError = console.error;
+  try {
+    console.error = () => {};
+    const brokenDb = { ...db, prepare(sql) {
+      if (sql.includes("FROM automations")) throw new Error("Injected scheduler dispatch failure");
+      return db.prepare(sql);
+    } };
+    await assert.rejects(scheduler.runScheduledTasks({ ...env, DB: brokenDb }, "* * * * *"), /Injected scheduler dispatch failure/);
+  } finally { console.error = oldConsoleError; }
+  assert.equal((await scheduler.taskSchedulerHealth(db, "owner")).state, "error", "Dispatch failure must be visible instead of a healthy heartbeat");
+  sqlite.prepare("UPDATE task_scheduler_health SET last_error=NULL,last_success_at=?").run(new Date(Date.now() - 4 * 60_000).toISOString());
+  assert.equal((await scheduler.taskSchedulerHealth(db, "owner")).state, "stale");
+  assert.equal((await scheduler.taskSchedulerHealth(db, "plan-user")).overdue_count, 0, "Due task counts remain scoped to the requesting account");
   sqlite.close();
   console.log("PASS: source protocol, fences/recovery, verification/retry, recurring goals, device permissions, signed events/retry/revocation, bounded power leases, cloud action ownership");
 } finally {

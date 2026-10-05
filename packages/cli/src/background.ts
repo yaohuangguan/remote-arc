@@ -2,16 +2,19 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { agentLeaseActive } from "./agent-runtime.js";
 
-const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
-const AGENT_DIR = path.join(CONFIG_DIR, "agent");
-const LOG_DIR = path.join(CONFIG_DIR, "logs");
-const AGENT_BUNDLE = path.join(AGENT_DIR, "remotelink.mjs");
-const AGENT_VERSION_FILE = path.join(AGENT_DIR, "version");
-const MAC_LABEL = "app.remotearc.agent";
-const WINDOWS_RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-const WINDOWS_RUN_VALUE = "Remote Arc Agent";
-const LINUX_UNIT = "remotearc-agent.service";
+export class LegacyBackgroundAgentError extends Error {}
+
+export function windowsSupervisorLaunchScript(node: string, bundle: string) {
+  const quote = (value: string) => "'" + value.replaceAll("'", "''") + "'";
+  // PowerShell's redirection pump can keep the launcher alive until the child
+  // exits. The Agent persists its own event journal; do not make enabling
+  // recovery wait for (or depend on) that temporary PowerShell process.
+  return "Start-Process -FilePath " + quote(node) +
+    " -ArgumentList " + quote('"' + bundle + '" --supervise') +
+    " -WindowStyle Hidden | Out-Null";
+}
 
 export type BackgroundAgentStatus = {
   supported: boolean;
@@ -19,11 +22,12 @@ export type BackgroundAgentStatus = {
   active: boolean;
   service: "launchd" | "registry-run" | "systemd-user" | "unsupported";
   pid?: number | null;
+  workerPid?: number | null;
   version?: string | null;
   detail?: string;
 };
 
-type RunResult = {
+export type RunResult = {
   code: number;
   stdout: string;
   stderr: string;
@@ -41,6 +45,12 @@ async function run(
     });
     let stdout = "";
     let stderr = "";
+    const timer = setTimeout(() => {
+      child.kill();
+      const detail = `${command} timed out after 10 seconds`;
+      if (options.ignoreFailure) resolve({ code: 124, stdout, stderr: detail });
+      else reject(new Error(detail));
+    }, 10_000);
     child.stdout?.on("data", (chunk) => {
       stdout += chunk.toString();
     });
@@ -48,6 +58,7 @@ async function run(
       stderr += chunk.toString();
     });
     child.once("error", (error) => {
+      clearTimeout(timer);
       if (options.ignoreFailure) {
         resolve({ code: 1, stdout, stderr: stderr || error.message });
         return;
@@ -55,6 +66,7 @@ async function run(
       reject(error);
     });
     child.once("close", (code) => {
+      clearTimeout(timer);
       const result = { code: code ?? 1, stdout, stderr };
       if ((code ?? 1) !== 0 && !options.ignoreFailure) {
         reject(
@@ -69,64 +81,100 @@ async function run(
   });
 }
 
-function xmlEscape(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
+export function createBackgroundController(
+  options: {
+    platform?: NodeJS.Platform;
+    home?: string;
+    nodePath?: string;
+    uid?: number;
+    run?: typeof run;
+    wait?: (ms: number) => Promise<unknown>;
+    leaseActive?: (directory: string) => Promise<boolean>;
+  } = {},
+) {
+  const platform = options.platform ?? process.platform;
+  const home = options.home ?? os.homedir();
+  const nodePath = options.nodePath ?? process.execPath;
+  const uid = options.uid ?? process.getuid?.() ?? os.userInfo().uid;
+  const runCommand = options.run ?? run;
+  const wait =
+    options.wait ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const leaseActive = options.leaseActive ?? agentLeaseActive;
+  const CONFIG_DIR = path.join(home, ".remotearc");
+  const AGENT_DIR = path.join(CONFIG_DIR, "agent");
+  const LOG_DIR = path.join(CONFIG_DIR, "logs");
+  const AGENT_BUNDLE = path.join(AGENT_DIR, "remotelink.mjs");
+  const AGENT_VERSION_FILE = path.join(AGENT_DIR, "version");
+  const MAC_LABEL = "app.remotearc.agent";
+  const WINDOWS_RUN_KEY =
+    "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+  const WINDOWS_RUN_VALUE = "Remote Arc Agent";
+  const LINUX_UNIT = "remotearc-agent.service";
 
-function psQuote(value: string) {
-  return "'" + value.replaceAll("'", "''") + "'";
-}
+  function xmlEscape(value: string) {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  }
 
-async function ensureBundle(sourcePath: string, version?: string) {
-  await fs.mkdir(AGENT_DIR, { recursive: true });
-  await fs.mkdir(LOG_DIR, { recursive: true });
-  if (path.resolve(sourcePath) !== path.resolve(AGENT_BUNDLE)) {
-    await fs.copyFile(sourcePath, AGENT_BUNDLE);
-    if (process.platform !== "win32") {
-      await fs.chmod(AGENT_BUNDLE, 0o700).catch(() => undefined);
+  function psQuote(value: string) {
+    return "'" + value.replaceAll("'", "''") + "'";
+  }
+
+  function unitQuote(value: string) {
+    return JSON.stringify(value).replaceAll("%", "%%");
+  }
+
+  async function ensureBundle(sourcePath: string, version?: string) {
+    await fs.mkdir(AGENT_DIR, { recursive: true });
+    await fs.mkdir(LOG_DIR, { recursive: true });
+    if (path.resolve(sourcePath) !== path.resolve(AGENT_BUNDLE)) {
+      const staging = AGENT_BUNDLE + "." + process.pid + ".tmp";
+      await fs.copyFile(sourcePath, staging);
+      await fs.rename(staging, AGENT_BUNDLE);
+      if (platform !== "win32") {
+        await fs.chmod(AGENT_BUNDLE, 0o700).catch(() => undefined);
+      }
+    }
+    if (version) {
+      await fs.writeFile(AGENT_VERSION_FILE, version + "\n", { mode: 0o600 });
     }
   }
-  if (version) {
-    await fs.writeFile(AGENT_VERSION_FILE, version + "\n", { mode: 0o600 });
+
+  async function backgroundBundleVersion() {
+    return fs
+      .readFile(AGENT_VERSION_FILE, "utf8")
+      .then((value) => value.trim() || null)
+      .catch(() => null);
   }
-}
 
-async function backgroundBundleVersion() {
-  return fs
-    .readFile(AGENT_VERSION_FILE, "utf8")
-    .then((value) => value.trim() || null)
-    .catch(() => null);
-}
+  function macPlistPath() {
+    return path.join(home, "Library", "LaunchAgents", MAC_LABEL + ".plist");
+  }
 
-function macPlistPath() {
-  return path.join(os.homedir(), "Library", "LaunchAgents", MAC_LABEL + ".plist");
-}
+  function linuxUnitPath() {
+    return path.join(home, ".config", "systemd", "user", LINUX_UNIT);
+  }
 
-function linuxUnitPath() {
-  return path.join(os.homedir(), ".config", "systemd", "user", LINUX_UNIT);
-}
-
-async function enableMac(
-  sourcePath: string,
-  preserveCurrent: boolean,
-  version?: string,
-): Promise<BackgroundAgentStatus> {
-  await ensureBundle(sourcePath, version);
-  const plistPath = macPlistPath();
-  await fs.mkdir(path.dirname(plistPath), { recursive: true });
-  const stdoutPath = path.join(LOG_DIR, "agent.log");
-  const stderrPath = path.join(LOG_DIR, "agent-error.log");
-  const plist = `<?xml version="1.0" encoding="UTF-8"?>
+  async function enableMac(
+    sourcePath: string,
+    preserveCurrent: boolean,
+    version?: string,
+  ): Promise<BackgroundAgentStatus> {
+    await ensureBundle(sourcePath, version);
+    const plistPath = macPlistPath();
+    await fs.mkdir(path.dirname(plistPath), { recursive: true });
+    const stdoutPath = path.join(LOG_DIR, "agent.log");
+    const stderrPath = path.join(LOG_DIR, "agent-error.log");
+    const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>Label</key><string>${MAC_LABEL}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${xmlEscape(process.execPath)}</string>
+    <string>${xmlEscape(nodePath)}</string>
     <string>${xmlEscape(AGENT_BUNDLE)}</string>
     <string>--agent</string>
   </array>
@@ -139,7 +187,7 @@ async function enableMac(
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key><string>${xmlEscape(process.env.PATH || "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")}</string>
-    <key>HOME</key><string>${xmlEscape(os.homedir())}</string>
+    <key>HOME</key><string>${xmlEscape(home)}</string>
   </dict>
   <key>ThrottleInterval</key><integer>5</integer>
   <key>StandardOutPath</key><string>${xmlEscape(stdoutPath)}</string>
@@ -147,240 +195,363 @@ async function enableMac(
 </dict>
 </plist>
 `;
-  await fs.writeFile(plistPath, plist, { mode: 0o600 });
+    await fs.writeFile(plistPath, plist, { mode: 0o600 });
 
-  const domain = `gui/${process.getuid?.() ?? os.userInfo().uid}`;
-  const loaded = await run(
-    "launchctl",
-    ["print", domain + "/" + MAC_LABEL],
-    { ignoreFailure: true },
-  );
-  await run("launchctl", ["enable", domain + "/" + MAC_LABEL], {
-    ignoreFailure: true,
-  });
-  if (!(preserveCurrent && loaded.code === 0)) {
-    await run("launchctl", ["bootout", domain + "/" + MAC_LABEL], {
+    const domain = `gui/${uid}`;
+    const loaded = await runCommand(
+      "launchctl",
+      ["print", domain + "/" + MAC_LABEL],
+      { ignoreFailure: true },
+    );
+    await runCommand("launchctl", ["enable", domain + "/" + MAC_LABEL], {
       ignoreFailure: true,
     });
-    await run("launchctl", ["bootstrap", domain, plistPath]);
-    await run("launchctl", ["kickstart", "-k", domain + "/" + MAC_LABEL], {
+    // Never boot out the Agent answering the setting request. Re-enabling
+    // an already loaded job is idempotent and avoids the bootout/bootstrap race.
+    if (loaded.code !== 0) {
+      const bootstrapped = await runCommand(
+        "launchctl",
+        ["bootstrap", domain, plistPath],
+        { ignoreFailure: true },
+      );
+      if (bootstrapped.code !== 0) {
+        const observed = await runCommand(
+          "launchctl",
+          ["print", domain + "/" + MAC_LABEL],
+          { ignoreFailure: true },
+        );
+        if (observed.code !== 0) {
+          throw new Error(
+            "launchctl bootstrap exited with " +
+              bootstrapped.code +
+              ": " +
+              (bootstrapped.stderr.trim() || bootstrapped.stdout.trim()) +
+              ". The current terminal remains connected.",
+          );
+        }
+      }
+    }
+    await runCommand("launchctl", ["kickstart", domain + "/" + MAC_LABEL], {
       ignoreFailure: true,
     });
+
+    return backgroundAgentStatus();
   }
 
-  return backgroundAgentStatus();
-}
-
-async function disableMac(stopCurrent: boolean): Promise<BackgroundAgentStatus> {
-  const plistPath = macPlistPath();
-  const domain = `gui/${process.getuid?.() ?? os.userInfo().uid}`;
-  await run("launchctl", ["disable", domain + "/" + MAC_LABEL], {
-    ignoreFailure: true,
-  });
-  await fs.rm(plistPath, { force: true });
-  if (stopCurrent) {
-    await run("launchctl", ["bootout", domain + "/" + MAC_LABEL], {
+  async function disableMac(
+    stopCurrent: boolean,
+  ): Promise<BackgroundAgentStatus> {
+    const plistPath = macPlistPath();
+    const domain = `gui/${uid}`;
+    await runCommand("launchctl", ["disable", domain + "/" + MAC_LABEL], {
       ignoreFailure: true,
     });
+    await fs.rm(plistPath, { force: true });
+    if (stopCurrent) {
+      await runCommand("launchctl", ["bootout", domain + "/" + MAC_LABEL], {
+        ignoreFailure: true,
+      });
+    }
+    return backgroundAgentStatus();
   }
-  return backgroundAgentStatus();
-}
 
-async function statusMac(): Promise<BackgroundAgentStatus> {
-  const plistPath = macPlistPath();
-  const enabled = await fs.access(plistPath).then(() => true).catch(() => false);
-  const domain = "gui/" + (process.getuid?.() ?? os.userInfo().uid);
-  const result = await run("launchctl", ["print", domain + "/" + MAC_LABEL], { ignoreFailure: true });
-  const pidMatch = result.stdout.match(/\\bpid = (\\d+)/);
-  const pid = pidMatch ? Number(pidMatch[1]) : null;
-  const active = result.code === 0 && pid !== null && /\\bstate = running\\b/i.test(result.stdout);
-  return {
-    supported: true,
-    enabled,
-    active,
-    service: "launchd",
-    pid,
-    version: await backgroundBundleVersion(),
-    detail: enabled && !active ? "Background connection is configured but the launchd agent is not currently running." : undefined,
-  };
-}
+  async function statusMac(): Promise<BackgroundAgentStatus> {
+    const plistPath = macPlistPath();
+    const installed = await fs
+      .access(plistPath)
+      .then(() => true)
+      .catch(() => false);
+    const domain = "gui/" + uid;
+    const result = await runCommand(
+      "launchctl",
+      ["print", domain + "/" + MAC_LABEL],
+      { ignoreFailure: true },
+    );
+    const disabled = await runCommand("launchctl", ["print-disabled", domain], {
+      ignoreFailure: true,
+    });
+    const enabled =
+      installed && !disabled.stdout.includes('"' + MAC_LABEL + '" => true');
+    const pidMatch = result.stdout.match(/\bpid = (\d+)/);
+    const pid = pidMatch ? Number(pidMatch[1]) : null;
+    const active =
+      result.code === 0 &&
+      pid !== null &&
+      /\bstate = running\b/i.test(result.stdout);
+    return {
+      supported: true,
+      enabled,
+      active,
+      service: "launchd",
+      pid,
+      workerPid: pid,
+      version: await backgroundBundleVersion(),
+      detail:
+        enabled && !active
+          ? "Background connection is configured but the launchd agent is not currently running."
+          : undefined,
+    };
+  }
 
-async function enableLinux(
-  sourcePath: string,
-  preserveCurrent: boolean,
-  version?: string,
-): Promise<BackgroundAgentStatus> {
-  await ensureBundle(sourcePath, version);
-  const unitPath = linuxUnitPath();
-  await fs.mkdir(path.dirname(unitPath), { recursive: true });
-  const unit = `[Unit]
+  async function enableLinux(
+    sourcePath: string,
+    preserveCurrent: boolean,
+    version?: string,
+  ): Promise<BackgroundAgentStatus> {
+    await ensureBundle(sourcePath, version);
+    const unitPath = linuxUnitPath();
+    await fs.mkdir(path.dirname(unitPath), { recursive: true });
+    const unit = `[Unit]
 Description=Remote Arc background agent
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=${process.execPath} ${AGENT_BUNDLE} --agent
+ExecStart=:${unitQuote(nodePath)} ${unitQuote(AGENT_BUNDLE)} --agent
 Restart=on-failure
 RestartSec=3
 Environment=NODE_ENV=production
+Environment=${unitQuote("PATH=" + (process.env.PATH || "/usr/local/bin:/usr/bin:/bin"))}
+Environment=${unitQuote("HOME=" + home)}
 
 [Install]
 WantedBy=default.target
 `;
-  await fs.writeFile(unitPath, unit, { mode: 0o600 });
-  await run("systemctl", ["--user", "daemon-reload"]);
-  await run(
-    "systemctl",
-    preserveCurrent
-      ? ["--user", "enable", LINUX_UNIT]
-      : ["--user", "enable", "--now", LINUX_UNIT],
-  );
-  return backgroundAgentStatus();
-}
-
-async function disableLinux(stopCurrent: boolean): Promise<BackgroundAgentStatus> {
-  await run(
-    "systemctl",
-    stopCurrent
-      ? ["--user", "disable", "--now", LINUX_UNIT]
-      : ["--user", "disable", LINUX_UNIT],
-    { ignoreFailure: true },
-  );
-  await fs.rm(linuxUnitPath(), { force: true });
-  if (stopCurrent) {
-    await run("systemctl", ["--user", "daemon-reload"], {
-      ignoreFailure: true,
-    });
+    await fs.writeFile(unitPath, unit, { mode: 0o600 });
+    await runCommand("systemctl", ["--user", "daemon-reload"]);
+    await runCommand("systemctl", ["--user", "enable", "--now", LINUX_UNIT]);
+    return backgroundAgentStatus();
   }
-  return backgroundAgentStatus();
-}
 
-async function statusLinux(): Promise<BackgroundAgentStatus> {
-  const enabledResult = await run("systemctl", ["--user", "is-enabled", LINUX_UNIT], { ignoreFailure: true });
-  const activeResult = await run("systemctl", ["--user", "is-active", LINUX_UNIT], { ignoreFailure: true });
-  const pidResult = await run("systemctl", ["--user", "show", LINUX_UNIT, "--property", "MainPID", "--value"], { ignoreFailure: true });
-  const supported = !enabledResult.stderr.toLowerCase().includes("failed to connect to bus");
-  const pidValue = Number(pidResult.stdout.trim());
-  return {
-    supported,
-    enabled: enabledResult.code === 0,
-    active: activeResult.code === 0 && Number.isFinite(pidValue) && pidValue > 0,
-    service: supported ? "systemd-user" : "unsupported",
-    pid: Number.isFinite(pidValue) && pidValue > 0 ? pidValue : null,
-    version: await backgroundBundleVersion(),
-    detail: supported ? undefined : "systemd user services are unavailable",
-  };
-}
-
-async function powershell(script: string, ignoreFailure = false) {
-  const utf8Script =
-    "$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); " +
-    script;
-  return run(
-    "powershell.exe",
-    ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", utf8Script],
-    { ignoreFailure },
-  );
-}
-
-async function windowsAgentPid() {
-  const escapedBundle = AGENT_BUNDLE.replaceAll("'", "''");
-  const script =
-    "$p = Get-CimInstance Win32_Process | Where-Object { $_.Name -ieq 'node.exe' -and $_.CommandLine -like '*" +
-    escapedBundle +
-    "*' -and $_.CommandLine -like '*--agent*' } | Select-Object -First 1 -ExpandProperty ProcessId; " +
-    "if ($null -ne $p) { Write-Output $p }";
-  const result = await powershell(script, true);
-  const pid = Number(result.stdout.trim());
-  return Number.isFinite(pid) && pid > 0 ? pid : null;
-}
-
-async function enableWindows(
-  sourcePath: string,
-  preserveCurrent: boolean,
-  version?: string,
-): Promise<BackgroundAgentStatus> {
-  await ensureBundle(sourcePath, version);
-  const command = '"' + process.execPath + '" "' + AGENT_BUNDLE + '" --agent';
-  await run("reg.exe", [
-    "add", WINDOWS_RUN_KEY, "/v", WINDOWS_RUN_VALUE, "/t", "REG_SZ", "/d", command, "/f",
-  ]);
-  if (!preserveCurrent && !(await windowsAgentPid())) {
-    const stdoutPath = path.join(LOG_DIR, "agent.log");
-    const stderrPath = path.join(LOG_DIR, "agent-error.log");
-    await powershell(
-      "Start-Process -FilePath " +
-        psQuote(process.execPath) +
-        " -ArgumentList @(" +
-        psQuote(AGENT_BUNDLE) +
-        ", '--agent') -WindowStyle Hidden" +
-        " -RedirectStandardOutput " +
-        psQuote(stdoutPath) +
-        " -RedirectStandardError " +
-        psQuote(stderrPath) +
-        " | Out-Null",
+  async function disableLinux(
+    stopCurrent: boolean,
+  ): Promise<BackgroundAgentStatus> {
+    await runCommand(
+      "systemctl",
+      stopCurrent
+        ? ["--user", "disable", "--now", LINUX_UNIT]
+        : ["--user", "disable", LINUX_UNIT],
+      { ignoreFailure: true },
     );
-    await new Promise((resolve) => setTimeout(resolve, 350));
-  }
-  return backgroundAgentStatus();
-}
-
-async function disableWindows(stopCurrent: boolean): Promise<BackgroundAgentStatus> {
-  await run("reg.exe", ["delete", WINDOWS_RUN_KEY, "/v", WINDOWS_RUN_VALUE, "/f"], { ignoreFailure: true });
-  if (stopCurrent) {
-    const pid = await windowsAgentPid();
-    if (pid) {
-      await powershell("Stop-Process -Id " + pid + " -Force -ErrorAction SilentlyContinue", true);
+    await fs.rm(linuxUnitPath(), { force: true });
+    if (stopCurrent) {
+      await runCommand("systemctl", ["--user", "daemon-reload"], {
+        ignoreFailure: true,
+      });
     }
+    return backgroundAgentStatus();
   }
-  return backgroundAgentStatus();
-}
 
-async function statusWindows(): Promise<BackgroundAgentStatus> {
-  const enabledResult = await run("reg.exe", ["query", WINDOWS_RUN_KEY, "/v", WINDOWS_RUN_VALUE], { ignoreFailure: true });
-  const pid = await windowsAgentPid();
+  async function statusLinux(): Promise<BackgroundAgentStatus> {
+    const enabledResult = await runCommand(
+      "systemctl",
+      ["--user", "is-enabled", LINUX_UNIT],
+      { ignoreFailure: true },
+    );
+    const activeResult = await runCommand(
+      "systemctl",
+      ["--user", "is-active", LINUX_UNIT],
+      { ignoreFailure: true },
+    );
+    const pidResult = await runCommand(
+      "systemctl",
+      ["--user", "show", LINUX_UNIT, "--property", "MainPID", "--value"],
+      { ignoreFailure: true },
+    );
+    const supported = !enabledResult.stderr
+      .toLowerCase()
+      .includes("failed to connect to bus");
+    const pidValue = Number(pidResult.stdout.trim());
+    return {
+      supported,
+      enabled: enabledResult.code === 0,
+      active:
+        activeResult.code === 0 && Number.isFinite(pidValue) && pidValue > 0,
+      service: supported ? "systemd-user" : "unsupported",
+      pid: Number.isFinite(pidValue) && pidValue > 0 ? pidValue : null,
+      workerPid: Number.isFinite(pidValue) && pidValue > 0 ? pidValue : null,
+      version: await backgroundBundleVersion(),
+      detail: supported ? undefined : "systemd user services are unavailable",
+    };
+  }
+
+  async function powershell(script: string, ignoreFailure = false) {
+    const utf8Script =
+      "$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); " +
+      script;
+    return runCommand(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        utf8Script,
+      ],
+      { ignoreFailure },
+    );
+  }
+
+  async function windowsAgentPid(role = "--supervise") {
+    const script =
+      "$p = Get-CimInstance Win32_Process | Where-Object { " +
+      "$_.Name -ieq 'node.exe' -and $_.ExecutablePath -ieq " +
+      psQuote(nodePath) +
+      " -and $_.CommandLine -match ('^\"?' + [regex]::Escape(" +
+      psQuote(nodePath) +
+      ") + '\"?\\s+\"?' + [regex]::Escape(" +
+      psQuote(AGENT_BUNDLE) +
+      ") + '\"?\\s+" +
+      role +
+      "(?:\\s|$)')" +
+      " } | Select-Object -First 1 -ExpandProperty ProcessId; " +
+      "if ($null -ne $p) { Write-Output $p }";
+    const result = await powershell(script, true);
+    const pid = Number(result.stdout.trim());
+    return Number.isFinite(pid) && pid > 0 ? pid : null;
+  }
+
+  async function enableWindows(
+    sourcePath: string,
+    preserveCurrent: boolean,
+    version?: string,
+  ): Promise<BackgroundAgentStatus> {
+    await ensureBundle(sourcePath, version);
+    const start = windowsSupervisorLaunchScript(nodePath, AGENT_BUNDLE);
+    const encoded = Buffer.from(start, "utf16le").toString("base64");
+    const command =
+      "powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand " +
+      encoded;
+    await runCommand("reg.exe", [
+      "add",
+      WINDOWS_RUN_KEY,
+      "/v",
+      WINDOWS_RUN_VALUE,
+      "/t",
+      "REG_SZ",
+      "/d",
+      command,
+      "/f",
+    ]);
+    if (!(await windowsAgentPid())) await powershell(start);
+
+    return backgroundAgentStatus();
+  }
+
+  async function disableWindows(
+    stopCurrent: boolean,
+  ): Promise<BackgroundAgentStatus> {
+    await runCommand(
+      "reg.exe",
+      ["delete", WINDOWS_RUN_KEY, "/v", WINDOWS_RUN_VALUE, "/f"],
+      { ignoreFailure: true },
+    );
+    if (stopCurrent) {
+      for (const role of ["--agent", "--supervise"]) {
+        const pid = await windowsAgentPid(role);
+        if (pid && pid !== process.pid)
+          await powershell(
+            "Stop-Process -Id " + pid + " -Force -ErrorAction SilentlyContinue",
+            true,
+          );
+      }
+    }
+    return backgroundAgentStatus();
+  }
+
+  async function statusWindows(): Promise<BackgroundAgentStatus> {
+    const enabledResult = await runCommand(
+      "reg.exe",
+      ["query", WINDOWS_RUN_KEY, "/v", WINDOWS_RUN_VALUE],
+      { ignoreFailure: true },
+    );
+    const pid = await windowsAgentPid();
+    return {
+      supported: true,
+      enabled: enabledResult.code === 0,
+      active: pid !== null,
+      service: "registry-run",
+      pid,
+      workerPid: await windowsAgentPid("--agent"),
+      version: await backgroundBundleVersion(),
+      detail:
+        enabledResult.code === 0 && pid === null
+          ? "Login startup is configured, but its supervisor is not running; recovery is unavailable."
+          : undefined,
+    };
+  }
+
+  async function backgroundAgentStatus(): Promise<BackgroundAgentStatus> {
+    if (platform === "darwin") return statusMac();
+    if (platform === "win32") return statusWindows();
+    if (platform === "linux") return statusLinux();
+    return {
+      supported: false,
+      enabled: false,
+      active: false,
+      service: "unsupported",
+      detail: "unsupported operating system",
+    };
+  }
+
+  async function enableBackgroundAgent(
+    sourcePath: string,
+    options: { preserveCurrent?: boolean; version?: string } = {},
+  ) {
+    const preserveCurrent = options.preserveCurrent ?? false;
+    const before = await backgroundAgentStatus();
+    if (before.workerPid && before.workerPid !== process.pid) {
+      let participates = await leaseActive(AGENT_DIR);
+      for (let attempt = 0; !participates && attempt < 6; attempt++) {
+        await wait(500);
+        participates = await leaseActive(AGENT_DIR);
+      }
+      if (!participates)
+        throw new LegacyBackgroundAgentError(
+          "An existing background Agent does not hold the execution lease. Stop the older Agent locally before upgrading; this launch will not create a competing executor.",
+        );
+    }
+    if (platform === "darwin")
+      await enableMac(sourcePath, preserveCurrent, options.version);
+    else if (platform === "win32")
+      await enableWindows(sourcePath, preserveCurrent, options.version);
+    else if (platform === "linux")
+      await enableLinux(sourcePath, preserveCurrent, options.version);
+    else return backgroundAgentStatus();
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const status = await backgroundAgentStatus();
+      if (status.enabled && status.active) return status;
+      if (!status.supported) return status;
+      await wait(200);
+    }
+    const status = await backgroundAgentStatus();
+    throw new Error(
+      status.detail ||
+        "Background supervisor did not start; the current terminal remains connected.",
+    );
+  }
+
+  async function disableBackgroundAgent(
+    options: { stopCurrent?: boolean } = {},
+  ) {
+    const stopCurrent = options.stopCurrent ?? true;
+    if (platform === "darwin") return disableMac(stopCurrent);
+    if (platform === "win32") return disableWindows(stopCurrent);
+    if (platform === "linux") return disableLinux(stopCurrent);
+    return backgroundAgentStatus();
+  }
+
   return {
-    supported: true,
-    enabled: enabledResult.code === 0,
-    active: pid !== null,
-    service: "registry-run",
-    pid,
-    version: await backgroundBundleVersion(),
-    detail: enabledResult.code === 0 && pid === null
-      ? "Background connection is configured but the user-level agent is not currently running."
-      : undefined,
+    backgroundAgentStatus,
+    enableBackgroundAgent,
+    disableBackgroundAgent,
   };
 }
 
-export async function backgroundAgentStatus(): Promise<BackgroundAgentStatus> {
-  if (process.platform === "darwin") return statusMac();
-  if (process.platform === "win32") return statusWindows();
-  if (process.platform === "linux") return statusLinux();
-  return {
-    supported: false,
-    enabled: false,
-    active: false,
-    service: "unsupported",
-    detail: "unsupported operating system",
-  };
-}
-
-export async function enableBackgroundAgent(
-  sourcePath: string,
-  options: { preserveCurrent?: boolean; version?: string } = {},
-) {
-  const preserveCurrent = options.preserveCurrent ?? false;
-  if (process.platform === "darwin") return enableMac(sourcePath, preserveCurrent, options.version);
-  if (process.platform === "win32") return enableWindows(sourcePath, preserveCurrent, options.version);
-  if (process.platform === "linux") return enableLinux(sourcePath, preserveCurrent, options.version);
-  return backgroundAgentStatus();
-}
-
-export async function disableBackgroundAgent(options: { stopCurrent?: boolean } = {}) {
-  const stopCurrent = options.stopCurrent ?? true;
-  if (process.platform === "darwin") return disableMac(stopCurrent);
-  if (process.platform === "win32") return disableWindows(stopCurrent);
-  if (process.platform === "linux") return disableLinux(stopCurrent);
-  return backgroundAgentStatus();
-}
+export const {
+  backgroundAgentStatus,
+  enableBackgroundAgent,
+  disableBackgroundAgent,
+} = createBackgroundController();

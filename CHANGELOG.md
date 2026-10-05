@@ -2,6 +2,21 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.4.4 (unreleased candidate)
+
+- Unify goal creation around objective, explicit decision executor, finite plan budget and independent triggers; retain command automation as an explicit code entry.
+- Add a versioned Dashboard contract and opt-in MCP goal contract while preserving legacy IDs and API defaults.
+- Repair registered task Cron dispatch; expose scheduler health and actual execution-start counts, preserve queued goal events on resume and meter planned hosted turns.
+- Simplify device management, default to dark, fix monochrome client marks, move the tutorial to Connect AI and update platform/safety/task documentation.
+
+- Retain the attached terminal and operation history when enabling recovery.
+- Use a single execution lease; additional terminals observe logs and the daemon takes over after an owner ends.
+- Add a hidden Windows login supervisor with bounded Agent restart backoff; require a live supervisor before reporting successful enable.
+- Make macOS enable idempotent and fix launchd PID/state parsing.
+- Separate verified recovery, supervisor status and execution/Relay presence in Dashboard. Disabling recovery preserves execution; stopping the background Agent is explicit.
+- Write pairing configuration atomically, serialize setting changes, safely discard results for disconnected sockets, and reject local permission-profile changes while another Agent owns execution.
+- Add native lifecycle and bundled attached-terminal regression checks.
+
 ## 0.4.3
 
 - Fixed background-agent packaging so the copied standalone agent bundle includes its WebSocket runtime and no longer crash-loops on macOS.

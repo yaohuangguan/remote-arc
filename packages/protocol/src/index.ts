@@ -7,6 +7,10 @@ export type DeviceMetadata = {
   agentVersion: string;
   pid?: number;
   backgroundProcess?: boolean;
+  recoveryEnabled?: boolean;
+  supervisorActive?: boolean;
+  supervisorPid?: number | null;
+  supervisorService?: string;
   connectedAt?: string;
   lastSeen?: string;
 };

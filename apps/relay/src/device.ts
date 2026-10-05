@@ -348,6 +348,11 @@ export async function getDevicesForUser(
     agentVersion?: string;
     pid?: number;
     connectedAt?: string;
+    recovery_enabled?: boolean;
+    background_guard_active?: boolean;
+    background_guard_pid?: number | null;
+    background_guard_service?: string | null;
+    execution_mode?: string;
     background_active?: boolean;
     background_pid?: number | null;
     background_agent_version?: string | null;
@@ -446,10 +451,14 @@ export async function getDevicesForUser(
         capabilities.includes("background_agent_v1") ||
         device.background_seen_at !== null,
       background_enabled:
-        device.background_enabled === null
+        typeof live?.recovery_enabled === "boolean" ? live.recovery_enabled : device.background_enabled === null
           ? null
           : device.background_enabled !== 0,
-      background_service: device.background_service,
+      background_service: live?.background_guard_service || device.background_service,
+      background_recovery_available: capabilities.includes("background_recovery_v2"),
+      background_guard_active: live?.background_guard_active === true,
+      background_guard_pid: live?.background_guard_pid ?? null,
+      execution_mode: live?.execution_mode ?? null,
       background_seen_at: device.background_seen_at,
       background_active: live?.background_active === true,
       background_pid:

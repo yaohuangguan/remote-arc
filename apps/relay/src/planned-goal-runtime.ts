@@ -3,6 +3,7 @@ import { LeaseLostError } from "./automation-store.js";
 import { planAgentTurn, PlannerTransientError, type AgentPlannerDecision } from "./agent-planner.js";
 import { validateAgentToolArguments } from "./agent-tools.js";
 import { takeSourceDecision } from "./source-goals.js";
+import { recordPlusUsage } from "./plus-usage.js";
 import type { AgentGoalSpec, AutomationEnv, AutomationRow, AutomationStatus, RuntimeState } from "./automations.js";
 import { activePhase, adaptiveCandidates, finishPhase, initialPlannedState, plannedReport, recordProgress, revisePhases, sanitizeChecks, sanitizePhases, selectPhase, startPhase, timeBudget, type GoalCheck, type PlannedState, type PhaseOutcome } from "./planned-goals.js";
 
@@ -258,6 +259,7 @@ export async function executePlannedGoal(env: AutomationEnv, task: AutomationRow
       iteration: agent.iteration + 1, maxIterations: goal.max_iterations, allowedTools: goal.allowed_tools,
       memory: s.phase_memory, observation: agent.observation, plannedContext: plannedContext(s, task),
     });
+    if (goal.controller !== "source" && decision) await recordPlusUsage(env, task.user_id, { planner_turns: 1 });
     if (!decision) { await wait(s.replan_reason || "Next action requires the source AI; saved deterministic work has settled."); return; }
     validatePlannedDecision(decision, goal, s); agent.iteration++; agent.last_decision_summary = decision.decisionSummary;
     agent.memory = decision.memory; s.phase_memory = decision.memory; s.needs_reasoning = undefined;

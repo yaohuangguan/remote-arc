@@ -1,6 +1,6 @@
 # Task and device experience review
 
-Baseline: default branch `master`, `81e36248a8dd215885c83cf08e943e9080a19730`.
+Integrated baseline: default branch `master`, `7a912f8192097994b6d2c34ba317fcfe073aa938` (PR80 included).
 Implementation branch: `feat/dashboard-task-device-ux`. Date: 2026-10-05.
 
 ## What creating a task actually does
@@ -51,42 +51,19 @@ Terminal access runs under the local OS account and is not an OS sandbox.
 
 ## Implementation and validation checkpoint
 
-Implemented the new task names, creation outcomes, progressive AI controls,
-provider/tool availability notices, post-creation focus, compact device overview
-and three management panels. Task results lead with execution state and evidence;
-chat references and technical timing are optional unless a source decision is
-needed. Authenticated collection metadata exposes only provider availability.
+The creation UI now has two intents: **Complete a goal** and **Command automation**. Goals always save a finite plan budget; phases, overnight duration and planning mode are properties. Start conditions are independent: now, future time, interval or event. Goals require an explicit source or hosted decision executor. See [task-architecture-v2.md](task-architecture-v2.md) for the architecture, migration and MCP compatibility contract.
 
-The homepage now positions Remote Arc as a controlled execution platform with
-Connect / Execute / Control capabilities. Its existing tutorial video moved to
-`/connect-ai`. The new Safety Guard illustration uses allowed project writing
-and blocked sensitive-path reading. Dark is the first-visit default; saved
-preferences remain valid. Public and Dashboard monochrome client marks are
-correct in dark mode. Public task guides explain manual creation without chat.
+Dashboard shows actual run starts, saved instructions, execution evidence, source-AI waiting and scheduler health. New goals cannot enter the shell command field. Existing incorrectly created commands remain visible for explicit replacement; no production task is silently rewritten or resumed.
 
-Passed before integration with PR80:
+The integrated tree includes compact device management, attached-terminal recovery, a single local execution owner, truthful supervisor/Relay presence, dark defaults and logo fixes. Homepage positioning is Connect / Execute / Control; the existing tutorial video is on `/connect-ai`. Safety Guard illustrates approved project writing and blocked sensitive-file reading, with the shell boundary explained accurately.
 
-- `pnpm run ci`: typechecks, native execution, MCP, browser extension, source and
-  planned goals, owned worktrees, SEO, OAuth, security and approvals.
-- `pnpm test:automations`: local Wrangler/D1 and WebSocket device execution,
-  including provider metadata without credentials, a manually created source
-  goal waiting without a chat decision, and independent saved command slices.
-- Preview and production UI builds; subsequent UI typechecks.
-- 18 layout/theme checks: six pages in dark Chinese at 390px, light English at
-  320px and light Chinese at 1440px; manual dark English desktop review. Mode
-  switching, source selection, device management and a planned-task deep link
-  work. Preview mutations remain disabled. A few existing narrow-screen child
-  overflows are under final review even though document widths stay correct.
+Verified locally on 2026-10-05:
 
-During this work PR80 merged to `master` at
-`7a912f8192097994b6d2c34ba317fcfe073aa938`. It fixes the self-contained background
-bundle, Windows user-level startup and real background-agent observability in
-remotelink 0.4.3. Rebase the UI work onto this commit and preserve the background
-state/PID/version plus Repair/Stop controls inside Background & tasks. Recheck
-the combined tree before delivery. The other ChatGPT conversation's connection
-error does not imply its committed work was lost; PR80 is merged and npm exposes
-0.4.3. Its reported real-host verification is separate from this UI review.
+- `pnpm run ci`: all workspace typechecks, native execution, MCP, browser companion, source/planned goals, owned worktrees, SEO, OAuth, security and approval tests passed. Subsequent relay typecheck and goal suites passed after scheduler/usage fixes.
+- `pnpm test:automations`: real local Wrangler/D1 migrations and scheduled handler, both configured Cron strings, true run-start counts, command and hosted goals, planning and adaptation after a failed test, exact planner metering, source waiting without invented runs, independent source slices, queued goal events, unknown outcomes, offline recovery and policy-stop behavior passed.
+- `pnpm test:recovery`: mocked macOS/Linux service behavior; real Windows hidden launch and PID detection; real lease exclusion/stale-owner recovery; supervisor restart/disable; copied standalone CLI, attached operation history, one execution connection and rejected conflicting permission changes passed.
+- Production and preview UI builds passed. 18 layout/theme checks cover six pages at 390px dark Chinese, 320px light English and 1440px light Chinese. Two intents × four triggers and source selection were inspected. Preview mutations remain disabled.
 
-Delivery is a reviewable PR and Cloudflare preview. Production publication,
-package release and real overnight host acceptance are separate work.
-Update this checkpoint with the implementation and validation results.
+GitHub CI/native-matrix and Cloudflare preview checks are separate from these local results. Real macOS launchctl, refreshed host task catalogs and an actual overnight client session remain deployment acceptance items. Calendar timezone/DST scheduling is not implemented; interval recurrence is explicitly labeled.
+
+Delivery is a Draft PR and Cloudflare UI preview. CLI 0.4.4 is an unreleased candidate; production publication and package release remain separate.

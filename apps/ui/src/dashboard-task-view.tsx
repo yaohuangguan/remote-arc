@@ -15,6 +15,7 @@ type Task = {
   kind?: string;
   next_run_at?: string | null;
   goal_json?: string | null;
+  action_json?: string;
 };
 type Progress = {
   planned?: PlannedProgress;
@@ -111,7 +112,10 @@ export function TaskResults({ task, referenceControl, reveal = false }: { task: 
   const timestamp = (value: string | null) => value
     ? new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-US") : "—";
   const phaseLabel = taskActivity(task, tr);
-  const chatReference = <div className="taskChatReference"><strong>{tr("Open this task in your AI chat", "在 AI 聊天中引用这条任务")}</strong>{referenceControl}<code>{task.id}</code><p>{tr("Paste the reference into an authorized, connected AI chat. Remote Arc provides saved task context; it cannot read your other chats or start a ChatGPT conversation.", "将引用粘贴到已授权并连接的 AI 聊天中。Remote Arc 提供保存的任务上下文，不会读取其他聊天或自动开启 ChatGPT 对话。")}</p></div>;
+  let instructions: { objective?: string; success_criteria?: string; controller?: string; steps?: { command?: string; cwd?: string; type?: string }[] } = {};
+  try { instructions = task.goal_json && JSON.parse(task.goal_json)?.type === "agent_goal"
+    ? JSON.parse(task.goal_json) : JSON.parse(task.action_json || "{}"); } catch { /* Invalid legacy record remains visible through status/error. */ }
+  const chatReference = <div className="taskChatReference"><strong>{tr("Reference this saved task", "引用已保存的任务")}</strong>{referenceControl}<code>{task.id}</code><p>{tr("Use a client connected to the same Remote Arc account with task-reading tools and permissions. The reference retrieves saved task context, not the original chat. Continuing an AI goal also requires decision tools and a runtime that can keep working. If the client lacks these tools, it must report that instead of looking for a checkpoint file.", "需要客户端连接同一 Remote Arc 账号，且具有任务读取工具及权限。引用读取的是已保存的任务上下文，不会转移原聊天。继续 AI 目标还需要决策工具和能够持续工作的运行环境。客户端缺少工具时应明确说明，不应寻找本地检查点文件。")}</p></div>;
 
   return (
     <details ref={details} open={open} className="automationDetails" onToggle={(event) => setOpen(event.currentTarget.open)}>
@@ -133,7 +137,7 @@ export function TaskResults({ task, referenceControl, reveal = false }: { task: 
           <h3>{tr("Recent runs", "最近执行")}</h3>
           {error && <p role="status">{tr("Run history could not be loaded.", "执行记录加载失败。 ")} <button className="ghostButton" onClick={() => setRetry((value) => value + 1)}>{tr("Retry", "重试")}</button></p>}
           {open && runs === null && !error && <p role="status">{tr("Loading results…", "正在加载结果…")}</p>}
-          {runs?.length === 0 && <p>{tr("Results appear here when the first run starts.", "第一次执行开始后，结果会显示在这里。")}</p>}
+          {runs?.length === 0 && <p>{tr("No run has started. Saving a task is not execution. Check its executor, trigger and scheduling status above.", "尚未开始任何执行。保存任务不等于执行，请检查上方的执行器、启动条件与调度状态。")}</p>}
           {runs?.map((run) => (
             <details className="taskRun" key={run.id}>
               <summary>
@@ -154,6 +158,10 @@ export function TaskResults({ task, referenceControl, reveal = false }: { task: 
             <div><span>{tr("Expires", "到期时间")}</span><strong>{task.expires_at ? timestamp(task.expires_at) : tr("No expiry", "未设置")}</strong></div>
             <div><span>{tr("Check interval", "检查间隔")}</span><strong>{Math.round(task.interval_seconds / 60)} {tr("min", "分钟")}</strong></div>
           </div>{!taskNeedsAgent(task) && chatReference}
+          <div className="taskSavedInstructions"><strong>{tr("Saved instructions", "已保存的指令")}</strong>
+            {instructions.objective ? <><p>{instructions.objective}</p><p>{tr("Success criteria", "成功标准")}: {instructions.success_criteria}</p><p>{tr("Decision executor", "决策执行器")}: {instructions.controller === "source" ? tr("Connected AI client", "已连接 AI 客户端") : tr("Hosted AI", "托管 AI")}</p></>
+              : instructions.steps?.map((step, index) => step.command ? <div key={index}><p>{tr("Shell command · executed verbatim", "Shell 命令 · 原样执行")}{step.cwd ? ` · ${step.cwd}` : ""}</p><pre>{step.command}</pre></div> : <p key={index}>{step.type}</p>)}
+          </div>
         </details>
         <p className="automationDetailNote"><a href="/docs/long-running-work">{tr("Understand task recovery and completion checks", "了解任务恢复与完成验收")} →</a></p>
       </div>

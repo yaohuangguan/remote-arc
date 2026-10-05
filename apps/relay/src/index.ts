@@ -1,5 +1,6 @@
 import { handleDeviceTaskSettings } from "./device-task-settings.js";
-import { deliverTaskEvents, handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
+import { handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
+import { runScheduledTasks } from "./task-scheduler.js";
 import { DeviceRegistry } from "./registry.js";
 import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
 import { createRemoteLinkMcp } from "./mcp.js";
@@ -41,7 +42,6 @@ import {
   handleAutomationCollection,
   handleAutomationItem,
   handleAutomationWebhook,
-  runAutomationTick,
 } from "./automations.js";
 import {
   handleGrantRevoke,
@@ -753,8 +753,8 @@ export default {
     env: Env,
     ctx: ExecutionContext,
   ) {
-    if (controller.cron === "* * * * *") {
-      ctx.waitUntil(runAutomationTick(env).then(() => deliverTaskEvents(env)));
+    if (["* * * * *", "*/5 * * * *"].includes(controller.cron)) {
+      ctx.waitUntil(runScheduledTasks(env, controller.cron));
     }
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(runSyntheticMonitor(env));

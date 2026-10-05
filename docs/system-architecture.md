@@ -94,7 +94,7 @@ flowchart TB
 | Undo | 对受支持的文件修改创建与恢复本地快照 | 不是任意命令/第三方操作的回滚 |
 | 终端/进程 | 启动命令、查询状态/输出、停止受管进程 | 真实本地用户权限；非通用 OS 沙箱 |
 | 浏览器上下文 | 读取用户明确共享的标签页、选择文本、链接与表格 | 只读共享上下文；不声称通用 GUI 自动操作 |
-| 登录后台连接 | launchd / Task Scheduler / systemd-user 自启与重连 | 依赖用户登录、设备供电和网络 |
+| 进程恢复与登录自启（0.4.4 候选） | launchd / Windows 用户级 supervisor / systemd-user 守护；单执行锁；终端可持续跟随日志；分别显示守护与 Relay 执行状态 | 与 Relay 网络重连独立；强杀执行者后约 15 秒接手；Windows 守护本身需持续运行；依赖用户登录和供电，旧运行实例需先停止或更新 |
 | Long Task | 运行已批准命令并持续跟踪至退出 | 无独立动态推理 |
 | Condition Watch | 匹配 Webhook 后执行确定计划 | 现有回调 URL 是 bearer capability |
 | Schedule Watch | 未来时间或完成后固定间隔执行 | 非日历 cron / 时区 / DST 引擎 |
@@ -350,3 +350,8 @@ GitHub deployment-level installation ID 不是用户授权，需单独保存 per
 现有 release HOLD 延续：在 Plugin review / PR41 的发布决策完成之前，不合并、
 不执行生产迁移/部署、不发布 npm、版本 tag 或 Plugin。官网新 Docs 与代码会
 先在 Draft PR 预览中供审查。
+
+
+## Unified task architecture follow-up (2026-10-05)
+
+See [the task v2 contract](task-architecture-v2.md) for the new goal/command boundary, independent triggers, decision executors, scheduler heartbeat and compatibility migration. The five legacy automation kinds remain storage/API compatibility details. Dashboard natural-language objectives use a versioned goal contract and never become shell commands. New goals always have a finite plan time budget; source-only goals with no decision are visibly blocked. The checked-out Cron mismatch is fixed by registering the task Cron and dispatching on the existing monitor Cron as a fallback. Production deployment and real-host acceptance remain separate from local test results.

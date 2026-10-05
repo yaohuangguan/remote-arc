@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { createTaskKeepAwakeManager } from "./keep-awake.js";
 import { goalWorkspace } from "./goal-workspace.js";
+import { appendAgentEvent, readAgentEvents, startSupervisedAgent, superviseAgent, tryAgentLease } from "./agent-runtime.js";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import process from "node:process";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
@@ -13,13 +15,14 @@ import {
   backgroundAgentStatus,
   disableBackgroundAgent,
   enableBackgroundAgent,
+  LegacyBackgroundAgentError,
 } from "./background.js";
 import {
   RemoteArcExecutionCore,
   type ExecutionPolicy,
 } from "@remotearc/execution-core";
 
-const VERSION = "0.4.3";
+const VERSION = "0.4.4";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -236,6 +239,7 @@ function logLine(
     level === "event" ? cyan("→") :
     cyan("•");
   process.stdout.write(`${dim(nowTime())}  ${icon}  ${message}\n`);
+  appendAgentEvent(path.join(CONFIG_DIR, "logs"), `${nowTime()}  ${level}  ${message}\n`);
 }
 
 function banner() {
@@ -279,10 +283,12 @@ async function readConfig(): Promise<SavedConfig | null> {
 }
 
 async function writeConfig(config: SavedConfig) {
-  await fs.mkdir(CONFIG_DIR, { recursive: true });
-  await fs.writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n", {
-    mode: 0o600,
-  });
+  await fs.mkdir(CONFIG_DIR, { recursive: true, mode: 0o700 });
+  const staging = CONFIG_PATH + "." + randomUUID() + ".tmp";
+  try {
+    await fs.writeFile(staging, JSON.stringify(config, null, 2) + "\n", { mode: 0o600 });
+    await fs.rename(staging, CONFIG_PATH);
+  } finally { await fs.rm(staging, { force: true }); }
 }
 
 async function resetConfig() {
@@ -436,10 +442,14 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
   const wsUrl = new URL("/agent", config.origin.replace(/^http/, "ws"));
 
   let stopped = false;
+  let rePair = false;
   let backoff = 1000;
+  let currentSocket: WebSocket | null = null;
+  let backgroundSettings: Promise<void> = Promise.resolve();
 
   const shutdown = async () => {
     stopped = true;
+    currentSocket?.terminate();
     keepAwake.close();
     await core.close().catch(() => undefined);
   };
@@ -453,6 +463,12 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
         Authorization: "Bearer " + config.deviceToken,
       },
     });
+
+    currentSocket = ws;
+    const send = (message: unknown) => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      try { ws.send(JSON.stringify(message)); } catch { ws.terminate(); }
+    };
 
     // Keep a permanent error listener on every socket attempt. During a
     // failed handshake, ws can emit a second asynchronous error when the
@@ -499,29 +515,48 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
       });
 
       backoff = 1000;
-      ws.send(
-        JSON.stringify({
-          type: "hello",
-          device: {
-            id: config.deviceId,
-            name: config.deviceName,
-            platform: process.platform,
-            arch: process.arch,
-            hostname: os.hostname(),
-            agentVersion: VERSION,
-            pid: process.pid,
-            backgroundProcess: argFlag("--agent"),
-            connectedAt: new Date().toISOString(),
-          },
-          tools: [...tools.map((tool) => tool.name), ...internalTools],
-          capabilities: [
-            "native_core_v1",
-            "device_policy_v1",
-            "undo_history_v1",
-            "background_agent_v1",
-          ],
-        }),
-      );
+      const connectedAt = new Date().toISOString();
+      const publishPresence = async () => {
+        const saved = await readConfig();
+        if (!saved || saved.deviceId !== config.deviceId || saved.deviceToken !== config.deviceToken) {
+          logLine("warn", "The local pairing changed or was removed; stopping this execution owner.");
+          await shutdown(); return;
+        }
+        const local = await backgroundAgentStatus().catch(() => null);
+        const recovery = local ? { ...local, enabled: saved?.backgroundEnabled === true && local.enabled && local.active } : null;
+        if (ws.readyState !== WebSocket.OPEN) return;
+        ws.send(
+          JSON.stringify({
+            type: "hello",
+            device: {
+              id: config.deviceId,
+              name: config.deviceName,
+              platform: process.platform,
+              arch: process.arch,
+              hostname: os.hostname(),
+              agentVersion: VERSION,
+              pid: process.pid,
+              backgroundProcess: argFlag("--agent"),
+              connectedAt,
+              recoveryEnabled: recovery?.enabled ?? false,
+              supervisorActive: recovery?.active,
+              supervisorPid: recovery?.pid,
+              supervisorService: recovery?.service,
+            },
+            tools: [...tools.map((tool) => tool.name), ...internalTools],
+            capabilities: [
+              "native_core_v1",
+              "device_policy_v1",
+              "undo_history_v1",
+              "background_agent_v1",
+              "background_recovery_v2",
+            ],
+          }),
+        );
+
+      };
+      await publishPresence();
+      const presenceTimer = setInterval(() => void publishPresence().catch(() => undefined), 30_000);
 
       logLine("success", `Relay connected · ${bold(config.deviceName)} · ${config.mode} mode`);
       logLine("success", "Device presence published.");
@@ -541,7 +576,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
               "content-type": "application/json",
             },
             body: JSON.stringify({
-              background_enabled: background?.enabled,
+              background_enabled: background ? (await readConfig())?.backgroundEnabled === true && background.enabled && background.active : undefined,
               background_process: argFlag("--agent"),
               background_service: background?.service,
             }),
@@ -634,32 +669,37 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
                 throw new Error("enabled must be a boolean");
               }
 
-              config.backgroundEnabled = enabled;
-              await writeConfig(config);
+              const change = backgroundSettings.then(async () => {
+                config = { ...(await readConfig() || config), backgroundEnabled: enabled };
+                await writeConfig(config);
 
-              if (enabled) {
-                const current = await backgroundAgentStatus();
-                result = current.enabled && current.active
-                  ? { ...current, desired_enabled: true }
-                  : {
-                      ...(await enableBackgroundAgent(SELF_PATH, {
-                        preserveCurrent: argFlag("--agent"),
-                        version: VERSION,
-                      })),
-                      desired_enabled: true,
-                    };
-                exitAfterResponse = !argFlag("--agent");
-              } else {
-                const stopCurrent = message.arguments?.stop_current === true;
-                const runningAsBackgroundAgent = argFlag("--agent");
-                result = {
-                  ...(await disableBackgroundAgent({
-                    stopCurrent: stopCurrent && !runningAsBackgroundAgent,
-                  })),
-                  desired_enabled: false,
-                };
-                exitAfterResponse = stopCurrent && runningAsBackgroundAgent;
-              }
+                if (enabled) {
+                  const current = await backgroundAgentStatus();
+                  result = current.enabled && current.active
+                    ? { ...current, desired_enabled: true }
+                    : {
+                        ...(await enableBackgroundAgent(SELF_PATH, {
+                          preserveCurrent: argFlag("--agent"),
+                          version: VERSION,
+                        })),
+                        desired_enabled: true,
+                      };
+                  // Retain the executing Agent and terminal; the daemon waits
+                  // on the shared lease and takes over only when this owner ends.
+                } else {
+                  const stopCurrent = message.arguments?.stop_current === true;
+                  const runningAsBackgroundAgent = argFlag("--agent");
+                  result = {
+                    ...(await disableBackgroundAgent({
+                      stopCurrent: stopCurrent && !runningAsBackgroundAgent,
+                    })),
+                    desired_enabled: false,
+                  };
+                  exitAfterResponse = stopCurrent && runningAsBackgroundAgent;
+                }
+              });
+              backgroundSettings = change.catch(() => undefined);
+              await change;
             } else {
               result = await core.call(
                 message.tool,
@@ -669,31 +709,29 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
             }
 
             logLine("success", `tool.done ${message.tool} · ${Date.now() - callStarted}ms`);
-            ws.send(
-              JSON.stringify({
+            send({
                 type: "result",
                 id: message.id,
                 result,
-              }),
-            );
+              });
+            if (message.tool === "set_background_agent") { await publishPresence(); void sendHeartbeat(); }
             if (exitAfterResponse) {
-              setTimeout(() => process.exit(0), 500);
+              setTimeout(() => void shutdown(), 500);
             }
           } catch (error) {
             logLine("error", `tool.fail ${message.tool} · ${error instanceof Error ? error.message : String(error)}`);
-            ws.send(
-              JSON.stringify({
+            send({
                 type: "result",
                 id: message.id,
                 error: error instanceof Error ? error.message : String(error),
-              }),
-            );
+              });
           }
         });
 
         ws.once("close", resolve);
         ws.once("error", resolve);
       });
+      clearInterval(presenceTimer);
       clearInterval(heartbeatTimer);
       clearInterval(approvalTimer);
       clearInterval(livenessTimer);
@@ -702,8 +740,8 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
         logLine("warn", error.message);
         await resetConfig();
         logLine("event", "Starting a fresh device pairing…");
-        await core.close().catch(() => undefined);
-        return "rePair";
+        rePair = true;
+        await shutdown();
       }
 
       logLine(
@@ -738,8 +776,10 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
     }
   }
 
+  process.off("SIGINT", shutdown);
+  process.off("SIGTERM", shutdown);
   await core.close().catch(() => undefined);
-  return "stopped";
+  return rePair ? "rePair" : "stopped";
 }
 
 async function main() {
@@ -757,9 +797,9 @@ async function main() {
         "Options:",
         "  --safe          Hard local read-only cap; dashboard cannot enable write tools",
         "  --developer     Legacy alias for dashboard-managed capabilities",
-        "  --foreground    Keep this session attached to the terminal instead of background mode",
-        "  --background    Enable the login background agent",
-        "  --no-background Disable login background mode and run this session in the foreground",
+        "  --foreground    Stay attached without installing or repairing recovery",
+        "  --background    Enable process recovery and keep this terminal attached",
+        "  --no-background Disable recovery; preserve the currently executing Agent",
         "  --reset         Remove local pairing and background-agent registration",
         "  --version       Print CLI version",
         "  --help        Show this help",
@@ -787,6 +827,7 @@ async function main() {
 
   const agentMode = argFlag("--agent");
   const foregroundMode = argFlag("--foreground");
+  const supervisorMode = argFlag("--supervise");
   const disableBackground = argFlag("--no-background");
   const enableBackground = argFlag("--background");
   let config = await readConfig();
@@ -799,17 +840,14 @@ async function main() {
     }
 
     if (!config) {
-      if (agentMode) return;
+      if (agentMode || supervisorMode) return;
       config = await pair(origin, selectedMode());
-    } else if (argFlag("--safe") || argFlag("--developer")) {
-      config.mode = argFlag("--safe") ? "safe" : "managed";
-      await writeConfig(config);
     }
 
     if (disableBackground) {
       config.backgroundEnabled = false;
       await writeConfig(config);
-      await disableBackgroundAgent({ stopCurrent: true }).catch(() => undefined);
+      await disableBackgroundAgent({ stopCurrent: false }).catch(() => undefined);
     } else if (enableBackground) {
       config.backgroundEnabled = true;
       await writeConfig(config);
@@ -817,31 +855,41 @@ async function main() {
 
     logLine("info", `Using paired device identity ${dim(config.deviceId.slice(0, 8))}…`);
 
-    if (agentMode) {
-      if (config.backgroundEnabled !== true) return;
-      const result = await connectAgent(config);
-      if (result !== "rePair") return;
+    if (supervisorMode) {
+      const release = await tryAgentLease(path.join(CONFIG_DIR, "agent"), "supervisor");
+      if (!release) return;
+      const abort = new AbortController();
+      const stop = () => abort.abort();
+      process.on("SIGINT", stop); process.on("SIGTERM", stop);
+      try {
+        await superviseAgent({ enabled: async () => (await readConfig())?.backgroundEnabled === true,
+          signal: abort.signal, start: () => startSupervisedAgent(process.execPath, SELF_PATH, path.join(CONFIG_DIR, "logs")) });
+      } finally {
+        process.off("SIGINT", stop); process.off("SIGTERM", stop); await release();
+      }
       return;
     }
+    if (agentMode && config.backgroundEnabled !== true) return;
 
-    if (!foregroundMode && config.backgroundEnabled === true) {
+    if (!agentMode && !foregroundMode && config.backgroundEnabled === true) {
       try {
         const status = await enableBackgroundAgent(SELF_PATH, { version: VERSION });
-        if (status.supported && status.enabled) {
+        if (status.supported && status.enabled && status.active) {
           banner();
-          logLine("success", "Background connection enabled.");
+          logLine("success", "Process recovery enabled; this terminal stays attached.");
           logLine(
             "info",
-            `Service: ${status.service} · starts automatically at login`,
+            `Supervisor: ${status.service} · PID ${status.pid} · takes over if the executing Agent ends`,
           );
           logLine(
             "info",
             "Use the Remote Arc dashboard or --no-background to disable it.",
           );
-          return;
-        }
-        logLine("warn", status.detail || "Background services are unavailable on this system.");
+        } else logLine("warn", status.detail || "Background services are unavailable on this system.");
       } catch (error) {
+        if (error instanceof LegacyBackgroundAgentError) {
+          logLine("error", error.message); process.exitCode = 1; return;
+        }
         logLine(
           "warn",
           "Could not enable background mode; keeping this terminal session connected: " +
@@ -856,8 +904,48 @@ async function main() {
         "Background connection is not configured yet · finish setup in the browser or Devices.",
       );
     }
-    const result = await connectAgent(config);
-    if (result !== "rePair") return;
+    const abort = new AbortController();
+    const stopWaiting = () => abort.abort();
+    process.on("SIGINT", stopWaiting); process.on("SIGTERM", stopWaiting);
+    let release: Awaited<ReturnType<typeof tryAgentLease>> = null;
+    let cursor: number | null = null;
+    let announced = false;
+    let lastApprovalPoll = 0;
+    try {
+      while (!abort.signal.aborted && !release) {
+        if (agentMode && (await readConfig())?.backgroundEnabled !== true) return;
+        release = await tryAgentLease(path.join(CONFIG_DIR, "agent"));
+        if (release) break;
+        if (!agentMode && (argFlag("--safe") || argFlag("--developer"))) {
+          logLine("error", "Another Agent owns execution. Stop it locally before changing the local permission profile.");
+          process.exitCode = 1;
+          return;
+        }
+        if (!agentMode) {
+          if (!announced) { logLine("info", "An Agent already owns execution. Following its operation log; Ctrl+C closes this viewer."); announced = true; }
+          const events = await readAgentEvents(path.join(CONFIG_DIR, "logs"), cursor);
+          cursor = events.cursor; if (events.text) process.stdout.write(events.text);
+          if (Date.now() - lastApprovalPoll >= 4_000) { lastApprovalPoll = Date.now(); void promptPendingApproval(config); }
+        }
+        await sleep(500);
+      }
+      if (!release || abort.signal.aborted) return;
+      if (argFlag("--safe") || argFlag("--developer")) {
+        config.mode = argFlag("--safe") ? "safe" : "managed";
+        await writeConfig(config);
+      }
+      process.off("SIGINT", stopWaiting); process.off("SIGTERM", stopWaiting);
+      const result = await connectAgent(config);
+      if (result !== "rePair") {
+        // launchd/systemd restart unexpected termination even if the Agent's
+        // signal handler completed cleanly. Disabled recovery remains stopped.
+        if (agentMode && (await readConfig())?.backgroundEnabled === true) process.exitCode = 1;
+        return;
+      }
+    } finally {
+      process.off("SIGINT", stopWaiting); process.off("SIGTERM", stopWaiting);
+      await release?.();
+    }
 
     config = null;
   }

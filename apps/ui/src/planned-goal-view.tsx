@@ -6,8 +6,9 @@ export function PlannedGoalEditor({ value: d, onChange }: { value: PlannedDraft;
   const { tr } = useI18n();
   const set = <K extends keyof PlannedDraft>(key: K, v: PlannedDraft[K]) => onChange({ ...d, [key]: v });
   const phaseSet = (i: number, field: string, value: unknown) => set("phases", d.phases.map((p, j) => j === i ? { ...p, [field]: value } : p));
-  return <fieldset className="plannedEditor automationFieldWide"><legend>{tr("A durable plan", "持久计划")}</legend>
-    <label className="plannedToggle"><input type="checkbox" checked={d.enabled} onChange={e => set("enabled", e.target.checked)} />{tr("Save phases, time policy and a resumable checkpoint", "保存阶段、时间策略与可续接检查点")}</label>
+  return <fieldset className="plannedEditor automationFieldWide"><legend>{tr("Plan settings", "计划设置")}</legend>
+    <label className="plannedToggle"><input type="checkbox" checked={d.enabled} onChange={e => set("enabled", e.target.checked)} />{tr("Customize phases, priorities and quality checks", "自定义阶段、优先级与质量检查")}</label>
+    {!d.enabled && <p>{tr("The executor plans from your objective. Progress, plan revisions and checkpoints are always saved within the time budget above.", "执行器根据目标规划；进度、计划版本和检查点始终会在上述时间预算内保存。")}</p>}
     {d.enabled && <>
       <p>{tr("Saved command slices can continue after the chat turn ends. New judgment waits for the selected controller; normal Chat is not guaranteed to wake itself.", "聊天轮次结束后，已保存的命令步骤可以继续。新的判断等待所选控制器；普通 Chat 不保证能自动唤醒自己。")}</p>
       <div className="plannedFields"><label><span>{tr("Planning mode", "规划方式")}</span><select value={d.mode} onChange={e => set("mode", e.target.value as PlannedDraft["mode"])}><option value="fixed">{tr("Fixed phases", "固定阶段")}</option><option value="guided">{tr("Guided by priorities", "按优先级规划")}</option><option value="autonomous">{tr("Plan from the goal", "从目标自主规划")}</option></select></label>

@@ -2,6 +2,14 @@
 
 ## Active follow-up: task and device experience (2026-10-05)
 
+The user subsequently requested an architecture redesign around a single goal
+task, with plans/time budgets/triggers rather than five competing task modes.
+Read [the task architecture v2 contract](docs/task-architecture-v2.md) first.
+The current checkout has a verified Cron mismatch (only the five-minute trigger
+is registered while dispatch listens to the one-minute trigger). The new typed
+Dashboard contract must never turn an objective into a shell command. Preserve
+existing IDs and records; do not silently migrate or resume production tasks.
+
 Work from default branch `master` (the repository has no `main`), baseline
 `81e36248a8dd215885c83cf08e943e9080a19730`, on
 `feat/dashboard-task-device-ux`. The user requested clearer task creation and
@@ -10,6 +18,14 @@ example and a corrected dark-mode ChatGPT logo. Read
 [the review and implementation plan](docs/dashboard-task-device-ux.md).
 Preserve the execution, permission, entitlement and recovery contracts. Do not
 merge, publish packages or deploy production as part of this UI change.
+
+The user subsequently reported macOS launchctl errors and Windows exiting while
+offline, and explicitly requested that background recovery preserve the current
+terminal/logs and recover interrupted processes separately from Relay retries.
+Read [the background recovery contract](docs/background-recovery.md). This is
+part of the active work; the 0.4.4 CLI is a candidate and must not be presented as
+published. PR80 is incorporated; PR81's small PID fix was still open with green
+CI when checked. Do not overwrite its branch or publish over another session.
 
 ## Historical follow-up: chat-first planned goals (2026-10-03)
 
