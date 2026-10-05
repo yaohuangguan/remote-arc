@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { createRemoteJWKSet, decodeJwt, jwtVerify } from "jose";
+import lockfile from "proper-lockfile";
 
 const AUTH_ORIGIN = "https://auth.openai.com";
 const AUTHORIZE_URL = AUTH_ORIGIN + "/api/accounts/authorize";
@@ -38,6 +39,7 @@ type ChatGptCredentials = {
   refreshToken: string;
   idToken: string;
   accessExpiresAt: number;
+  earliestRefreshAt?: number;
 };
 
 type TokenResponse = {
@@ -46,6 +48,7 @@ type TokenResponse = {
   id_token?: string;
   scope?: string;
   expires_in?: number;
+  earliest_refresh_at?: number | string;
   error?: string;
   error_description?: string;
 };
@@ -56,6 +59,33 @@ function base64url(bytes: Uint8Array) {
 
 function randomValue(size = 32) {
   return base64url(randomBytes(size));
+}
+
+function parseEpoch(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 10_000_000_000 ? value : value * 1000;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric > 10_000_000_000 ? numeric : numeric * 1000;
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+async function withCredentialLock<T>(work: () => Promise<T>) {
+  await fs.mkdir(AI_DIR, { recursive: true, mode: 0o700 });
+  const release = await lockfile.lock(AI_DIR, {
+    realpath: false,
+    stale: 15_000,
+    retries: { retries: 40, factor: 1, minTimeout: 50, maxTimeout: 250 },
+  });
+  try {
+    return await work();
+  } finally {
+    await release();
+  }
 }
 
 async function ensureHostId() {
@@ -302,6 +332,7 @@ async function signIn() {
     refreshToken: token.refresh_token,
     idToken: token.id_token,
     accessExpiresAt,
+    earliestRefreshAt: parseEpoch(token.earliest_refresh_at),
   };
   saveCredentials(credentials);
 
@@ -313,35 +344,61 @@ async function signIn() {
 
 async function refresh(credentials: ChatGptCredentials) {
   if (credentials.accessExpiresAt - Date.now() > 2 * 60_000) return credentials;
-  const token = await exchangeToken(
-    new URLSearchParams({
-      grant_type: "refresh_token",
-      client_id: credentials.clientId,
-      refresh_token: credentials.refreshToken,
-      resource: RESOURCE,
-    }),
-  );
-  if (!token.access_token) throw new Error("Token refresh did not return an access token.");
 
-  let accessExpiresAt = Date.now() + Math.max(60, token.expires_in || 3600) * 1000;
-  try {
-    const exp = decodeJwt(token.access_token).exp;
-    if (exp) accessExpiresAt = exp * 1000;
-  } catch {}
+  return withCredentialLock(async () => {
+    // Another foreground/background Remote Arc process may have refreshed the
+    // rotating token while we waited for the lock. Always reload first.
+    const current = loadCredentials();
+    if (!current) {
+      throw new Error("ChatGPT plan is not connected. Run: pnpm --filter remotelink ai:connect");
+    }
+    if (current.accessExpiresAt - Date.now() > 2 * 60_000) return current;
 
-  const next: ChatGptCredentials = {
-    ...credentials,
-    accessToken: token.access_token,
-    refreshToken: token.refresh_token || credentials.refreshToken,
-    idToken: token.id_token || credentials.idToken,
-    scope: token.scope || credentials.scope,
-    accessExpiresAt,
-  };
-  if (!next.scope.split(/\s+/).includes("chatgpt.tokens.use.direct")) {
-    throw new Error("The refreshed session no longer grants ChatGPT plan usage.");
-  }
-  saveCredentials(next);
-  return next;
+    if (
+      current.earliestRefreshAt &&
+      current.earliestRefreshAt > Date.now() &&
+      current.accessExpiresAt > Date.now()
+    ) {
+      // The current access token is still usable. Do not race OpenAI's
+      // rotating refresh token before the server says refresh is allowed.
+      return current;
+    }
+
+    const token = await exchangeToken(
+      new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: current.clientId,
+        refresh_token: current.refreshToken,
+        resource: RESOURCE,
+      }),
+    );
+    if (!token.access_token) throw new Error("Token refresh did not return an access token.");
+
+    let accessExpiresAt = Date.now() + Math.max(60, token.expires_in || 3600) * 1000;
+    try {
+      const exp = decodeJwt(token.access_token).exp;
+      if (exp) accessExpiresAt = exp * 1000;
+    } catch {}
+
+    const next: ChatGptCredentials = {
+      ...current,
+      accessToken: token.access_token,
+      refreshToken: token.refresh_token || current.refreshToken,
+      idToken: token.id_token || current.idToken,
+      scope: token.scope || current.scope,
+      accessExpiresAt,
+      earliestRefreshAt: parseEpoch(token.earliest_refresh_at),
+    };
+    if (!next.scope.split(/\s+/).includes("chatgpt.tokens.use.direct")) {
+      throw new Error("The refreshed session no longer grants ChatGPT plan usage.");
+    }
+
+    // Save the replacement refresh token before releasing the lock. Refresh
+    // tokens rotate; reusing an older token from a second process can revoke
+    // the renewable session.
+    saveCredentials(next);
+    return next;
+  });
 }
 
 async function requireCredentials() {
