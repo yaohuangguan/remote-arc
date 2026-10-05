@@ -4,6 +4,7 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.4.5
 
+- Add safe in-place handoff from a known older background Agent to the current CLI release, preserving pairing/configuration while preventing dual executors. Unknown legacy processes continue to fail closed.
 - Position Remote Arc explicitly as a persistent, permissioned agent runtime for computers the user already owns.
 - Refresh the private ChatGPT Plugin release so ChatGPT re-discovers the full production MCP tool surface, including durable tasks and Agent Goals.
 - Align the ChatGPT app submission metadata with all 31 production MCP tools, including binary file resources and persistent task controls.

@@ -22,7 +22,7 @@ import {
   type ExecutionPolicy,
 } from "@remotearc/execution-core";
 
-const VERSION = "0.4.4";
+const VERSION = "0.4.5";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -245,7 +245,7 @@ function logLine(
 function banner() {
   process.stdout.write("\n");
   process.stdout.write(bold("Remote Arc") + "  " + dim(`v${VERSION}`) + "\n");
-  process.stdout.write(dim("Secure remote MCP bridge") + "\n\n");
+  process.stdout.write(dim("Persistent agent runtime for your computers") + "\n\n");
 }
 
 function argFlag(name: string) {
@@ -873,6 +873,17 @@ async function main() {
 
     if (!agentMode && !foregroundMode && config.backgroundEnabled === true) {
       try {
+        const existing = await backgroundAgentStatus().catch(() => null);
+        if (
+          existing?.active &&
+          existing.version &&
+          existing.version !== VERSION
+        ) {
+          logLine(
+            "info",
+            `Background Agent v${existing.version} detected · checking safe handoff to v${VERSION}…`,
+          );
+        }
         const status = await enableBackgroundAgent(SELF_PATH, { version: VERSION });
         if (status.supported && status.enabled && status.active) {
           banner();
