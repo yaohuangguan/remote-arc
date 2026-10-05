@@ -386,8 +386,58 @@ try {
   };
   const toolList = await callMcp("tools/list", {});
   assert(toolList.tools.some(tool => tool.name === "get_goal_context"));
-  assert(toolList.tools.some(tool => tool.name === "submit_goal_decision" && tool.securitySchemes));
+  const createGoalTool = toolList.tools.find(tool => tool.name === "create_agent_goal");
+  const submitGoalTool = toolList.tools.find(tool => tool.name === "submit_goal_decision");
+  assert(createGoalTool?.securitySchemes);
+  assert(submitGoalTool?.securitySchemes);
+  assert.deepEqual(createGoalTool.securitySchemes[0].scopes, ["automation:write", "agent:write"]);
+  assert.deepEqual(submitGoalTool.securitySchemes[0].scopes, ["automation:write", "agent:write"]);
   assert(toolList.tools.some(tool => tool.name === "read_binary_file"));
+
+  const authProbeGoal = {
+    name: "OAuth scope probe",
+    device_id: "device",
+    controller: "source",
+    objective: "Inspect file",
+    success_criteria: "File inspected",
+    allowed_tools: ["read_file"],
+  };
+  for (const partialScope of ["automation:write", "agent:write"]) {
+    const denied = await callMcp(
+      "tools/call",
+      { name: "create_agent_goal", arguments: authProbeGoal },
+      { ...identity, scope: partialScope },
+    );
+    assert(denied.isError, `create_agent_goal must reject partial scope ${partialScope}`);
+    const challenge = denied._meta?.["mcp/www_authenticate"]?.[0] || "";
+    assert(
+      challenge.includes('scope="automation:write agent:write"'),
+      `create_agent_goal must challenge the full scope set, got: ${challenge}`,
+    );
+  }
+  const deniedDecisionScope = await callMcp(
+    "tools/call",
+    {
+      name: "submit_goal_decision",
+      arguments: {
+        automation_id: "missing",
+        expected_revision: 0,
+        idempotency_key: "scope-probe",
+        decision: "pause",
+        tool: "none",
+        decision_summary: "Scope probe",
+      },
+    },
+    { ...identity, scope: "agent:write" },
+  );
+  assert(deniedDecisionScope.isError);
+  assert(
+    (deniedDecisionScope._meta?.["mcp/www_authenticate"]?.[0] || "").includes(
+      'scope="automation:write agent:write"',
+    ),
+    "submit_goal_decision must challenge the full scope set",
+  );
+
   const usageCount = () => Number(
     sqlite.prepare("SELECT COALESCE(SUM(tool_calls), 0) AS n FROM user_monthly_usage WHERE user_id = ?").get("owner").n,
   );
