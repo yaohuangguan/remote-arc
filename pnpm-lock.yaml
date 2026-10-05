@@ -116,6 +116,9 @@ importers:
 
   packages/cli:
     dependencies:
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
