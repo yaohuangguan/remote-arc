@@ -2,7 +2,7 @@
 
 All notable changes to Remote Arc are documented here.
 
-## 0.4.4 (unreleased candidate)
+## 0.4.4
 
 - Unify goal creation around objective, explicit decision executor, finite plan budget and independent triggers; retain command automation as an explicit code entry.
 - Add a versioned Dashboard contract and opt-in MCP goal contract while preserving legacy IDs and API defaults.
