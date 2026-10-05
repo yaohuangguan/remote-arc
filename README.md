@@ -4,9 +4,9 @@
 
 # Remote Arc
 
-**Go beyond chat. Give your AI controlled access to the computers you already own.**
+**Persistent agent runtime for the computers you already own.**
 
-Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients to Windows, macOS, and Linux computers you explicitly pair — without exposing a public port or requiring a VPN.
+Remote Arc gives ChatGPT, Claude, Codex, Cursor, and compatible MCP clients a persistent, permissioned runtime across Windows, macOS, and Linux computers you explicitly pair — without exposing a public port or requiring a VPN. Durable tasks and Agent Goals can outlive the chat that created them, preserve bounded state, and resume through the same runtime later.
 
 [Website](https://remotearc.app) · [Dashboard](https://mcp.remotearc.app) · [Remote MCP](https://mcp.remotearc.app/mcp) · [Security](./SECURITY.md)
 
@@ -22,6 +22,7 @@ Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients t
 
 ## Why Remote Arc
 
+- **Persistent task runtime** — durable long tasks, schedules, condition watches, and Agent Goals can continue beyond one chat turn and be inspected or resumed later.
 - **Read-only by default** — newly paired devices start with safe inspection capabilities.
 - **Per-device skill controls** — independently enable file edits, terminal execution, process controls, and recovery.
 - **Outbound-only connectivity** — no public IP, VPN, router port forwarding, or inbound listener on your computer.
@@ -112,6 +113,7 @@ Current native tools:
 list_directory
 browse_directories
 read_file
+read_binary_file
 get_file_info
 list_processes
 write_file
@@ -149,6 +151,7 @@ Read-only local capabilities:
 ```text
 list_directory
 read_file
+read_binary_file
 get_file_info
 list_processes
 ```
@@ -413,7 +416,7 @@ not unnecessarily consume the Workers request quota.
 
 ## Remote MCP tools
 
-Hosted MCP currently exposes 26 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
+Hosted MCP currently exposes 31 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
 
 ```text
 list_devices
@@ -425,9 +428,14 @@ browser_read_page
 browser_get_selected_text
 browser_extract_links
 browser_extract_table
+browser_click
+browser_fill
 
 list_directory
 read_file
+read_binary_file
+create_file_resource
+revoke_file_resource
 get_file_info
 list_processes
 start_process

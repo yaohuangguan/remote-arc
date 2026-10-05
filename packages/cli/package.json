@@ -1,7 +1,7 @@
 {
   "name": "remotelink",
-  "version": "0.4.4",
-  "description": "Connect a computer to Remote Arc with one command.",
+  "version": "0.4.5",
+  "description": "Persistent agent runtime for computers you own.",
   "type": "module",
   "bin": {
     "remotelink": "dist/index.js",
@@ -44,7 +44,8 @@
     "url": "https://github.com/yaohuangguan/remote-arc/issues"
   },
   "keywords": [
-    "remote",
+    "agent-runtime",
+    "persistent-agent",
     "mcp",
     "chatgpt",
     "claude",

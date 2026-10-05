@@ -6,6 +6,23 @@ import { agentLeaseActive } from "./agent-runtime.js";
 
 export class LegacyBackgroundAgentError extends Error {}
 
+
+function parseReleaseVersion(value: string | null | undefined) {
+  if (!value) return null;
+  const match = value.trim().match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])] as const;
+}
+
+function isOlderRelease(current: string | null | undefined, target: string | null | undefined) {
+  const a = parseReleaseVersion(current);
+  const b = parseReleaseVersion(target);
+  if (!a || !b) return false;
+  if (a[0] !== b[0]) return a[0] < b[0];
+  if (a[1] !== b[1]) return a[1] < b[1];
+  return a[2] < b[2];
+}
+
 export function windowsSupervisorLaunchScript(node: string, bundle: string) {
   const quote = (value: string) => "'" + value.replaceAll("'", "''") + "'";
   // PowerShell's redirection pump can keep the launcher alive until the child
@@ -508,10 +525,41 @@ WantedBy=default.target
         await wait(500);
         participates = await leaseActive(AGENT_DIR);
       }
-      if (!participates)
-        throw new LegacyBackgroundAgentError(
-          "An existing background Agent does not hold the execution lease. Stop the older Agent locally before upgrading; this launch will not create a competing executor.",
-        );
+
+      if (!participates) {
+        const canUpgradeLegacy =
+          isOlderRelease(before.version, options.version) && before.enabled;
+
+        if (!canUpgradeLegacy) {
+          throw new LegacyBackgroundAgentError(
+            "An existing background Agent does not hold the execution lease and cannot be identified as a safe older release. Stop it locally before retrying; this launch will not create a competing executor.",
+          );
+        }
+
+        if (platform === "darwin") await disableMac(true);
+        else if (platform === "win32") await disableWindows(true);
+        else if (platform === "linux") await disableLinux(true);
+        else {
+          throw new LegacyBackgroundAgentError(
+            "The existing background Agent is older, but automatic handoff is not supported on this operating system.",
+          );
+        }
+
+        let stopped = false;
+        for (let attempt = 0; attempt < 40; attempt++) {
+          const status = await backgroundAgentStatus();
+          if (!status.workerPid) {
+            stopped = true;
+            break;
+          }
+          await wait(250);
+        }
+        if (!stopped) {
+          throw new LegacyBackgroundAgentError(
+            "The older background Agent did not stop cleanly. Automatic upgrade was aborted before installing the new executor.",
+          );
+        }
+      }
     }
     if (platform === "darwin")
       await enableMac(sourcePath, preserveCurrent, options.version);

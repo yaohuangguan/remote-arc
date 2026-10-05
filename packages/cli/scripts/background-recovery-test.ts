@@ -76,17 +76,78 @@ try {
     mac.enableBackgroundAgent(source),
     /bootstrap exited with 5/,
   );
+  const legacyHome = path.join(temp, "legacy");
+  const legacyAgentDir = path.join(legacyHome, ".remotearc", "agent");
+  await fs.mkdir(legacyAgentDir, { recursive: true });
+  await fs.writeFile(path.join(legacyAgentDir, "version"), "0.4.3\n");
+  const legacyLaunchAgents = path.join(legacyHome, "Library", "LaunchAgents");
+  await fs.mkdir(legacyLaunchAgents, { recursive: true });
+  await fs.writeFile(
+    path.join(legacyLaunchAgents, "app.remotearc.agent.plist"),
+    "<plist/>\n",
+  );
+  let legacyLoaded = true;
+  let legacyDisabled = false;
+  const legacyCalls: string[][] = [];
   const legacy = createBackgroundController({
     platform: "darwin",
-    home: path.join(temp, "legacy"),
-    run: async () => result(0, "state = running\n pid = 1234\n"),
+    home: legacyHome,
+    uid: 501,
+    run: async (command, args) => {
+      legacyCalls.push([command, ...args]);
+      if (args[0] === "print")
+        return legacyLoaded
+          ? result(0, "state = running\n pid = 1234\n")
+          : result(113);
+      if (args[0] === "print-disabled")
+        return result(0, '"app.remotearc.agent" => ' + legacyDisabled);
+      if (args[0] === "disable") legacyDisabled = true;
+      if (args[0] === "enable") legacyDisabled = false;
+      if (args[0] === "bootout") legacyLoaded = false;
+      if (args[0] === "bootstrap" || args[0] === "kickstart")
+        legacyLoaded = true;
+      return result();
+    },
+    wait: async () => undefined,
+    leaseActive: async () => false,
+  });
+  const upgradedLegacy = await legacy.enableBackgroundAgent(source, {
+    version: "0.4.5",
+  });
+  assert.equal(upgradedLegacy.active, true);
+  assert.equal(upgradedLegacy.version, "0.4.5");
+  assert(
+    legacyCalls.some((call) => call[1] === "bootout") &&
+      legacyCalls.some((call) => call[1] === "bootstrap"),
+    "A known older daemon must stop before the replacement background bundle starts",
+  );
+
+  const unknownHome = path.join(temp, "legacy-unknown");
+  await fs.mkdir(path.join(unknownHome, ".remotearc", "agent"), {
+    recursive: true,
+  });
+  let unknownLoaded = true;
+  const unknownLegacy = createBackgroundController({
+    platform: "darwin",
+    home: unknownHome,
+    uid: 501,
+    run: async (_command, args) => {
+      if (args[0] === "print")
+        return unknownLoaded
+          ? result(0, "state = running\n pid = 4321\n")
+          : result(113);
+      if (args[0] === "print-disabled")
+        return result(0, '"app.remotearc.agent" => false');
+      if (args[0] === "bootout") unknownLoaded = false;
+      return result();
+    },
     wait: async () => undefined,
     leaseActive: async () => false,
   });
   await assert.rejects(
-    legacy.enableBackgroundAgent(source),
-    /Stop the older Agent locally/,
-    "An old daemon without an execution lease must not overlap a new executor",
+    unknownLegacy.enableBackgroundAgent(source, { version: "0.4.5" }),
+    /cannot be identified as a safe older release/,
+    "An unknown daemon without an execution lease must still fail closed",
   );
 
   const linuxCalls: string[][] = [];
@@ -279,7 +340,7 @@ try {
     "Supervisor retries child exits and respects disabled recovery",
   );
   console.log(
-    "PASS: macOS idempotence/PID/bootstrap failure, Windows live supervisor confirmation, single-owner exclusion, killed-owner recovery, log following, supervised restart/disable",
+    "PASS: macOS idempotence/PID/bootstrap failure, safe legacy handoff/fail-closed unknowns, Windows live supervisor confirmation, single-owner exclusion, killed-owner recovery, log following, supervised restart/disable",
   );
 } finally {
   assert.equal(path.dirname(temp), os.tmpdir());
