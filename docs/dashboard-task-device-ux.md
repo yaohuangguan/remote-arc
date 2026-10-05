@@ -66,4 +66,4 @@ Verified locally on 2026-10-05:
 
 GitHub CI/native-matrix and Cloudflare preview checks are separate from these local results. Real macOS launchctl, refreshed host task catalogs and an actual overnight client session remain deployment acceptance items. Calendar timezone/DST scheduling is not implemented; interval recurrence is explicitly labeled.
 
-Delivery is a Draft PR and Cloudflare UI preview. CLI 0.4.4 is an unreleased candidate; production publication and package release remain separate.
+Delivery is PR82 and its Cloudflare UI preview. The user authorized merging after the Security fix and validation, closing duplicate PR74 and superseded PR81, and checking the normal master deployment. CLI 0.4.4 is an unreleased candidate; npm publication remains separate.

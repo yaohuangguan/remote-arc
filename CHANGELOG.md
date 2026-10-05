@@ -8,6 +8,7 @@ All notable changes to Remote Arc are documented here.
 - Add a versioned Dashboard contract and opt-in MCP goal contract while preserving legacy IDs and API defaults.
 - Repair registered task Cron dispatch; expose scheduler health and actual execution-start counts, preserve queued goal events on resume and meter planned hosted turns.
 - Simplify device management, default to dark, fix monochrome client marks, move the tutorial to Connect AI and update platform/safety/task documentation.
+- Repair Security preview authorization/approval fixtures, share response types, and show a recoverable unavailable state for malformed or failed API responses instead of crashing. Keep preview security changes disabled.
 
 - Retain the attached terminal and operation history when enabling recovery.
 - Use a single execution lease; additional terminals observe logs and the daemon takes over after an owner ends.
