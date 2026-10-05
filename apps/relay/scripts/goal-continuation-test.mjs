@@ -372,8 +372,11 @@ try {
 
   // Exercise actual MCP SDK registration/HTTP dispatch, not only helpers.
   const mcp = await importSource("mcp");
+  let schedulerKicks = 0;
   const callMcp = async (method, params, who = identity) => {
-    const handler = mcp.createRemoteLinkMcp(env, who);
+    const handler = mcp.createRemoteLinkMcp(env, who, {
+      kickScheduler: () => { schedulerKicks++; },
+    });
     const response = await handler.fetch(new Request(env.PUBLIC_ORIGIN + "/mcp", { method: "POST",
       headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
@@ -580,6 +583,13 @@ try {
   assert.equal((await runtime.listAutomationRuns(env, "owner", unifiedId)).length, 0, "Saving a goal must not invent an execution record");
   const unifiedContext = await callMcp("tools/call", { name: "get_goal_context", arguments: { automation_id: unifiedId } });
   assert(JSON.parse(unifiedContext.content[0].text).ready_for_decision, "An immediate source goal accepts its first decision without a fake scheduler run");
+  const kicksBeforeDecision = schedulerKicks;
+  const kickedDecision = await callMcp("tools/call", { name: "submit_goal_decision", arguments: {
+    automation_id: unifiedId, expected_revision: 0, idempotency_key: "kick-source-goal",
+    decision: "pause", tool: "none", decision_summary: "Pause after testing immediate scheduler kick",
+  } });
+  assert(!kickedDecision.isError, JSON.stringify(kickedDecision));
+  assert.equal(schedulerKicks, kicksBeforeDecision + 1, "Accepted source decisions must request an immediate scheduler kick");
   const missingExecutor = await callMcp("tools/call", { name: "create_agent_goal", arguments: { ...goalArgs, controller: undefined, task_version: 1 } });
   assert(missingExecutor.isError, "New contract requires explicit executor selection");
   const mixedTrigger = await callMcp("tools/call", { name: "create_agent_goal", arguments: { ...goalArgs, trigger: { type: "now" } } });

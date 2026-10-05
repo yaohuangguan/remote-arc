@@ -98,6 +98,19 @@ try {
   await assert.rejects(submit(uncertain, "execution_slice", { steps: [step("unknown-effect")] }), /read-only inspection/);
   await submit(uncertain, "tool", { path: "/workspace/status.txt" }, "", "read_file"); await tick(uncertain);
   assert.equal((await source.getGoalContext(db, "owner", uncertain)).planned.inspection_required, false);
+
+  // A completed source tool call must hand its observation back immediately;
+  // do not require an otherwise empty scheduler interval before the next turn.
+  const immediateHandoff = await create(fixed([phase("immediate-handoff")]));
+  await tick(immediateHandoff);
+  assert((await source.getGoalContext(db, "owner", immediateHandoff)).ready_for_decision);
+  await submit(immediateHandoff, "tool", { path: "/workspace/status.txt" }, "", "read_file");
+  await tick(immediateHandoff);
+  const immediateContext = await source.getGoalContext(db, "owner", immediateHandoff);
+  assert.equal((await get(immediateHandoff)).status, "waiting_for_event");
+  assert(immediateContext.ready_for_decision, "Source tool observation should be available without a second scheduler tick");
+  assert.match(immediateContext.latest_observation, /unchanged source/);
+
   const uncertainEdit = await create(fixed([phase("uncertain-edit")])); await tick(uncertainEdit);
   await submit(uncertainEdit, "tool", { path: "/workspace/change.txt", content: "candidate" }, "", "write_file"); unknownWrite = true; await tick(uncertainEdit);
   assert((await state(uncertainEdit)).planned.inspection_required, "Dynamic effects also require inspection after lost acknowledgement");

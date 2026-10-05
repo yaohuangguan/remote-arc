@@ -158,6 +158,7 @@ function installOpenAiToolListAuthMetadata(server: McpServer) {
 export function createRemoteLinkMcp(
   env: Env,
   identity: OAuthIdentity | null,
+  options: { kickScheduler?: (automationId: string) => void } = {},
 ) {
   return createMcpHandler(() => {
     const server = new McpServer(
@@ -1206,8 +1207,17 @@ export function createRemoteLinkMcp(
     }, async (input) => {
       if (!identity || !hasScope(identity, "automation:write") || !hasScope(identity, "agent:write")) return authRequired(env, AGENT_WRITE_SCOPES);
       await consume(env, identity);
-      return textResult(await submitGoalDecision(env.DB, identity, input.automation_id,
-        input.expected_revision, input.idempotency_key, input));
+      const submitted = await submitGoalDecision(env.DB, identity, input.automation_id,
+        input.expected_revision, input.idempotency_key, input);
+      try {
+        options.kickScheduler?.(input.automation_id);
+      } catch (error) {
+        console.warn("source_goal_scheduler_kick_failed", {
+          automationId: input.automation_id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return textResult(submitted);
     });
 
     server.registerTool(
