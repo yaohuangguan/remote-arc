@@ -56,26 +56,32 @@ const consume = async (env: Env, identity: OAuthIdentity) =>
 const taskDashboardUrl = (env: Env, id: string) =>
   `${(env.APP_ORIGIN || env.PUBLIC_ORIGIN).replace(/\/$/, "")}/automations?task=${encodeURIComponent(id)}`;
 
-const oauthSchemes = (scope: Scope) => [
+const AGENT_WRITE_SCOPES = ["automation:write", "agent:write"] as const;
+
+const scopeList = (scope: Scope | readonly Scope[]) =>
+  typeof scope === "string" ? [scope] : [...scope];
+
+const oauthSchemes = (scope: Scope | readonly Scope[]) => [
   {
     type: "oauth2",
-    scopes: [scope],
+    scopes: scopeList(scope),
   },
 ];
 
-const oauthToolMeta = (scope: Scope) => ({
+const oauthToolMeta = (scope: Scope | readonly Scope[]) => ({
   securitySchemes: oauthSchemes(scope),
 });
 
-const authRequired = (env: Env, scope: Scope) => {
+const authRequired = (env: Env, scope: Scope | readonly Scope[]) => {
+  const requiredScopes = scopeList(scope);
   const challenge =
-    `Bearer resource_metadata="${env.PUBLIC_ORIGIN}/.well-known/oauth-protected-resource", error="insufficient_scope", error_description="Sign in to Remote Arc to continue", scope="${scope}"`;
+    `Bearer resource_metadata="${env.PUBLIC_ORIGIN}/.well-known/oauth-protected-resource", error="insufficient_scope", error_description="Sign in to Remote Arc to continue", scope="${requiredScopes.join(" ")}"`;
 
   return {
     content: [
       {
         type: "text" as const,
-        text: `Authentication required. Remote Arc needs the ${scope} scope.`,
+        text: `Authentication required. Remote Arc needs the ${requiredScopes.join(" + ")} scope${requiredScopes.length === 1 ? "" : "s"}.`,
       },
     ],
     _meta: {
@@ -982,14 +988,7 @@ export function createRemoteLinkMcp(
           openWorldHint: true,
           destructiveHint: true,
         },
-        _meta: {
-          securitySchemes: [
-            {
-              type: "oauth2",
-              scopes: ["automation:write", "agent:write"],
-            },
-          ],
-        },
+        _meta: oauthToolMeta(AGENT_WRITE_SCOPES),
       },
       async (input) => {
         if (
@@ -997,7 +996,7 @@ export function createRemoteLinkMcp(
           !hasScope(identity, "automation:write") ||
           !hasScope(identity, "agent:write")
         ) {
-          return authRequired(env, "agent:write");
+          return authRequired(env, AGENT_WRITE_SCOPES);
         }
         if (input.trigger && input.task_version !== 1) throw new Error("trigger requires task_version=1.");
         if (input.task_version === 1 && input.schedule) throw new Error("Use trigger instead of legacy schedule with task_version=1.");
@@ -1203,9 +1202,9 @@ export function createRemoteLinkMcp(
         memory: z.string().max(8000).default(""), completion_evidence: z.string().max(3000).default(""),
       }),
       annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true, idempotentHint: true },
-      _meta: { securitySchemes: [{ type: "oauth2", scopes: ["automation:write", "agent:write"] }] },
+      _meta: oauthToolMeta(AGENT_WRITE_SCOPES),
     }, async (input) => {
-      if (!identity || !hasScope(identity, "automation:write") || !hasScope(identity, "agent:write")) return authRequired(env, "agent:write");
+      if (!identity || !hasScope(identity, "automation:write") || !hasScope(identity, "agent:write")) return authRequired(env, AGENT_WRITE_SCOPES);
       await consume(env, identity);
       return textResult(await submitGoalDecision(env.DB, identity, input.automation_id,
         input.expected_revision, input.idempotency_key, input));
