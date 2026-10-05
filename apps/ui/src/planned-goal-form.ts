@@ -5,7 +5,7 @@ export type PlannedDraft = {
   continueWork: boolean; sameFailure: string; noProgress: string; retries: string;
   phases: { id: string; objective: string; criteria: string; verify: string; minMinutes: string; maxMinutes: string; dependsOn: string[]; command: string }[];
 };
-export const newPlannedDraft = (): PlannedDraft => ({ enabled: false, mode: "fixed", priorities: "", minMinutes: "", maxMinutes: "480", endAt: "", reserveMinutes: "5", quality: false, checks: [{ name: "tests", command: "" }], continueWork: false, sameFailure: "3", noProgress: "8", retries: "2", phases: [] });
+export const newPlannedDraft = (): PlannedDraft => ({ enabled: false, mode: "autonomous", priorities: "", minMinutes: "", maxMinutes: "1440", endAt: "", reserveMinutes: "5", quality: false, checks: [{ name: "tests", command: "" }], continueWork: false, sameFailure: "3", noProgress: "8", retries: "2", phases: [] });
 export function buildPlannedContract(d: PlannedDraft) {
   if (d.mode === "fixed" && !d.phases.length) throw new Error("Add at least one phase to a fixed plan.");
   if (d.phases.some(p => !p.objective.trim() || !p.criteria.trim())) throw new Error("Each phase needs an objective and success criteria.");

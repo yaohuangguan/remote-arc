@@ -5,11 +5,8 @@ import { TaskAvailability } from "./product-docs.js";
 export function LongRunningWorkDocs() {
   const { tr } = useI18n();
   const modes = [
-    ["Long Task", tr("Track an approved command until it exits.", "跟踪已批准的命令直到退出。"), tr("Builds, exports, lengthy scripts.", "构建、导出、长时间脚本。")],
-    ["Condition Watch", tr("Start a fixed plan when a matching event arrives.", "收到匹配事件后启动固定计划。"), tr("Respond to a webhook or CI result.", "响应 Webhook 或 CI 结果。")],
-    ["Schedule Watch", tr("Start a fixed plan at a future time or recurring interval.", "在未来时间或周期性间隔启动固定计划。"), tr("Repeatable maintenance and checks.", "可重复的维护与检查。")],
-    ["Goal Loop", tr("Repeat the same plan and verification until the check passes.", "重复同一计划与验收，直到检查通过。"), tr("Known recovery recipes.", "步骤已知的恢复流程。")],
-    ["Agent Goal", tr("Inspect results, choose the next action, revise and verify.", "检查结果、选择下一步、调整方案并验收。"), tr("Coding, investigation and tasks whose next step depends on the result.", "开发、排查以及下一步取决于结果的工作。")],
+    [tr("Goal task", "目标任务"), tr("Plan, act, inspect and revise until the outcome is verified or a bound stops the run.", "规划、执行、检查并调整，直到验证目标或触及停止边界。"), tr("Development, investigation, hours of work and overnight goals.", "开发、排查、持续数小时与隔夜目标。")],
+    [tr("Command automation", "命令自动化"), tr("Run explicit saved shell code or an approved cloud action.", "执行明确保存的 shell 代码或已批准的云端操作。"), tr("Known scripts, tests and repeatable operations.", "已知脚本、测试与可重复操作。")],
   ];
   return (
     <main className="technicalDoc productDocs">
@@ -20,7 +17,7 @@ export function LongRunningWorkDocs() {
         <div className="articleMetaLinks">
           <a href="/docs">{tr("All documentation", "全部文档")} →</a>
           <a href="/security-model">{tr("Security model", "安全模型")} →</a>
-          <a href="https://github.com/yaohuangguan/remote-arc/blob/feat/chat-first-planned-goals/docs/chat-first-planned-goals.md" target="_blank" rel="noreferrer">{tr("Engineering reference", "系统技术参考")} ↗</a>
+          <a href="https://github.com/yaohuangguan/remote-arc/blob/master/docs/chat-first-planned-goals.md" target="_blank" rel="noreferrer">{tr("Engineering reference", "系统技术参考")} ↗</a>
         </div>
       </header>
       <TaskAvailability />
@@ -29,7 +26,8 @@ export function LongRunningWorkDocs() {
           <strong>{tr("CONTENTS", "目录")}</strong>
           {[
             ["overview", tr("What continues", "什么会持续运行")],
-            ["modes", tr("Choose a task mode", "选择任务模式")],
+            ["modes", tr("Goal and execution", "目标与执行")],
+            ["dashboard", tr("Creating from Dashboard", "从 Dashboard 创建")],
             ["permissions", tr("Device task settings", "设备任务设置")],
             ["agent", tr("Who keeps reasoning", "谁继续判断下一步")],
             ["prepare", tr("Prepare an overnight goal", "准备过夜目标")],
@@ -52,14 +50,26 @@ export function LongRunningWorkDocs() {
             <p>{tr("A long-running command can wait without a model thinking continuously. Adaptive work also needs a continuing reasoning controller. Connecting the Plugin enables access to tools; the AI host determines how and when reasoning continues.", "长时间运行的命令可以在模型没有持续推理时继续等待。需要动态调整的工作还需要持续推理控制器。连接 Plugin 提供工具访问，AI 宿主决定推理如何以及何时继续。")}</p>
           </section>
           <section id="work-modes">
-            <h2>{tr("How the AI chooses a task mode", "AI 如何选择任务模式")}</h2>
+            <h2>{tr("One goal with a plan and a time budget", "一个目标，包含计划与时间预算")}</h2>
             <div className="tableScroll"><table><thead><tr><th>{tr("Mode", "模式")}</th><th>{tr("Behavior", "行为")}</th><th>{tr("Useful for", "适合")}</th></tr></thead>
               <tbody>{modes.map(([mode, behavior, use]) => <tr key={mode}><td>{mode}</td><td>{behavior}</td><td>{use}</td></tr>)}</tbody></table></div>
-            <p>{tr("One computer can support several modes. Choose Agent Goal when failures or discoveries may require a different next step. Supply a verification command whenever completion can be checked automatically.", "一台电脑可以支持多种模式。如果失败或新发现可能改变下一步，选择 Agent Goal；完成结果能够自动检查时，应提供验收命令。")}</p>
+            <p>{tr("Choose the start condition independently: now, a future time, a repeat interval or a matching event. Long-running and planned work are the same goal task. Supply verification whenever the outcome can be checked automatically.", "单独选择启动条件：现在、未来时间、重复间隔或匹配事件。长任务与计划工作属于同一个目标任务，能自动检查成果时应提供验收。")}</p>
+          </section>
+          <section id="work-dashboard">
+            <h2>{tr("Creating a task without a chat", "不经过聊天，直接创建任务")}</h2>
+            <p>{tr("Dashboard → Tasks → Create manually saves the instructions in that form. You do not need to repeat those instructions in a chat. Remote Arc does not read a ChatGPT conversation or automatically open one.", "Dashboard → 任务 → 手动创建会保存表单里的指令，无需在聊天中重复交代。Remote Arc 不会读取 ChatGPT 对话，也不会自动开启聊天。")}</p>
+            <div className="tableScroll"><table><thead><tr><th>{tr("What you create", "创建内容")}</th><th>{tr("What happens next", "接下来会发生什么")}</th></tr></thead><tbody>
+              <tr><td>{tr("Goal · hosted AI", "目标 · 托管 AI")}</td><td>{tr("A configured model can plan and execute after you leave. If no model is configured, creation is blocked rather than silently switching executors.", "已配置模型可在你离开后规划和执行。未配置模型时阻止创建，不会悄悄更换执行器。")}</td></tr>
+              <tr><td>{tr("Goal · connected AI", "目标 · 已连接 AI")}</td><td>{tr("Without a decision or approved command slice, it visibly awaits that client. Copying the reference enables an authorized client to read context; it does not wake an idle chat.", "没有决策或已批准命令步骤时，明确等待该客户端。复制引用让已授权客户端读取上下文，不会唤起空闲聊天。")}</td></tr>
+              <tr><td>{tr("Command automation", "命令自动化")}</td><td>{tr("Runs executable shell instructions exactly as entered inside the approved working directory. A sentence asking for a summary belongs in a goal, not a command field.", "在已批准工作目录中原样运行 shell 指令。要求总结的一句话应填写为目标，而不是命令。")}</td></tr>
+              <tr><td>{tr("Start condition", "启动条件")}</td><td>{tr("Eligible now, at the selected time, after an interval, or after the secret event webhook matches. The trigger does not supply an AI executor.", "现在、指定时间、间隔结束或秘密 Webhook 匹配后进入待执行。触发条件本身不会提供 AI 执行器。")}</td></tr>
+            </tbody></table></div>
+            <p>{tr("Saving is not running. The task list shows actual run starts, execution state and scheduler health; details show saved instructions, observations, results and evidence. A copied reference retrieves cloud task state, not the original chat or a local checkpoint file. The client needs matching task tools and OAuth permissions.", "保存不等于执行。列表显示真实启动次数、执行状态和调度健康；详情显示保存的指令、观察、结果与证据。复制引用读取云端任务状态，不是原聊天或本地检查点文件；客户端需要匹配的任务工具和 OAuth 权限。")}</p>
+            <p>{tr("Closing Dashboard does not cancel a task. An offline device waits for reconnection; there is no remote power-on. Keep-awake only prevents a supported, online computer from sleeping when enabled and authorized.", "关闭 Dashboard 不会取消任务。离线设备等待重连，无法远程开机。保持唤醒只在受支持的在线电脑上获准开启后阻止睡眠。")}</p>
           </section>
           <section id="work-permissions">
             <h2>{tr("Control task capabilities per computer", "按电脑控制任务能力")}</h2>
-            <p>{tr("Open Dashboard → Devices → Task permissions. Each computer has separate switches for background tasks, scheduled tasks, adaptive goals, source-agent continuation and permission to stay awake during a task. OAuth access and the computer's tool/path permissions must also allow the work.", "打开 Dashboard → Devices → 任务权限。每台电脑分别控制后台任务、定时任务、自主目标任务、源 Agent 续接，以及允许任务期间保持唤醒。OAuth 授权和电脑的工具、路径权限也必须允许这项工作。")}</p>
+            <p>{tr("Open Dashboard → Devices → Manage → Background & tasks. Each computer has separate switches for background tasks, scheduled tasks, adaptive goals, source-agent continuation and permission to stay awake during a task. OAuth access and the computer's tool/path permissions must also allow the work.", "打开 Dashboard → 设备 → 管理 → 后台与任务。每台电脑分别控制后台任务、定时任务、自主目标任务、源 Agent 续接，以及允许任务期间保持唤醒。OAuth 授权和电脑的工具、路径权限也必须允许这项工作。")}</p>
             <p>{tr("Turning off a permission stops affected tasks. It does not undo changes already made. Existing authorized task behavior is retained for older device settings; source-agent continuation and task keep-awake require explicit opt-in.", "关闭权限会停止受影响的任务，已经产生的修改不会因此自动撤销。旧设备设置保留之前已授权的任务行为；源 Agent 续接和任务保持唤醒需要明确开启。")}</p>
           </section>
           <section id="work-agent">
@@ -81,7 +91,7 @@ export function LongRunningWorkDocs() {
           </section>
           <section id="work-plan">
             <h2>{tr("Phases, quality and a durable chat handoff", "阶段、质量与持久聊天续接")}</h2>
-            <p>{tr("An optional plan extends Agent Goal. Fixed mode follows provided phases; guided mode uses priorities; autonomous mode asks the selected controller to inspect and propose a bounded plan. Phases have objectives, success criteria, dependencies and optional verification or deterministic execution slices. Completed prerequisites gate downstream work. Partial or blocked work is recorded while independent authorized phases can continue.", "可选计划扩展现有 Agent Goal。固定模式遵循提供的阶段，引导模式按优先级规划，自主模式由所选控制器检查状态并提出有界计划。阶段包含目标、成功标准、依赖，以及可选验证或确定性执行步骤。下游要求前置阶段完成；部分完成或阻塞会记录，独立的已授权阶段可以继续。")}</p>
+            <p>{tr("New Dashboard goals always save a bounded plan; the default lets the executor plan from the objective. Optional custom settings supply fixed phases or guided priorities. Fixed mode follows provided phases; guided mode uses priorities; autonomous mode asks the selected controller to inspect and propose a bounded plan. Phases have objectives, success criteria, dependencies and optional verification or deterministic execution slices. Completed prerequisites gate downstream work. Partial or blocked work is recorded while independent authorized phases can continue.", "新建 Dashboard 目标始终保存有界计划，默认让执行器根据目标自主规划。可选自定义设置提供固定阶段或引导优先级。固定模式遵循提供的阶段，引导模式按优先级规划，自主模式由所选控制器检查状态并提出有界计划。阶段包含目标、成功标准、依赖，以及可选验证或确定性执行步骤。下游要求前置阶段完成；部分完成或阻塞会记录，独立的已授权阶段可以继续。")}</p>
             <p>{tr("Minimum time means useful work, never filler edits. Maximum time and an ISO stop-at time bound the run; the earliest limit applies. Finalization reserve closes risky new work and allows process settlement, final checks and a saved report. Phase limits yield partial outcomes. Known incomplete dependencies are never advanced just because a timer expired.", "最少时间指有用工作，不要求凑数修改。最长时间和带时区偏移的 ISO 停止时间限制运行，以最早限制为准。预留收尾时间停止风险较大的新工作，用于处理进程、最终检查和保存报告。阶段超时记录为部分完成，不能因计时结束而推进尚未满足的依赖。")}</p>
             <div className="articleCallout"><strong>{tr("Green-only quality", "只接受通过检查的版本")}</strong><p>{tr("Configure required test, typecheck, build, benchmark or invariant commands. Requires updated remotelink and a clean Git repository root. Remote Arc creates a task-owned detached worktree, checks its baseline and evaluates candidates before promoting an accepted checkpoint. The checked tree must stay unchanged through validation. A rejected attempt stays in its old worktree; recovery creates a new candidate from the accepted frontier. Your original branch and existing files are not reset. Accepted work needs review before application to that branch.", "可配置必需的测试、类型、构建、基准或不变量检查。需要新版 remotelink 和干净的 Git 仓库根目录。Remote Arc 创建任务拥有的独立 worktree，检查基线，候选通过验收后才推进已接受版本。验证期间被检查的代码树必须保持一致。失败尝试保留在旧 worktree，恢复时从已验收版本创建新候选，不重置原分支和已有文件。将成果应用到原分支前仍需审查。")}</p></div>
             <p>{tr("Repeated equivalent failures and turns without material progress trigger replanning or parking. Optional highest-value continuation requires justified candidates with value, risk, effort, confidence and a way to verify; oversized work is rejected. No safe useful work means waiting for reasoning or safely finalizing. Plan facts survive phase changes while detailed phase memory resets; private chain of thought is never stored.", "等价失败重复出现、轮次缺乏实质进展时，会重新规划或搁置。可选的高价值续作要求候选给出价值、风险、工作量、信心与验证方式，超出剩余安全时间的工作不接受。没有安全有用工作时等待判断或安全收尾。计划事实跨阶段保留，阶段详细记忆重置，不保存私有思维过程。")}</p>
@@ -89,7 +99,7 @@ export function LongRunningWorkDocs() {
           </section>
           <section id="work-schedule">
             <h2>{tr("Schedule the same goal loop", "定时启动同一目标循环")}</h2>
-            <p>{tr("Agent Goals can start immediately, at a future timestamp or after a recurring interval. Each recurring run starts with fresh progress and its own iteration budget. Runs of the same task do not overlap. The interval is measured from the previous run's completion.", "Agent Goal 可以立即启动、在未来时间启动，或按间隔重复。每轮周期任务从新的进度开始，使用独立迭代预算；同一个任务不重叠运行，间隔从上一轮完成时计算。")}</p>
+            <p>{tr("Goal tasks can start immediately, at a future timestamp, after a recurring interval or after a matching webhook. Each recurring run starts with fresh progress and its own iteration budget. Runs of the same task do not overlap. The interval is measured from the previous run's completion.", "目标任务可以立即启动、在未来时间启动、按间隔重复，或由匹配 Webhook 触发。每轮周期任务从新的进度开始，使用独立迭代预算；同一个任务不重叠运行，间隔从上一轮完成时计算。")}</p>
             <p>{tr("The computer must be available when work starts. Calendar cron, timezone/DST rules, missed-run catch-up and powering on a computer are not provided by these interval schedules.", "开始工作时电脑必须可用。当前间隔调度不提供日历 Cron、时区与夏令时规则、错过任务补跑或自动开机。")}</p>
           </section>
           <section id="work-recovery">
@@ -113,7 +123,7 @@ export function LongRunningWorkDocs() {
               <tr><td>paused / cancelled</td><td>{tr("Further task work is suspended or stopped. Prior effects are not automatically undone.", "后续任务工作已暂停或停止，此前副作用不会自动撤销。")}</td></tr>
               <tr><td>completed / failed / expired</td><td>{tr("A run/goal finished, could not finish, or reached its deadline. Check evidence and run history; a recurring task can wait for its next run.", "一轮或目标完成、无法完成，或到达期限。检查证据与运行历史，周期任务可等待下一轮。")}</td></tr>
             </tbody></table></div>
-            <p>{tr("max_iterations limits planning turns, not hours or tokens. The current Agent Goal limit is 1–2000 turns, with a default of 30. Task expiry, run limits and host/provider quotas also apply. Reaching a budget or deadline is a stopping outcome, not success. A one-minute scheduler advances due work; schedules are not exact-second timers.", "max_iterations 限制规划轮数，不是小时或 Token。当前 Agent Goal 范围为 1–2000 轮，默认 30 轮；任务期限、运行次数和宿主或服务额度也适用。触及预算或期限是停止结果，不是成功。每分钟调度器推进到期工作，调度不是精确到秒的计时器。")}</p>
+            <p>{tr("max_iterations limits planning turns, not hours or tokens. The current Agent Goal limit is 1–2000 turns, with a legacy MCP default of 30 and a new Dashboard default of 720. New Dashboard goals also save a finite per-run time budget (24 hours by default). Task expiry, run limits and host/provider quotas also apply. Reaching a budget or deadline is a stopping outcome, not success. A one-minute scheduler advances due work; schedules are not exact-second timers.", "max_iterations 限制规划轮数，不是小时或 Token。当前 Agent Goal 范围为 1–2000 轮，旧 MCP 默认 30 轮，新 Dashboard 默认 720 轮。新 Dashboard 目标同时保存有限的单次时间预算（默认 24 小时）；任务期限、运行次数和宿主或服务额度也适用。触及预算或期限是停止结果，不是成功。每分钟调度器推进到期工作，调度不是精确到秒的计时器。")}</p>
           </section>
           <section id="work-evidence">
             <h2>{tr("Read completion evidence", "阅读完成证据")}</h2>
@@ -127,7 +137,7 @@ export function LongRunningWorkDocs() {
           </section>
           <section id="work-availability">
             <h2>{tr("Availability and validation", "可用状态与验证")}</h2>
-            <div className="articleCallout"><p>{tr("This guide describes the staged long-running-work implementation. Source-agent continuation and signed events require the matching relay, device settings and host support. Safe event delivery must be configured by the deployment operator. Real Chat/Work overnight acceptance is a separate release check; preview and mocked tests do not prove it.", "本文描述正在准备发布的持续工作实现。源 Agent 续接和签名事件需要匹配的 Relay、设备设置及宿主支持，安全事件投递由部署方配置。真实 Chat/Work 过夜验收是独立发布检查，预览和模拟测试不能证明已经通过。")}</p></div>
+            <div className="articleCallout"><p>{tr("This guide describes the current task execution contract. Source-agent continuation and signed events require the matching relay, device settings and host support. Safe event delivery must be configured by the deployment operator. Real Chat/Work overnight acceptance is a separate release check; preview and mocked tests do not prove it.", "本文描述当前任务执行合同。源 Agent 续接和签名事件需要匹配的 Relay、设备设置及宿主支持，安全事件投递由部署方配置。真实 Chat/Work 过夜验收是独立发布检查，预览和模拟测试不能证明已经通过。")}</p></div>
             <p>{tr("Keeping a device awake uses a temporary system request. Power loss, forced sleep, lid policy, network failure and unavailable OS services can still interrupt work. Login background connection alone does not prevent sleep.", "保持唤醒使用临时系统请求。断电、强制休眠、关盖策略、断网及不可用的系统服务仍可能中断工作；登录后台连接本身不能防止休眠。")}</p>
           </section>
         </article>

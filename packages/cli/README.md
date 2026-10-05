@@ -40,18 +40,29 @@ https://remotearc.app
 ## Commands
 
 ```text
-npx remotelink                 Pair, reconnect, or ensure the configured connection mode
+npx remotelink                 Pair/reconnect and keep the terminal and logs open
 npx remotelink --safe          Hard local read-only cap
 npx remotelink --developer     Legacy alias for dashboard-managed capabilities
-npx remotelink --foreground    Keep this run attached to the terminal
-npx remotelink --background    Enable/repair login background mode
-npx remotelink --no-background Disable login background mode and stay foreground
+npx remotelink --foreground    Stay attached without installing/repairing recovery
+npx remotelink --background    Enable/repair recovery; keep this terminal attached
+npx remotelink --no-background Disable recovery; preserve current execution
 npx remotelink --reset         Remove local pairing and background registration
 npx remotelink --version       Show the CLI version
 npx remotelink --help          Show help
 ```
 
 The package also exposes the aliases `remote-link` and `remote-arc`.
+
+In the 0.4.4 candidate, background recovery and Relay reconnect are separate.
+Recovery installs a user service (macOS/Linux) or a hidden login supervisor
+(Windows), which takes over when the executing Agent ends. Only one updated
+Agent owns execution; additional terminals follow its operation log and offer
+approvals. A forcibly killed owner can take about 15 seconds to release its
+execution lease. Turning recovery off preserves current execution. Explicit
+Stop background Agent also ends that Agent's work. Windows recovery needs the
+supervisor to remain running; killing it requires a local relaunch or login.
+Sleep/power loss still makes the device unavailable. All concurrent instances
+must be updated; pre-0.4.4 Agents do not participate in the execution lease.
 
 ## Native execution core
 

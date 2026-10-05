@@ -21,6 +21,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const assert=(v,m)=>{if(!v)throw new Error("ASSERT: "+m)};
 const mockBase="http://127.0.0.1:8792";
 let plannerCalls=0;
+let unifiedPlannerTurns=null;
 let githubMergeCalls=0;
 const plannerDecisions=[
   {decision:"tool",tool:"read_file",arguments_json:JSON.stringify({path:"/workspace/src/app.ts",offset:0,length:120}),decision_summary:"Inspect the failing implementation before changing it.",memory:"Need inspect src/app.ts.",completion_evidence:""},
@@ -35,7 +36,10 @@ const mockServer=http.createServer(async(req,res)=>{
   if(req.method==="POST"&&url.pathname==="/responses"){
     let body="";for await(const chunk of req)body+=chunk;
     JSON.parse(body||"{}");
-    const decision=plannerDecisions[Math.min(plannerCalls,plannerDecisions.length-1)];
+    const decision=unifiedPlannerTurns===null ? plannerDecisions[Math.min(plannerCalls,plannerDecisions.length-1)]
+      : unifiedPlannerTurns===0 ? {decision:"revise_plan",tool:"none",arguments_json:JSON.stringify({reason:"Inspect, fix and verify the failing tests.",phases:[{id:"fix",objective:"Fix the focused test",success_criteria:"Tests and verification pass",max_duration_seconds:3600}]}),decision_summary:"Persist a bounded phase before making changes.",memory:"One verified phase.",completion_evidence:""}
+      : plannerDecisions[Math.min(unifiedPlannerTurns-1,plannerDecisions.length-1)];
+    if(unifiedPlannerTurns!==null)unifiedPlannerTurns++;
     plannerCalls++;
     res.setHeader("content-type","application/json");
     res.end(JSON.stringify({id:"resp_e2e_"+plannerCalls,status:"completed",output:[{type:"message",content:[{type:"output_text",text:JSON.stringify(decision)}]}]}));
@@ -64,6 +68,8 @@ const {privateKey}=generateKeyPairSync("rsa",{
 });
 
 const baseConfig=JSON.parse(fs.readFileSync(repo+"/apps/relay/wrangler.jsonc","utf8"));
+assert(baseConfig.triggers?.crons?.includes("* * * * *"),"Production must register the every-minute task Cron tested below");
+assert(baseConfig.triggers.crons.includes("*/5 * * * *"),"Keep the monitor Cron as a dispatch fallback");
 baseConfig.routes=[];
 delete baseConfig.ai;
 baseConfig.vars={...(baseConfig.vars||{}),OPENAI_API_KEY:"e2e-key",AGENT_MODEL_BASE_URL:mockBase,AGENT_MODEL:"gpt-5.6-luna",GITHUB_APP_ID:"12345",GITHUB_APP_PRIVATE_KEY:privateKey,GITHUB_APP_INSTALLATION_ID:"67890",GITHUB_API_BASE_URL:mockBase};
@@ -116,7 +122,7 @@ try {
   const processes=new Map();
   let socket=new WebSocket(base.replace("http","ws")+"/agent",{headers:{Authorization:"Bearer "+tokenBody.device_token}});
   const attachSocket=ws=>{
-    ws.on("open",()=>ws.send(JSON.stringify({type:"hello",device:{id:deviceId,name:"Automation Fake Mac",platform:"darwin",arch:"arm64",hostname:"automation-fake",agentVersion:"e2e",connectedAt:new Date().toISOString()},tools,capabilities:["native_core_v1","device_policy_v1","undo_history_v1"]})));
+    ws.on("open",()=>ws.send(JSON.stringify({type:"hello",device:{id:deviceId,name:"Automation Fake Mac",platform:"darwin",arch:"arm64",hostname:"automation-fake",agentVersion:"e2e",connectedAt:new Date().toISOString(),backgroundProcess:false,recoveryEnabled:true,supervisorActive:true,supervisorPid:4321,supervisorService:"launchd"},tools,capabilities:["native_core_v1","device_policy_v1","undo_history_v1","background_recovery_v2"]})));
     ws.on("message",raw=>{
       const m=JSON.parse(raw.toString()); if(m.type!=="call")return;
       try {
@@ -165,17 +171,27 @@ try {
   await new Promise((ok,fail)=>{socket.once("open",()=>setTimeout(ok,150));socket.once("error",fail)});
 
   const api=async(path,init={})=>{const res=await fetch(base+path,{...init,headers:{...authHeaders,...(init.headers||{})}});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(path+" "+res.status+" "+JSON.stringify(body));return body};
-  const tick=async()=>{const res=await fetch(base+"/__scheduled?cron="+encodeURIComponent("* * * * *"));const txt=await res.text();assert(res.ok,"scheduled tick "+res.status+" "+txt);await sleep(650)};
+  const tick=async(cron="* * * * *")=>{const res=await fetch(base+"/__scheduled?cron="+encodeURIComponent(cron));const txt=await res.text();assert(res.ok,"scheduled tick "+res.status+" "+txt);await sleep(650)};
   const poke=async id=>{await api("/api/automations/"+id+"/pause",{method:"POST"});await api("/api/automations/"+id+"/resume",{method:"POST"});};
   const get=async id=>(await api("/api/automations/"+id)).automation;
   const status=await api("/api/status");
   const connected=status.devices.find(device=>device.id===deviceId);
   assert(connected?.available_tools?.includes("read_binary_file"),"Latest agent hello must publish read_binary_file capability");
+  assert(connected.background_recovery_available===true && connected.background_guard_active===true && connected.background_guard_pid===4321,"Verified local supervisor must be visible separately from Relay execution");
+  assert(connected.background_enabled===true && connected.background_active===false && connected.execution_mode==="foreground","A waiting supervisor must not be mistaken for a background execution connection");
+  const collection=await api("/api/automations");
+  assert(collection.capabilities?.hosted_planner===true && collection.capabilities?.github_merge===true,"Task creation must expose configured providers without their credentials");
+  assert(!JSON.stringify(collection).includes("e2e-key") && !JSON.stringify(collection).includes("PRIVATE KEY"),"Task capability metadata must not expose provider credentials");
 
   // Long task: running -> running -> completed.
-  let created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E long",kind:"long_task",device_id:deviceId,command:"long-task",interval_seconds:60})});
+  const invalidIntent=await fetch(base+"/api/automations",{method:"POST",headers:authHeaders,body:JSON.stringify({task:{version:1,intent:"goal",name:"Must not become shell",device_id:deviceId,trigger:{type:"now"},goal:{controller:"hosted",objective:"Summarize the day",success_criteria:"A factual summary",allowed_tools:["read_file"]},command:{text:"Summarize the day"}}})});
+  assert(invalidIntent.status===400,"Goal prose mixed into command instructions must be rejected at the typed boundary");
+  let created=await api("/api/automations",{method:"POST",body:JSON.stringify({task:{version:1,intent:"command",name:"E2E long",device_id:deviceId,trigger:{type:"now"},command:{text:"long-task",cwd:"/workspace",recovery:"fail"},limits:{check_interval_seconds:60}}})});
   const longId=created.automation.id;
-  await tick(); let row=await get(longId); if(row.status!=="running")throw new Error("long starts "+row.status+" worker="+workerLog.slice(-2500));
+  await tick("*/5 * * * *"); let row=await get(longId); if(row.status!=="running")throw new Error("long starts through configured fallback "+row.status+" worker="+workerLog.slice(-2500));
+  const afterStart=await api("/api/automations");
+  assert(afterStart.scheduler?.state==="healthy" && afterStart.scheduler.last_success_at,"Scheduled handler must publish a real successful heartbeat");
+  assert(afterStart.automations.find(task=>task.id===longId).run_started_count===1 && row.run_count===0,"A running first attempt must show one start while its completion counter is still zero");
   await poke(longId); await tick(); row=await get(longId); assert(row.status==="running","long stays running after first poll "+row.status);
   await poke(longId); await tick(); row=await get(longId); assert(row.status==="completed"&&row.run_count===1,"long completes "+JSON.stringify(row));
 
@@ -227,6 +243,17 @@ try {
   assert(startedCommands.includes("verify-agent"),"agent must run deterministic final verification");
   const meteredStatus=await api("/api/status");
   assert(meteredStatus.plusUsage?.planner_turns===plannerCalls,"Hosted planner turns must be metered exactly once");
+
+  // The new Dashboard goal contract must plan, execute, adapt and verify too.
+  unifiedPlannerTurns=0;
+  const unifiedHosted=await api("/api/automations",{method:"POST",body:JSON.stringify({task:{version:1,intent:"goal",name:"E2E unified hosted goal",device_id:deviceId,trigger:{type:"now"},limits:{check_interval_seconds:60},goal:{controller:"hosted",objective:"Fix the failing test",success_criteria:"Focused and final checks pass",workspace:"/workspace",verify_command:"verify-agent",allowed_tools:["read_file","edit_block","start_process"]}}})});
+  const unifiedGoal=JSON.parse(unifiedHosted.automation.goal_json);
+  assert(unifiedGoal.plan.time_policy.max_duration_seconds===86400 && unifiedGoal.max_iterations===720,"New goals have a finite plan and reasoning budget");
+  for(let i=0;i<25;i++){await tick();row=await get(unifiedHosted.automation.id);if(row.status==="completed")break;assert(!["failed","cancelled","expired"].includes(row.status),"Unified goal failed "+JSON.stringify(row));await poke(row.id);}
+  assert(row.status==="completed","Unified hosted goal must settle with execution evidence: "+JSON.stringify(row));
+  assert(JSON.parse(row.state_json).planned.outcomes.some(phase=>phase.id==="fix" && phase.outcome==="completed"),"The planned phase must have accepted results");
+  assert(unifiedPlannerTurns===7,"Planning and tool decisions must be bounded and metered");
+  assert((await api("/api/status")).plusUsage.planner_turns===plannerCalls,"Unified planner turns must also be metered exactly once");
 
   // Permission snapshot: a real security-policy change stops unattended work; it never waits for approval.
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E policy stop",kind:"long_task",device_id:deviceId,command:"policy-test",interval_seconds:60})});
@@ -281,7 +308,17 @@ try {
   // Extend the same Wrangler/D1 + WebSocket device E2E with chat-independent
   // planned execution. This proves relay behavior, not real Chat wakeup.
   await api("/api/devices/"+deviceId+"/task-permissions",{method:"POST",body:JSON.stringify({background_tasks:true,scheduled_tasks:true,adaptive_agent:true,source_agent:true,keep_awake:false})});
-  created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E source planned slices",kind:"agent_goal",device_id:deviceId,interval_seconds:60,agent_goal:{controller:"source",objective:"Execute saved validation phases",success_criteria:"Both checks pass",workspace:"/workspace",allowed_tools:["start_process"],plan:{planning_mode:"fixed",time_policy:{max_duration_seconds:3600,finalization_reserve_seconds:60},phases:[{id:"first",objective:"First check",success_criteria:"First exit zero",execution_slice:[{name:"first",command:"planned-first",timeout_seconds:20}]},{id:"second",objective:"Second check",success_criteria:"Second exit zero",depends_on:["first"],execution_slice:[{name:"second",command:"planned-second",timeout_seconds:20}]}]}}})});
+  // A Dashboard-created source goal is saved but cannot invent a chat decision.
+  const manualSource=await api("/api/automations",{method:"POST",body:JSON.stringify({task:{version:1,intent:"goal",name:"E2E manual source without chat",device_id:deviceId,trigger:{type:"now"},goal:{controller:"source",objective:"Inspect the project",success_criteria:"Explain the result",workspace:"/workspace",allowed_tools:["read_file"]},limits:{check_interval_seconds:60}}})});
+  assert(manualSource.automation.status==="waiting_for_event" && JSON.parse(manualSource.automation.state_json).phase==="awaiting_agent","Source ownership must be explicit at creation, before Cron dispatch");
+  await tick();
+  const sourceWaiting=await get(manualSource.automation.id);
+  assert(sourceWaiting.status==="waiting_for_event" && JSON.parse(sourceWaiting.state_json).phase==="awaiting_agent","A source goal without a chat decision must wait for its AI");
+  assert(sourceWaiting.run_count===0,"Saving a source goal alone must not execute an action");
+  assert((await api("/api/automations/"+sourceWaiting.id)).runs.length===0,"Waiting for a source decision must not invent an execution record");
+  await api("/api/automations/"+manualSource.automation.id+"/cancel",{method:"POST"});
+
+  created=await api("/api/automations",{method:"POST",body:JSON.stringify({task:{version:1,intent:"goal",name:"E2E source planned slices",device_id:deviceId,trigger:{type:"now"},limits:{check_interval_seconds:60},goal:{controller:"source",objective:"Execute saved validation phases",success_criteria:"Both checks pass",workspace:"/workspace",allowed_tools:["start_process"],plan:{planning_mode:"fixed",time_policy:{max_duration_seconds:3600,finalization_reserve_seconds:60},phases:[{id:"first",objective:"First check",success_criteria:"First exit zero",execution_slice:[{name:"first",command:"planned-first",timeout_seconds:20}]},{id:"second",objective:"Second check",success_criteria:"Second exit zero",depends_on:["first"],execution_slice:[{name:"second",command:"planned-second",timeout_seconds:20}]}]}}}})});
   const plannedId=created.automation.id, turnsBefore=plannerCalls;
   for(let i=0;i<8;i++){row=await get(plannedId);if(row.status==="completed")break;await poke(plannedId);await tick();}
   row=await get(plannedId);assert(row.status==="completed","planned source goal settles "+JSON.stringify(row));
@@ -291,6 +328,23 @@ try {
   assert(plannerCalls===turnsBefore,"source mode must not fall back to hosted planner");
   assert([...processes.values()].filter(p=>p.command==="planned-first").length===1,"first slice exactly one acknowledged dispatch");
   assert([...processes.values()].filter(p=>p.command==="planned-second").length===1,"second slice exactly one acknowledged dispatch");
+
+  // An event is a trigger for the same goal engine, not a separate task mode.
+  const eventGoal=await api("/api/automations",{method:"POST",body:JSON.stringify({task:{version:1,intent:"goal",name:"E2E event goal",device_id:deviceId,
+    trigger:{type:"event",source:"generic",event:"ready"},limits:{check_interval_seconds:60,max_runs:2},
+    goal:{controller:"source",objective:"Run the authorized event check",success_criteria:"Check exits zero",workspace:"/workspace",allowed_tools:["start_process"],
+      plan:{planning_mode:"fixed",time_policy:{max_duration_seconds:3600,finalization_reserve_seconds:60},phases:[{id:"check",objective:"Event check",success_criteria:"Exit zero",execution_slice:[{name:"check",command:"goal-event-check",timeout_seconds:20}]}]}}}})});
+  assert(eventGoal.automation.status==="waiting_for_event" && eventGoal.webhook?.url,"A goal event trigger must create a real webhook");
+  const sendGoalEvent=async delivery=>fetch(eventGoal.webhook.url,{method:"POST",headers:{"content-type":"application/json","x-remotearc-event":"ready","x-remotearc-delivery":delivery},body:"{}"});
+  await sendGoalEvent("goal-event-1"); await tick();
+  const firstEventRun=JSON.parse((await get(eventGoal.automation.id)).state_json).run_id;
+  const queuedGoal=await (await sendGoalEvent("goal-event-2")).json();
+  assert(queuedGoal.queued===true,"A second event during a goal run must queue rather than replace that run");
+  assert(JSON.parse((await get(eventGoal.automation.id)).state_json).run_id===firstEventRun,"An event must preserve the active run's checkpoint");
+  for(let i=0;i<12;i++){row=await get(eventGoal.automation.id);if(row.status==="completed")break;await poke(row.id);await tick();}
+  row=await get(eventGoal.automation.id);
+  assert(row.status==="completed" && row.run_count===2,"Queued events must settle as two bounded, non-overlapping goal runs: "+JSON.stringify(row));
+  assert([...processes.values()].filter(p=>p.command==="goal-event-check").length===2,"Each acknowledged event should execute its goal once");
   reconnected.close();
 
   console.log(JSON.stringify({ok:true,long:"completed",unattended_recovery:"completed_without_approval",goal:{status:"completed",attempts:2},agent_goal:{status:"completed",planner_turns:plannerCalls},policy_change:"failed_without_approval",condition:"completed",github_merge:{status:"completed",api_calls:githubMergeCalls},offline:"reconnected_and_completed",deviceId},null,2));

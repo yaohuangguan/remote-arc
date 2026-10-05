@@ -7,6 +7,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -23,9 +24,10 @@ jobs:
       - run: pnpm run ci
       - run: pnpm build:ui
       - run: pnpm test:automations
-      - run: pnpm build:cli
+      - run: pnpm test:recovery
 
   native-core:
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -47,3 +49,4 @@ jobs:
       - run: pnpm --filter @remotearc/execution-core test:integration
       - run: pnpm --filter @remotearc/mcp test:smoke
       - run: pnpm --filter @remotearc/execution-core exec tsx ../cli/scripts/goal-workspace-test.ts
+      - run: pnpm test:recovery

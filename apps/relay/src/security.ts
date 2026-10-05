@@ -1,5 +1,6 @@
 import { getSessionUser, nowIso } from "./auth.js";
 import { writeAudit } from "./audit.js";
+import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
 
 type SecurityEnv = {
   DB: D1Database;
@@ -70,9 +71,9 @@ export async function handleSecurityState(request: Request, env: SecurityEnv) {
         refreshExpiresAt: grant.refresh_expires_at,
         tokenRows: grant.token_rows,
         status: accessActive ? "active" : refreshActive ? "refreshable" : "expired",
-      };
+      } satisfies SecurityGrant;
     }),
-  });
+  } satisfies SecurityState);
 }
 
 export async function handleMcpPause(request: Request, env: SecurityEnv) {

@@ -18,6 +18,8 @@ import {
   type AgentToolName,
 } from "./agent-planner.js";
 import { takeSourceDecision } from "./source-goals.js";
+import { normalizeTaskContract, type TaskContract } from "./task-contract.js";
+import { taskSchedulerHealth } from "./task-scheduler.js";
 import { binaryBytesRead, finishAutomationRunWithUsage, recordPlusUsage } from "./plus-usage.js";
 import { sanitizePlan, finishPhase, plannedReport, timeBudget, type GoalPlan, type PlannedState } from "./planned-goals.js";
 import { executePlannedGoal } from "./planned-goal-runtime.js";
@@ -156,6 +158,7 @@ export type AutomationRow = {
   expires_at: string | null;
   max_runs: number;
   run_count: number;
+  run_started_count?: number;
   last_run_at: string | null;
   last_error: string | null;
   lease_token: string | null;
@@ -191,6 +194,7 @@ type DevicePolicySnapshot = {
 };
 
 export type CreateAutomationInput = {
+  task?: TaskContract;
   keep_awake?: boolean;
   name?: string;
   kind?: AutomationCreateKind;
@@ -667,6 +671,12 @@ export async function createAutomation(
   input: CreateAutomationInput,
   options?: { entitlements?: PlanEntitlements },
 ) {
+  const typedContract = input.task !== undefined;
+  if (typedContract) {
+    if (Object.keys(input).some(key => key !== "task"))
+      throw new Error("A versioned task contract cannot be mixed with legacy automation fields.");
+    input = normalizeTaskContract(input.task!);
+  }
   const requestedKind = input.kind || "long_task";
   if (
     !["long_task", "condition_watch", "schedule_watch", "goal_loop", "agent_goal"].includes(
@@ -732,12 +742,14 @@ export async function createAutomation(
   const goal = sanitizeGoal({ ...input, kind: requestedKind }, policy);
   const now = nowIso();
   const { trigger, nextRunAt, initialStatus } = sanitizeTrigger(
-    requestedKind === "agent_goal" && input.schedule ? "schedule_watch" : storedKind, input, now);
+    input.condition ? "condition_watch" : input.schedule ? "schedule_watch" : storedKind, input, now);
+  const awaitingSource = typedContract && goal?.type === "agent_goal" && goal.controller === "source"
+    && !goal.plan?.phases.some(phase => phase.execution_slice?.length) && trigger.type === "immediate";
   if (!cloudOnly) await requireTaskPermission(env.DB, userId, deviceId, storedKind, goal, trigger, action.keep_awake);
   const expiresAt = defaultExpiry(requestedKind === "agent_goal" && trigger.type === "interval" ? "schedule_watch" : storedKind,
     requestedKind === "agent_goal" && trigger.type === "at" ? trigger.at : now, input);
   const maxRuns =
-    requestedKind === "agent_goal" ? (input.schedule?.every_seconds ? defaultMaxRuns("schedule_watch", input.max_runs) : 1) : defaultMaxRuns(storedKind, input.max_runs);
+    requestedKind === "agent_goal" ? (["interval", "webhook"].includes(trigger.type) ? defaultMaxRuns("schedule_watch", input.max_runs) : 1) : defaultMaxRuns(storedKind, input.max_runs);
   const intervalSeconds = clampInterval(
     input.interval_seconds,
     requestedKind === "agent_goal" ? 60 : 300,
@@ -762,7 +774,7 @@ export async function createAutomation(
       userId,
       name,
       storedKind,
-      initialStatus,
+      awaitingSource ? "waiting_for_event" : initialStatus,
       deviceId || null,
       stableJson(trigger),
       stableJson(action),
@@ -770,7 +782,7 @@ export async function createAutomation(
       stableJson(
         requestedKind === "agent_goal"
           ? ({
-              phase: "idle",
+              phase: awaitingSource ? "awaiting_agent" : "idle",
               step_index: 0,
               agent: {
                 iteration: 0,
@@ -782,7 +794,7 @@ export async function createAutomation(
       ),
       policy ? stableJson(policy) : null,
       intervalSeconds,
-      nextRunAt,
+      awaitingSource ? null : nextRunAt,
       expiresAt,
       maxRuns,
       now,
@@ -790,7 +802,7 @@ export async function createAutomation(
     .run();
 
   let webhook: { url: string; token: string } | null = null;
-  if (storedKind === "condition_watch") {
+  if (trigger.type === "webhook") {
     const token = randomToken(24);
     await env.DB.prepare(
       `INSERT INTO automation_webhooks (automation_id, secret_hash, created_at)
@@ -817,7 +829,8 @@ export async function listAutomations(
 ) {
   const safeLimit = Math.min(Math.max(Math.round(limit), 1), 200);
   const result = await env.DB.prepare(
-    `SELECT *
+    `SELECT automations.*, (SELECT COUNT(*) FROM automation_runs r
+       WHERE r.automation_id=automations.id AND r.user_id=automations.user_id) AS run_started_count
      FROM automations
      WHERE user_id = ?1
      ORDER BY created_at DESC
@@ -926,7 +939,11 @@ export async function resumeAutomation(
   let status: AutomationStatus = "waiting";
   let nextRunAt: string | null = nowIso();
 
-  if (automation.kind === "condition_watch" && !state.process_id) {
+  if (parseJson<AgentGoalSpec | null>(automation.goal_json, null)?.controller === "source"
+      && ["awaiting_agent", "needs_reasoning"].includes(state.phase || "") && !state.process_id && !state.planned) {
+    status = "waiting_for_event";
+    nextRunAt = null;
+  } else if (trigger?.type === "webhook" && !state.run_id && !state.process_id && !state.trigger) {
     status = "waiting_for_event";
     nextRunAt = null;
   } else if (trigger?.type === "at" && !state.process_id) {
@@ -1017,7 +1034,7 @@ export async function handleAutomationWebhook(
   if (!hook || (await sha256Hex(token)) !== hook.secret_hash) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
-  if (hook.kind !== "condition_watch") {
+  if (parseJson<TriggerSpec | null>(hook.trigger_json, null)?.type !== "webhook") {
     return Response.json({ error: "not_a_condition_watch" }, { status: 400 });
   }
   if (
@@ -1047,7 +1064,7 @@ export async function handleAutomationWebhook(
   const busy =
     hook.status === "waiting" ||
     hook.status === "running" ||
-    hook.status === "waiting_for_device";
+    hook.status === "waiting_for_device" || Boolean(parseJson<RuntimeState>(hook.state_json, {}).run_id);
   const eventId = crypto.randomUUID();
   const consumedAt = !matched ? now : busy ? null : now;
 
@@ -1406,17 +1423,27 @@ async function updateRunSummary(
 }
 
 async function finishAgentRun(env: AutomationEnv, automation: AutomationRow, state: RuntimeState) {
+  const continuation = await nextGoalRun(env, automation, state);
+  await persistRuntime(env, automation, state, continuation.status, continuation.next, null,
+    { incrementRun: true, event: "run_completed", summary: "Goal run completed; see saved run evidence." });
+}
+
+async function nextGoalRun(env: AutomationEnv, automation: AutomationRow, state: RuntimeState): Promise<{ status: AutomationStatus; next: string | null }> {
   const trigger = parseJson<TriggerSpec>(automation.trigger_json, { type: "immediate" });
-  const recurring = trigger.type === "interval" && (automation.max_runs === 0 || automation.run_count + 1 < automation.max_runs);
-  if (recurring) {
-    // Evidence is retained in the run summary/journal. A new invocation starts
-    // with a fresh memory, observation and iteration budget.
-    state.agent = { iteration: 0, memory: "", observation: "New scheduled run. Inspect current workspace state before acting." };
-    state.phase = "idle";
-  }
-  await persistRuntime(env, automation, state, recurring ? "waiting" : "completed",
-    recurring ? nextScheduleAfterRun(trigger, nowIso()) : null, null,
-    { incrementRun: true, event: "run_completed", summary: recurring ? "Verified run completed; next interval scheduled." : "Goal completed; see run evidence." });
+  const goal = parseJson<AgentGoalSpec | null>(automation.goal_json, null);
+  const now = nowIso();
+  const recurring = ["interval", "webhook"].includes(trigger.type)
+    && (automation.max_runs === 0 || automation.run_count + 1 < automation.max_runs)
+    && (!goal?.plan?.time_policy.end_at || goal.plan.time_policy.end_at > now);
+  if (!recurring) return { status: "completed", next: null };
+  // Evidence stays in the run history and journal. Each new run receives fresh
+  // phase, memory, iteration and elapsed-time budgets.
+  state.planned = undefined;
+  state.agent = { iteration: 0, memory: "", observation: "New triggered run. Inspect current workspace state before acting." };
+  state.phase = "idle";
+  state.trigger = trigger.type === "webhook" ? await takeQueuedEvent(env, automation.id) ?? undefined : undefined;
+  return trigger.type === "webhook" ? { status: state.trigger ? "waiting" : "waiting_for_event", next: state.trigger ? now : null }
+    : { status: "waiting", next: nextScheduleAfterRun(trigger, now) };
 }
 
 async function executeAgentGoal(
@@ -1888,17 +1915,9 @@ async function executeAutomation(
           await updateRunSummary(env, automation, state.run_id, summary);
           await markRunFinished(env, automation, state, status, null, status === "completed" ? null : summary.slice(0, 1000));
           state.run_id = undefined;
-          const recurring = trigger.type === "interval" && status === "completed" &&
-            (automation.max_runs === 0 || automation.run_count + 1 < automation.max_runs) &&
-            (!goal.plan?.time_policy.end_at || goal.plan.time_policy.end_at > nowIso());
-          if (recurring) {
-            state.planned = undefined;
-            state.agent = { iteration: 0, memory: "", observation: "New scheduled planned run; establish a fresh bounded baseline." };
-            state.phase = "idle";
-          }
-          await persistRuntime(env, automation, state, recurring ? "waiting" : status,
-            recurring ? nextScheduleAfterRun(trigger, nowIso()) : null, null,
-            { incrementRun: true, event: recurring ? "run_completed" : status, summary: summary.slice(0, 6000) });
+          const continuation = status === "completed" ? await nextGoalRun(env, automation, state) : { status, next: null };
+          await persistRuntime(env, automation, state, continuation.status, continuation.next, null,
+            { incrementRun: true, event: status === "completed" ? "run_completed" : status, summary: summary.slice(0, 6000) });
         },
       });
       return;
@@ -2409,6 +2428,7 @@ export async function runAutomationTick(
           message.slice(0, 1000), { event: "retry", summary: "Transient planner error; retry " + state.retry_count }).catch((failure) => { if (!(failure instanceof LeaseLostError)) throw failure; });
         continue;
       }
+      await markRunFinished(env, automation, state, "failed", null, message.slice(0, 1000));
       await persistRuntime(
         env,
         automation,
@@ -2451,6 +2471,11 @@ export async function handleAutomationCollection(
   if (request.method === "GET") {
     return Response.json({
       automations: await listAutomations(env, user.id),
+      capabilities: {
+        hosted_planner: agentPlannerConfigured(env),
+        github_merge: githubAutomationConfigured(env),
+      },
+      scheduler: await taskSchedulerHealth(env.DB, user.id),
     });
   }
 

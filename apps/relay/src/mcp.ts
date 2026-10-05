@@ -1,4 +1,5 @@
 import { getGoalContext, submitGoalDecision } from "./source-goals.js";
+import { normalizeTaskContract, type TaskContract } from "./task-contract.js";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 const plannedCheckSchema = z.object({ name: z.string().min(1).max(80), command: z.string().min(1).max(4000), cwd: z.string().max(500).optional(), timeout_seconds: z.number().int().min(1).max(3600).default(300) });
@@ -938,12 +939,14 @@ export function createRemoteLinkMcp(
       {
         title: "Create a self-directed durable Agent Goal",
         description:
-          "Create user-requested ongoing work directly from the current AI chat; no Dashboard form is required. For reasoning in this conversation, explicitly select controller=source; hosted remains the legacy default, never a source fallback. Return the saved automation.id and dashboard_url to the chat and retain that ID for get_goal_context/submit_goal_decision on later turns. Optional plan persists phases/dependencies, time/reserve, green-only checks and recovery. Saved deterministic slices continue without the chat stream; new reasoning waits for the selected controller or host wakeup. Green-only work uses owned Git worktrees and needs updated remotelink; review accepted work before applying it. Device policy, evidence and agent:write scope apply.",
+          "Create user-requested ongoing work directly from the current AI chat; no Dashboard form is required. For reasoning in this conversation, explicitly select controller=source; hosted remains the legacy default, never a source fallback. Return the saved automation.id and dashboard_url to the chat and retain that ID for get_goal_context/submit_goal_decision on later turns. Use task_version=1 for the unified goal contract: select controller explicitly, use trigger now/at/interval/event, and receive a bounded plan (default 24 hours, 720 turns). Optional plan customizes phases/dependencies, time/reserve, green-only checks and recovery. Omit task_version to preserve legacy defaults (30 turns and optional plan). Saved deterministic slices continue without the chat stream; new reasoning waits for the selected controller or host wakeup. Green-only work uses owned Git worktrees and needs updated remotelink; review accepted work before applying it. Device policy, evidence and agent:write scope apply.",
         inputSchema: z.object({
           name: z.string().min(1).max(120),
           keep_awake: z.boolean().default(false),
           device_id: z.string(),
           objective: z.string().min(1).max(6000),
+          task_version: z.literal(1).optional(),
+          trigger: z.object({ type: z.enum(["now", "at", "interval", "event"]), at: z.string().optional(), every_seconds: z.number().int().min(60).max(2592000).optional(), source: z.enum(["github", "generic"]).optional(), event: z.string().optional(), match: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional() }).optional(),
           success_criteria: z.string().min(1).max(4000),
           workspace: z.string().max(500).optional(),
           verify_command: z.string().max(4000).optional(),
@@ -962,10 +965,10 @@ export function createRemoteLinkMcp(
             )
             .min(1)
             .max(7),
-          controller: z.enum(["hosted", "source"]).default("hosted"),
+          controller: z.enum(["hosted", "source"]).optional(),
           plan: plannedGoalSchema.optional(),
           source_capabilities: z.object({ durable_context: z.boolean(), resume_on_next_turn: z.boolean(), autonomous_event_wakeup: z.boolean() }).optional(),
-          max_iterations: z.number().int().min(1).max(2000).default(30),
+          max_iterations: z.number().int().min(1).max(2000).optional(),
           schedule: z.object({
             at: z.string().optional(), every_seconds: z.number().int().min(60).max(86400).optional(),
             start_at: z.string().optional(),
@@ -996,7 +999,11 @@ export function createRemoteLinkMcp(
         ) {
           return authRequired(env, "agent:write");
         }
-        const automationInput = {
+        if (input.trigger && input.task_version !== 1) throw new Error("trigger requires task_version=1.");
+        if (input.task_version === 1 && input.schedule) throw new Error("Use trigger instead of legacy schedule with task_version=1.");
+        if (input.task_version === 1 && !input.controller) throw new Error("Select source or hosted explicitly for a goal task.");
+        const controller = input.controller || "hosted";
+        const legacyInput = {
           name: input.name,
           keep_awake: input.keep_awake,
           kind: "agent_goal" as const,
@@ -1006,19 +1013,26 @@ export function createRemoteLinkMcp(
           schedule: input.schedule,
           max_runs: input.max_runs,
           agent_goal: {
-            controller: input.controller,
+            controller,
             plan: input.plan,
             source_capabilities: input.source_capabilities,
-            controller_client_id: input.controller === "source" ? identity.clientId : undefined,
+            controller_client_id: controller === "source" ? identity.clientId : undefined,
             objective: input.objective,
             success_criteria: input.success_criteria,
             workspace: input.workspace,
             verify_command: input.verify_command,
             verify_cwd: input.verify_cwd,
             allowed_tools: input.allowed_tools,
-            max_iterations: input.max_iterations,
+            max_iterations: input.max_iterations ?? (input.task_version === 1 ? 720 : 30),
           },
         };
+        const taskContract: TaskContract | undefined = input.task_version === 1 ? {
+          version: 1, intent: "goal", name: input.name, device_id: input.device_id,
+          trigger: input.trigger || { type: "now" }, goal: legacyInput.agent_goal,
+          limits: { expires_at: input.expires_at, max_runs: input.max_runs, check_interval_seconds: input.interval_seconds },
+          keep_awake: input.keep_awake,
+        } : undefined;
+        const automationInput = taskContract ? normalizeTaskContract(taskContract) : legacyInput;
         const entitlements = await requireFeatures(
           env,
           identity.userId,
@@ -1028,7 +1042,7 @@ export function createRemoteLinkMcp(
         const created = await createAutomation(
           env,
           identity.userId,
-          automationInput,
+          taskContract ? { task: taskContract } : automationInput,
           { entitlements },
         );
         return textResult({
@@ -1038,7 +1052,7 @@ export function createRemoteLinkMcp(
                 id: created.automation.id,
                 name: created.automation.name,
                 kind: "agent_goal",
-                controller: input.controller,
+                controller,
                 stored_kind: created.automation.kind,
                 status: created.automation.status,
                 device_id: created.automation.device_id,
@@ -1046,8 +1060,9 @@ export function createRemoteLinkMcp(
                 expires_at: created.automation.expires_at,
               }
             : null,
+          webhook: created.webhook ? { url: created.webhook.url, note: "Treat this webhook URL as a secret bearer capability; returned only on creation." } : null,
           note:
-            input.controller === "source"
+            controller === "source"
               ? "Show the task ID and dashboard_url in this conversation. This is the same saved task displayed in Dashboard, not a separate plan. Retain its ID; read get_goal_context and submit_goal_decision on this or a later source turn. Saved deterministic slices continue without the chat stream; new judgment waits in needs_reasoning. Autonomous wakeup depends on the host and is not guaranteed. No silent hosted fallback."
               : "The explicitly selected hosted planner continues with bounded observations and compact memory. This may be a different model from the creating chat.",
         });

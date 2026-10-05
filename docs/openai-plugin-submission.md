@@ -1,6 +1,6 @@
 # Remote Arc — OpenAI Public Plugin Submission Pack
 
-Last updated: 2026-09-30
+Last updated: 2026-10-05
 
 ## Submission type
 
@@ -58,6 +58,9 @@ Use Remote Arc only with computers, files, accounts, and services you own or are
 | `browser_fill` | false | true | false | Fills a non-sensitive control from a fresh shared-tab snapshot only after per-tab interaction opt-in; recognized password, OTP, payment-card, and file fields stay blocked. |
 | `list_directory` | true | false | false | Retrieves a directory listing from a private paired computer without modifying filesystem state. |
 | `read_file` | true | false | false | Retrieves file content from a private paired computer without modifying the file. |
+| `read_binary_file` | true | false | false | Reads a bounded binary chunk from an authorized paired device without modifying it. |
+| `create_file_resource` | false | false | false | Creates a temporary revision-pinned download capability for an authorized private file; does not modify the underlying file. |
+| `revoke_file_resource` | false | false | false | Revokes an account-owned temporary file capability; does not delete the file. |
 | `get_file_info` | true | false | false | Retrieves file/directory metadata only. |
 | `list_processes` | true | false | false | Retrieves running-process information from a private paired computer without changing processes. |
 | `start_process` | false | true | true | Executes an arbitrary terminal command on a paired computer. A command may modify local state and may access or change public internet services (for example, pushing code or calling an external API). Commands can cause irreversible effects. |
@@ -67,8 +70,15 @@ Use Remote Arc only with computers, files, accounts, and services you own or are
 | `write_file` | false | false | true | Writes or appends content to a file on the user's private paired computer. Rewrite mode can overwrite existing user data. |
 | `edit_block` | false | false | true | Performs targeted search-and-replace in a file on the user's private paired computer and therefore changes/overwrites user data. |
 | `undo_last_change` | false | false | false | Restores the newest reversible Remote Arc file change from a device-local snapshot. It mutates local state but is a bounded recovery action that refuses conflicting restores. |
+| `create_automation` | false | true | true | Saves an authorized command or cloud-action contract for future execution; commands can modify local or external state. |
+| `create_agent_goal` | false | true | true | Saves an authorized objective, executor, tools and limits; future approved actions can modify local or external state. |
+| `list_automations` | true | false | false | Reads only the authenticated account's saved task records. |
+| `get_automation` | true | false | false | Reads an account-owned task and its bounded recent run history. |
+| `get_goal_context` | true | false | false | Reads an account-owned goal, factual memory, observations, revision and bounded journal; it does not retrieve the original chat. |
+| `submit_goal_decision` | false | true | true | Persists an authorized revision-checked next decision which can cause device or external changes; matching idempotency keys prevent duplicate acceptance. |
+| `manage_automation` | false | false | true | Pauses, resumes or cancels account-owned work; cancellation can interrupt its managed process. |
 
-Production currently exposes 19 hosted MCP tools. The reviewer fixture intentionally advertises eight representative device tools for deterministic review: directory/file reads, file metadata, process listing, a safe command allowlist, sandboxed write/edit, and undo. Browser reads and production managed-process controls remain declared and annotated but are not required in the five representative positive tests.
+Production tools/list was independently checked on 2026-10-05 and exposed 31 hosted MCP tools. The reviewer fixture intentionally advertises eight representative device tools for deterministic review: directory/file reads, file metadata, process listing, a safe command allowlist, sandboxed write/edit, and undo. Browser reads and production managed-process controls remain declared and annotated but are not required in the five representative positive tests.
 
 Operational service metering and audit metadata are described in the Privacy Policy. The hints above describe the user-facing capability and external effect of each tool.
 
@@ -217,3 +227,12 @@ For review, use the dedicated reviewer account and the isolated Review Desktop f
 - [ ] Review policy attestations.
 - [ ] Submit for Review.
 - [ ] After approval, manually select **Publish**.
+
+
+## Client-catalog and durable-task acceptance
+
+The production server catalog and the client-installed Plugin catalog must be checked independently. A server listing of 31 tools does not prove that a particular chat has imported all 31. On 2026-10-05 the inspected chat had only nine Remote Arc device tools, lacked task-reading/decision tools, and its imported `start_process` schema omitted `cwd`, despite the live server including it.
+
+Before accepting task handoff in a real client, verify that it can call `get_automation`, `get_goal_context` and, when authorized to continue a source goal, `submit_goal_decision`; verify its terminal schema accepts `cwd`. Use the same account and appropriate OAuth scopes. A missing tool must produce an explicit capability error, not an inferred local checkpoint path or an attempt to bypass the path policy with another device.
+
+Create an actual goal task and observe a run start and factual completion evidence. Test the deployed Cloudflare scheduled handler and Cron configuration, not just manual task ticks. A copied ID alone neither transfers full conversation context nor wakes a stopped AI runtime. The five legacy automation names remain API compatibility details; Dashboard v2 separates goal/command intent from executor, trigger, plan and limits.

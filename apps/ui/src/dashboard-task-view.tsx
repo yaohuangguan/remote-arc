@@ -12,6 +12,10 @@ type Task = {
   expires_at: string | null;
   interval_seconds: number;
   last_error: string | null;
+  kind?: string;
+  next_run_at?: string | null;
+  goal_json?: string | null;
+  action_json?: string;
 };
 type Progress = {
   planned?: PlannedProgress;
@@ -47,7 +51,25 @@ export function taskNeedsAttention(task: Pick<Task, "state_json" | "status">) {
   return taskNeedsAgent(task) || ["waiting_for_device", "failed", "expired"].includes(task.status);
 }
 
-export function TaskResults({ task, referenceControl }: { task: Task; referenceControl?: React.ReactNode }) {
+export function taskActivity(task: Pick<Task, "status" | "state_json" | "kind" | "next_run_at">, tr: (en: string, zh: string) => string) {
+  if (task.status === "completed") return tr("Completed · results saved", "已完成，结果已保存");
+  if (task.status === "failed") return tr("Execution failed · inspect the error", "执行失败，请查看错误");
+  if (task.status === "cancelled") return tr("Cancelled · orchestration stopped", "已取消，编排已停止");
+  if (task.status === "expired") return tr("Time limit reached · inspect the outcome", "已到期限，请查看实际成果");
+  if (task.status === "paused") return tr("Paused · resume when ready", "已暂停，可手动恢复");
+  if (task.status === "waiting_for_device") return tr("Waiting for the computer to reconnect", "等待电脑重新连接");
+  if (taskNeedsAgent(task)) return tr("Waiting for an AI decision in chat", "等待聊天中的 AI 提交决策");
+  if (task.status === "waiting_for_event") return tr("Waiting for a matching webhook", "等待匹配的 Webhook 事件");
+  const progress = taskProgress(task);
+  if (progress.planned?.finalizing) return tr("Finalizing and checking the outcome", "正在收尾并检查成果");
+  if (["agent_verify_running", "goal_running"].includes(progress.phase || "")) return tr("Verifying the result", "正在验证结果");
+  if (["agent_process_running", "step_running", "planned_process_running"].includes(progress.phase || "") || progress.process_id) return tr("Saved command is running", "保存的命令正在执行");
+  if (task.status === "running") return tr("Working through the next step", "正在推进下一步");
+  if (task.next_run_at && Date.parse(task.next_run_at) > Date.now()) return tr("Waiting for the next scheduled run", "等待下一次计划执行");
+  return tr("Queued · starts when the device is available", "已排队，设备可用后启动");
+}
+
+export function TaskResults({ task, referenceControl, reveal = false }: { task: Task; referenceControl?: React.ReactNode; reveal?: boolean }) {
   const { tr, locale } = useI18n();
   const linked = new URLSearchParams(location.search).get("task") === task.id;
   const [open, setOpen] = useState(linked);
@@ -57,10 +79,11 @@ export function TaskResults({ task, referenceControl }: { task: Task; referenceC
   const [retry, setRetry] = useState(0);
   const progress = taskProgress(task);
   useEffect(() => {
-    if (!linked) return;
+    if (!linked && !reveal) return;
+    setOpen(true);
     const frame = requestAnimationFrame(() => details.current?.scrollIntoView({ block: "start" }));
     return () => cancelAnimationFrame(frame);
-  }, [linked]);
+  }, [linked, reveal]);
 
   useEffect(() => {
     if (!open) return;
@@ -88,41 +111,33 @@ export function TaskResults({ task, referenceControl }: { task: Task; referenceC
 
   const timestamp = (value: string | null) => value
     ? new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-US") : "—";
-  const phaseLabel = ["awaiting_agent", "needs_reasoning"].includes(progress.phase || "") ? tr("Waiting for the source AI", "等待来源 AI 决策")
-    : task.status === "waiting_for_device" ? tr("Waiting for the computer to reconnect", "等待电脑重新连接")
-    : task.status === "waiting_for_event" ? tr("Waiting for a matching event", "等待匹配事件")
-    : task.status === "paused" ? tr("Task paused", "任务已暂停")
-    : progress.phase === "agent_verify_running" || progress.phase === "goal_running" ? tr("Verifying the result", "正在验证结果")
-    : progress.phase === "agent_process_running" || progress.phase === "step_running" ? tr("Command in progress", "命令执行中")
-    : tr("Ready for the next step", "等待下一步");
+  const phaseLabel = taskActivity(task, tr);
+  let instructions: { objective?: string; success_criteria?: string; controller?: string; steps?: { command?: string; cwd?: string; type?: string }[] } = {};
+  try { instructions = task.goal_json && JSON.parse(task.goal_json)?.type === "agent_goal"
+    ? JSON.parse(task.goal_json) : JSON.parse(task.action_json || "{}"); } catch { /* Invalid legacy record remains visible through status/error. */ }
+  const chatReference = <div className="taskChatReference"><strong>{tr("Reference this saved task", "引用已保存的任务")}</strong>{referenceControl}<code>{task.id}</code><p>{tr("Use a client connected to the same Remote Arc account with task-reading tools and permissions. The reference retrieves saved task context, not the original chat. Continuing an AI goal also requires decision tools and a runtime that can keep working. If the client lacks these tools, it must report that instead of looking for a checkpoint file.", "需要客户端连接同一 Remote Arc 账号，且具有任务读取工具及权限。引用读取的是已保存的任务上下文，不会转移原聊天。继续 AI 目标还需要决策工具和能够持续工作的运行环境。客户端缺少工具时应明确说明，不应寻找本地检查点文件。")}</p></div>;
 
   return (
     <details ref={details} open={open} className="automationDetails" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>{tr("Progress & results", "进度与结果")}<span aria-hidden="true">›</span></summary>
       <div className="taskResultsBody">
-        <div className="taskChatReference"><strong>{tr("This task's chat reference", "这条任务的聊天引用")}</strong><code>{task.id}</code>{referenceControl}<p>{tr("Paste the reference into your connected AI chat to read this task's saved progress. It is the same task shown here.", "将引用粘贴到已连接的 AI 聊天中，即可读取这条任务保存的进度。聊天与这里管理的是同一条任务。")}</p></div>
-        {progress.planned && <React.Suspense fallback={<p role="status">{tr("Loading saved plan…", "正在加载保存的计划…")}</p>}><PlannedGoalProgress value={progress.planned} expiresAt={task.expires_at} /></React.Suspense>}
         {!['completed', 'failed', 'cancelled', 'expired'].includes(task.status) && (
           <div className="taskProgressPanel">
             <strong>{phaseLabel}</strong>
             {progress.agent && <span>{tr("Planning turn", "规划轮次")} {progress.agent.iteration || 0}</span>}
             {progress.agent?.last_decision_summary && <p>{progress.agent.last_decision_summary}</p>}
-            {taskNeedsAgent(task) && <p>{tr("Return to the AI client that created this goal. It must read the latest context and submit the next decision. Automatic continuation depends on that client's runtime and event support.", "回到创建目标的 AI 客户端，读取最新进度并提交下一步决策。能否自动继续取决于该客户端的运行时和事件支持。")}</p>}
+            {taskNeedsAgent(task) && <p>{tr("The source AI must read the latest context and submit the next decision. If you created this goal here, copy its reference into your connected AI chat. Closing this page does not wake that AI.", "来源 AI 需要读取最新上下文并提交下一步决策。如果目标是在这里创建的，请将任务引用复制到已连接的 AI 聊天。关闭此页面不会唤起 AI。")}</p>}
           </div>
         )}
+        {taskNeedsAgent(task) && chatReference}
         {progress.agent?.completion_evidence && <div className="taskEvidence"><strong>{tr("Completion evidence", "完成证据")}</strong><p>{progress.agent.completion_evidence}</p></div>}
-        <div className="automationDetailGrid">
-          <div><span>{tr("Created", "创建时间")}</span><strong>{timestamp(task.created_at)}</strong></div>
-          <div><span>{tr("Last run", "上次执行")}</span><strong>{timestamp(task.last_run_at)}</strong></div>
-          <div><span>{tr("Expires", "到期时间")}</span><strong>{task.expires_at ? timestamp(task.expires_at) : tr("No expiry", "未设置")}</strong></div>
-          <div><span>{tr("Check interval", "检查间隔")}</span><strong>{Math.round(task.interval_seconds / 60)} {tr("min", "分钟")}</strong></div>
-        </div>
+        {progress.planned && <React.Suspense fallback={<p role="status">{tr("Loading saved plan…", "正在加载保存的计划…")}</p>}><PlannedGoalProgress value={progress.planned} expiresAt={task.expires_at} /></React.Suspense>}
         {task.last_error && <p className="automationLastError">{task.last_error}</p>}
         <div className="taskRunHistory" aria-busy={open && runs === null && !error}>
           <h3>{tr("Recent runs", "最近执行")}</h3>
           {error && <p role="status">{tr("Run history could not be loaded.", "执行记录加载失败。 ")} <button className="ghostButton" onClick={() => setRetry((value) => value + 1)}>{tr("Retry", "重试")}</button></p>}
           {open && runs === null && !error && <p role="status">{tr("Loading results…", "正在加载结果…")}</p>}
-          {runs?.length === 0 && <p>{tr("Results appear here when the first run starts.", "第一次执行开始后，结果会显示在这里。")}</p>}
+          {runs?.length === 0 && <p>{tr("No run has started. Saving a task is not execution. Check its executor, trigger and scheduling status above.", "尚未开始任何执行。保存任务不等于执行，请检查上方的执行器、启动条件与调度状态。")}</p>}
           {runs?.map((run) => (
             <details className="taskRun" key={run.id}>
               <summary>
@@ -136,6 +151,18 @@ export function TaskResults({ task, referenceControl }: { task: Task; referenceC
             </details>
           ))}
         </div>
+        <details className="taskTechnicalDetails"><summary>{tr("Timing & chat reference", "时间与聊天引用")}</summary>
+          <div className="automationDetailGrid">
+            <div><span>{tr("Created", "创建时间")}</span><strong>{timestamp(task.created_at)}</strong></div>
+            <div><span>{tr("Last run", "上次执行")}</span><strong>{timestamp(task.last_run_at)}</strong></div>
+            <div><span>{tr("Expires", "到期时间")}</span><strong>{task.expires_at ? timestamp(task.expires_at) : tr("No expiry", "未设置")}</strong></div>
+            <div><span>{tr("Check interval", "检查间隔")}</span><strong>{Math.round(task.interval_seconds / 60)} {tr("min", "分钟")}</strong></div>
+          </div>{!taskNeedsAgent(task) && chatReference}
+          <div className="taskSavedInstructions"><strong>{tr("Saved instructions", "已保存的指令")}</strong>
+            {instructions.objective ? <><p>{instructions.objective}</p><p>{tr("Success criteria", "成功标准")}: {instructions.success_criteria}</p><p>{tr("Decision executor", "决策执行器")}: {instructions.controller === "source" ? tr("Connected AI client", "已连接 AI 客户端") : tr("Hosted AI", "托管 AI")}</p></>
+              : instructions.steps?.map((step, index) => step.command ? <div key={index}><p>{tr("Shell command · executed verbatim", "Shell 命令 · 原样执行")}{step.cwd ? ` · ${step.cwd}` : ""}</p><pre>{step.command}</pre></div> : <p key={index}>{step.type}</p>)}
+          </div>
+        </details>
         <p className="automationDetailNote"><a href="/docs/long-running-work">{tr("Understand task recovery and completion checks", "了解任务恢复与完成验收")} →</a></p>
       </div>
     </details>

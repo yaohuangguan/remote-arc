@@ -1,3 +1,21 @@
+export type SecurityGrant = {
+  grantId: string;
+  clientId: string;
+  clientName: string;
+  scopes: string[];
+  authorizedAt: string;
+  lastTokenIssuedAt: string;
+  accessExpiresAt: string;
+  refreshExpiresAt: string | null;
+  tokenRows: number;
+  status: "active" | "refreshable" | "expired";
+};
+
+export type SecurityState = {
+  mcpPaused: boolean;
+  grants: SecurityGrant[];
+};
+
 export type DeviceMetadata = {
   id: string;
   name: string;
@@ -7,6 +25,10 @@ export type DeviceMetadata = {
   agentVersion: string;
   pid?: number;
   backgroundProcess?: boolean;
+  recoveryEnabled?: boolean;
+  supervisorActive?: boolean;
+  supervisorPid?: number | null;
+  supervisorService?: string;
   connectedAt?: string;
   lastSeen?: string;
 };

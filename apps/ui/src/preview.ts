@@ -1,3 +1,5 @@
+import type { SecurityState } from "@remotearc/protocol";
+
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
 const previewNow = () => new Date().toISOString();
@@ -42,8 +44,19 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       policy_enforcement_available: true,
       undo_history_available: true,
       background_agent_available: true,
+      background_recovery_available: true,
+      background_guard_active: true,
+      background_guard_pid: 4821,
+      execution_mode: "foreground",
       background_enabled: true,
       background_service: "launchd",
+      background_active: false,
+      background_pid: null,
+      background_agent_version: null,
+      background_connected_at: null,
+      agent_version: "0.4.4",
+      agent_pid: 4926,
+      connected_at: previewAgo(3600000),
       background_seen_at: previewAgo(18000),
       automation_permissions: { background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: true, keep_awake: true },
       keep_awake_available: true,
@@ -69,7 +82,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       undo_history_available: true,
       background_agent_available: true,
       background_enabled: false,
-      background_service: "schtasks",
+      background_service: "registry-run",
       background_seen_at: previewAgo(4 * 3600000),
       automation_permissions: { background_tasks: true, scheduled_tasks: true, adaptive_agent: false, source_agent: false, keep_awake: false },
       keep_awake_available: false,
@@ -275,11 +288,14 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       });
     }
 
+    if (url.pathname === "/api/approvals") return json([]);
+
     if (url.pathname === "/api/security") {
       return json({
         mcpPaused: false,
         grants: [
           {
+            grantId: "preview-chatgpt-grant",
             clientId: "preview-chatgpt",
             clientName: "ChatGPT",
             scopes: ["devices:read", "computer:read", "computer:write"],
@@ -291,6 +307,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
             status: "active",
           },
           {
+            grantId: "preview-claude-grant",
             clientId: "preview-claude",
             clientName: "Claude",
             scopes: ["devices:read", "computer:read"],
@@ -302,7 +319,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
             status: "active",
           },
         ],
-      });
+      } satisfies SecurityState);
     }
 
     if (url.pathname === "/api/monitor") {
@@ -343,7 +360,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     }
 
     if (url.pathname === "/api/devices") return json(devices);
-    if (url.pathname === "/api/automations") return json({ automations });
+    if (url.pathname === "/api/automations") return json({ automations: automations.map(item => ({ ...item, run_started_count: item.run_count + (item.status === "running" ? 1 : 0) })), capabilities: { hosted_planner: true, github_merge: true }, scheduler: { state: "healthy", last_success_at: new Date().toISOString(), overdue_count: 0 } });
     const taskId = url.pathname.match(/^\/api\/automations\/([^/]+)$/)?.[1];
     if (taskId) {
       const automation = automations.find((item) => item.id === taskId);
