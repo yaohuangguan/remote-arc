@@ -519,7 +519,12 @@ export function renderMarketingHtml(html: string, pathname: string) {
     .replace(/<meta property="og:image"[^>]*>/, "")
     .replace("</head>", extra + "</head>");
 
-  // The homepage is a client-rendered SPA. Injecting crawl-only body copy into #root\n  // causes a visible text flash before React replaces it on first paint. Keep the\n  // metadata and JSON-LD above, but leave the homepage root empty for the app.\n  if (pathname === "/") return html;\n\n  if (!page) {
+  // The homepage is a client-rendered SPA. Injecting crawl-only body copy into #root
+  // causes a visible text flash before React replaces it on first paint. Keep the
+  // metadata and JSON-LD above, but leave the homepage root empty for the app.
+  if (pathname === "/") return html;
+
+  if (!page) {
     return html.replace('<div id="root"></div>', '<div id="root">' + notFoundHtml(pathname) + '</div>');
   }
   if (pathname === "/blogs") {
