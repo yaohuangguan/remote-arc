@@ -604,10 +604,10 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       const eventResponse = await handleTaskEventRpc(request, env, validIdentity);
       if (eventResponse) return eventResponse;
       const handler = createRemoteLinkMcp(env, validIdentity, {
-        kickScheduler: () => {
+        kickScheduler: (automationId) => {
           if (!ctx) return;
           ctx.waitUntil(
-            runAutomationTick(env).catch((error) => {
+            runAutomationTick(env, new Date(), automationId).catch((error) => {
               console.warn("source_goal_scheduler_kick_failed", {
                 error: error instanceof Error ? error.message : String(error),
               });
