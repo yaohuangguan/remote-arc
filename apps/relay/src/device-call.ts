@@ -145,6 +145,28 @@ export async function callDevice(
         ...(approvedWrite ? [approvedWrite.target_path] : []),
       ];
 
+  let effectiveArgs = args;
+  if (tool === "start_process") {
+    const explicitCwd =
+      typeof args.cwd === "string" && args.cwd.trim() ? args.cwd : undefined;
+    const implicitCwd =
+      !explicitCwd && taskWorkspaceRoot
+        ? taskWorkspaceRoot
+        : !explicitCwd && workspaceRoots.length === 1
+          ? workspaceRoots[0]
+          : undefined;
+
+    if (!explicitCwd && !implicitCwd && workspaceRoots.length > 1) {
+      throw new Error(
+        "start_process requires cwd when multiple Trusted Write Locations are configured.",
+      );
+    }
+
+    if (implicitCwd) {
+      effectiveArgs = { ...args, cwd: implicitCwd };
+    }
+  }
+
   const registryRequest = () =>
     new Request("https://registry/call", {
       method: "POST",
@@ -156,7 +178,7 @@ export async function callDevice(
         requestId,
         deviceId,
         tool,
-        arguments: args,
+        arguments: effectiveArgs,
         policy: {
           ...(taskWorkspaceRoot ? { taskWorkspaceRoot } : {}),
           workspaceRoots: effectiveWorkspaceRoots,

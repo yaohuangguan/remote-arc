@@ -182,4 +182,115 @@ function sessionDb(options?: {
   }
 }
 
+{
+  const { db } = sessionDb({
+    deviceRow: {
+      id: "device-1",
+      allowed_tools: JSON.stringify(["start_process"]),
+      workspace_roots: JSON.stringify(["/trusted/project"]),
+      sensitive_paths: null,
+      sensitive_allow_paths: null,
+      protect_sensitive_paths: 1,
+      undo_enabled: 1,
+      automation_permissions: "{}",
+    },
+  });
+
+  let forwarded: Record<string, unknown> | null = null;
+  const env = {
+    DB: db,
+    PUBLIC_ORIGIN: APP_ORIGIN,
+    REGISTRY: {
+      getByName() {
+        return {
+          async fetch(request: Request) {
+            forwarded = (await request.json()) as Record<string, unknown>;
+            return Response.json({ result: { content: [{ type: "text", text: "ok" }] } });
+          },
+        };
+      },
+    },
+  };
+
+  const identity = {
+    userId: USER_ID,
+    clientId: "client-1",
+    grantId: "grant-1",
+    scope: "computer:read computer:write",
+    resource: APP_ORIGIN + "/mcp",
+  };
+
+  await callDevice(
+    env as never,
+    identity,
+    "device-1",
+    "start_process",
+    { command: "echo hello" },
+  );
+
+  const forwardedArguments =
+    forwarded && typeof forwarded.arguments === "object"
+      ? (forwarded.arguments as Record<string, unknown>)
+      : null;
+  if (forwardedArguments?.cwd !== "/trusted/project") {
+    throw new Error("start_process did not default cwd to the sole Trusted Write Location");
+  }
+}
+
+{
+  const { db } = sessionDb({
+    deviceRow: {
+      id: "device-1",
+      allowed_tools: JSON.stringify(["start_process"]),
+      workspace_roots: JSON.stringify(["/trusted/a", "/trusted/b"]),
+      sensitive_paths: null,
+      sensitive_allow_paths: null,
+      protect_sensitive_paths: 1,
+      undo_enabled: 1,
+      automation_permissions: "{}",
+    },
+  });
+
+  let registryTouched = false;
+  const env = {
+    DB: db,
+    PUBLIC_ORIGIN: APP_ORIGIN,
+    REGISTRY: {
+      getByName() {
+        registryTouched = true;
+        throw new Error("registry should not be reached without an explicit cwd");
+      },
+    },
+  };
+
+  const identity = {
+    userId: USER_ID,
+    clientId: "client-1",
+    grantId: "grant-1",
+    scope: "computer:read computer:write",
+    resource: APP_ORIGIN + "/mcp",
+  };
+
+  let missingCwdBlocked = false;
+  try {
+    await callDevice(
+      env as never,
+      identity,
+      "device-1",
+      "start_process",
+      { command: "echo hello" },
+    );
+  } catch (error) {
+    missingCwdBlocked = String(error).includes(
+      "requires cwd when multiple Trusted Write Locations are configured",
+    );
+  }
+  if (!missingCwdBlocked) {
+    throw new Error("start_process did not require cwd with multiple Trusted Write Locations");
+  }
+  if (registryTouched) {
+    throw new Error("ambiguous terminal call reached the device registry");
+  }
+}
+
 console.log("Security grant and workspace-boundary regression tests passed");
