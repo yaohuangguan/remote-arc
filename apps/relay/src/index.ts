@@ -42,6 +42,7 @@ import {
   handleAutomationCollection,
   handleAutomationItem,
   handleAutomationWebhook,
+  runAutomationTick,
 } from "./automations.js";
 import {
   handleGrantRevoke,
@@ -117,7 +118,7 @@ function withTrustedDeviceHeaders(
   return new Request(request, { headers });
 }
 
-async function handleFetch(request: Request, env: Env): Promise<Response> {
+async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     const marketingOrigin = env.MARKETING_ORIGIN || "https://remotearc.app";
@@ -602,7 +603,18 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
 
       const eventResponse = await handleTaskEventRpc(request, env, validIdentity);
       if (eventResponse) return eventResponse;
-      const handler = createRemoteLinkMcp(env, validIdentity);
+      const handler = createRemoteLinkMcp(env, validIdentity, {
+        kickScheduler: () => {
+          if (!ctx) return;
+          ctx.waitUntil(
+            runAutomationTick(env).catch((error) => {
+              console.warn("source_goal_scheduler_kick_failed", {
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }),
+          );
+        },
+      });
       const response = await handler.fetch(request);
 
       // Keep the standard HTTP auth challenge on unauthenticated MCP failures
@@ -706,7 +718,7 @@ export default {
     ctx: ExecutionContext,
   ): Promise<Response> {
     try {
-      const response = await handleFetch(request, env);
+      const response = await handleFetch(request, env, ctx);
       if (response.status >= 500) {
         ctx.waitUntil(
           recordServiceIncident(
