@@ -155,7 +155,7 @@ export function createRemoteLinkMcp(
 ) {
   return createMcpHandler(() => {
     const server = new McpServer(
-      { name: "remotearc", version: "0.4.0" },
+      { name: "remotearc", version: "0.4.4" },
       { capabilities: { tools: {} } },
     );
 
