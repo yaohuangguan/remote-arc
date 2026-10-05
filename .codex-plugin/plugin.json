@@ -1,29 +1,29 @@
 {
   "interface": {
     "displayName": "Remote Arc",
-    "shortDescription": "Secure remote MCP for your computers.",
-    "longDescription": "Connect ChatGPT to computers you authorize through Remote Arc. Pair devices with the remotelink CLI, then inspect files, run development commands, and work across Windows, macOS, and Linux through a secure Remote MCP control plane.",
+    "shortDescription": "Persistent agent runtime for your computers.",
+    "longDescription": "Remote Arc gives AI agents a persistent, permissioned runtime across computers you authorize. Pair Windows, macOS, and Linux devices with remotelink, then inspect files, run development commands, create durable tasks and Agent Goals, resume saved work in later chats, and manage execution from the Remote Arc Dashboard.",
     "websiteURL": "https://remotearc.app",
     "brandColor": "#38BDF8",
     "logo": "../assets/plugin-logo.svg",
     "composerIcon": "../assets/plugin-logo.svg",
-    "defaultPrompt": "List my connected Remote Arc devices and tell me which ones are online.",
+    "defaultPrompt": "List my Remote Arc devices and persistent tasks, then tell me what is online or needs attention.",
     "developerName": "Remote Arc",
     "category": "Other",
     "capabilities": []
   },
   "name": "remote-arc",
-  "version": "0.4.4",
-  "description": "Securely connect ChatGPT to your Windows, macOS, and Linux computers through Remote Arc.",
+  "version": "0.4.5",
+  "description": "Persistent agent runtime that connects ChatGPT to your own computers.",
   "author": {
     "name": "Remote Arc"
   },
   "keywords": [
-    "remote",
+    "agent-runtime",
+    "persistent-agent",
+    "remote-computer",
     "mcp",
-    "computer",
-    "developer-tools",
-    "self-hosted"
+    "developer-tools"
   ],
   "homepage": "https://remotearc.app",
   "repository": "https://github.com/yaohuangguan/remote-arc",

@@ -3,8 +3,8 @@
   "schema_version": 1,
   "app_info": {
     "display_name": "Remote Arc",
-    "subtitle": "Access your computer remotely",
-    "description": "Remote Arc securely connects ChatGPT and Codex to Windows, macOS, Linux, and explicitly shared Chrome tabs. It can inspect directories and files, read process information, read shared browser tabs, and\u2014only when the user separately enables the required permission\u2014run terminal commands, modify files, or click/fill non-sensitive controls in a specific shared tab. Browser interaction is per-tab, stale snapshot refs are rejected, and recognized password, one-time-code, payment-card, and file-picker fields remain blocked. Each device has an independent revocable credential and policy. Remote Arc uses an OAuth-protected Universal Remote MCP endpoint and an outbound-only device connection. Use it only with computers, files, accounts, and services you own or are authorized to administer.",
+    "subtitle": "Persistent agent runtime for your computers",
+    "description": "Remote Arc is a persistent, permissioned agent runtime that connects ChatGPT and Codex to Windows, macOS, Linux, and explicitly shared Chrome tabs. It can inspect local state, run approved commands, modify files, create durable long-running tasks and Agent Goals, preserve bounded task context across chat sessions, and let the user pause, resume, or cancel saved work. Computer writes, browser interaction, persistent automation, and adaptive agent decisions use separate permissions and OAuth scopes. Browser interaction is per-tab, stale snapshot refs are rejected, and recognized password, one-time-code, payment-card, and file-picker fields remain blocked. Each device has an independent revocable credential and policy. Remote Arc uses an OAuth-protected Remote MCP endpoint and an outbound-only device connection. Use it only with computers, files, accounts, and services you own or are authorized to administer.",
     "category": "DEVELOPER_TOOLS"
   },
   "tools": {
@@ -258,6 +258,126 @@
         "read_only_justification": "Changes a field in the explicitly shared page, so it is not read-only, even though it does not submit the form by itself.",
         "open_world_justification": "It types into a control on an external website and may influence subsequent actions on that service.",
         "destructive_justification": "The tool only fills an allowed non-sensitive control and does not itself submit or click; recognized password, OTP, payment-card, and file fields are blocked."
+      }
+    },
+    "read_binary_file": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads a bounded byte range and metadata from a file on the paired computer without modifying the file.",
+        "open_world_justification": "Reads from the user's private paired computer and does not itself contact a public internet service.",
+        "destructive_justification": "Does not write, delete, overwrite, or otherwise mutate the requested file."
+      }
+    },
+    "create_file_resource": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Creates short-lived control-plane state for a temporary bearer file resource, so it is not strictly read-only.",
+        "open_world_justification": "The resource represents a file on the user's paired computer and does not itself modify a public internet service.",
+        "destructive_justification": "Does not modify the underlying file and the resource expires automatically; it only creates temporary read access."
+      }
+    },
+    "revoke_file_resource": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Changes Remote Arc control-plane state by revoking a temporary file resource.",
+        "open_world_justification": "Revocation is confined to Remote Arc's private control plane and does not target an external internet service.",
+        "destructive_justification": "Only removes temporary bearer access and does not delete or modify the underlying user file."
+      }
+    },
+    "create_automation": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Creates persistent future work in Remote Arc, so it changes durable control-plane state and may later execute approved actions.",
+        "open_world_justification": "A saved automation may later run terminal commands, call configured webhooks, or perform another explicitly authorized external action.",
+        "destructive_justification": "Persistent tasks can execute consequential commands or external actions after the creating chat turn, so Remote Arc requires dedicated automation authority."
+      }
+    },
+    "create_agent_goal": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Creates a durable adaptive goal that can choose bounded follow-up actions over time, so it changes persistent state.",
+        "open_world_justification": "An Agent Goal may use approved terminal or other open-world capabilities while pursuing the saved objective.",
+        "destructive_justification": "Adaptive execution can make persistent local or external changes within the approved tool and policy boundary."
+      }
+    },
+    "list_automations": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads account-scoped metadata for saved Remote Arc tasks and watches without changing their state.",
+        "open_world_justification": "Reads Remote Arc control-plane records and does not itself contact or modify an external service.",
+        "destructive_justification": "Does not start, pause, resume, cancel, or otherwise mutate saved work."
+      }
+    },
+    "get_automation": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads one saved task, its frozen plan, runtime metadata, and recent run summaries without changing execution.",
+        "open_world_justification": "Reads Remote Arc control-plane state and does not itself perform an external action.",
+        "destructive_justification": "Does not execute, pause, resume, cancel, or modify the task."
+      }
+    },
+    "get_goal_context": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads durable Agent Goal context, observations, memory, evidence, and progress journal without changing the goal.",
+        "open_world_justification": "Reads saved Remote Arc task state and does not itself contact or modify a public service.",
+        "destructive_justification": "Does not execute a tool or mutate the saved goal."
+      }
+    },
+    "submit_goal_decision": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Submits the next bounded decision for a source-controlled persistent goal, which changes durable task state and may execute an approved tool.",
+        "open_world_justification": "The selected decision may invoke a terminal or another approved capability that can interact with external services.",
+        "destructive_justification": "A submitted decision can cause persistent file, process, repository, deployment, or other consequential changes within the saved permission boundary."
+      }
+    },
+    "manage_automation": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": false,
+        "destructiveHint": true
+      },
+      "justifications": {
+        "read_only_justification": "Pauses, resumes, or cancels persistent work and therefore changes task state.",
+        "open_world_justification": "The management action targets Remote Arc task state; it does not directly call a public service.",
+        "destructive_justification": "Cancel can stop active work and resume can allow consequential saved work to continue, so management is treated as consequential."
       }
     }
   },

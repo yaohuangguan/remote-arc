@@ -34,7 +34,7 @@ const articles: Record<string, SeoPage> = {
   },
   "/blogs/remote-arc-vs-openclaw": {
     title: "Remote Arc vs OpenClaw: two different layers of the AI stack",
-    description: "Remote Arc and OpenClaw can both help AI act on computers, but they solve different layers: controlled remote execution versus a self-hosted assistant and agent gateway.",
+    description: "Remote Arc and OpenClaw can both help AI act on computers, but they own different layers: a persistent real-computer agent runtime versus a self-hosted assistant and agent gateway.",
     canonical: SITE + "/blogs/remote-arc-vs-openclaw",
     type: "article",
     author: "Sam Yao",
@@ -87,7 +87,7 @@ const articles: Record<string, SeoPage> = {
 };
 
 const pages: Record<string, SeoPage> = {
-  "/": { title: "Remote Arc — Remote Computer Access for AI via MCP", description: "Connect ChatGPT, Claude, Cursor and compatible MCP clients to paired Windows, macOS and Linux computers with explicit per-device permissions.", canonical: SITE + "/" },
+  "/": { title: "Remote Arc — Persistent Agent Runtime for Your Computers", description: "Give ChatGPT, Claude, Codex and compatible AI clients a persistent, permissioned runtime across your own Windows, macOS and Linux computers, with durable tasks and Agent Goals.", canonical: SITE + "/" },
   "/install": { title: "Install Remote Arc for ChatGPT, Claude and Cursor", description: "Install Remote Arc, pair your computer and connect your AI client through Remote MCP.", canonical: SITE + "/install/chatgpt" },
   "/install/chatgpt": { title: "Install Remote Arc for ChatGPT", description: "Connect ChatGPT to Windows, macOS or Linux through Remote Arc and a secure OAuth-protected Remote MCP endpoint.", canonical: SITE + "/install/chatgpt" },
   "/install/claude": { title: "Install Remote Arc for Claude", description: "Connect Claude to paired computers through Remote Arc using a secure Remote MCP connector and explicit device permissions.", canonical: SITE + "/install/claude" },

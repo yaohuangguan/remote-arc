@@ -2133,11 +2133,11 @@ function Landing({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <section className="landingHero">
         <div className="heroCopy">
-          <span className="eyebrow">{tr("YOUR AI. YOUR COMPUTER.", "你的 AI，你的电脑。")}</span>
+          <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
           <HeroHeadline />
           <p>{tr(
-            "Use your AI from anywhere to build, fix and run on your own computer. Connect ChatGPT, Claude or another MCP client, with permissions you control.",
-            "无论你在哪里，都能让 ChatGPT、Claude 或其他 MCP 客户端使用自己电脑上的文件与工具。开发、修复与执行，权限由你掌控。"
+            "Give the AI you already use a persistent, permissioned runtime across your own computers. Start work now, save long-running goals, and return in a later chat without losing the execution state.",
+            "让你已经在用的 AI 获得跨真实电脑的持久化、可控 Runtime。现在开始工作，保存长任务与目标，换到之后的聊天仍可从已保存的执行状态继续。"
           )}</p>
           <div className="heroPrimaryCommand">
             <span>{tr("START HERE · RUN ON YOUR COMPUTER", "从这里开始 · 在电脑上运行")}</span>
@@ -2187,7 +2187,7 @@ function Landing({ user }: { user?: User | null }) {
             <LogoMark />
             <div>
               <strong>Remote Arc</strong>
-              <small>{tr("Secure routing · device presence · permissions", "安全路由 · 设备在线状态 · 权限控制")}</small>
+              <small>{tr("Persistent tasks · device presence · permissions", "持久任务 · 设备在线状态 · 权限控制")}</small>
             </div>
           </div>
 
@@ -2714,7 +2714,7 @@ function BlogsPage({ user }: { user?: User | null }) {
         "Remote Arc 和 OpenClaw 有什么区别：它们其实处在 AI 技术栈的不同层",
       ),
       summary: tr(
-        "Both can help AI do things on real computers, but OpenClaw is a self-hosted assistant and gateway platform while Remote Arc is a remote execution layer for AI clients you already use.",
+        "Both can help AI act on real computers, but OpenClaw is a self-hosted assistant and gateway platform while Remote Arc is a persistent agent runtime beneath the AI clients you already use.",
         "两者都能让 AI 在真实电脑上做事，但 OpenClaw 更像自托管 Assistant / Gateway 平台，而 Remote Arc 是给你已经在用的 AI 客户端提供远程执行能力的一层。",
       ),
       tag: tr("COMPARISON", "产品对比"),
@@ -2902,8 +2902,8 @@ function RemoteArcVsOpenClawArticlePage({ user }: { user?: User | null }) {
             "Remote Arc 和 OpenClaw 有什么区别：它们其实处在 AI 技术栈的不同层",
           )}</h1>
           <p className="blogDeck">{tr(
-            "They can both help AI act on real computers, but they start from very different product boundaries. One is an assistant and agent platform. The other is a controlled remote execution layer.",
-            "它们都可以让 AI 在真实电脑上做事，但产品边界完全不同：一个更像 Assistant 与 Agent 平台，另一个更像受控的远程执行层。",
+            "They can both help AI act on real computers, but they start from different product boundaries. OpenClaw is an assistant and agent platform; Remote Arc is a persistent runtime that keeps approved work, execution state and real-device access alive beneath the AI client you choose.",
+            "它们都可以让 AI 在真实电脑上做事，但产品边界不同：OpenClaw 是 Assistant 与 Agent 平台；Remote Arc 是位于你所选 AI 客户端之下的持久化 Runtime，负责保存任务、执行状态与真实设备访问。",
           )}</p>
           <div className="blogByline"><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")} · {post.date} · {post.readTime}</span></div></div>
         </header>
@@ -2920,16 +2920,16 @@ function RemoteArcVsOpenClawArticlePage({ user }: { user?: User | null }) {
           )}</p>
 
           <p>{tr(
-            "Remote Arc intentionally stops earlier. It does not try to own the conversation, memory, model or agent loop. It gives an AI client you already chose — ChatGPT, Claude, Codex or another compatible MCP client — a controlled way to reach computers you explicitly paired.",
-            "Remote Arc 刻意停在更底层。它不试图拥有对话、记忆、模型或 Agent Loop，而是给你已经选择好的 AI 客户端——例如 ChatGPT、Claude、Codex 或其他兼容 MCP 的客户端——提供一种受控方式去访问你明确配对的电脑。",
+            "Remote Arc deliberately owns a different layer. It does not replace your conversation UI or model; it owns the durable execution layer beneath them: paired computers, task state, checkpoints, bounded Agent Goals, recovery and permissioned tool execution. ChatGPT, Claude, Codex or another compatible MCP client can act as the reasoning source above that runtime.",
+            "Remote Arc 刻意负责不同的一层：它不替代你的对话界面或模型，而是负责其下方的持久执行层——配对电脑、任务状态、检查点、受限 Agent Goal、恢复机制与权限化工具执行。ChatGPT、Claude、Codex 或其他兼容 MCP 的客户端可以作为 Runtime 上方的推理来源。",
           )}</p>
 
-          <h2>{tr("OpenClaw is an AI home. Remote Arc is an AI bridge.", "OpenClaw 更像 AI 的“家”，Remote Arc 更像 AI 的“桥”。")}</h2>
+          <h2>{tr("OpenClaw is an AI home. Remote Arc is the runtime underneath.", "OpenClaw 更像 AI 的“家”，Remote Arc 是它下方的 Runtime。")}</h2>
           <div className="blogCompareTable">
             <div className="blogCompareHead"><span></span><strong>Remote Arc</strong><strong>OpenClaw</strong></div>
-            <div><span>{tr("Primary role", "核心角色")}</span><b>{tr("Remote computer execution layer", "远程电脑执行层")}</b><b>{tr("Self-hosted assistant / gateway platform", "自托管 Assistant / Gateway 平台")}</b></div>
+            <div><span>{tr("Primary role", "核心角色")}</span><b>{tr("Persistent agent runtime for real computers", "面向真实电脑的持久化 Agent Runtime")}</b><b>{tr("Self-hosted assistant / gateway platform", "自托管 Assistant / Gateway 平台")}</b></div>
             <div><span>{tr("Who owns the conversation", "谁承载对话")}</span><b>{tr("Your existing AI client", "现有 AI 客户端")}</b><b>{tr("OpenClaw Gateway and its channels", "OpenClaw Gateway 与其渠道")}</b></div>
-            <div><span>{tr("Model/runtime", "模型 / Runtime")}</span><b>{tr("External to Remote Arc", "不由 Remote Arc 承载")}</b><b>{tr("Part of the OpenClaw platform", "属于 OpenClaw 平台能力")}</b></div>
+            <div><span>{tr("Model / reasoning", "模型 / 推理")}</span><b>{tr("External source; runtime state stays in Remote Arc", "外部提供推理；Runtime 状态由 Remote Arc 持久化")}</b><b>{tr("Part of the OpenClaw platform", "属于 OpenClaw 平台能力")}</b></div>
             <div><span>MCP</span><b>{tr("Primary remote interface to paired computers", "连接已配对电脑的核心远程接口")}</b><b>{tr("One interface among several; can serve and consume MCP", "多种接口之一；既能作为 MCP Server，也能消费 MCP")}</b></div>
             <div><span>{tr("Deployment", "部署方式")}</span><b>{tr("Managed control plane + local agent", "托管控制面 + 本地 Agent")}</b><b>{tr("Self-hosted Gateway by default", "默认自托管 Gateway")}</b></div>
             <div><span>{tr("Computer control", "电脑控制")}</span><b>{tr("Files, processes, terminal and explicit device skills", "文件、进程、终端与明确设备技能")}</b><b>{tr("Broader agent tooling, including computer-use providers", "更广泛的 Agent 工具，包括 Computer Use Provider")}</b></div>
@@ -2964,8 +2964,8 @@ function RemoteArcVsOpenClawArticlePage({ user }: { user?: User | null }) {
           )}</p>
 
           <p>{tr(
-            "In principle the two models can even meet: OpenClaw supports remote MCP server definitions, while Remote Arc exposes a Remote MCP endpoint. That makes Remote Arc less of an alternative runtime and more of a reusable computer-access layer that different runtimes can sit above.",
-            "从架构上看，两者甚至可以连接起来：OpenClaw 支持配置远程 MCP Server，而 Remote Arc 本身就暴露 Remote MCP Endpoint。这样看，Remote Arc 更不像另一个 Agent Runtime，而更像一层可以被不同 Runtime 复用的电脑访问能力。",
+            "The two models can even meet: OpenClaw can consume remote MCP servers, while Remote Arc exposes one. In that setup OpenClaw can be the assistant above Remote Arc, while Remote Arc remains the persistent computer runtime below it. The same runtime can instead be driven by ChatGPT, Claude, Codex or another compatible client.",
+            "从架构上看，两者甚至可以连接起来：OpenClaw 可以消费 Remote MCP，而 Remote Arc 暴露对应 Endpoint。此时 OpenClaw 可以作为上层 Assistant，Remote Arc 仍是下方的持久化电脑 Runtime；同一个 Runtime 也可以由 ChatGPT、Claude、Codex 或其他兼容客户端驱动。",
           )}</p>
 
           <div className="blogSourceNote">
