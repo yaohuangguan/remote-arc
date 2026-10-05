@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 import {
   createBackgroundController,
   windowsSupervisorLaunchScript,
@@ -210,14 +211,16 @@ try {
   // stale interval; never manually remove a live lock or adjust its timestamps.
   const tsx = createRequire(
     new URL("../../execution-core/package.json", import.meta.url),
-  ).resolve("tsx/cli");
+  ).resolve("tsx");
   const holder = path.join(temp, "holder.mts");
   const runtime = new URL("../src/agent-runtime.ts", import.meta.url).href;
   await fs.writeFile(
     holder,
-    `import { tryAgentLease } from ${JSON.stringify(runtime)}; await tryAgentLease(process.argv[2]); console.log('owned'); setInterval(()=>{},1000);`,
+    `import { tryAgentLease } from ${JSON.stringify(runtime)}; await tryAgentLease(process.argv[2]); console.log('owned:'+process.pid); setInterval(()=>{},1000);`,
   );
-  const child = spawn(process.execPath, [tsx, holder, leaseDir], {
+  // Load TS in the actual owner process. The tsx CLI may fork a second Node;
+  // killing its wrapper on Unix leaves the owner and stdout pipe alive.
+  const child = spawn(process.execPath, ["--import", pathToFileURL(tsx).href, holder, leaseDir], {
     stdio: ["ignore", "pipe", "inherit"],
     windowsHide: true,
   });
@@ -225,7 +228,10 @@ try {
     child.once("close", () => resolve()),
   );
   await new Promise<void>((resolve, reject) => {
-    child.stdout.once("data", () => resolve());
+    child.stdout.once("data", data => {
+      try { assert.equal(data.toString().trim(), "owned:" + child.pid); resolve(); }
+      catch (error) { reject(error); }
+    });
     child.once("error", reject);
     child.once("exit", () => reject(new Error("holder exited early")));
   });

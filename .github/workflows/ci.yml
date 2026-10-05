@@ -7,6 +7,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -26,6 +27,7 @@ jobs:
       - run: pnpm test:recovery
 
   native-core:
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
