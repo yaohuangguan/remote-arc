@@ -6224,7 +6224,7 @@ const PRODUCT_RELEASES: ProductRelease[] = [
     ],
   },
   {
-    version: "0.4.0",
+    version: "0.4.4",
     date: "2026-10-04",
     status: "released",
     title: "Durable work and adaptive agents",

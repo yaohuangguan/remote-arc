@@ -227,7 +227,7 @@ async function handleFetch(request: Request, env: Env): Promise<Response> {
       return Response.json({
         ok: true,
         service: "remotearc-relay",
-        version: "0.4.0",
+        version: "0.4.4",
         auth: "oauth2-pkce",
       });
     }

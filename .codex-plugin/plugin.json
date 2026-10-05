@@ -13,7 +13,7 @@
     "capabilities": []
   },
   "name": "remote-arc",
-  "version": "0.4.0",
+  "version": "0.4.4",
   "description": "Securely connect ChatGPT to your Windows, macOS, and Linux computers through Remote Arc.",
   "author": {
     "name": "Remote Arc"
