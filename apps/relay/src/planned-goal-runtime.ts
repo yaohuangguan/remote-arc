@@ -321,6 +321,14 @@ export async function executePlannedGoal(env: AutomationEnv, task: AutomationRow
     // identical observations count toward the bounded no-progress watchdog.
     const material = ["write_file", "edit_block"].includes(decision.tool);
     if (recordProgress(s, agent.observation, material, false)) { await reject("No material progress within policy."); await phaseEnd("blocked", "No material progress within policy."); return; }
+    if (goal.controller === "source" && !state.process_id) {
+      // The source AI already has a fresh observation and no deterministic
+      // device work remains. Hand control back immediately instead of burning
+      // another scheduler interval before the next reasoning turn.
+      state.phase = "awaiting_agent";
+      await ops.save("waiting_for_event", wakeAt(task, s), null, "planned_observation");
+      return;
+    }
     await save("planned_observation", state.process_id ? "running" : "waiting");
   } catch (e) {
     if (e instanceof LeaseLostError) throw e;
