@@ -2333,6 +2333,7 @@ async function claimAutomation(
 export async function runAutomationTick(
   env: AutomationEnv,
   at = new Date(),
+  onlyAutomationId?: string,
 ) {
   const now = at.toISOString();
   await maintainTaskKeepAwake(env);
@@ -2385,10 +2386,11 @@ export async function runAutomationTick(
        AND next_run_at IS NOT NULL
        AND next_run_at <= ?1
        AND (expires_at IS NULL OR expires_at > ?1)
+       AND (?2 IS NULL OR id = ?2)
      ORDER BY next_run_at ASC
      LIMIT 20`,
   )
-    .bind(now)
+    .bind(now, onlyAutomationId || null)
     .all<AutomationRow>();
 
   let executed = 0;
