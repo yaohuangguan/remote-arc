@@ -19,9 +19,15 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
+    "ai:connect": "node --experimental-strip-types src/chatgpt-plan-poc.ts connect",
+    "ai:status": "node --experimental-strip-types src/chatgpt-plan-poc.ts status",
+    "ai:models": "node --experimental-strip-types src/chatgpt-plan-poc.ts models",
+    "ai:test": "node --experimental-strip-types src/chatgpt-plan-poc.ts test",
+    "ai:disconnect": "node --experimental-strip-types src/chatgpt-plan-poc.ts disconnect",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
+    "jose": "^6.2.12",
     "proper-lockfile": "^4.1.2",
     "ws": "^8.18.3"
   },
