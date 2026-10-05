@@ -1,5 +1,6 @@
 import { callDevice } from "../src/device-call.js";
 import { handleGrantRevoke, handleSecurityState } from "../src/security.js";
+import { parseSecurityState } from "../../ui/src/security-state.js";
 
 const APP_ORIGIN = "https://mcp.remotearc.app";
 const USER_ID = "user-1";
@@ -111,6 +112,9 @@ function sessionDb(options?: {
   const payload = (await response.json()) as {
     grants?: Array<{ grantId?: string; clientId?: string }>;
   };
+  if (!parseSecurityState(payload)) {
+    throw new Error("authenticated security API does not match the Dashboard response contract");
+  }
   if (payload.grants?.length !== 2) {
     throw new Error("multiple authorizations for one OAuth client were collapsed");
   }

@@ -1,3 +1,5 @@
+import type { SecurityState } from "@remotearc/protocol";
+
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
 const previewNow = () => new Date().toISOString();
@@ -286,11 +288,14 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       });
     }
 
+    if (url.pathname === "/api/approvals") return json([]);
+
     if (url.pathname === "/api/security") {
       return json({
         mcpPaused: false,
         grants: [
           {
+            grantId: "preview-chatgpt-grant",
             clientId: "preview-chatgpt",
             clientName: "ChatGPT",
             scopes: ["devices:read", "computer:read", "computer:write"],
@@ -302,6 +307,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
             status: "active",
           },
           {
+            grantId: "preview-claude-grant",
             clientId: "preview-claude",
             clientName: "Claude",
             scopes: ["devices:read", "computer:read"],
@@ -313,7 +319,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
             status: "active",
           },
         ],
-      });
+      } satisfies SecurityState);
     }
 
     if (url.pathname === "/api/monitor") {

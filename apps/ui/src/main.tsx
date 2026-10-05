@@ -7,6 +7,8 @@ import { createRoot } from "react-dom/client";
 import { I18nProvider, useI18n } from "./i18n.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
+import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
+import { parsePendingApprovals, parseSecurityState, type PendingApproval } from "./security-state.js";
 import "./styles.css";
 import "./dashboard.css";
 
@@ -156,19 +158,6 @@ type ProductStatus = {
   };
 };
 
-type SecurityGrant = {
-  grantId: string;
-  clientId: string;
-  clientName: string;
-  scopes: string[];
-  authorizedAt: string;
-  lastTokenIssuedAt: string;
-  accessExpiresAt: string;
-  refreshExpiresAt: string | null;
-  tokenRows: number;
-  status: "active" | "refreshable" | "expired";
-};
-
 type DashboardDialog = {
   kind: "notice" | "confirm" | "prompt";
   title: string;
@@ -178,24 +167,6 @@ type DashboardDialog = {
   tone?: "default" | "danger";
   placeholder?: string;
   initialValue?: string;
-};
-
-type SecurityState = {
-  mcpPaused: boolean;
-  grants: SecurityGrant[];
-};
-
-type PendingApproval = {
-  id: string;
-  device_id: string;
-  client_id: string | null;
-  client_name: string | null;
-  grant_id: string | null;
-  request_id: string;
-  tool_name: string;
-  target_path: string;
-  requested_at: string;
-  expires_at: string;
 };
 
 type MonitorIncident = {
@@ -3238,6 +3209,8 @@ function Dashboard({
   const [managedDeviceId, setManagedDeviceId] = useState<string | null>(null);
   const [devicePanel, setDevicePanel] = useState<"access" | "tasks" | "activity">("access");
   const [securityState, setSecurityState] = useState<SecurityState | null>(null);
+  const [securityError, setSecurityError] = useState(false);
+  const securityRefreshRevision = useRef(0);
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
   const [securityBusy, setSecurityBusy] = useState(false);
   const [monitorState, setMonitorState] = useState<MonitorState | null>(null);
@@ -3390,15 +3363,25 @@ function Dashboard({
   }
 
   async function refreshSecurity() {
-    const [securityResponse, approvalsResponse] = await Promise.all([
-      fetch("/api/security"),
-      fetch("/api/approvals"),
-    ]);
-    if (securityResponse.ok) {
-      setSecurityState(await securityResponse.json() as SecurityState);
-    }
-    if (approvalsResponse.ok) {
-      setPendingApprovals(await approvalsResponse.json() as PendingApproval[]);
+    const revision = ++securityRefreshRevision.current;
+    try {
+      const [securityResponse, approvalsResponse] = await Promise.all([
+        fetch("/api/security"), fetch("/api/approvals"),
+      ]);
+      if (!securityResponse.ok || !approvalsResponse.ok) throw new Error("Security data unavailable");
+      const [security, approvals] = await Promise.all([
+        securityResponse.json().then(parseSecurityState), approvalsResponse.json().then(parsePendingApprovals),
+      ]);
+      if (!security || !approvals) throw new Error("Invalid security response");
+      if (revision !== securityRefreshRevision.current) return;
+      setSecurityState(security);
+      setPendingApprovals(approvals);
+      setSecurityError(false);
+    } catch {
+      if (revision !== securityRefreshRevision.current) return;
+      setSecurityState(null);
+      setPendingApprovals([]);
+      setSecurityError(true);
     }
   }
 
@@ -3406,6 +3389,7 @@ function Dashboard({
     approval: PendingApproval,
     decision: "allow_once" | "allow_10m" | "always_folder" | "deny",
   ) {
+    if (UI_PREVIEW || !securityState) return;
     setSecurityBusy(true);
     try {
       const response = await fetch(
@@ -3749,6 +3733,7 @@ function Dashboard({
   }
 
   async function setMcpPaused(paused: boolean) {
+    if (UI_PREVIEW || !securityState) return;
     setSecurityBusy(true);
     try {
       const response = await fetch("/api/security/mcp", {
@@ -3771,6 +3756,7 @@ function Dashboard({
   }
 
   async function revokeGrant(grant: SecurityGrant) {
+    if (UI_PREVIEW || !securityState) return;
     const shortId = grant.grantId.slice(0, 12) + "…";
     const expired = grant.status === "expired";
     const confirmed = await askConfirm(
@@ -5750,7 +5736,7 @@ function Dashboard({
                 <p>{tr("Review authentication, device exposure and recent Remote Arc activity.", "查看身份验证、设备暴露范围与 Remote Arc 最近活动。")}</p>
               </div>
               <div className="securityTopActions">
-                <button className={securityState?.mcpPaused ? "goldButton" : "dangerButton"} disabled={securityBusy} onClick={() => void setMcpPaused(!securityState?.mcpPaused)}>
+                <button className={securityState?.mcpPaused ? "goldButton" : "dangerButton"} disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void setMcpPaused(!securityState?.mcpPaused)}>
                   {securityState?.mcpPaused ? tr("Resume Remote MCP", "恢复 Remote MCP") : tr("Pause Remote MCP", "暂停 Remote MCP")}
                 </button>
                 <button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Device permissions", "设备权限")}</button>
@@ -5758,11 +5744,17 @@ function Dashboard({
               </div>
             </section>
 
+            {securityError && <section className="policyWarning" role="alert">
+              <strong>{tr("Could not load security data", "无法加载安全数据")}</strong>
+              <p>{tr("Your current access state could not be verified. Refresh to try again.", "当前访问状态暂无法确认，请刷新后重试。")}</p>
+              <button className="ghostButton" disabled={securityBusy} onClick={() => void refreshSecurity()}>{tr("Retry", "重试")}</button>
+            </section>}
+
             <section className="securityStatusGrid">
               <article className={"securityStatusCard primary" + (securityState?.mcpPaused ? " paused" : "")}>
-                <div><span>{tr("Remote MCP", "Remote MCP")}</span><i className={"healthDot " + (securityState?.mcpPaused ? "idle" : "good")} /></div>
-                <strong>{securityState?.mcpPaused ? tr("Paused", "已暂停") : tr("Protected", "已保护")}</strong>
-                <small>{securityState?.mcpPaused ? tr("All authenticated MCP calls are blocked until you resume access.", "所有已认证 MCP 调用都会被拦截，直到你恢复访问。") : tr("OAuth, per-device credentials and relay enforcement are active.", "OAuth、每设备凭证与 Relay 权限拦截均已启用。")}</small>
+                <div><span>{tr("Remote MCP", "Remote MCP")}</span><i className={"healthDot " + (!securityState || securityState.mcpPaused ? "idle" : "good")} /></div>
+                <strong>{!securityState ? (securityError ? tr("Unavailable", "暂无法确认") : tr("Checking…", "正在检查…")) : securityState.mcpPaused ? tr("Paused", "已暂停") : tr("Protected", "已保护")}</strong>
+                <small>{!securityState ? tr("Waiting for the current access state from Remote Arc.", "等待 Remote Arc 返回当前访问状态。") : securityState.mcpPaused ? tr("All authenticated MCP calls are blocked until you resume access.", "所有已认证 MCP 调用都会被拦截，直到你恢复访问。") : tr("OAuth, per-device credentials and relay enforcement are active.", "OAuth、每设备凭证与 Relay 权限拦截均已启用。")}</small>
               </article>
               <article className="securityStatusCard">
                 <div><span>{tr("Authentication", "身份验证")}</span><span className="securityMiniState">OAuth</span></div>
@@ -5813,21 +5805,21 @@ function Dashboard({
                     </div>
                     <div className="securityGrantDetails">
                       <span>{tr("Target", "目标")} <strong><code>{approval.target_path}</code></strong></span>
-                      <span>{tr("Request", "请求")} <strong>{approval.request_id.slice(0, 8)}</strong></span>
+                      <span>{tr("Request", "请求")} <strong>{approval.request_id?.slice(0, 8) || "—"}</strong></span>
                       <span>{tr("Expires", "过期")} <strong>{new Date(approval.expires_at).toLocaleTimeString(locale === "zh" ? "zh-CN" : "en-NZ", { hour: "2-digit", minute: "2-digit" })}</strong></span>
                     </div>
                     <div className="securityGrantScopes">
-                      <button className="goldButton" disabled={securityBusy} onClick={() => void decidePendingApproval(approval, "allow_once")}>{tr("Allow once", "仅允许一次")}</button>
-                      <button className="ghostButton" disabled={securityBusy} onClick={() => void decidePendingApproval(approval, "allow_10m")}>{tr("Allow 10 min", "允许 10 分钟")}</button>
-                      <button className="ghostButton" disabled={securityBusy} onClick={() => void decidePendingApproval(approval, "always_folder")}>{tr("Trust this folder", "信任此文件夹")}</button>
-                      <button className="dangerButton" disabled={securityBusy} onClick={() => void decidePendingApproval(approval, "deny")}>{tr("Deny", "拒绝")}</button>
+                      <button className="goldButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_once")}>{tr("Allow once", "仅允许一次")}</button>
+                      <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_10m")}>{tr("Allow 10 min", "允许 10 分钟")}</button>
+                      <button className="ghostButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "always_folder")}>{tr("Trust this folder", "信任此文件夹")}</button>
+                      <button className="dangerButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "deny")}>{tr("Deny", "拒绝")}</button>
                     </div>
                   </div>
                 ))}
                 {!pendingApprovals.length && (
                   <div className="securityEmptyState compact">
-                    <strong>{tr("No pending approvals", "暂无待审批请求")}</strong>
-                    <span>{tr("Out-of-scope file changes will appear here and in an interactive remotelink terminal.", "超出可信写入范围的文件修改会显示在这里，也会显示在交互式 remotelink 终端中。")}</span>
+                    <strong>{securityState ? tr("No pending approvals", "暂无待审批请求") : securityError ? tr("Approvals unavailable", "暂无法获取审批请求") : tr("Loading approvals…", "正在加载审批请求…")}</strong>
+                    {securityState && <span>{tr("Out-of-scope file changes will appear here and in an interactive remotelink terminal.", "超出可信写入范围的文件修改会显示在这里，也会显示在交互式 remotelink 终端中。")}</span>}
                   </div>
                 )}
               </div>
@@ -5887,14 +5879,14 @@ function Dashboard({
                         <span>{tr("Refresh authorization", "Refresh 授权")} <strong>{grant.refreshExpiresAt ? new Date(grant.refreshExpiresAt).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-NZ", { year: "numeric", month: "short", day: "numeric" }) : tr("None", "无")}</strong></span>
                       </div>
                       <div className="securityGrantScopes">{grant.scopes.map((scope) => <code key={scope}>{scope}</code>)}</div>
-                      <button className={grant.status === "expired" ? "ghostButton" : "dangerButton"} disabled={securityBusy} onClick={() => void revokeGrant(grant)}>
+                      <button className={grant.status === "expired" ? "ghostButton" : "dangerButton"} disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void revokeGrant(grant)}>
                         {grant.status === "expired" ? tr("Remove expired", "移除过期授权") : tr("Disconnect access", "断开此授权")}
                       </button>
                     </div>
                   );
                 })}
                 {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No AI authorizations", "暂无 AI 授权")}</strong><span>{tr("Connect ChatGPT, Claude or another MCP client to see each OAuth authorization here.", "连接 ChatGPT、Claude 或其他 MCP 客户端后，每一份 OAuth 授权都会显示在这里。")}</span><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
-                {!securityState && <div className="securityEmptyState compact"><strong>{tr("Loading access grants…", "正在加载访问授权…")}</strong></div>}
+                {!securityState && <div className="securityEmptyState compact"><strong>{securityError ? tr("Authorizations unavailable", "暂无法获取授权") : tr("Loading access grants…", "正在加载访问授权…")}</strong></div>}
               </div>
             </section>
 
