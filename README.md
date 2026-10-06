@@ -289,8 +289,8 @@ location from turning a permitted mutation into an out-of-scope write.
 
 The selected trusted-write/protected-path strings are control-plane policy
 metadata stored in D1; saving a path does not copy its file contents. Durable
-Agent Goals can separately persist bounded file/process observations needed for
-continuation.
+deterministic Tasks store only the task contract, bounded run state and result
+metadata needed for their lifecycle.
 
 ## Trusted Write Locations and boundary approvals
 
@@ -446,23 +446,14 @@ edit_block
 undo_last_change
 
 create_automation
-create_agent_goal
-get_goal_context
-submit_goal_decision
 list_automations
 get_automation
 manage_automation
 ```
 
-The automation tools create and manage durable control-plane state. They do not grant new device capabilities: when an automation executes on a computer, the normal device ownership, skill policy, Trusted Write Locations, boundary approvals and Sensitive Path Policy checks still apply. Per-device task permissions independently govern background, scheduled, adaptive, source-controlled and keep-awake capabilities.
+The automation tools create and manage durable deterministic control-plane state. They do not grant new device capabilities: when an automation executes on a computer, the normal device ownership, skill policy, Trusted Write Locations, boundary approvals and Sensitive Path Policy checks still apply. Per-device task permissions independently govern background, scheduled and keep-awake behavior.
 
-Agent Goals support two explicit controllers: the existing hosted planner
-(default), or the source AI client using context/revision-based decisions. Source
-mode does not silently switch models. Sustained reasoning depends on the host's
-goal runtime or verified MCP task-event continuation; installing a Plugin alone
-does not guarantee overnight reasoning. Event discovery is disabled unless both
-encrypted signing-key storage and a secure HTTPS/DNS-pinning egress service
-binding are provisioned. The ordinary Cloudflare fetch path is not a fallback.
+Adaptive Agent Goal/source-decision work remains an experimental implementation behind a disabled production feature flag. It is intentionally absent from the shipped MCP tool contract because ordinary Chat cannot yet be autonomously woken for fresh reasoning after the creating turn ends. The engineering notes remain in the repository for continued research.
 
 See [the complete system architecture](docs/system-architecture.md),
 [implementation plan](docs/long-running-work-plan.md),
