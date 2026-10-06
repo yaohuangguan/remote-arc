@@ -39,7 +39,7 @@ export async function callDevice(
 ) {
   const ownedDevice = await env.DB.prepare(
     `SELECT id, allowed_tools, workspace_roots, sensitive_paths, sensitive_allow_paths,
-            protect_sensitive_paths, undo_enabled, automation_permissions
+            protect_sensitive_paths, undo_enabled
      FROM devices
      WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
   )
@@ -52,7 +52,6 @@ export async function callDevice(
       sensitive_allow_paths: string | null;
       protect_sensitive_paths: number;
       undo_enabled: number;
-      automation_permissions: string | null;
     }>();
 
   if (!ownedDevice) {
@@ -66,9 +65,27 @@ export async function callDevice(
     return reviewerDemoResult(env, identity.userId, tool, args);
   }
 
-  // A release must still reach the device after its power permission is revoked.
-  if (tool === "set_task_keep_awake" && args.seconds !== 0 && JSON.parse(ownedDevice.automation_permissions || "{}").keep_awake !== true) {
-    throw new Error("Task keep-awake is disabled for this device.");
+  // Keep the ordinary computer-tool path compatible with devices whose D1
+  // schema predates task permissions. Only the keep-awake control needs the
+  // newer automation_permissions column.
+  if (tool === "set_task_keep_awake" && args.seconds !== 0) {
+    let automationPermissions: string | null = null;
+    try {
+      const row = await env.DB.prepare(
+        `SELECT automation_permissions FROM devices
+         WHERE id = ?1 AND user_id = ?2 AND revoked_at IS NULL`,
+      )
+        .bind(deviceId, identity.userId)
+        .first<{ automation_permissions: string | null }>();
+      automationPermissions = row?.automation_permissions ?? null;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/no such column:\s*automation_permissions/i.test(message)) throw error;
+    }
+
+    if (JSON.parse(automationPermissions || "{}").keep_awake !== true) {
+      throw new Error("Task keep-awake is disabled for this device.");
+    }
   }
 
   if (ownedDevice.allowed_tools && tool !== "set_task_keep_awake") {
