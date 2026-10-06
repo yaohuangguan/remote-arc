@@ -58,7 +58,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       agent_pid: 4926,
       connected_at: previewAgo(3600000),
       background_seen_at: previewAgo(18000),
-      automation_permissions: { background_tasks: true, scheduled_tasks: true, adaptive_agent: true, source_agent: true, keep_awake: true },
+      automation_permissions: { background_tasks: true, scheduled_tasks: true, adaptive_agent: false, source_agent: false, keep_awake: true },
       keep_awake_available: true,
     },
     {
@@ -155,44 +155,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     },
   ];
 
-  const automations = [...baseAutomations, {
-    ...baseAutomations[0]!,
-    id: "preview-planned",
-    name: "Improve the project until morning",
-    kind: "goal_loop",
-    status: "waiting_for_event",
-    goal_json: JSON.stringify({ type: "agent_goal", controller: "source" }),
-    state_json: JSON.stringify({ phase: "needs_reasoning", agent: { iteration: 8, last_decision_summary: "Independent validation passed. Next architectural choice needs source reasoning." }, planned: {
-      started_at: previewAgo(55 * 60000), active_phase: "foundation", needs_reasoning: "Tests revealed a new architecture decision. Candidate is preserved; the next chat turn can inspect saved context.",
-      plan: { phases: [{ id: "website", objective: "Verify the website" }, { id: "foundation", objective: "Investigate the foundation" }, { id: "next", objective: "Implement the dependent feature" }], time_policy: { max_duration_seconds: 8 * 3600 } },
-      outcomes: [{ id: "website", outcome: "completed", spent_seconds: 900, evidence: "Website tests and build passed.", remaining_work: "", checkpoint: "example-green-checkpoint" }],
-      green_frontier: { checkpoint: "example-green-checkpoint", at: previewAgo(40 * 60000) }, candidate: { status: "working", path: "/Users/sam/work/project/.remotearc-goals/example/candidate-0" },
-      workspace: { path: "/Users/sam/work/project/.remotearc-goals/example/candidate-0" }, checks: [{ name: "typecheck", passed: true, exit_code: 0, evidence: "Example: exit code 0" }, { name: "tests", passed: true, exit_code: 0, evidence: "Example: focused tests passed" }], rejected: [],
-    } }),
-    next_run_at: new Date(Date.now() + 7 * 3600000).toISOString(),
-    updated_at: previewAgo(20000),
-  }, {
-    ...baseAutomations[0]!,
-    id: "preview-source",
-    name: "Investigate intermittent test failures",
-    kind: "goal_loop",
-    status: "waiting_for_event",
-    goal_json: JSON.stringify({ type: "agent_goal", controller: "source", objective: "Find the cause and verify the fix.", success_criteria: "The previously failing test passes.", allowed_tools: ["read_file", "start_process"] }),
-    state_json: JSON.stringify({ phase: "awaiting_agent", agent: { iteration: 4, last_decision_summary: "Reproduced the failure; inspect the affected module next." } }),
-    run_count: 1,
-    next_run_at: null,
-    updated_at: previewAgo(60000),
-  }, {
-    ...baseAutomations[0]!,
-    id: "preview-completed",
-    name: "Verify release build",
-    status: "completed",
-    goal_json: JSON.stringify({ type: "agent_goal", controller: "hosted" }),
-    state_json: JSON.stringify({ phase: "idle", agent: { iteration: 6, completion_evidence: "Typecheck and integration tests passed. The release build exited with code 0." } }),
-    run_count: 1,
-    next_run_at: null,
-    updated_at: previewAgo(10 * 60000),
-  }];
+  const automations = [...baseAutomations];
 
   const json = (value: unknown, status = 200) =>
     Promise.resolve(
