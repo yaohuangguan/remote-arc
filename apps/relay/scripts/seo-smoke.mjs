@@ -67,7 +67,8 @@ assert.ok(mcp.includes('rel="canonical" href="https://remotearc.app/mcp-computer
 
 const home = renderMarketingHtml(shell, "/");
 assert.ok(home.includes('"@type":"SoftwareApplication"'));
-assert.ok(home.includes("Remote computer access for AI through MCP"));
+assert.ok(home.includes('<div id="root"></div>'), "homepage should keep an empty SPA root");
+assert.ok(!home.includes('<main class="seo-blog-shell">'), "homepage should not inject crawl-only body copy before React mounts");
 
 const missing = renderMarketingHtml(shell, "/definitely-not-a-real-page");
 assert.ok(missing.includes("<h1>Page not found</h1>"));
