@@ -83,7 +83,8 @@
     "REVIEWER_DEMO_DEVICE_ID": "review-desktop-v1",
     "REVIEWER_EMAIL": "openai-reviewer@remotearc.app",
     "ALERT_EMAIL": "moviegoer24@gmail.com",
-    "ALERT_FROM_EMAIL": "alerts@remotearc.app"
+    "ALERT_FROM_EMAIL": "alerts@remotearc.app",
+    "ENABLE_EXPERIMENTAL_AGENT_GOALS": "0"
   },
   "ratelimits": [
     {
