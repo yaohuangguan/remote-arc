@@ -54,6 +54,7 @@ export type AutomationEnv = DeviceCallEnv &
   GitHubAutomationEnv & {
     PUBLIC_ORIGIN: string;
     APP_ORIGIN?: string;
+    ENABLE_EXPERIMENTAL_AGENT_GOALS?: string;
   };
 
 type JsonPrimitive = string | number | boolean | null;
@@ -678,6 +679,11 @@ export async function createAutomation(
     input = normalizeTaskContract(input.task!);
   }
   const requestedKind = input.kind || "long_task";
+  if (requestedKind === "agent_goal" && env.ENABLE_EXPERIMENTAL_AGENT_GOALS === "0") {
+    throw new Error(
+      "Adaptive Agent Goals are experimental and are not enabled on this production deployment. Use a deterministic durable Task instead.",
+    );
+  }
   if (
     !["long_task", "condition_watch", "schedule_watch", "goal_loop", "agent_goal"].includes(
       requestedKind,
@@ -2476,6 +2482,7 @@ export async function handleAutomationCollection(
       capabilities: {
         hosted_planner: agentPlannerConfigured(env),
         github_merge: githubAutomationConfigured(env),
+        experimental_agent_goals: env.ENABLE_EXPERIMENTAL_AGENT_GOALS !== "0",
       },
       scheduler: await taskSchedulerHealth(env.DB, user.id),
     });

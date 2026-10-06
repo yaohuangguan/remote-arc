@@ -67,7 +67,20 @@ jobs:
         working-directory: apps/relay
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: pnpm exec wrangler d1 migrations apply remote-link-auth --remote
+        run: |
+          set +e
+          OUTPUT="$(pnpm exec wrangler d1 migrations apply remote-link-auth --remote 2>&1)"
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -eq 0 ]; then
+            printf '%s\n' "$OUTPUT"
+          elif printf '%s\n' "$OUTPUT" | grep -q 'code: 7403'; then
+            printf '%s\n' "$OUTPUT"
+            echo "::warning::Cloudflare deploy token cannot administer D1 migrations (7403). Continuing with the schema-compatible worker; apply pending migrations separately with D1-authorized credentials."
+          else
+            printf '%s\n' "$OUTPUT"
+            exit "$STATUS"
+          fi
 
       - name: Deploy Remote Arc to Cloudflare
         env:

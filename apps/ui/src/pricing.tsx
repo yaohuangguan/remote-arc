@@ -29,9 +29,9 @@ export function PricingContent({
   const plusFeatures = [
     tr("Everything in Free", "包含 Free 的全部能力"),
     tr("Binary reads plus 10-minute revision-pinned file resources for large transfers", "二进制读取 + 10 分钟绑定文件版本的大文件临时资源"),
-    tr("24/7-capable durable Tasks for overnight and long-running work", "支持 24/7 持续编排的持久 Task，用于隔夜与长任务"),
+    tr("Durable long-running command Tasks that survive chat disconnects", "可跨聊天断开的持久长命令 Task"),
     tr("Condition watches and scheduled / recurring Tasks", "条件监听与定时 / 周期 Task"),
-    tr("Planned Agent Goals: fixed, guided and autonomous planning modes", "计划模式 Agent Goal：fixed、guided、autonomous"),
+    tr("Deterministic verification loops with bounded retries", "带有界重试的确定性验证循环"),
     tr("Keep-awake leases on supported devices", "受支持设备的 Keep-awake 租约"),
   ];
 
@@ -45,7 +45,7 @@ export function PricingContent({
     { label: tr("Durable / overnight Tasks", "持久 / 隔夜 Task"), feature: "durable_tasks" },
     { label: tr("Long-running Tasks", "长任务"), feature: "durable_tasks" },
     { label: tr("Schedules & condition watches", "定时与条件监听"), feature: "scheduled_tasks" },
-    { label: tr("Planned Agent Goals", "计划模式 Agent Goal"), feature: "planned_agent_goals" },
+    { label: tr("Bounded verification loops", "有界验证循环"), feature: "planned_agent_goals" },
     { label: tr("Supported keep-awake", "受支持的保持唤醒"), feature: "keep_awake" },
   ];
 
@@ -60,8 +60,8 @@ export function PricingContent({
     [
       tr("Is Plus unlimited AI reasoning?", "Plus 是否等于无限 AI 推理？"),
       tr(
-        "No. Remote Arc provides durable orchestration and execution boundaries. Your ChatGPT, Claude or other AI plan remains separate. Source-controlled goals can keep saved command slices running, while new judgment may still wait for the selected AI host or a real wakeup mechanism.",
-        "不是。Remote Arc 提供的是持久编排与执行边界。ChatGPT、Claude 或其他 AI 订阅独立计算。Source-controlled goal 可以继续执行已保存的命令步骤，但新的判断仍可能等待所选 AI 宿主或真实的唤醒机制。",
+        "No. Remote Arc can keep approved deterministic work, process tracking and schedules durable, but it does not currently keep an ordinary Chat AI reasoning loop alive after that chat ends. Fresh judgment still requires a supported live AI host.",
+        "不是。Remote Arc 可以持久执行已授权的确定性工作、进程跟踪和计划任务，但目前不能在普通 Chat 结束后让同一 AI 推理循环自动继续。需要新的判断时，仍需受支持且在线的 AI 宿主。",
       ),
     ],
     [
@@ -93,10 +93,10 @@ export function PricingContent({
   return <main className="pricingContent">
     <header className="pricingIntro">
       <span className="eyebrow">{tr("FREE + PLUS", "FREE + PLUS")}</span>
-      <h1>{tr("Remote control is Free. Work that keeps going is Plus.", "远程控制用 Free，持续推进的工作用 Plus。")}</h1>
+      <h1>{tr("Remote control is Free. Durable task orchestration is Plus.", "远程控制用 Free，持久任务编排用 Plus。")}</h1>
       <p>{tr(
-        "Start with the computer and AI client you already use. Upgrade the account capability boundary when you need binary files, overnight execution, long tasks or an explicit planning loop.",
-        "继续使用你已有的电脑和 AI 客户端。需要二进制文件、隔夜执行、长任务或明确的计划循环时，再升级账户能力边界。",
+        "Start with the computer and AI client you already use. Upgrade the account capability boundary when you need binary files, durable long commands, schedules, condition watches or keep-awake support.",
+        "继续使用你已有的电脑和 AI 客户端。需要二进制文件、持久长命令、定时任务、条件监听或保持唤醒时，再升级账户能力边界。",
       )}</p>
     </header>
 

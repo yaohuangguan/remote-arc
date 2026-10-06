@@ -36,6 +36,7 @@ type Env = {
   APP_ORIGIN?: string;
   MONTHLY_TOOL_CALL_LIMIT?: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  ENABLE_EXPERIMENTAL_AGENT_GOALS?: string;
 };
 
 type Scope =
@@ -824,7 +825,7 @@ export function createRemoteLinkMcp(
       {
         title: "Create a persistent Remote Arc automation",
         description:
-          "Save user-requested ongoing or scheduled work as a durable task; the user can ask in chat and need not fill a Dashboard form. Use ordinary tools for immediate one-off operations. Supports long commands, webhook watches, interval schedules and fixed-plan goal loops; use create_agent_goal when each result may require a different next action.",
+          "Save user-requested ongoing or scheduled deterministic work as a durable task; the user can ask in chat and need not fill a Dashboard form. Use ordinary tools for immediate one-off operations. Supports long commands, webhook watches, interval schedules and fixed verification loops. This tool does not keep an AI reasoning loop alive after the creating chat ends.",
         inputSchema: z.object({
           name: z.string().min(1).max(120),
           kind: z.enum([
@@ -941,6 +942,7 @@ export function createRemoteLinkMcp(
     );
 
 
+    if (env.ENABLE_EXPERIMENTAL_AGENT_GOALS !== "0") {
     server.registerTool(
       "create_agent_goal",
       {
@@ -1069,6 +1071,8 @@ export function createRemoteLinkMcp(
       },
     );
 
+    }
+
     server.registerTool(
       "list_automations",
       {
@@ -1178,6 +1182,7 @@ export function createRemoteLinkMcp(
       },
     );
 
+    if (env.ENABLE_EXPERIMENTAL_AGENT_GOALS !== "0") {
     server.registerTool("get_goal_context", {
       title: "Read durable Agent Goal context",
       description: "Read the objective, revision, latest observation, factual working memory, completion evidence and ordered progress journal. Use after a pause or a new conversation to continue without replaying uncertain actions.",
@@ -1219,6 +1224,8 @@ export function createRemoteLinkMcp(
       }
       return textResult(submitted);
     });
+
+    }
 
     server.registerTool(
       "manage_automation",

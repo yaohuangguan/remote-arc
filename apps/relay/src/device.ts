@@ -311,34 +311,70 @@ export async function getDevicesForUser(
   env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
   userId: string,
 ) {
-  const rows = await env.DB.prepare(
-    `SELECT id, name, platform, arch, hostname, created_at, last_seen, allowed_tools,
-            workspace_roots, sensitive_paths, sensitive_allow_paths, protect_sensitive_paths, undo_enabled,
-            background_enabled, background_service, background_seen_at, automation_permissions
-     FROM devices
-     WHERE user_id = ?1 AND revoked_at IS NULL
-     ORDER BY created_at DESC`,
-  )
-    .bind(userId)
-    .all<{
-      id: string;
-      name: string;
-      platform: string;
-      arch: string | null;
-      hostname: string | null;
-      created_at: string;
-      last_seen: string | null;
-      allowed_tools: string | null;
-      workspace_roots: string | null;
-      sensitive_paths: string | null;
-      sensitive_allow_paths: string | null;
-      protect_sensitive_paths: number;
-      undo_enabled: number;
-      automation_permissions: string | null;
-      background_enabled: number | null;
-      background_service: string | null;
-      background_seen_at: string | null;
-    }>();
+  type StoredDevice = {
+    id: string;
+    name: string;
+    platform: string;
+    arch: string | null;
+    hostname: string | null;
+    created_at: string;
+    last_seen: string | null;
+    allowed_tools: string | null;
+    workspace_roots: string | null;
+    sensitive_paths: string | null;
+    sensitive_allow_paths: string | null;
+    protect_sensitive_paths: number;
+    undo_enabled: number;
+    automation_permissions: string | null;
+    background_enabled: number | null;
+    background_service: string | null;
+    background_seen_at: string | null;
+  };
+
+  let storedDevices: StoredDevice[];
+  try {
+    const rows = await env.DB.prepare(
+      `SELECT id, name, platform, arch, hostname, created_at, last_seen, allowed_tools,
+              workspace_roots, sensitive_paths, sensitive_allow_paths, protect_sensitive_paths, undo_enabled,
+              background_enabled, background_service, background_seen_at, automation_permissions
+       FROM devices
+       WHERE user_id = ?1 AND revoked_at IS NULL
+       ORDER BY created_at DESC`,
+    )
+      .bind(userId)
+      .all<StoredDevice>();
+    storedDevices = rows.results || [];
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (
+      !/no such column:\s*(background_enabled|background_service|background_seen_at|automation_permissions)/i.test(
+        message,
+      )
+    ) {
+      throw error;
+    }
+
+    // Core remote-computer access must not disappear just because a newer
+    // optional task/background migration has not been applied yet. Fall back
+    // to the pre-task schema and surface conservative defaults.
+    const legacyRows = await env.DB.prepare(
+      `SELECT id, name, platform, arch, hostname, created_at, last_seen, allowed_tools,
+              workspace_roots, sensitive_paths, sensitive_allow_paths, protect_sensitive_paths, undo_enabled
+       FROM devices
+       WHERE user_id = ?1 AND revoked_at IS NULL
+       ORDER BY created_at DESC`,
+    )
+      .bind(userId)
+      .all<Omit<StoredDevice, "automation_permissions" | "background_enabled" | "background_service" | "background_seen_at">>();
+
+    storedDevices = (legacyRows.results || []).map((device) => ({
+      ...device,
+      automation_permissions: null,
+      background_enabled: null,
+      background_service: null,
+      background_seen_at: null,
+    }));
+  }
 
   type OnlineDevice = {
     id: string;
@@ -371,7 +407,6 @@ export async function getDevicesForUser(
     ? ((await onlineResponse.json()) as OnlineDevice[])
     : [];
 
-  const storedDevices = rows.results || [];
   if (online.length < storedDevices.length) {
     // Temporary migration fallback while pre-sharding WebSockets may still
     // be attached to the legacy singleton Durable Object.

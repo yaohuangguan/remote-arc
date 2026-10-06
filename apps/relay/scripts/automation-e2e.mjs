@@ -72,7 +72,7 @@ assert(baseConfig.triggers?.crons?.includes("* * * * *"),"Production must regist
 assert(baseConfig.triggers.crons.includes("*/5 * * * *"),"Keep the monitor Cron as a dispatch fallback");
 baseConfig.routes=[];
 delete baseConfig.ai;
-baseConfig.vars={...(baseConfig.vars||{}),OPENAI_API_KEY:"e2e-key",AGENT_MODEL_BASE_URL:mockBase,AGENT_MODEL:"gpt-5.6-luna",GITHUB_APP_ID:"12345",GITHUB_APP_PRIVATE_KEY:privateKey,GITHUB_APP_INSTALLATION_ID:"67890",GITHUB_API_BASE_URL:mockBase};
+baseConfig.vars={...(baseConfig.vars||{}),ENABLE_EXPERIMENTAL_AGENT_GOALS:"1",OPENAI_API_KEY:"e2e-key",AGENT_MODEL_BASE_URL:mockBase,AGENT_MODEL:"gpt-5.6-luna",GITHUB_APP_ID:"12345",GITHUB_APP_PRIVATE_KEY:privateKey,GITHUB_APP_INSTALLATION_ID:"67890",GITHUB_API_BASE_URL:mockBase};
 // "/*" already routes /__scheduled through the Worker. Newer Wrangler rejects
 // a redundant explicit /__scheduled entry when the wildcard is present.
 const e2eConfig=repo+"/apps/relay/wrangler.e2e.json";
@@ -180,7 +180,7 @@ try {
   assert(connected.background_recovery_available===true && connected.background_guard_active===true && connected.background_guard_pid===4321,"Verified local supervisor must be visible separately from Relay execution");
   assert(connected.background_enabled===true && connected.background_active===false && connected.execution_mode==="foreground","A waiting supervisor must not be mistaken for a background execution connection");
   const collection=await api("/api/automations");
-  assert(collection.capabilities?.hosted_planner===true && collection.capabilities?.github_merge===true,"Task creation must expose configured providers without their credentials");
+  assert(collection.capabilities?.hosted_planner===true && collection.capabilities?.github_merge===true && collection.capabilities?.experimental_agent_goals===true,"Task creation must expose configured providers and the explicit experimental flag without their credentials");
   assert(!JSON.stringify(collection).includes("e2e-key") && !JSON.stringify(collection).includes("PRIVATE KEY"),"Task capability metadata must not expose provider credentials");
 
   // Long task: running -> running -> completed.

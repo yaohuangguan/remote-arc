@@ -2,6 +2,14 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.4.6
+
+- Restore the shipped product boundary to controlled remote-computer access plus deterministic durable Tasks; autonomous ordinary-Chat reasoning remains experimental and is no longer advertised as production capability.
+- Hide experimental Agent Goal/source-decision tools from the production MCP surface while retaining the implementation behind an explicit deployment flag for continued research.
+- Keep core device discovery and computer tool calls compatible with production databases that have not yet received the optional background/task-permission migrations.
+- Let the deploy workflow continue with the schema-compatible Worker when the configured Cloudflare token can deploy Workers but lacks D1 migration scope (error 7403); pending D1 migrations still require separately authorized credentials.
+
+
 ## 0.4.5
 
 - Add safe in-place handoff from a known older background Agent to the current CLI release, preserving pairing/configuration while preventing dual executors. Unknown legacy processes continue to fail closed.

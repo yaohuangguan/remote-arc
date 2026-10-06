@@ -3,8 +3,8 @@
   "schema_version": 1,
   "app_info": {
     "display_name": "Remote Arc",
-    "subtitle": "Persistent agent runtime for your computers",
-    "description": "Remote Arc is a persistent, permissioned agent runtime that connects ChatGPT and Codex to Windows, macOS, Linux, and explicitly shared Chrome tabs. It can inspect local state, run approved commands, modify files, create durable long-running tasks and Agent Goals, preserve bounded task context across chat sessions, and let the user pause, resume, or cancel saved work. Computer writes, browser interaction, persistent automation, and adaptive agent decisions use separate permissions and OAuth scopes. Browser interaction is per-tab, stale snapshot refs are rejected, and recognized password, one-time-code, payment-card, and file-picker fields remain blocked. Each device has an independent revocable credential and policy. Remote Arc uses an OAuth-protected Remote MCP endpoint and an outbound-only device connection. Use it only with computers, files, accounts, and services you own or are authorized to administer.",
+    "subtitle": "Controlled remote access to your computers",
+    "description": "Remote Arc connects ChatGPT and Codex to Windows, macOS, Linux, and explicitly shared Chrome tabs on computers the user authorizes. It can inspect local state, run approved commands, modify files, create and manage deterministic durable tasks, and let the user pause, resume, or cancel saved work. Computer writes, browser interaction, and persistent automation use separate permissions and OAuth scopes. Browser interaction is per-tab, stale snapshot refs are rejected, and recognized password, one-time-code, payment-card, and file-picker fields remain blocked. Each device has an independent revocable credential and policy. Remote Arc uses an OAuth-protected Remote MCP endpoint and an outbound-only device connection. Continuous autonomous AI reasoning after a normal Chat turn ends is not part of the production capability.",
     "category": "DEVELOPER_TOOLS"
   },
   "tools": {
@@ -308,18 +308,6 @@
         "destructive_justification": "Persistent tasks can execute consequential commands or external actions after the creating chat turn, so Remote Arc requires dedicated automation authority."
       }
     },
-    "create_agent_goal": {
-      "annotations": {
-        "readOnlyHint": false,
-        "openWorldHint": true,
-        "destructiveHint": true
-      },
-      "justifications": {
-        "read_only_justification": "Creates a durable adaptive goal that can choose bounded follow-up actions over time, so it changes persistent state.",
-        "open_world_justification": "An Agent Goal may use approved terminal or other open-world capabilities while pursuing the saved objective.",
-        "destructive_justification": "Adaptive execution can make persistent local or external changes within the approved tool and policy boundary."
-      }
-    },
     "list_automations": {
       "annotations": {
         "readOnlyHint": true,
@@ -342,30 +330,6 @@
         "read_only_justification": "Reads one saved task, its frozen plan, runtime metadata, and recent run summaries without changing execution.",
         "open_world_justification": "Reads Remote Arc control-plane state and does not itself perform an external action.",
         "destructive_justification": "Does not execute, pause, resume, cancel, or modify the task."
-      }
-    },
-    "get_goal_context": {
-      "annotations": {
-        "readOnlyHint": true,
-        "openWorldHint": false,
-        "destructiveHint": false
-      },
-      "justifications": {
-        "read_only_justification": "Reads durable Agent Goal context, observations, memory, evidence, and progress journal without changing the goal.",
-        "open_world_justification": "Reads saved Remote Arc task state and does not itself contact or modify a public service.",
-        "destructive_justification": "Does not execute a tool or mutate the saved goal."
-      }
-    },
-    "submit_goal_decision": {
-      "annotations": {
-        "readOnlyHint": false,
-        "openWorldHint": true,
-        "destructiveHint": true
-      },
-      "justifications": {
-        "read_only_justification": "Submits the next bounded decision for a source-controlled persistent goal, which changes durable task state and may execute an approved tool.",
-        "open_world_justification": "The selected decision may invoke a terminal or another approved capability that can interact with external services.",
-        "destructive_justification": "A submitted decision can cause persistent file, process, repository, deployment, or other consequential changes within the saved permission boundary."
       }
     },
     "manage_automation": {

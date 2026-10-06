@@ -1,7 +1,7 @@
 {
   "name": "remotelink",
   "version": "0.4.5",
-  "description": "Persistent agent runtime for computers you own.",
+  "description": "Controlled remote computer access for AI across computers you own.",
   "type": "module",
   "bin": {
     "remotelink": "dist/index.js",
@@ -44,8 +44,6 @@
     "url": "https://github.com/yaohuangguan/remote-arc/issues"
   },
   "keywords": [
-    "agent-runtime",
-    "persistent-agent",
     "mcp",
     "chatgpt",
     "claude",

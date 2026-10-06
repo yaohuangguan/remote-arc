@@ -1,26 +1,24 @@
 {
   "interface": {
     "displayName": "Remote Arc",
-    "shortDescription": "Persistent agent runtime for your computers.",
-    "longDescription": "Remote Arc gives AI agents a persistent, permissioned runtime across computers you authorize. Pair Windows, macOS, and Linux devices with remotelink, then inspect files, run development commands, create durable tasks and Agent Goals, resume saved work in later chats, and manage execution from the Remote Arc Dashboard.",
+    "shortDescription": "Controlled remote access to your computers.",
+    "longDescription": "Remote Arc connects AI clients to Windows, macOS, and Linux computers you explicitly pair. Inspect files, run approved development commands, use explicitly shared browser tabs, and manage deterministic durable tasks under per-device permissions and local safety boundaries. Continuous autonomous AI reasoning after a chat ends is not currently a production capability.",
     "websiteURL": "https://remotearc.app",
     "brandColor": "#38BDF8",
     "logo": "../assets/plugin-logo.svg",
     "composerIcon": "../assets/plugin-logo.svg",
-    "defaultPrompt": "List my Remote Arc devices and persistent tasks, then tell me what is online or needs attention.",
+    "defaultPrompt": "List my Remote Arc devices, then tell me what is online and which remote tools are available.",
     "developerName": "Remote Arc",
     "category": "Other",
     "capabilities": []
   },
   "name": "remote-arc",
   "version": "0.4.5",
-  "description": "Persistent agent runtime that connects ChatGPT to your own computers.",
+  "description": "Controlled remote computer access for AI across computers you authorize.",
   "author": {
     "name": "Remote Arc"
   },
   "keywords": [
-    "agent-runtime",
-    "persistent-agent",
     "remote-computer",
     "mcp",
     "developer-tools"

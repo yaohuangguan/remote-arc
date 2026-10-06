@@ -16,8 +16,8 @@ const expected = [
   "list_directory", "read_file", "read_binary_file", "create_file_resource",
   "revoke_file_resource", "get_file_info", "list_processes", "start_process",
   "process_status", "process_output", "stop_process", "write_file", "edit_block",
-  "undo_last_change", "create_automation", "create_agent_goal", "list_automations",
-  "get_automation", "get_goal_context", "submit_goal_decision", "manage_automation",
+  "undo_last_change", "create_automation", "list_automations",
+  "get_automation", "manage_automation",
 ];
 
 const missingRelay = expected.filter((name) => !registered.has(name));
@@ -33,7 +33,7 @@ if (missingRelay.length || missingSubmission.length || extraSubmission.length) {
   process.exit(1);
 }
 
-if (expected.length !== 31) {
+if (expected.length !== 28) {
   console.error(`Expected runtime surface count changed: ${expected.length}`);
   process.exit(1);
 }
@@ -44,8 +44,8 @@ const description = [
   plugin.extensions?.["com.openai"]?.interface?.longDescription,
 ].filter(Boolean).join(" ");
 
-if (!/persistent/i.test(description) || !/agent runtime/i.test(description)) {
-  console.error("Plugin positioning must identify Remote Arc as a persistent agent runtime.");
+if (!/(remote|computer)/i.test(description) || !/(access|control)/i.test(description)) {
+  console.error("Plugin positioning must identify Remote Arc as controlled remote computer access.");
   process.exit(1);
 }
 
