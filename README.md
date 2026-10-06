@@ -4,9 +4,9 @@
 
 # Remote Arc
 
-**Persistent agent runtime for the computers you already own.**
+**Controlled remote computer access for AI — across the computers you already own.**
 
-Remote Arc gives ChatGPT, Claude, Codex, Cursor, and compatible MCP clients a persistent, permissioned runtime across Windows, macOS, and Linux computers you explicitly pair — without exposing a public port or requiring a VPN. Durable tasks and Agent Goals can outlive the chat that created them, preserve bounded state, and resume through the same runtime later.
+Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients to Windows, macOS, and Linux computers you explicitly pair — without exposing a public port or requiring a VPN. It focuses on permissioned file, process, terminal, and explicitly shared browser access. Deterministic background tasks can persist independently of a chat; continuous AI reasoning is not currently claimed as a production capability.
 
 [Website](https://remotearc.app) · [Dashboard](https://mcp.remotearc.app) · [Remote MCP](https://mcp.remotearc.app/mcp) · [Security](./SECURITY.md)
 
@@ -22,7 +22,7 @@ Remote Arc gives ChatGPT, Claude, Codex, Cursor, and compatible MCP clients a pe
 
 ## Why Remote Arc
 
-- **Persistent task runtime** — durable long tasks, schedules, condition watches, and Agent Goals can continue beyond one chat turn and be inspected or resumed later.
+- **Durable deterministic tasks** — approved commands, schedules, and condition watches can continue beyond one chat turn and be inspected later; new AI judgment still requires an active reasoning host.
 - **Read-only by default** — newly paired devices start with safe inspection capabilities.
 - **Per-device skill controls** — independently enable file edits, terminal execution, process controls, and recovery.
 - **Outbound-only connectivity** — no public IP, VPN, router port forwarding, or inbound listener on your computer.
@@ -198,15 +198,14 @@ per-device skill list.
 
 ## Durable Automations
 
-Remote Arc can persist work independently of the chat session that created it. MCP clients need the separate `automation:read` / `automation:write` OAuth scopes to inspect or create persistent work; ordinary `computer:write` access does not grant that authority. Adaptive Agent Goals require the additional `agent:write` scope because they can inspect each result and choose a different next approved action over time.
+Remote Arc can persist deterministic work independently of the chat session that created it. MCP clients need the separate `automation:read` / `automation:write` OAuth scopes to inspect or create persistent work; ordinary `computer:write` access does not grant that authority.
 
-Five persistent modes share the same durable task engine:
+Four production task modes share the same durable task engine:
 
 - **Long task** — start a command and keep tracking it after the MCP call/chat ends.
 - **Condition watch** — wait for a webhook event, then execute an approved plan.
 - **Schedule watch** — execute a plan on a recurring interval or at a future time.
 - **Goal loop** — repeat a fixed work plan, execute a verification command, and retry until verification succeeds, the task expires, the run limit is reached, or the user stops it.
-- **Agent Goal** — after each bounded tool result, a hosted planner updates compact working memory, rethinks the strategy and chooses a different next action from the user-approved tool set. An optional deterministic verification command can prevent model-only completion.
 
 Condition watches may also use a cloud-side GitHub App merge action. A matching CI webhook can therefore merge an explicitly configured pull request without depending on a paired computer being online.
 
@@ -214,7 +213,7 @@ Automation state lives in D1 and is advanced by the Worker scheduler or webhook 
 
 Creating an automation snapshots the current device permission policy. Routine disconnects and local agent restarts do not introduce an approval step: unattended work waits for the device and automatically recovers. If you later change the device security policy itself, Remote Arc stops that automation rather than silently inheriting a different trust boundary.
 
-A device going offline moves eligible work to `waiting_for_device`; it does not automatically fail the automation. Deterministic long-running work defaults to automatic attempt restart if the local agent reconnects without its previous managed-process handle. Agent Goals handle the same case by marking the previous outcome as unknown, re-inspecting current state, and replanning instead of waiting for a person to approve continuation.
+A device going offline moves eligible work to `waiting_for_device`; it does not automatically fail the automation. Deterministic long-running work defaults to automatic attempt restart if the local agent reconnects without its previous managed-process handle. If a task needs fresh AI judgment after a result changes, that reasoning must come from a currently available AI host; Remote Arc does not currently claim an autonomous ordinary-Chat wake loop.
 
 The background agent and automation engine solve different problems:
 
