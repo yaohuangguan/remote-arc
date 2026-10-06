@@ -245,7 +245,7 @@ function logLine(
 function banner() {
   process.stdout.write("\n");
   process.stdout.write(bold("Remote Arc") + "  " + dim(`v${VERSION}`) + "\n");
-  process.stdout.write(dim("Persistent agent runtime for your computers") + "\n\n");
+  process.stdout.write(dim("Controlled remote access for AI") + "\n\n");
 }
 
 function argFlag(name: string) {
