@@ -620,6 +620,8 @@ function PairDevice({
   const [setupStep, setSetupStep] = useState<"permissions" | "workspace" | "done">("permissions");
   const [directoryBrowser, setDirectoryBrowser] = useState<DirectoryBrowser | null>(null);
   const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [workspacePathInput, setWorkspacePathInput] = useState("");
+  const [pendingWorkspaceAction, setPendingWorkspaceAction] = useState<"file-editing" | "terminal" | null>(null);
   const [setupError, setSetupError] = useState("");
   const [terminalConfirm, setTerminalConfirm] = useState(false);
   const [backgroundRequested, setBackgroundRequested] = useState(true);
@@ -644,6 +646,20 @@ function PairDevice({
   useEffect(() => {
     if (user && initialCode) void lookup(initialCode);
   }, [user?.id]);
+
+  useEffect(() => {
+    if (
+      pairedDevice?.status === "online" &&
+      pairedDevice.background_agent_available !== true &&
+      pairedDevice.background_enabled !== true
+    ) {
+      setBackgroundRequested(false);
+    }
+  }, [
+    pairedDevice?.status,
+    pairedDevice?.background_agent_available,
+    pairedDevice?.background_enabled,
+  ]);
 
   useEffect(() => {
     if (!approvedDeviceId || setupStep === "done") return;
@@ -691,6 +707,11 @@ function PairDevice({
         throw new Error(payload.error || tr("Could not approve device", "设备授权失败"));
       }
       setApprovedDeviceId(payload.device.id);
+      setDirectoryBrowser(null);
+      setWorkspacePathInput("");
+      setPendingWorkspaceAction(null);
+      setSetupError("");
+      setTerminalConfirm(false);
       setPairedDevice({
         id: payload.device.id,
         name: payload.device.name,
@@ -742,6 +763,7 @@ function PairDevice({
         );
       }
       setDirectoryBrowser(payload.browser);
+      setWorkspacePathInput(payload.browser.path);
     } catch (error) {
       setSetupError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -749,7 +771,9 @@ function PairDevice({
     }
   }
 
-  async function openWorkspacePicker() {
+  async function openWorkspacePicker(nextAction: "file-editing" | "terminal" | null = null) {
+    setPendingWorkspaceAction(nextAction);
+    setSetupError("");
     setSetupStep("workspace");
     if (!directoryBrowser) await browseWorkspace("~");
   }
@@ -782,6 +806,10 @@ function PairDevice({
 
   async function enableFileEditing() {
     if (!approvedDeviceId) return;
+    if (!(pairedDevice?.workspace_roots || []).length) {
+      await openWorkspacePicker("file-editing");
+      return;
+    }
     setBusy(true);
     setSetupError("");
     try {
@@ -800,17 +828,44 @@ function PairDevice({
   }
 
   async function applyWorkspaceScope() {
-    if (!directoryBrowser || !approvedDeviceId) return;
+    if (!approvedDeviceId) return;
+    const requestedPath = workspacePathInput.trim() || directoryBrowser?.path || "";
+    if (!requestedPath) {
+      setSetupError(tr("Choose a folder first.", "请先选择一个目录。"));
+      return;
+    }
+
     setBusy(true);
     setSetupError("");
     try {
+      const browseResponse = await fetch(
+        "/api/devices/" +
+          encodeURIComponent(approvedDeviceId) +
+          "/directories?path=" +
+          encodeURIComponent(requestedPath),
+      );
+      const browsePayload = (await browseResponse.json().catch(() => ({}))) as {
+        browser?: DirectoryBrowser;
+        error?: string;
+      };
+      if (!browseResponse.ok || !browsePayload.browser) {
+        throw new Error(
+          browsePayload.error ||
+            tr("That folder is not available on this computer.", "这台电脑上无法使用该目录。"),
+        );
+      }
+
+      const selectedPath = browsePayload.browser.path;
+      setDirectoryBrowser(browsePayload.browser);
+      setWorkspacePathInput(selectedPath);
+
       const policyResponse = await fetch(
         "/api/devices/" + encodeURIComponent(approvedDeviceId) + "/policy",
         {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            workspace_roots: [directoryBrowser.path],
+            workspace_roots: [selectedPath],
             sensitive_paths: pairedDevice?.sensitive_paths || [],
             sensitive_allow_paths: pairedDevice?.sensitive_allow_paths || [],
             protect_sensitive_paths: pairedDevice?.protect_sensitive_paths ?? true,
@@ -823,9 +878,26 @@ function PairDevice({
         throw new Error(payload.error || tr("Could not save Trusted Write Locations.", "无法保存可信写入区域。"));
       }
 
+      const nextAction = pendingWorkspaceAction;
       setPairedDevice((current) =>
-        current ? { ...current, workspace_roots: [directoryBrowser.path] } : current,
+        current ? { ...current, workspace_roots: [selectedPath] } : current,
       );
+      setPendingWorkspaceAction(null);
+
+      if (nextAction === "file-editing") {
+        const current = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
+        await saveTools([
+          ...current,
+          "write_file",
+          "edit_block",
+          "undo_last_change",
+        ]);
+      } else if (nextAction === "terminal") {
+        const current = pairedDevice?.allowed_tools || [...SAFE_DEVICE_TOOLS];
+        await saveTools([...current, "start_process"]);
+        setTerminalConfirm(false);
+      }
+
       setSetupStep("permissions");
     } catch (error) {
       setSetupError(error instanceof Error ? error.message : String(error));
@@ -835,6 +907,11 @@ function PairDevice({
   }
 
   async function enableTerminal() {
+    if (!(pairedDevice?.workspace_roots || []).length) {
+      setTerminalConfirm(false);
+      await openWorkspacePicker("terminal");
+      return;
+    }
     setBusy(true);
     setSetupError("");
     try {
@@ -850,7 +927,7 @@ function PairDevice({
 
   async function finishSetup() {
     if (!approvedDeviceId) return;
-    if (pairedDevice?.status !== "online" || pairedDevice.background_agent_available !== true) {
+    if (pairedDevice?.status !== "online") {
       setSetupError(
         tr(
           "Wait for the local Remote Arc agent to connect before finishing setup.",
@@ -860,10 +937,24 @@ function PairDevice({
       return;
     }
 
+    if (backgroundRequested && pairedDevice.background_agent_available !== true) {
+      setSetupError(tr(
+        "Automatic recovery is not available on this client yet. Turn it off to finish setup now, or update remotelink first.",
+        "当前客户端还不支持自动恢复。你可以先关闭此选项完成设置，或先更新 remotelink。",
+      ));
+      return;
+    }
+
     if (backgroundRequested && !pairedDevice.background_recovery_available) {
       setSetupError(tr("This older client exits its terminal when enabling background mode. Update to the recovery-capable CLI, or turn this option off to finish setup with the current session.", "当前旧版客户端启用后台模式会退出终端。请更新为支持恢复的 CLI，或关闭此选项，以当前会话完成设置。"));
       return;
     }
+    if (!backgroundRequested && !backgroundActuallyEnabled) {
+      setSetupError("");
+      setSetupStep("done");
+      return;
+    }
+
     setBusy(true);
     setSetupError("");
     try {
@@ -1020,8 +1111,8 @@ function PairDevice({
       <CenteredCard
         title={tr("Computer ready", "电脑已就绪")}
         body={tr(
-          "The computer is paired and the permissions below are active. Connect the AI you want to use next; you can add more clients later.",
-          "电脑已经配对，下面的权限已经生效。接下来连接你要使用的 AI；之后还可以继续添加其他客户端。",
+          "Setup is complete and this computer is ready to use. Connecting an AI is optional here; if you already connected one, you can go straight to Dashboard.",
+          "设置已经完成，这台电脑现在可以使用。这里连接 AI 是可选的；如果你已经连接过 AI，可以直接进入 Dashboard。",
         )}
       >
         <div className="successMark">✓</div>
@@ -1041,11 +1132,11 @@ function PairDevice({
 
         <section className="pairAgentConnect">
           <div className="pairAgentConnectIntro">
-            <span className="eyebrow">{tr("NEXT · CONNECT YOUR AI", "下一步 · 连接你的 AI")}</span>
-            <h3>{tr("Use this computer from the agent you already work with.", "从你正在使用的 AI 里开始操作这台电脑。")}</h3>
+            <span className="eyebrow">{tr("OPTIONAL NEXT STEP · CONNECT AN AI", "可选下一步 · 连接 AI")}</span>
+            <h3>{tr("Use this computer from the AI you already work with.", "从你正在使用的 AI 里操作这台电脑。")}</h3>
             <p>{tr(
-              "Pairing the computer and authorizing an AI client are separate. Choose one now, or connect more later from Dashboard → Connect AI.",
-              "电脑配对与 AI 客户端授权是两条独立关系。现在选择一个，之后也可以从 Dashboard → Connect AI 继续添加。",
+              "Device setup is already finished. Choose a connector only if you still need to connect an AI client; you can also do this later from Dashboard → Connect AI.",
+              "设备设置已经完成。只有在你还需要连接 AI 客户端时才选择下面的连接方式；之后也可以随时从 Dashboard → Connect AI 完成。",
             )}</p>
           </div>
 
@@ -1081,8 +1172,8 @@ function PairDevice({
         </section>
 
         <div className="pairDoneSecondary">
-          <a href="/connect">{tr("Connect another AI later", "之后连接其他 AI")} →</a>
-          <a href="/devices">{tr("Open Devices", "打开设备页")} →</a>
+          <a href="/devices" className="pairDonePrimary">{tr("Open Dashboard", "进入 Dashboard")} →</a>
+          <a href="/connect">{tr("Connect an AI later", "之后再连接 AI")} →</a>
         </div>
       </CenteredCard>
     );
@@ -1091,12 +1182,42 @@ function PairDevice({
   if (approvedDeviceId && setupStep === "workspace") {
     return (
       <CenteredCard
-        title={tr("Choose a workspace", "选择工作区")}
-        body={tr(
-          "Trusted Write Locations are optional for read-only use. Add a folder when you want AI to edit files there without asking each time; ordinary non-sensitive reads can still happen elsewhere.",
-          "只读使用时无需设置可信写入区域。需要 AI 在某个目录内持续修改文件时再添加；其他普通非敏感位置仍可只读访问。",
-        )}
+        title={tr("Choose where AI may work", "选择 AI 可以工作的目录")}
+        body={pendingWorkspaceAction === "terminal"
+          ? tr(
+              "Terminal access needs a Trusted Write Location before it can be enabled. Choose a folder on this runtime. Terminal commands still run as your local OS user and are not confined to this folder by an OS sandbox.",
+              "开启终端前需要先设置可信写入区域。请选择这个运行环境上的目录。终端命令仍以本机用户身份执行，并不会被操作系统沙箱限制在这个目录内。",
+            )
+          : tr(
+              "Choose a folder where Remote Arc may create or edit files. You can browse this computer or enter any folder path that this runtime can access.",
+              "选择一个允许 Remote Arc 创建或编辑文件的目录。你可以浏览这台电脑，也可以直接输入这个运行环境能够访问的任意目录路径。",
+            )}
       >
+        <div className="pairWorkspaceManual">
+          <label htmlFor="pair-workspace-path">{tr("Folder path", "目录路径")}</label>
+          <div>
+            <input
+              id="pair-workspace-path"
+              value={workspacePathInput}
+              onChange={(event) => setWorkspacePathInput(event.target.value)}
+              placeholder={tr("Enter a folder path on this computer", "输入这台电脑上的目录路径")}
+              spellCheck={false}
+              autoComplete="off"
+            />
+            <button
+              className="ghostButton"
+              disabled={!workspacePathInput.trim() || directoryLoading || busy}
+              onClick={() => void browseWorkspace(workspacePathInput.trim())}
+            >
+              {directoryLoading ? tr("Opening…", "正在打开…") : tr("Browse", "浏览")}
+            </button>
+          </div>
+          <small>{tr(
+            "Paths are interpreted by this runtime, so Windows, macOS, Linux and WSL can each use their native filesystem paths.",
+            "路径由当前运行环境解释，因此 Windows、macOS、Linux 和 WSL 都可以使用各自原生的文件系统路径。",
+          )}</small>
+        </div>
+
         <div className="pairWorkspacePath">
           <code>{directoryBrowser?.path || tr("Waiting for device…", "等待设备上线…")}</code>
           {directoryBrowser?.parent && (
@@ -1129,15 +1250,23 @@ function PairDevice({
         {setupError && <p className="errorText">{setupError}</p>}
 
         <div className="pairSetupActions">
-          <button className="ghostButton" onClick={() => setSetupStep("permissions")}>
+          <button className="ghostButton" onClick={() => {
+            setPendingWorkspaceAction(null);
+            setSetupError("");
+            setSetupStep("permissions");
+          }}>
             {tr("Back", "返回")}
           </button>
           <button
             className="primaryButton"
-            disabled={!directoryBrowser || directoryLoading || busy}
+            disabled={!workspacePathInput.trim() || directoryLoading || busy}
             onClick={() => void applyWorkspaceScope()}
           >
-            {busy ? tr("Saving…", "正在保存…") : tr("Use this folder", "使用此目录")}
+            {busy
+              ? tr("Saving…", "正在保存…")
+              : pendingWorkspaceAction
+                ? tr("Use folder & continue", "使用此目录并继续")
+                : tr("Use this folder", "使用此目录")}
           </button>
         </div>
       </CenteredCard>
@@ -1326,7 +1455,7 @@ function PairDevice({
           <span>{tr("You can change every permission later from Devices.", "之后可以在设备页随时修改所有权限。")}</span>
           <button
             className="primaryButton"
-            disabled={!backgroundCapabilityReady || busy}
+            disabled={pairedDevice?.status !== "online" || busy}
             onClick={() => void finishSetup()}
           >
             {busy

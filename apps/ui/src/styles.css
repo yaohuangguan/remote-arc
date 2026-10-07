@@ -306,6 +306,40 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .pairSetupSummary span { color:#77828f; }
 .pairSetupSummary strong { color:#dce2e9; }
 .pairSetupDone { width:100%; }
+.pairWorkspaceManual {
+  display:grid;
+  gap:7px;
+  margin-bottom:14px;
+}
+.pairWorkspaceManual label {
+  color:#cbd7de;
+  font-size:11px;
+  font-weight:700;
+}
+.pairWorkspaceManual > div {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+}
+.pairWorkspaceManual input {
+  min-width:0;
+  border:1px solid #26303a;
+  border-radius:10px;
+  background:#080c11;
+  color:#dce7ec;
+  padding:10px 11px;
+  font:600 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.pairWorkspaceManual input:focus {
+  outline:none;
+  border-color:#3f8198;
+  box-shadow:0 0 0 2px rgba(63,129,152,.14);
+}
+.pairWorkspaceManual small {
+  color:#65717e;
+  font-size:9px;
+  line-height:1.5;
+}
 .pairWorkspacePath {
   display:flex;
   align-items:center;
@@ -399,6 +433,17 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 :root[data-theme="light"] .pairWorkspaceList {
   background:#f5fafc;
   color:#087ea4;
+}
+:root[data-theme="light"] .pairWorkspaceManual label { color:#143742; }
+:root[data-theme="light"] .pairWorkspaceManual small { color:#68818a; }
+:root[data-theme="light"] .pairWorkspaceManual input {
+  border-color:#dcebf2;
+  background:#fff;
+  color:#143742;
+}
+:root[data-theme="light"] .pairWorkspaceManual input:focus {
+  border-color:#9dcedd;
+  box-shadow:0 0 0 2px rgba(8,126,164,.10);
 }
 :root[data-theme="light"] .pairSetupFooter { border-color:#e2edf2; }
 
@@ -11180,6 +11225,7 @@ body{font-size:18px;line-height:1.6}
   font-size:11px;
   font-weight:650;
 }
+.pairDoneSecondary a.pairDonePrimary { color:#8addf7; }
 .pairDoneSecondary a:hover { color:#8addf7; }
 
 :root[data-theme="light"] .pairAgentConnect,
@@ -11219,6 +11265,7 @@ body{font-size:18px;line-height:1.6}
 :root[data-theme="light"] .pairAgentEndpoint code {
   color:#075985;
 }
+:root[data-theme="light"] .pairDoneSecondary a.pairDonePrimary,
 :root[data-theme="light"] .pairDoneSecondary a:hover {
   color:#087ea4;
 }
@@ -11226,6 +11273,7 @@ body{font-size:18px;line-height:1.6}
 @media(max-width:620px) {
   .pairAgentGrid { grid-template-columns:1fr; }
   .pairDoneSecondary { flex-direction:column; }
+  .pairWorkspaceManual > div { grid-template-columns:1fr; }
 }
 
 /* Pairing completion should be comfortably readable on desktop and mobile. */

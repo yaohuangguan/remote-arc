@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "test:onboarding": "node scripts/onboarding-flow-test.mjs",
     "test:security": "node scripts/security-response-test.mjs"
   },
   "dependencies": {
