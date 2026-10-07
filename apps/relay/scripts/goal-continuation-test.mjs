@@ -413,8 +413,9 @@ try {
     );
     assert(denied.isError, `create_agent_goal must reject partial scope ${partialScope}`);
     const challenge = denied._meta?.["mcp/www_authenticate"]?.[0] || "";
-    assert(
-      challenge.includes('scope="automation:write agent:write"'),
+    assert.deepEqual(
+      new Set(/scope="([^"]+)"/.exec(challenge)?.[1].split(/\s+/) || []),
+      new Set(["automation:write", "agent:write", "offline_access"]),
       `create_agent_goal must challenge the full scope set, got: ${challenge}`,
     );
   }
@@ -434,10 +435,9 @@ try {
     { ...identity, scope: "agent:write" },
   );
   assert(deniedDecisionScope.isError);
-  assert(
-    (deniedDecisionScope._meta?.["mcp/www_authenticate"]?.[0] || "").includes(
-      'scope="automation:write agent:write"',
-    ),
+  assert.deepEqual(
+    new Set(/scope="([^"]+)"/.exec(deniedDecisionScope._meta?.["mcp/www_authenticate"]?.[0] || "")?.[1].split(/\s+/) || []),
+    new Set(["automation:write", "agent:write", "offline_access"]),
     "submit_goal_decision must challenge the full scope set",
   );
 
