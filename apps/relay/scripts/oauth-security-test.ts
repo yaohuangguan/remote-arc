@@ -211,10 +211,10 @@ function authUrl(extra = "") {
     throw new Error("overlapping refresh did not retain a bounded grace window");
   }
   for (const update of graceUpdates) {
-    if (!update.sql.includes("SET expires_at = ?1")) {
-      throw new Error("old access token was not expired immediately");
+    if (!update.sql.includes("WHEN expires_at > ?1 THEN ?1")) {
+      throw new Error("old access token does not receive a bounded overlap window");
     }
-    if (!update.sql.includes("WHEN refresh_expires_at > ?2 THEN ?2")) {
+    if (!update.sql.includes("WHEN refresh_expires_at > ?1 THEN ?1")) {
       throw new Error("refresh grace window can be extended");
     }
     if (update.sql.includes("SET revoked_at")) {
@@ -223,4 +223,14 @@ function authUrl(extra = "") {
   }
 }
 
-console.log("OAuth consent and refresh security regression tests passed");
+{
+  const metadata = await import("../src/oauth.js").then((module) =>
+    module.authorizationServerMetadata(envBase),
+  );
+  const body = (await metadata.json()) as { scopes_supported?: string[] };
+  if (!body.scopes_supported?.includes("offline_access")) {
+    throw new Error("OAuth discovery must advertise offline_access for persistent MCP clients");
+  }
+}
+
+console.log("OAuth consent, refresh, and offline-access regression tests passed");
