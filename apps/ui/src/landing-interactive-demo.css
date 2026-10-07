@@ -1,0 +1,74 @@
+.homeDemo{margin-top:32px}
+.homeDemoToolbar{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:14px}
+.homeDemoExamples{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.homeDemoExamples button{min-height:42px;border:1px solid var(--line);border-radius:8px;padding:9px 14px;background:transparent;color:var(--landing-muted);font-size:14px;font-weight:650;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.homeDemoExamples button:hover{background:var(--panel);color:var(--text)}
+.homeDemoExamples button.active{background:var(--panel);color:var(--text);border-color:#299bb7;box-shadow:inset 0 0 0 1px rgba(41,155,183,.22)}
+.homeDemoMode{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;font-size:11px;font-weight:800;letter-spacing:.07em;color:var(--landing-muted)}
+.homeDemoMode i,.homeDemoTerminalDevice i{display:block;width:7px;height:7px;border-radius:50%;background:#42c497;box-shadow:0 0 0 3px rgba(66,196,151,.12)}
+.homeDemoSurface{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.04fr);min-height:530px;border:1px solid var(--line);border-radius:15px;overflow:hidden;background:var(--panel)}
+.homeDemoChat{display:flex;flex-direction:column;min-width:0;min-height:530px;color:var(--text);background:var(--panel)}
+.homeDemoPanelHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 22px;border-bottom:1px solid var(--line);min-height:75px}
+.homeDemoAppMark{display:flex;gap:12px;align-items:center;min-width:0}
+.homeDemoAppMark>span{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;display:grid;place-items:center;font-size:19px;color:var(--text);background:var(--bg)}
+.homeDemoAppMark>div{display:flex;flex-direction:column;gap:4px}
+.homeDemoAppMark strong{font-size:15px;font-weight:720}
+.homeDemoAppMark small{font-size:12px;color:var(--landing-muted)}
+.homeDemoClientSelect{display:flex;gap:3px;border:1px solid var(--line);padding:3px;border-radius:8px}
+.homeDemoClientSelect button{min-height:30px;border:0;border-radius:5px;background:transparent;color:var(--landing-muted);font-size:12px;padding:5px 9px;cursor:pointer}
+.homeDemoClientSelect button[aria-pressed="true"]{background:var(--bg);color:var(--text);font-weight:750}
+.homeDemoChatBody{display:flex;flex-direction:column;align-items:flex-start;flex:1;gap:21px;padding:31px 28px 24px}
+.homeDemoChatStarter{font-size:13px;line-height:1.6;color:var(--landing-muted);max-width:360px}
+.homeDemoUserBubble{align-self:flex-end;max-width:92%;padding:16px 19px;border:1px solid var(--line);border-radius:14px 14px 4px 14px;background:var(--bg);color:var(--text);font-size:17px;font-weight:600;line-height:1.52}
+.homeDemoAssistantHint{font-size:13px;color:var(--landing-muted);padding-left:47px}
+.homeDemoAssistant{display:flex;gap:12px;align-items:flex-start;max-width:96%;animation:homeDemoFade .24s ease-out}
+.homeDemoAssistantSymbol{flex-shrink:0;display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:18px}
+.homeDemoAssistant>div{padding-top:5px}
+.homeDemoAssistant strong{font-size:15px;color:var(--text)}
+.homeDemoAssistant p{font-size:15px;line-height:1.65;margin:8px 0 0;color:var(--landing-muted)}
+.homeDemoComplete{display:inline-flex;margin-top:16px;padding:7px 11px;border:1px solid rgba(30,143,109,.22);border-radius:7px;color:#229675;font-size:12px;font-weight:700}
+.homeDemoComposer{border-top:1px solid var(--line);padding:15px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.homeDemoComposer>span{font-size:13px;color:var(--landing-muted)}
+.homeDemoComposer button{min-height:42px;border:0;border-radius:8px;background:#168cb0;color:white;font-size:14px;font-weight:720;padding:10px 16px;cursor:pointer;white-space:nowrap}
+.homeDemoComposer button:hover:not(:disabled){background:#0e789a}
+.homeDemoComposer button:disabled{opacity:.63;cursor:progress}
+.homeDemoTerminal{display:flex;flex-direction:column;min-width:0;min-height:530px;background:#0c131d;color:#d6e3ea;border-left:1px solid #28394a}
+.homeDemoTerminalHeader{display:flex;align-items:center;gap:13px;min-height:75px;padding:15px 21px;border-bottom:1px solid #293544;font-size:13px;color:#dce8f2}
+.homeDemoTerminalHeader>span:nth-child(2){font-weight:700}
+.homeDemoTerminalHeader b{color:#728694;margin:0 4px}
+.homeDemoTerminalDots{display:flex;gap:5px}
+.homeDemoTerminalDots i{width:8px;height:8px;border-radius:50%;background:#4c687a}
+.homeDemoTerminalDots i:first-child{background:#ef867c}
+.homeDemoTerminalDots i:nth-child(2){background:#dfb265}
+.homeDemoTerminalDots i:last-child{background:#65c39b}
+.homeDemoTerminalDevice{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:11px;color:#97afbf}
+.homeDemoTerminalBody{flex:1;min-height:0;max-height:458px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#32485b transparent;padding:22px 23px 27px;font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,Monaco,monospace}
+.homeDemoTerminalBanner{font-size:13px;margin-bottom:7px;color:#c6d7e2}
+.homeDemoMonoAccent{font-weight:750;color:#4bc1df}
+.homeDemoTerminalInfo{font-size:12px;color:#78bd9f;margin-bottom:17px}
+.homeDemoTerminalWaiting{color:#708b9d;font-size:12px;margin-top:23px}
+.homeDemoTraceLine{display:flex;align-items:baseline;gap:11px;min-width:0;animation:homeDemoFade .2s ease-out;margin:9px 0 0}
+.homeDemoTraceTime{flex:0 0 39px;font-size:11px;color:#6f899d}
+.homeDemoTraceEvent{flex:0 0 65px;color:#56b8dc;font-weight:750}
+.homeDemoTraceSuccess{flex:0 0 65px;color:#6cd7a6;font-weight:750}
+.homeDemoTraceLine code{font:inherit;font-size:12px;color:#e9f4fa;overflow-wrap:anywhere;min-width:0}
+.homeDemoTraceLine small{color:#8a9faf;font-size:11px}
+.homeDemoTraceArgs{padding-left:115px;margin:2px 0 14px;color:#a3b6c7;animation:homeDemoFade .2s ease-out}
+.homeDemoTraceArgs code{font:inherit;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
+.homeDemoTraceResult{margin:0 0 17px}
+.homeDemoTraceResult code{color:#ccebdc}
+.homeDemoTerminalFinished{margin-top:21px;padding-top:15px;border-top:1px solid #253748;font-size:12px;color:#70d3a2;font-weight:720}
+.homeDemoTerminalCursor{display:inline-block;animation:homeDemoBlink 1s step-end infinite;color:#55c4e0;margin-top:12px}
+.homeDemoTerminalFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 22px;border-top:1px solid #293544;font-size:11px;color:#9eb0be}
+.homeDemoTerminalFooter>span:last-child{font-weight:700;color:#74c6a4}
+.homeDemoUnder{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 25px;margin-top:13px}
+.homeDemoUnder p{margin:0;max-width:730px;font-size:12px;line-height:1.6;color:var(--landing-muted)}
+.homeDemoUnder a{font-size:13px;font-weight:700;color:var(--text);text-decoration:none}
+.homeDemoUnder a:hover{text-decoration:underline}
+.homeDemo button:focus-visible{outline:3px solid #2596b7;outline-offset:3px}
+@keyframes homeDemoFade{from{opacity:.35;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes homeDemoBlink{50%{opacity:0}}
+@media(max-width:1020px){.homeDemoToolbar{align-items:flex-start;flex-direction:column}.homeDemoSurface{grid-template-columns:1fr 1fr}.homeDemoPanelHeader{padding:13px 15px}.homeDemoTerminalHeader{padding:13px 15px}.homeDemoChatBody{padding:25px 19px}.homeDemoTerminalBody{padding:19px 14px}.homeDemoTraceLine{gap:6px}.homeDemoTraceTime{flex-basis:36px}.homeDemoTraceEvent,.homeDemoTraceSuccess{flex-basis:59px}.homeDemoTraceArgs{padding-left:103px}}
+@media(max-width:760px){.homeDemoSurface{grid-template-columns:minmax(0,1fr)}.homeDemoChat{min-height:360px}.homeDemoChatBody{min-height:240px}.homeDemoTerminal{min-height:350px;border-left:0;border-top:1px solid #293544}.homeDemoTerminalBody{max-height:360px;min-height:250px}.homeDemoExamples{gap:6px}.homeDemoExamples button{font-size:13px;min-height:40px;padding:8px 11px}.homeDemoMode{font-size:10px}.homeDemoChatBody{gap:17px}.homeDemoUserBubble{font-size:16px}.homeDemoTerminalFooter{padding:11px 16px}.homeDemoUnder{align-items:flex-start}}
+@media(max-width:390px){.homeDemoClientSelect button{padding:5px 6px;font-size:11px}.homeDemoPanelHeader{padding:12px}.homeDemoAppMark small{font-size:11px}.homeDemoTerminalHeader{gap:7px}.homeDemoTerminalDevice{font-size:10px}.homeDemoTraceLine code{font-size:11px}.homeDemoTraceArgs{padding-left:96px}}
+@media(prefers-reduced-motion:reduce){.homeDemoTraceLine,.homeDemoTraceArgs,.homeDemoAssistant,.homeDemoTerminalCursor{animation:none}.homeDemoExamples button{transition:none}}
