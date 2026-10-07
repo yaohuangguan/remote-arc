@@ -54,6 +54,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
   const [step, setStep] = useState(-1);
   const [client, setClient] = useState<"ChatGPT" | "Claude">("ChatGPT");
   const demoRef = useRef<HTMLDivElement>(null);
+  const terminalRef = useRef<HTMLDivElement>(null);
   const events = eventsFor(scenarios[selected]?.id ?? "code", tr);
   const scenario = scenarios[selected] ?? scenarios[0];
   const finished = step >= events.length * 2 + 1;
@@ -80,7 +81,19 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (terminalRef.current) terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+  }, [step, selected]);
+
   if (!scenario) return null;
+
+  const finalReply = scenarios[selected]?.id === "code"
+    ? tr("I fixed the formatting edge case and reran the tests: 24 passed. The diff is ready for review.", "我修复了格式化的边界问题并重新运行测试：24 项全部通过。修改内容已准备好供你检查。")
+    : scenarios[selected]?.id === "inspect"
+      ? tr("The logs point to repeated connection timeouts. I haven't changed any files or restarted the service.", "日志显示反复发生连接超时。我没有修改任何文件，也没有重启服务。")
+      : scenarios[selected]?.id === "schedule"
+        ? tr("The health check is scheduled. It will collect status only; no service restart is included.", "健康检查已安排，届时只采集状态，不包含重启服务。")
+        : tr("The export finished successfully. The result and task status are available to inspect when you return.", "报表导出已成功完成，稍后回来可以查看结果与任务状态。");
 
   const pickScenario = (index: number) => {
     setSelected(index);
@@ -124,7 +137,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                 <span className="homeDemoAssistantSymbol">✳</span>
                 <div>
                   <strong>{finished ? tr("Task completed", "任务完成") : tr("Working with Remote Arc…", "正在通过 Remote Arc 执行…")}</strong>
-                  {finished ? <p>{scenario.result.replace(/^“|”$/g, "")}</p> :
+                  {finished ? <p>{finalReply}</p> :
                     <p>{tr("Calling approved tools on the example computer.", "正在示例电脑上调用已授权的工具。")}</p>}
                   {finished && <div className="homeDemoComplete">✓ {tr("Results returned to this chat", "结果已返回 AI 对话")}</div>}
                 </div>
@@ -146,7 +159,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
             <span>Remote Arc <b>/</b> {tr("device activity", "设备活动")}</span>
             <span className="homeDemoTerminalDevice"><i aria-hidden="true" />{tr("example-workstation", "示例工作站")}</span>
           </header>
-          <div className="homeDemoTerminalBody" role="log" aria-label={tr("Simulated tool call sequence", "模拟工具调用序列")}>
+          <div className="homeDemoTerminalBody" ref={terminalRef} role="log" aria-label={tr("Simulated tool call sequence", "模拟工具调用序列")}>
             <div className="homeDemoTerminalBanner">
               <span className="homeDemoMonoAccent">remote-arc</span>
               <span>{tr(" · local execution", " · 本地执行")}</span>
