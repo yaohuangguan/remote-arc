@@ -6427,37 +6427,9 @@ type ProductRelease = {
   changes: string[];
 };
 
-const PRODUCT_RELEASES: ProductRelease[] = [
-  {
-    version: "0.4.3",
-    date: "2026-10-04",
-    status: "released",
-    title: "Reliable, observable background connections",
-    summary: "The copied background agent is self-contained, Windows startup uses current-user permissions, and Dashboard distinguishes configured autostart from a live background connection.",
-    changes: [
-      "Bundled the ws dependency into the standalone ESM background agent, preventing the macOS launchd missing-package crash loop.",
-      "Replaced Windows Scheduled Task registration with current-user Startup and detached process logs, without requiring administrator access.",
-      "Preserved the macOS user PATH for background developer tools.",
-      "Published live agent PID, version and connection time; added Dashboard Repair and Stop now controls.",
-      "Extended release smoke checks to execute the copied standalone background bundle from an isolated directory.",
-    ],
-  },
-  {
-    version: "0.4.4",
-    date: "2026-10-04",
-    status: "released",
-    title: "Durable work and adaptive agents",
-    summary: "Remote Arc moves beyond request-bound remote execution: devices can stay available in the background, work can survive the chat that created it, and Agent Goals can inspect results and change strategy until a verifiable objective is reached.",
-    changes: [
-      "Durable Automations: Long Task, Condition Watch, Schedule Watch and deterministic Goal Loop with D1 state, leases, expiry, pause/resume/cancel and offline recovery.",
-      "Adaptive Agent Goal: each planning turn receives the latest bounded tool result, updates compact working memory, and may choose a different next approved action; optional deterministic verification must exit 0 before completion.",
-      "Cloud-side GitHub action: a matching CI workflow webhook can merge one explicitly configured pull request through a GitHub App installation token without requiring a paired computer to be online.",
-      "Separate persistent-authority OAuth scopes: automation:read, automation:write and agent:write; ordinary computer:write does not silently grant future autonomous work.",
-      "Background Agent baseline: start at login, reconnect automatically and keep a paired Windows, macOS or Linux machine reachable without an open terminal window while the machine is awake.",
-      "Pairing permission onboarding, post-pair Connect AI launcher, improved device policy controls, local undo visibility and managed background-process controls.",
-      "Chrome Browser Beta, PWA device management, service monitoring, light-first dashboard, QHD scaling, richer documentation/security pages and a substantive public-site information architecture.",
-    ],
-  },
+declare const __REMOTEARC_RELEASES__: ProductRelease[];
+
+const LEGACY_PRODUCT_RELEASES: ProductRelease[] = [
   {
     version: "0.3.14",
     date: "2026-09-29",
@@ -6652,6 +6624,11 @@ const PRODUCT_RELEASES: ProductRelease[] = [
   },
 ];
 
+const PRODUCT_RELEASES: ProductRelease[] = [
+  ...__REMOTEARC_RELEASES__,
+  ...LEGACY_PRODUCT_RELEASES,
+];
+
 function ReleasesPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const latest = PRODUCT_RELEASES[0]!;
@@ -6685,8 +6662,8 @@ function ReleasesPage({ user }: { user?: User | null }) {
           <div>
             <strong>{tr("Release status", "版本状态")}</strong>
             <p>{tr(
-              "The latest published CLI is remotelink 0.4.3. Task availability also depends on your plan, relay configuration and device permissions; a website preview does not execute work.",
-              "最新已发布的 CLI 是 remotelink 0.4.3。任务可用性还取决于套餐、Relay 配置与设备权限；网站预览不会执行任务。",
+              `The latest published CLI is remotelink ${latest.version}. Task availability also depends on your plan, relay configuration and device permissions; a website preview does not execute work.`,
+              `最新已发布的 CLI 是 remotelink ${latest.version}。任务可用性还取决于套餐、Relay 配置与设备权限；网站预览不会执行任务。`,
             )}</p>
           </div>
         </section>

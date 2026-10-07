@@ -23,6 +23,20 @@ On first run, `remotelink`:
 No public IP, VPN, router port forwarding, repository clone, or manual token
 copy is required.
 
+<!-- latest-release:start -->
+## Latest release
+
+**remotelink 0.4.7 — Pairing repair and clearer onboarding**
+
+Published 2026-10-07
+
+- Make Forget device complete the full revocation lifecycle: live Relay sockets are disconnected immediately, and interactive CLI startup validates saved pairing before viewer/background attach so revoked local identities automatically stop old background owners, clear credentials and return to fresh pairing.
+- Improve first-run onboarding readability with larger permission, workspace, recovery and connector copy, and render the ChatGPT/OpenAI mark correctly for dark and light themes.
+- Keep the 0.4.6 controlled background handoff and runtime-version visibility improvements.
+
+See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/yaohuangguan/remote-arc/blob/master/CHANGELOG.md).
+<!-- latest-release:end -->
+
 ## Connect your AI client
 
 Remote MCP endpoint:
@@ -53,7 +67,7 @@ npx remotelink --help          Show help
 
 The package also exposes the aliases `remote-link` and `remote-arc`.
 
-In 0.4.7, background recovery and Relay reconnect are separate. A normal npx remotelink@latest launch can safely hand off a known older background Agent to the current release without creating two executors.
+Background recovery and Relay reconnect are separate. A normal `npx remotelink@latest` launch can safely hand off a known older background Agent to the current release without creating two executors.
 Recovery installs a user service (macOS/Linux) or a hidden login supervisor
 (Windows), which takes over when the executing Agent ends. Only one updated
 Agent owns execution; additional terminals follow its operation log and offer
@@ -62,7 +76,7 @@ execution lease. Turning recovery off preserves current execution. Explicit
 Stop background Agent also ends that Agent's work. Windows recovery needs the
 supervisor to remain running; killing it requires a local relaunch or login.
 Sleep/power loss still makes the device unavailable. All concurrent instances
-must be updated; pre-0.4.4 Agents do not participate in the execution lease. When the installed version is identified as an older release, 0.4.7 performs a controlled handoff even when that older Agent still owns the execution lease: it stops the known Remote Arc worker and supervisor, waits for the lease to release, preserves pairing and policy, installs the replacement bundle, and verifies that the replacement worker owns execution. If a saved device pairing has been revoked from Dashboard, interactive startup now validates it before viewer/background attach, stops the known local background owner, clears the revoked credential and begins fresh pairing. Unknown processes still fail closed instead of being killed automatically.
+must be updated; pre-0.4.4 Agents do not participate in the execution lease. When the installed version is identified as an older release, the current CLI performs a controlled handoff even when that older Agent still owns the execution lease: it stops the known Remote Arc worker and supervisor, waits for the lease to release, preserves pairing and policy, installs the replacement bundle, and verifies that the replacement worker owns execution. If a saved device pairing has been revoked from Dashboard, interactive startup now validates it before viewer/background attach, stops the known local background owner, clears the revoked credential and begins fresh pairing. Unknown processes still fail closed instead of being killed automatically.
 
 ## Native execution core
 

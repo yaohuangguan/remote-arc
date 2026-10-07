@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Sync release docs from CHANGELOG
+        run: pnpm release:sync
+
       - name: Verify release ref
         if: github.event_name != 'workflow_dispatch'
         run: |
@@ -117,8 +120,15 @@ jobs:
           else
             TAG_NAME="$GITHUB_REF_NAME"
           fi
-          gh release view "$TAG_NAME" >/dev/null 2>&1 || \
+          CLI_VERSION="${TAG_NAME#remotelink-v}"
+          node scripts/sync-release-docs.mjs --notes "$CLI_VERSION" > /tmp/release-notes.md
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release edit "$TAG_NAME" \
+              --title "remotelink $CLI_VERSION" \
+              --notes-file /tmp/release-notes.md
+          else
             gh release create "$TAG_NAME" \
               --target "$GITHUB_SHA" \
-              --title "remotelink ${TAG_NAME#remotelink-v}" \
-              --generate-notes
+              --title "remotelink $CLI_VERSION" \
+              --notes-file /tmp/release-notes.md
+          fi

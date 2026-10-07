@@ -539,6 +539,19 @@ remote-arc
 The published CLI bundles `@remotearc/execution-core` into the distributable
 artifact. End users do not install a separate execution server.
 
+Release content has one source of truth: `CHANGELOG.md`. Each release section uses
+`## <version> - <date>`, one `### <title>`, and bullet changes. Run:
+
+```bash
+pnpm release:sync
+pnpm release:check
+```
+
+`release:sync` updates the npm README's Latest release block. The website Releases
+page reads the same CHANGELOG at build time, and the GitHub Release workflow uses
+the same section as its release notes. CI fails when the package version and latest
+CHANGELOG section drift apart.
+
 npm publishing uses GitHub Actions OIDC Trusted Publishing with provenance.
 
 The npm Trusted Publisher configuration must match:

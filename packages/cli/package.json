@@ -19,7 +19,7 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "node ../../scripts/sync-release-docs.mjs --write && pnpm build"
   },
   "dependencies": {
     "proper-lockfile": "^4.1.2",

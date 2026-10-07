@@ -2,13 +2,17 @@
 
 All notable changes to Remote Arc are documented here.
 
-## 0.4.7
+## 0.4.7 - 2026-10-07
+
+### Pairing repair and clearer onboarding
 
 - Make Forget device complete the full revocation lifecycle: live Relay sockets are disconnected immediately, and interactive CLI startup validates saved pairing before viewer/background attach so revoked local identities automatically stop old background owners, clear credentials and return to fresh pairing.
 - Improve first-run onboarding readability with larger permission, workspace, recovery and connector copy, and render the ChatGPT/OpenAI mark correctly for dark and light themes.
 - Keep the 0.4.6 controlled background handoff and runtime-version visibility improvements.
 
-## 0.4.6
+## 0.4.6 - 2026-10-07
+
+### Safe Agent handoff and runtime visibility
 
 - Fix in-place upgrades from lease-owning older background Agents: a known older worker now performs a controlled stop, lease release, bundle replacement and verified restart instead of leaving the new CLI as a passive viewer.
 - Surface running Agent and installed recovery-bundle versions in Dashboard and flag devices that are behind the current CLI release.
@@ -18,7 +22,9 @@ All notable changes to Remote Arc are documented here.
 - Let the deploy workflow continue with the schema-compatible Worker when the configured Cloudflare token can deploy Workers but lacks D1 migration scope (error 7403); pending D1 migrations still require separately authorized credentials.
 
 
-## 0.4.5
+## 0.4.5 - 2026-10-06
+
+### Safer background upgrades
 
 - Add safe in-place handoff from a known older background Agent to the current CLI release, preserving pairing/configuration while preventing dual executors. Unknown legacy processes continue to fail closed.
 - Position Remote Arc explicitly as a persistent, permissioned agent runtime for computers the user already owns.
@@ -26,7 +32,9 @@ All notable changes to Remote Arc are documented here.
 - Align the ChatGPT app submission metadata with all 31 production MCP tools, including binary file resources and persistent task controls.
 - Add a runtime-surface contract check so Relay tool registration, app submission metadata, and the runtime positioning cannot silently drift apart.
 
-## 0.4.4
+## 0.4.4 - 2026-10-05
+
+### Durable tasks and adaptive execution
 
 - Unify goal creation around objective, explicit decision executor, finite plan budget and independent triggers; retain command automation as an explicit code entry.
 - Add a versioned Dashboard contract and opt-in MCP goal contract while preserving legacy IDs and API defaults.
@@ -42,7 +50,9 @@ All notable changes to Remote Arc are documented here.
 - Write pairing configuration atomically, serialize setting changes, safely discard results for disconnected sockets, and reject local permission-profile changes while another Agent owns execution.
 - Add native lifecycle and bundled attached-terminal regression checks.
 
-## 0.4.3
+## 0.4.3 - 2026-10-05
+
+### Reliable background connections
 
 - Fixed background-agent packaging so the copied standalone agent bundle includes its WebSocket runtime and no longer crash-loops on macOS.
 - Windows background connection now uses the current user's Startup registry entry instead of Task Scheduler, avoiding administrator-only `Register-ScheduledTask` failures.
@@ -51,18 +61,24 @@ All notable changes to Remote Arc are documented here.
 - Disabling background mode can stop the background process immediately rather than only removing login autostart.
 - Release CI now executes the copied standalone background bundle in addition to the installed npm package.
 
-## 0.4.2
+## 0.4.2 - 2026-10-05
+
+### Publish artifact reliability
 
 - Fixed the published ESM bundle so the `ws` runtime dependency remains external instead of being incorrectly bundled with CommonJS dynamic requires.
 - Added a release smoke test that packs the npm artifact, installs it into a clean temporary project, and executes `remotelink --version` before publication.
 - Carries the current 0.4 security model and evergreen npm/GitHub product documentation.
 
-## 0.4.1
+## 0.4.1 - 2026-10-05
+
+### Broken ESM publish, superseded
 
 - **Broken release:** the published CLI could install but failed at startup with `Dynamic require of "events" is not supported` because `ws` was incorrectly bundled into the ESM artifact.
 - Superseded by 0.4.2.
 
-## 0.4.0
+## 0.4.0 - 2026-10-05
+
+### Trusted Write Locations and Approval Broker
 
 ### Security and permissions
 
