@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   resolveProductionDeployPolicy,
   deploymentMetadata,
+  shouldSkipStaleProductionDeploy,
 } from "./deploy-relay-policy.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -47,6 +48,50 @@ const ref =
   process.env.BRANCH_NAME ||
   "local";
 
+function latestRemoteMasterSha() {
+  try {
+    const output = execFileSync(
+      "git",
+      ["ls-remote", "origin", "refs/heads/master"],
+      { cwd: repoRoot, encoding: "utf8" },
+    ).trim();
+    return output.split(/\s+/)[0] || "";
+  } catch {
+    throw new Error(
+      "Could not verify the latest origin/master SHA; refusing production deploy.",
+    );
+  }
+}
+
+function ensureLatestMaster(stage) {
+  if (policy.source !== "github-actions") return;
+
+  const latestMasterSha = latestRemoteMasterSha();
+  if (!latestMasterSha) {
+    throw new Error(
+      "origin/master returned no SHA; refusing production deploy.",
+    );
+  }
+
+  if (
+    shouldSkipStaleProductionDeploy({
+      source: policy.source,
+      ref,
+      requestedSha: sha,
+      latestMasterSha,
+    })
+  ) {
+    console.log(
+      `Skipping stale production deploy at ${stage}: ${sha.slice(0, 12)} is no longer origin/master (${latestMasterSha.slice(0, 12)}).`,
+    );
+    process.exit(0);
+  }
+
+  console.log(
+    `Verified latest master at ${stage}: ${latestMasterSha.slice(0, 12)}`,
+  );
+}
+
 const metadata = deploymentMetadata({
   source: policy.source,
   sha,
@@ -57,9 +102,13 @@ console.log(
   `Remote Arc production deploy allowed: ${policy.source} · ${metadata.tag}`,
 );
 
+ensureLatestMaster("pre-build");
+
 if (!skipBuild) {
   run("pnpm", ["build:ui"]);
 }
+
+ensureLatestMaster("pre-upload");
 
 run(
   "pnpm",

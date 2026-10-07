@@ -424,7 +424,10 @@ REMOTEARC_MANUAL_PROD_DEPLOY=1 pnpm deploy:relay
 ```
 
 Every allowed deploy writes the verified Git SHA into the Cloudflare version tag
-and message so production history can be traced back to its source commit.
+and message so production history can be traced back to its source commit. GitHub
+Actions also verifies `origin/master` immediately before the build and again
+before upload; if a newer master commit exists, the older successful CI run exits
+without deploying.
 
 ## Remote MCP tools
 

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   resolveProductionDeployPolicy,
   deploymentMetadata,
+  shouldSkipStaleProductionDeploy,
 } from "./deploy-relay-policy.mjs";
 
 assert.equal(resolveProductionDeployPolicy({}).allowed, false);
@@ -41,4 +42,33 @@ const manualMeta = deploymentMetadata({
 });
 assert.equal(manualMeta.tag, "manual-abcdef123456");
 
-console.log("PASS: production deploy policy blocks accidental duplicate deploys");
+assert.equal(
+  shouldSkipStaleProductionDeploy({
+    source: "github-actions",
+    ref: "master",
+    requestedSha: "old",
+    latestMasterSha: "new",
+  }),
+  true,
+);
+assert.equal(
+  shouldSkipStaleProductionDeploy({
+    source: "github-actions",
+    ref: "refs/heads/master",
+    requestedSha: "same",
+    latestMasterSha: "same",
+  }),
+  false,
+);
+assert.equal(
+  shouldSkipStaleProductionDeploy({
+    source: "manual-emergency",
+    ref: "master",
+    requestedSha: "old",
+    latestMasterSha: "new",
+  }),
+  false,
+  "Emergency manual deploys remain an explicit operator escape hatch.",
+);
+
+console.log("PASS: production deploy policy blocks duplicate and stale deploys");
