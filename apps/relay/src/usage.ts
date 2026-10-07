@@ -1,6 +1,7 @@
 type UsageEnv = {
   DB: D1Database;
   MONTHLY_TOOL_CALL_LIMIT?: string;
+  OPERATOR_EMAIL?: string;
 };
 
 export type MonthlyUsage = {
@@ -22,14 +23,25 @@ function configuredMonthlyLimit(env: UsageEnv) {
 
 async function monthlyLimitForUser(env: UsageEnv, userId: string) {
   const user = await env.DB.prepare(
-    "SELECT role FROM users WHERE id = ?1 LIMIT 1",
+    "SELECT role, email FROM users WHERE id = ?1 LIMIT 1",
   )
     .bind(userId)
-    .first<{ role: string | null }>();
+    .first<{ role: string | null; email: string | null }>();
 
-  if (user?.role === "admin") return null;
+  const operatorEmail = env.OPERATOR_EMAIL?.trim().toLowerCase();
+  if (
+    user?.role === "admin" ||
+    (operatorEmail && user?.email?.trim().toLowerCase() === operatorEmail)
+  ) {
+    return null;
+  }
   return configuredMonthlyLimit(env);
 }
+
+const isMissingUsageTableError = (error: unknown) =>
+  /no such table:\s*user_monthly_usage/i.test(
+    error instanceof Error ? error.message : String(error),
+  );
 
 function usageSnapshot(month: string, used: number, limit: number | null): MonthlyUsage {
   return {
@@ -47,13 +59,18 @@ export async function getMonthlyUsage(
 ): Promise<MonthlyUsage> {
   const month = monthKey();
   const limit = await monthlyLimitForUser(env, userId);
-  const row = await env.DB.prepare(
-    "SELECT tool_calls FROM user_monthly_usage WHERE user_id = ?1 AND month_key = ?2",
-  )
-    .bind(userId, month)
-    .first<{ tool_calls: number }>();
+  try {
+    const row = await env.DB.prepare(
+      "SELECT tool_calls FROM user_monthly_usage WHERE user_id = ?1 AND month_key = ?2",
+    )
+      .bind(userId, month)
+      .first<{ tool_calls: number }>();
 
-  return usageSnapshot(month, row?.tool_calls || 0, limit);
+    return usageSnapshot(month, row?.tool_calls || 0, limit);
+  } catch (error) {
+    if (!isMissingUsageTableError(error)) throw error;
+    return usageSnapshot(month, 0, limit);
+  }
 }
 
 export async function consumeToolCall(env: UsageEnv, userId: string) {
@@ -62,29 +79,40 @@ export async function consumeToolCall(env: UsageEnv, userId: string) {
   const now = new Date().toISOString();
 
   if (limit === null) {
-    const row = await env.DB.prepare(
+    try {
+      const row = await env.DB.prepare(
+        `INSERT INTO user_monthly_usage (user_id, month_key, tool_calls, updated_at)
+         VALUES (?1, ?2, 1, ?3)
+         ON CONFLICT(user_id, month_key)
+         DO UPDATE SET tool_calls = tool_calls + 1, updated_at = excluded.updated_at
+         RETURNING tool_calls`,
+      )
+        .bind(userId, month, now)
+        .first<{ tool_calls: number }>();
+
+      return usageSnapshot(month, row?.tool_calls || 1, null);
+    } catch (error) {
+      if (!isMissingUsageTableError(error)) throw error;
+      return usageSnapshot(month, 0, null);
+    }
+  }
+
+  let row: { tool_calls: number } | null;
+  try {
+    row = await env.DB.prepare(
       `INSERT INTO user_monthly_usage (user_id, month_key, tool_calls, updated_at)
        VALUES (?1, ?2, 1, ?3)
        ON CONFLICT(user_id, month_key)
        DO UPDATE SET tool_calls = tool_calls + 1, updated_at = excluded.updated_at
+       WHERE tool_calls < ?4
        RETURNING tool_calls`,
     )
-      .bind(userId, month, now)
+      .bind(userId, month, now, limit)
       .first<{ tool_calls: number }>();
-
-    return usageSnapshot(month, row?.tool_calls || 1, null);
+  } catch (error) {
+    if (!isMissingUsageTableError(error)) throw error;
+    return usageSnapshot(month, 0, limit);
   }
-
-  const row = await env.DB.prepare(
-    `INSERT INTO user_monthly_usage (user_id, month_key, tool_calls, updated_at)
-     VALUES (?1, ?2, 1, ?3)
-     ON CONFLICT(user_id, month_key)
-     DO UPDATE SET tool_calls = tool_calls + 1, updated_at = excluded.updated_at
-     WHERE tool_calls < ?4
-     RETURNING tool_calls`,
-  )
-    .bind(userId, month, now, limit)
-    .first<{ tool_calls: number }>();
 
   if (!row) {
     const usage = await getMonthlyUsage(env, userId);
