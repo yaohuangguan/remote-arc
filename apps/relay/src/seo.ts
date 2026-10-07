@@ -87,7 +87,7 @@ const articles: Record<string, SeoPage> = {
 };
 
 const pages: Record<string, SeoPage> = {
-  "/": { title: "Remote Arc — Controlled Computer Access for AI", description: "Connect ChatGPT, Claude, Codex and compatible MCP clients to paired Windows, macOS and Linux computers with explicit device permissions and local safety boundaries.", canonical: SITE + "/" },
+  "/": { title: "Remote Arc — Controlled Computer Access for AI", description: "Connect ChatGPT, Claude, Codex and compatible MCP clients to paired Windows, macOS and Linux computers with explicit permissions and local safety controls.", canonical: SITE + "/" },
   "/install": { title: "Install Remote Arc for ChatGPT, Claude and Cursor", description: "Install Remote Arc, pair your computer and connect your AI client through Remote MCP.", canonical: SITE + "/install/chatgpt" },
   "/install/chatgpt": { title: "Install Remote Arc for ChatGPT", description: "Connect ChatGPT to Windows, macOS or Linux through Remote Arc and a secure OAuth-protected Remote MCP endpoint.", canonical: SITE + "/install/chatgpt" },
   "/install/claude": { title: "Install Remote Arc for Claude", description: "Connect Claude to paired computers through Remote Arc using a secure Remote MCP connector and explicit device permissions.", canonical: SITE + "/install/claude" },
@@ -100,7 +100,7 @@ const pages: Record<string, SeoPage> = {
   "/docs/mcp": { title: "Remote Arc MCP Reference — OAuth, Tools & Browser", description: "Remote MCP connection, OAuth scopes, device tools, deterministic task controls and browser companion setup for Remote Arc.", canonical: SITE + "/docs/mcp" },
   "/connect-ai": { title: "Connect an AI client to Remote Arc", description: "Pair a computer, choose its device permissions, then connect ChatGPT, Claude, Cursor or another compatible MCP client through OAuth.", canonical: SITE + "/connect-ai" },
   "/security-model": { title: "Remote Arc Security and Trust Model", description: "Remote Arc trust boundaries, per-device skills, directory and sensitive-path controls, encrypted transport, data handling, Local Undo and revocation.", canonical: SITE + "/security-model" },
-  "/blogs": { title: "Remote Arc Blog", description: "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.", canonical: SITE + "/blogs" },
+  "/blogs": { title: "Remote Arc Blog — MCP, Security & Remote AI Engineering", description: "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.", canonical: SITE + "/blogs" },
   "/use-cases": { title: "Remote Arc Use Cases — Let AI work on your real computer", description: "Explore workflows for coding, file organization, long jobs, scheduled checks, CI follow-up, data, diagnostics and explicitly shared browser context.", canonical: SITE + "/use-cases" },
   "/chatgpt-computer-access": { title: "ChatGPT Computer Access via Remote MCP — Remote Arc", description: "Connect ChatGPT to a real Windows, macOS or Linux computer through Remote MCP, OAuth and explicit per-device permissions.", canonical: SITE + "/chatgpt-computer-access" },
   "/claude-computer-access": { title: "Claude Computer Access via Remote MCP — Remote Arc", description: "Connect Claude to explicitly paired Windows, macOS and Linux computers through Remote MCP, OAuth and per-device permissions.", canonical: SITE + "/claude-computer-access" },
@@ -129,9 +129,12 @@ for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
 
 function blogIndexHtml() {
   const items = Object.entries(articles).map(function(entry) {
-    return '<li><a href="' + entry[0] + '">' + esc(entry[1].title) + '</a> — Sam Yao</li>';
+    return '<li><a href="' + entry[0] + '">' + esc(entry[1].title) + '</a><p>' + esc(entry[1].description) + '</p></li>';
   }).join("");
-  return '<main class="seo-blog-shell"><section><p class="seo-eyebrow">BLOG</p><h1>Remote Arc blog</h1><p>Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.</p><ol>' + items + '</ol></section></main>';
+  return '<main class="seo-blog-shell"><section><p class="seo-eyebrow">BLOG</p><h1>Remote Arc blog</h1>' +
+    '<p>Engineering notes, architecture decisions, security trade-offs and product reasoning from building a controlled Remote MCP bridge between AI clients and real computers.</p>' +
+    '<p>The articles explain why Remote Arc separates the hosted control plane from local operating-system execution, how OAuth and paired-device identities fit together, why terminal access is treated differently from narrower file tools, and where durable task execution stops being the same thing as fresh AI reasoning.</p>' +
+    '<p>Use these notes when you want the implementation rationale behind the product documentation rather than only setup instructions.</p><ol>' + items + '</ol></section></main>';
 }
 
 function articleHtml(page: SeoPage) {
@@ -152,106 +155,152 @@ type CrawlPage = {
 const crawlPages: Record<string, CrawlPage> = {
   "/": {
     h1: "Remote computer access for AI through MCP",
-    intro: "Remote Arc connects ChatGPT, Claude, Cursor and other compatible AI clients to Windows, macOS and Linux computers that you explicitly pair.",
+    intro: "Remote Arc connects ChatGPT, Claude, Cursor and other compatible AI clients to Windows, macOS and Linux computers that you explicitly pair. It is a remote execution layer for work that already lives on your devices, not a replacement assistant, hosted desktop or general remote-control product.",
     sections: [
-      { heading: "Use the computer where the work already lives", text: "Your repositories, files, runtimes and command-line tools stay on your own machine. Remote Arc provides a controlled Remote MCP path for reading, editing and running approved work there." },
-      { heading: "Separate AI authorization from device permission", text: "OAuth authorizes the AI client. Each paired computer separately controls tools, Trusted Write Locations, boundary approvals, sensitive paths and long-running task capabilities." },
-      { heading: "No inbound Remote Arc port", text: "The local agent establishes an outbound connection to the hosted control plane, so normal setup does not require exposing a Remote Arc listener on your router or machine." }
+      { heading: "Use the computer where the work already lives", text: "Your repositories, files, runtimes, credentials and command-line tools can stay on your own machine. Remote Arc exposes named MCP capabilities for inspecting directories, reading files, making supported edits, checking processes and running approved commands. The AI asks for a specific tool operation and the paired device executes it locally, so you do not need to move an entire development environment into a hosted VM just to let an AI help with real work." },
+      { heading: "Separate AI authorization from device permission", text: "OAuth authorizes the AI client to your Remote Arc account, while each paired computer keeps its own policy. A development workstation can allow file edits and managed terminal commands while another machine remains read-only. Trusted Write Locations, protected paths, per-tool permissions and explicit approvals let you narrow ordinary file workflows without pretending that powerful terminal access is risk free." },
+      { heading: "No inbound Remote Arc port", text: "The local agent establishes an outbound connection to the hosted control plane. Normal setup does not require port forwarding, a public IP address, a VPN into the machine or a publicly reachable local MCP server. The hosted side handles identity, discovery and routing; operating-system execution still terminates on the paired computer under the local user account." },
+      { heading: "Keep the AI client replaceable", text: "Remote Arc uses MCP as the product boundary exposed to compatible AI clients. That means the client can change without rebuilding the device connection model. You can connect ChatGPT, Claude, Cursor or another supported MCP client to the same account while keeping paired computers, device policy and revocation controls independent from the conversation interface." },
+      { heading: "Support short actions and durable work", text: "For immediate work, an AI can inspect state and call device tools during the conversation. For deterministic work that must outlive one chat turn, Remote Arc can persist bounded commands, schedules, condition watches and task state on supported plans. Fresh reasoning is still treated separately: a saved task can continue deterministic execution, but Remote Arc does not claim that a model remains continuously conscious after the chat ends." }
     ],
-    links: [["/install/chatgpt", "Install for ChatGPT"], ["/install/claude", "Install for Claude"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"], ["/docs", "Documentation"]]
+    links: [["/install/chatgpt", "Install for ChatGPT"], ["/install/claude", "Install for Claude"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"], ["/docs", "Documentation"], ["/use-cases", "Use cases"]]
   },
   "/install/chatgpt": {
     h1: "Install Remote Arc for ChatGPT",
     intro: "Pair a computer, connect ChatGPT to the Remote Arc MCP endpoint, complete OAuth and choose the capabilities that ChatGPT may use on that device.",
     sections: [
-      { heading: "1. Pair the computer", text: "Run npx remotelink on Windows, macOS or Linux and approve the short-lived pairing request in your Remote Arc account." },
-      { heading: "2. Add the Remote MCP connection", text: "Connect ChatGPT to https://mcp.remotearc.app/mcp and complete Remote Arc OAuth when your ChatGPT account supports the required MCP app path." },
-      { heading: "3. Keep permissions explicit", text: "Start with read access. Enable editing, terminal execution, browser interaction or long-running work only where the task and device require them." }
+      { heading: "1. Pair the computer", text: "Run npx remotelink on the Windows, macOS or Linux machine you want ChatGPT to reach. Sign in to the Remote Arc account that should own the device, approve the short-lived pairing request and confirm the computer appears online before adding the AI connection." },
+      { heading: "2. Add the Remote MCP connection", text: "Connect ChatGPT to https://mcp.remotearc.app/mcp and complete Remote Arc OAuth when your ChatGPT account supports the required MCP app path. OAuth authorizes the ChatGPT client to the Remote Arc account; it does not replace the separate policy saved for each paired computer." },
+      { heading: "3. Keep permissions explicit", text: "Start with read access and a small verification request. Enable supported file editing, terminal execution, browser interaction or long-running task permissions only where the workflow requires them. A development computer can have broader permissions while another paired device stays read-only." },
+      { heading: "4. Verify the target before real work", text: "Ask ChatGPT to list paired devices, name the computer you intend to use and inspect a harmless project directory or text file. Confirm the returned device and path before asking for edits or commands. This establishes that routing, OAuth and the local policy all point at the expected machine." }
     ],
-    links: [["/chatgpt-computer-access", "How ChatGPT computer access works"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"]]
+    links: [["/chatgpt-computer-access", "How ChatGPT computer access works"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"], ["/use-cases/remote-development", "Remote development"]]
   },
   "/install/claude": {
     h1: "Install Remote Arc for Claude",
     intro: "Connect Claude to a paired computer through a remote MCP connector while keeping device permissions and operating-system execution on the computer you control.",
     sections: [
-      { heading: "Pair once", text: "Run npx remotelink on the target computer and approve the device in Remote Arc." },
-      { heading: "Connect Claude", text: "Add the Remote Arc Remote MCP endpoint to Claude, complete OAuth and then ask Claude to work with the paired device." },
-      { heading: "Control the boundary per device", text: "A development workstation can expose editing and terminal tools while another computer remains read-only." }
+      { heading: "1. Pair the target computer", text: "Run npx remotelink on the Windows, macOS or Linux computer Claude should reach. Approve pairing in your Remote Arc account and confirm the device is online. The paired-device identity is independent from the Claude connector authorization." },
+      { heading: "2. Add the Remote Arc connector", text: "In Claude, add a custom connector that points to https://mcp.remotearc.app/mcp and complete Remote Arc OAuth. Claude can then discover the Remote Arc tools available to the account and route permitted calls to the selected paired computer." },
+      { heading: "3. Control the boundary per device", text: "A development workstation can expose editing and terminal tools while another computer remains read-only. Trusted Write Locations, protected paths and local policy still apply regardless of which compatible AI client is connected." },
+      { heading: "4. Test with a narrow first action", text: "Ask Claude to list devices and read a harmless file or inspect a project directory before enabling broader actions. Confirm the computer and path are correct, then add edit or terminal permissions only if the task actually needs them." }
     ],
-    links: [["/claude-computer-access", "How Claude computer access works"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"]]
+    links: [["/claude-computer-access", "How Claude computer access works"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"], ["/use-cases/remote-development", "Remote development"]]
   },
   "/install/cursor": {
     h1: "Install Remote Arc for Cursor",
     intro: "Use Remote Arc as a remote HTTP MCP server so Cursor can reach approved files, processes and tools on paired computers.",
     sections: [
-      { heading: "Pair the target computer", text: "Run npx remotelink and approve the device before connecting Cursor." },
-      { heading: "Install the MCP connection", text: "Add Remote Arc to Cursor using the remote MCP configuration and complete OAuth." },
-      { heading: "Limit what Cursor can change", text: "Configure device tools, Trusted Write Locations and sensitive-path rules. Ordinary non-sensitive reads may remain broad, while out-of-scope writes pause for explicit approval." }
+      { heading: "1. Pair the target computer", text: "Run npx remotelink on the machine that owns the project or development environment and approve that device in Remote Arc. The computer keeps an outbound connection, so ordinary setup does not require publishing a local MCP server or forwarding a router port." },
+      { heading: "2. Add the remote HTTP MCP server", text: "Point Cursor's MCP configuration at https://mcp.remotearc.app/mcp and complete OAuth for the Remote Arc account. Cursor can then discover the permitted tools while the source tree and command execution remain on the paired machine." },
+      { heading: "3. Limit what Cursor can change", text: "Configure device tools, Trusted Write Locations and sensitive-path rules. Ordinary non-sensitive reads can remain broad while supported writes outside trusted locations require additional approval. Terminal execution is a separate capability because it runs with the authority of the local user." },
+      { heading: "4. Verify with the repository's own checks", text: "For development work, ask Cursor to inspect the selected checkout, make a focused change and run the project's existing test or typecheck command. Review the diff and command output before treating the remote task as complete." }
     ],
-    links: [["/docs/mcp", "MCP reference"], ["/use-cases/remote-development", "Remote development workflow"], ["/security-model", "Security model"]]
+    links: [["/docs/mcp", "MCP reference"], ["/use-cases/remote-development", "Remote development workflow"], ["/security-model", "Security model"], ["/mcp-computer-access", "MCP computer access"]]
   },
   "/chatgpt-computer-access": {
     h1: "Give ChatGPT access to your computer through Remote MCP",
     intro: "Remote Arc gives ChatGPT a controlled route to a real Windows, macOS or Linux computer without sharing an operating-system password or opening a Remote Arc inbound port.",
     sections: [
-      { heading: "ChatGPT sees tools, not a raw desktop login", text: "The MCP connection exposes named capabilities such as file inspection, file editing and managed commands according to the policy of the selected device." },
-      { heading: "Your computer remains a separate trust boundary", text: "The device can be read-only, developer-oriented or terminal-enabled. Trusted Write Locations, boundary approvals, protected paths and Local Undo add narrower controls for supported file workflows." }
+      { heading: "ChatGPT sees tools, not a raw desktop login", text: "The MCP connection exposes named capabilities such as device discovery, directory inspection, file reads, supported edits, process inspection and managed commands according to the policy of the selected device. ChatGPT requests those capabilities through Remote Arc instead of receiving an unrestricted desktop session or the password for the local operating-system account." },
+      { heading: "The connection uses OAuth and a separate device identity", text: "ChatGPT authorizes to your Remote Arc account through OAuth. The paired computer has its own revocable device credential and outbound connection. These are separate trust relationships: removing a ChatGPT grant does not force every computer to pair again, and revoking one computer does not invalidate every AI client." },
+      { heading: "Your computer remains a separate trust boundary", text: "The device can be read-only, developer-oriented or terminal-enabled. Trusted Write Locations, boundary approvals, protected paths and Local Undo add narrower controls for supported file workflows. Terminal execution is deliberately separate because it runs with the permissions of the local operating-system user and is not equivalent to a sandboxed file edit." },
+      { heading: "Ask for observable work and verification", text: "A useful request names the target computer, the desired result and how to verify it. For code work, that can mean reading the affected implementation, applying a focused edit and running the project's own test command. For longer deterministic work, supported task controls can persist a command or schedule after the immediate chat turn ends." }
     ],
-    links: [["/install/chatgpt", "Install for ChatGPT"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"]]
+    links: [["/install/chatgpt", "Install for ChatGPT"], ["/docs/mcp", "MCP reference"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"], ["/use-cases/remote-development", "Remote development"]]
   },
   "/claude-computer-access": {
     h1: "Give Claude controlled access to your computer through Remote MCP",
     intro: "Remote Arc connects Claude to explicitly paired Windows, macOS and Linux computers through an OAuth-protected remote MCP endpoint.",
     sections: [
-      { heading: "Remote connector, local execution", text: "Claude connects to Remote Arc over MCP while file and command execution still terminates on the paired computer through the local agent." },
-      { heading: "Device permissions stay independent", text: "Changing AI clients does not change the computer policy. Tool access, Trusted Write Locations, approvals, sensitive paths and revocation remain attached to the paired device and account." }
+      { heading: "Remote connector, local execution", text: "Claude connects to Remote Arc over MCP while file and command execution still terminates on the paired computer through the local agent. The hosted control plane handles identity, tool discovery and routing; it does not turn the computer into a public MCP server or require a general remote-desktop login." },
+      { heading: "Device permissions stay independent", text: "Changing AI clients does not change the computer policy. Tool access, Trusted Write Locations, approvals, sensitive paths and revocation remain attached to the paired device and account. A workstation can allow edits and tests while another computer exposes only read-oriented inspection tools." },
+      { heading: "Authorization can be revoked independently", text: "Claude receives an OAuth grant to the Remote Arc account, while each computer has a separate paired-device identity. You can revoke a Claude authorization without re-pairing devices, or remove one device without changing every other client connection." },
+      { heading: "Use the machine's existing environment", text: "Because execution happens on the paired computer, Claude can work with the checkout, installed runtimes and command-line tools already present there when those capabilities are enabled. This is useful when moving the project to a hosted coding environment would be slow, incomplete or incompatible with the local setup." }
     ],
-    links: [["/install/claude", "Install for Claude"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"]]
+    links: [["/install/claude", "Install for Claude"], ["/docs/mcp", "MCP reference"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"], ["/use-cases/remote-development", "Remote development"]]
   },
   "/mcp-computer-access": {
     h1: "Remote MCP computer access for AI agents",
     intro: "Remote Arc is a hosted Remote MCP bridge that lets compatible AI clients discover and invoke approved capabilities on computers you pair.",
     sections: [
-      { heading: "Why remote MCP instead of a public local server", text: "AI clients connect to one hosted MCP endpoint while each computer makes an outbound device connection. The computer does not need to host a publicly reachable MCP listener." },
-      { heading: "What the MCP tools can cover", text: "Depending on device policy, Remote Arc can expose file and directory inspection, supported file edits, process inspection, managed commands, local undo, browser tab context and durable task controls." },
-      { heading: "Where the security boundary lives", text: "OAuth controls the AI client and per-device policy controls the computer. Terminal execution, when enabled, still inherits the permissions of the local operating-system user." }
+      { heading: "Why remote MCP instead of a public local server", text: "AI clients connect to one hosted MCP endpoint while each computer makes an outbound device connection. The computer does not need to host a publicly reachable MCP listener, expose a router port or publish a local IP address. This keeps discovery and authorization reachable from cloud AI clients while execution remains on the machine you selected." },
+      { heading: "What the MCP tools can cover", text: "Depending on device policy, Remote Arc can expose file and directory inspection, bounded binary reads, supported file edits, process inspection, managed commands, local undo, explicitly shared browser-tab context and durable task controls. The tool surface is capability-based rather than a single all-or-nothing computer-control permission." },
+      { heading: "How a call reaches one device", text: "The MCP client identifies the target paired computer, the hosted control plane authenticates the account and tool request, and a per-user routing layer forwards the call to the selected outbound device connection. The local agent checks what it actually exposes before executing the operation and returns only the tool result through the existing connection." },
+      { heading: "Where the security boundary lives", text: "OAuth controls the AI client and per-device policy controls the computer. Trusted Write Locations and sensitive-path checks can narrow supported file operations. Terminal execution, when enabled, still inherits the permissions of the local operating-system user, so Remote Arc does not describe a terminal-enabled device as an OS sandbox." },
+      { heading: "MCP keeps the reasoning client replaceable", text: "Remote Arc does not need to own the user's conversation, model or memory in order to provide computer access. A compatible MCP client can change while the paired computers and their policy remain attached to the Remote Arc account. This keeps the remote execution layer separate from the AI interface above it." }
     ],
-    links: [["/docs/mcp", "Remote MCP reference"], ["/install/chatgpt", "ChatGPT setup"], ["/install/claude", "Claude setup"], ["/security-model", "Security model"]]
+    links: [["/docs/mcp", "Remote MCP reference"], ["/install/chatgpt", "ChatGPT setup"], ["/install/claude", "Claude setup"], ["/security-model", "Security model"], ["/use-cases", "Use cases"]]
   },
   "/docs": {
     h1: "Remote Arc documentation",
-    intro: "Technical documentation for pairing devices, connecting AI clients, choosing permissions, understanding data flow and running bounded long-running work.",
-    links: [["/docs/mcp", "MCP reference"], ["/docs/long-running-work", "Long-running work"], ["/security-model", "Security model"], ["/use-cases", "Use cases"]]
+    intro: "Technical documentation for pairing devices, connecting AI clients, choosing permissions, understanding data flow and running bounded long-running work on computers you control.",
+    sections: [
+      { heading: "Start with a paired device", text: "Install the remotelink agent on Windows, macOS or Linux, sign in to the Remote Arc account that should own the device and approve pairing. Pairing creates a revocable device identity. The local agent then keeps an outbound connection to the hosted control plane so the computer can receive only the Remote Arc calls routed to that device." },
+      { heading: "Connect an AI client through Remote MCP", text: "Compatible clients connect to the Remote Arc MCP endpoint over OAuth. OAuth authorizes the client to an account; it does not automatically grant every operating-system capability. Device discovery, tool descriptions and authorization are exposed through the MCP layer, while actual file and process operations terminate on the selected paired machine." },
+      { heading: "Choose the capability boundary per computer", text: "Read access, supported writes, process inspection, terminal execution, browser interaction and task capabilities are separate controls. Trusted Write Locations and sensitive-path rules narrow supported file operations. When unrestricted terminal execution is enabled, the command still inherits the permissions of the local operating-system user, so it should be enabled only on devices where that authority is acceptable." },
+      { heading: "Understand local recovery and hosted state", text: "Supported file edits can create Local Undo snapshots on the device, and recovery checks the current file revision before restoring older content. Hosted Remote Arc stores account, device, grant, policy, usage and task metadata needed for routing and recovery. It is not intended to become a backup of your whole filesystem." },
+      { heading: "Use durable work for deterministic continuation", text: "Long Tasks, schedules and condition watches can save work that should continue after the current chat stream ends. These mechanisms are best for bounded commands and checks with observable results. When the next step requires new judgment rather than a predetermined command, a supported reasoning controller must resume and decide what to do next." }
+    ],
+    links: [["/docs/mcp", "MCP reference"], ["/docs/long-running-work", "Long-running work"], ["/security-model", "Security model"], ["/use-cases", "Use cases"], ["/connect-ai", "Connect an AI client"]]
   },
   "/docs/mcp": {
     h1: "Remote Arc Remote MCP reference",
-    intro: "Reference for the Remote Arc MCP endpoint, OAuth authorization, device discovery, file and process tools, browser capabilities, task controls and client integration.",
-    links: [["/mcp-computer-access", "MCP computer access overview"], ["/install/chatgpt", "ChatGPT setup"], ["/install/claude", "Claude setup"], ["/security-model", "Security model"]]
+    intro: "Reference for the Remote Arc MCP endpoint, OAuth authorization, device discovery, file and process tools, browser capabilities, durable task controls and client integration.",
+    sections: [
+      { heading: "Endpoint and authorization", text: "Compatible clients connect to https://mcp.remotearc.app/mcp. Remote Arc uses OAuth authorization for AI clients and keeps that authorization separate from device pairing. A client grant can be revoked without re-pairing every computer, and a single computer can be revoked without invalidating every AI connection on the account." },
+      { heading: "Device discovery and selection", text: "The MCP surface can list computers linked to the account and report whether each device is online. Tool calls target a specific device identifier so work is routed to one selected connection rather than broadcast across the account. Device metadata is used for routing and policy decisions; the remote client does not receive an operating-system login session." },
+      { heading: "Files, processes and commands", text: "Depending on device policy, MCP tools can list directories, read text or bounded binary data, inspect file metadata, inspect processes, apply supported text edits and start managed terminal commands. Write operations can be limited by Trusted Write Locations and protected-path rules. Terminal access is intentionally distinct because once enabled it inherits the local user's authority." },
+      { heading: "Browser companion capabilities", text: "When a Chrome tab is explicitly shared, Remote Arc can expose a simplified snapshot, selected text, links or table data. Click and fill capabilities require additional per-tab permission. Password, one-time-code, payment-card and file-upload fields remain outside the ordinary browser fill path." },
+      { heading: "Durable tasks and reasoning boundaries", text: "Remote Arc can persist long commands, schedules, condition watches and bounded goal state so deterministic work can survive disconnects and chat endings. Task state and recovery do not imply that an AI model is continuously running. Any step that requires fresh interpretation still needs a reasoning controller to resume from saved context and choose the next allowed action." }
+    ],
+    links: [["/mcp-computer-access", "MCP computer access overview"], ["/install/chatgpt", "ChatGPT setup"], ["/install/claude", "Claude setup"], ["/docs/long-running-work", "Long-running work"], ["/security-model", "Security model"]]
   },
   "/docs/long-running-work": {
     h1: "Long-running AI work on your own computer",
-    intro: "Understand saved goals, bounded command slices, verification, recovery, scheduled work and the limits of continuing a task after a chat turn ends.",
-    links: [["/use-cases/overnight-goals", "Overnight goals"], ["/use-cases/long-running-jobs", "Long-running jobs"], ["/pricing", "Pricing"]]
+    intro: "Understand saved tasks, bounded command slices, verification, recovery, scheduled work and the limits of continuing a task after a chat turn ends.",
+    sections: [
+      { heading: "Persist the task contract, not an open chat stream", text: "Remote Arc can store the objective, target device, allowed tools, working directory, command or bounded plan, verification rules and expiry needed to continue approved work. The saved task exists independently from the browser tab or chat stream that created it, so closing the conversation does not erase the deterministic work contract." },
+      { heading: "Use Long Tasks for known commands", text: "When the command is already known, a Long Task can start it on the paired computer and record run state, exit status and bounded output. Recovery is explicit because repeating a command after losing a process handle can be unsafe. A task can be configured to fail rather than blindly execute a side-effecting command twice." },
+      { heading: "Use schedules and condition watches for future triggers", text: "A schedule can make a fixed task due at a future time or after an interval. A condition watch can wait for a matching external event before making an authorized action due. The trigger decides when work becomes eligible; device policy and the selected tools still decide what the task is allowed to execute." },
+      { heading: "Separate deterministic continuation from fresh reasoning", text: "A fixed command or pre-agreed execution slice can continue without asking a model to invent a new strategy. When evidence shows that the plan is blocked or a different next step is required, Remote Arc can preserve context for a later reasoning controller. Persisted task state is not the same thing as claiming an AI model stays awake and continuously thinks between chat turns." },
+      { heading: "Verify completion with evidence", text: "A task should finish against observable criteria such as an exit code, test command, generated artifact or recorded state. Failed, expired, cancelled and paused are distinct outcomes and should not be reported as success. For source-controlled work, green-only checks and revision-aware edits provide stronger evidence than a simple 'command ran' message." }
+    ],
+    links: [["/use-cases/overnight-goals", "Overnight goals"], ["/use-cases/long-running-jobs", "Long-running jobs"], ["/use-cases/scheduled-checks", "Scheduled checks"], ["/docs/mcp", "MCP reference"], ["/pricing", "Pricing"]]
   },
   "/security-model": {
     h1: "Remote Arc security and trust model",
     intro: "Remote Arc separates AI-client authorization, hosted routing and local operating-system execution so each paired computer can keep its own explicit capability boundary.",
     sections: [
-      { heading: "Outbound device connection", text: "The local agent connects outward to the hosted relay rather than requiring a normal inbound Remote Arc port." },
-      { heading: "Per-device capability policy", text: "Read, edit, terminal, browser and long-running task capabilities can be controlled separately, with workspace and sensitive-path policy for file-oriented work." },
-      { heading: "Revocation and recovery", text: "AI grants and paired devices can be revoked independently. Supported file edits can use local snapshots for conflict-aware undo when enabled." }
+      { heading: "Outbound device connection", text: "The local agent connects outward to the hosted relay rather than requiring a normal inbound Remote Arc port. A computer therefore does not need port forwarding or a publicly reachable listener for ordinary Remote Arc use. The hosted control plane can route authenticated tool calls to an online device through that existing outbound connection." },
+      { heading: "Separate client authorization from device identity", text: "AI clients authorize with OAuth while paired computers receive independent revocable device identities. This avoids one shared master credential for every client and machine. Revoking an AI grant does not require re-pairing every computer, and removing one computer does not force all AI clients to authorize again." },
+      { heading: "Per-device capability policy", text: "Read, edit, terminal, browser and long-running task capabilities can be controlled separately. File-oriented work can be narrowed with Trusted Write Locations, workspace boundaries, protected sensitive paths and approval steps. The policy is attached to the device rather than hidden inside a prompt, so a different AI client sees the same local boundary." },
+      { heading: "Terminal access is intentionally more powerful", text: "When terminal execution is enabled, commands run with the permissions of the local operating-system user. Remote Arc does not claim that workspace settings sandbox an unrestricted shell. Users should enable terminal access only on devices where that authority is appropriate and prefer narrower file tools when they are sufficient." },
+      { heading: "Local recovery without hosted filesystem backups", text: "Supported write_file and edit_block operations can create Local Undo snapshots on the paired computer. A restore checks the post-edit revision before overwriting newer work. Snapshot contents remain local; hosted Remote Arc keeps the operational metadata required for identity, routing, policy, task state and audit rather than storing a backup copy of the whole device." }
     ],
-    links: [["/docs", "Documentation"], ["/docs/mcp", "MCP reference"], ["/privacy", "Privacy"]]
+    links: [["/docs", "Documentation"], ["/docs/mcp", "MCP reference"], ["/privacy", "Privacy"], ["/support", "Support"]]
   },
   "/use-cases": {
     h1: "Remote Arc use cases",
     intro: "Practical workflows for remote development, file organization, long-running jobs, scheduled checks, CI follow-up, data work, home-lab diagnostics, browser context and remote support.",
-    links: [["/use-cases/remote-development", "Remote development"], ["/use-cases/overnight-goals", "Overnight goals"], ["/use-cases/browser-research", "Browser research"], ["/use-cases/home-lab", "Home lab"]]
+    sections: [
+      { heading: "Remote development on the machine that owns the checkout", text: "An AI can inspect an existing repository, read configuration, edit selected files and run the project's own tests without first copying the project into another hosted environment. Device policy determines whether the session stays read-only or can use targeted edits and managed commands." },
+      { heading: "Durable jobs without keeping a chat stream open", text: "Builds, exports, scripts and scheduled checks can be stored as bounded tasks so the device can keep working after the immediate conversation ends. Remote Arc records task state and results, while new reasoning is requested only when a later step actually requires judgment." },
+      { heading: "Authorized diagnostics and support", text: "A paired machine can expose logs, file metadata and running processes for diagnosis before repair permissions are enabled. This separates observing a problem from changing the system and is useful for home-lab maintenance, remote support and incident investigation on computers you control." },
+      { heading: "Explicit browser context", text: "The browser companion works only with tabs the user shares. An AI can read simplified page content, selections, links and tables, then use scoped click or fill capabilities only when interaction is enabled for that tab. This keeps browser access narrower than handing an agent unrestricted control of the whole browser profile." }
+    ],
+    links: [["/use-cases/remote-development", "Remote development"], ["/use-cases/overnight-goals", "Overnight goals"], ["/use-cases/browser-research", "Browser research"], ["/use-cases/home-lab", "Home lab"], ["/use-cases/remote-support", "Remote support"], ["/docs", "Documentation"]]
   },
   "/pricing": {
     h1: "Remote Arc pricing",
-    intro: "Use the hosted Remote MCP control plane with a free account, then add paid capabilities for heavier or longer-running workflows as they become available.",
-    links: [["/docs", "Documentation"], ["/install/chatgpt", "Get started"], ["/security-model", "Security model"]]
+    intro: "Use the hosted Remote MCP control plane with a free account, then add account capabilities for heavier or longer-running workflows.",
+    sections: [
+      { heading: "Free covers core remote-computer access", text: "The Free plan currently includes 10,000 hosted MCP tool calls per account each month, text-file and directory inspection, process inspection, explicitly shared browser-tab context and the file-editing or terminal tools that you deliberately enable on a device. Per-device permissions, Trusted Write Locations and Sensitive Path Policy remain part of the control model." },
+      { heading: "Plus is the durable-work capability tier", text: "Plus adds server-enforced capabilities such as bounded binary reads, temporary revision-pinned file resources, durable long-running command Tasks, schedules, condition watches, deterministic verification loops and supported keep-awake leases. These features extend what an authorized task may do; they do not silently override device tool policy." },
+      { heading: "Plan entitlement and usage are separate", text: "The account plan decides which product capabilities can be invoked, while device policy decides where those capabilities may act. Hosted MCP calls are metered separately, and one chat request can involve multiple tool calls. Reaching a usage limit never expands permissions or changes the device's local security boundary." },
+      { heading: "Durable does not mean unlimited AI reasoning", text: "Remote Arc can persist approved deterministic work, process tracking, schedules, verification state and recovery metadata after a chat disconnects. Fresh judgment still requires a supported reasoning host when the next action cannot be determined from the saved task contract." }
+    ],
+    links: [["/docs", "Documentation"], ["/docs/long-running-work", "Long-running work"], ["/install/chatgpt", "Get started"], ["/security-model", "Security model"]]
   },
   "/blogs": {
     h1: "Remote Arc blog",
@@ -260,17 +309,35 @@ const crawlPages: Record<string, CrawlPage> = {
   "/releases": {
     h1: "Remote Arc release history",
     intro: "Product changes across device access, MCP tooling, browser capabilities, security controls, task persistence and the hosted control plane.",
-    links: [["/docs", "Documentation"], ["/blogs", "Engineering blog"]]
+    sections: [
+      { heading: "Device runtime and onboarding", text: "Remote Arc releases track changes to remotelink pairing, background recovery, version visibility, device removal, reconnect behavior and the onboarding path that gets a new computer from install to a usable AI connection." },
+      { heading: "MCP tools and local safety", text: "Release notes cover file and process tools, terminal execution, Trusted Write Locations, sensitive-path handling, Local Undo, binary reads and the browser companion. Security-sensitive behavior is documented alongside capability changes rather than being treated as an implementation detail." },
+      { heading: "Durable task execution", text: "Long Tasks, schedules, condition watches, bounded Agent Goals, verification, recovery and source-controlled continuation evolve independently from immediate MCP calls. Release history records when those capabilities change so users can understand what a particular runtime version supports." },
+      { heading: "Hosted control plane", text: "OAuth, device routing, usage enforcement, account entitlements, monitoring and deployment changes are part of the same release surface because the local agent and hosted relay must agree on protocol and policy semantics." }
+    ],
+    links: [["/docs", "Documentation"], ["/docs/mcp", "MCP reference"], ["/blogs", "Engineering blog"], ["/security-model", "Security model"]]
   },
   "/demo": {
     h1: "Remote Arc demo",
     intro: "See the shape of a Remote Arc session from an AI request through the hosted MCP control plane to a paired computer and back.",
-    links: [["/install/chatgpt", "Install for ChatGPT"], ["/security-model", "Security model"]]
+    sections: [
+      { heading: "The AI starts with a named task", text: "A Remote Arc workflow begins in a compatible AI client. The request identifies the computer and desired result, such as inspecting a project, reading files or running a test. The AI receives MCP tools rather than a raw desktop credential." },
+      { heading: "The hosted control plane routes the call", text: "Remote Arc authenticates the AI client, checks account and device policy, resolves the selected paired computer and forwards the tool request through that device's existing outbound connection. The machine does not need a public inbound Remote Arc port." },
+      { heading: "Execution finishes on the computer", text: "The local agent checks the capabilities it exposes and performs the approved operation using the real files, processes and runtimes on that machine. The specific tool result returns through the relay to the AI client." },
+      { heading: "The demo is not a hidden unrestricted session", text: "The same per-device permissions apply during a demo as during ordinary use. Read, edit, terminal, browser and durable-task capabilities remain separable, and terminal access still carries the permissions of the local operating-system user." }
+    ],
+    links: [["/install/chatgpt", "Install for ChatGPT"], ["/mcp-computer-access", "How MCP computer access works"], ["/security-model", "Security model"], ["/docs", "Documentation"]]
   },
   "/connect-ai": {
     h1: "Connect an AI client to Remote Arc",
     intro: "Pair a computer first, then connect ChatGPT, Claude, Cursor or another compatible MCP client through OAuth.",
-    links: [["/install/chatgpt", "ChatGPT"], ["/install/claude", "Claude"], ["/install/cursor", "Cursor"], ["/docs/mcp", "MCP reference"]]
+    sections: [
+      { heading: "Pair the computer before connecting the AI", text: "Run remotelink on the Windows, macOS or Linux machine that should receive Remote Arc tool calls. Approve the pairing request in your account and confirm the device appears online. Device pairing establishes the computer identity separately from any AI client authorization." },
+      { heading: "Add the Remote MCP endpoint", text: "Use https://mcp.remotearc.app/mcp in a compatible client and complete Remote Arc OAuth when prompted. The client can then discover the tools permitted by your account and the selected device without needing the computer's operating-system password." },
+      { heading: "Start with the narrowest useful permissions", text: "Read-only inspection is enough for many diagnosis and review tasks. Enable supported editing, terminal execution, browser interaction or durable task permissions only where the workflow requires them. Different computers can expose different capability sets under the same account." },
+      { heading: "Verify with a small first request", text: "After connecting, list paired devices and ask the AI to read a harmless file or inspect a project directory on the intended computer. Confirm the device, path and result before granting broader capabilities. This catches wrong-device or wrong-workspace mistakes early in onboarding." }
+    ],
+    links: [["/install/chatgpt", "ChatGPT"], ["/install/claude", "Claude"], ["/install/cursor", "Cursor"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"]]
   },
   "/privacy": {
     h1: "Remote Arc privacy policy",
@@ -287,12 +354,93 @@ const crawlPages: Record<string, CrawlPage> = {
   }
 };
 
+const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools: string; proof: string; boundary: string }> = {
+  "remote-development": {
+    prompt: "Ask the AI to inspect a named checkout, reproduce a failing test, edit only the affected code and rerun focused verification on the same paired workstation.",
+    flow: "Resolve the target device and workspace first, read the failing implementation before editing, apply a focused change, run the project's own checks and inspect the resulting diff before any commit.",
+    tools: "Typical capabilities are device discovery, read_file, edit_block and start_process. The device needs file-read and edit permission plus terminal access for tests.",
+    proof: "A useful result includes the concrete diff, focused test output and a clear statement of any remaining failure instead of only saying that the task is done.",
+    boundary: "Terminal commands run as the local operating-system user. Trusted Write Locations do not sandbox shell commands, and Local Undo covers supported file-tool edits rather than arbitrary shell edits or Git history."
+  },
+  "file-organization": {
+    prompt: "Ask the AI to inspect a selected folder, propose an exact move plan, wait for approval, avoid deletion or overwrite, then save a before-and-after manifest.",
+    flow: "Inspect names and metadata without reading unnecessary contents, review destination folders and filename collisions, execute only the approved moves, then verify that the expected files exist at their new locations.",
+    tools: "Planning can use list_directory, get_file_info and selective read_file. Actual file moves currently require separately authorized terminal access because there is no dedicated move-file MCP tool.",
+    proof: "The result should preserve the approved move list, document collision handling and verify destination files so the user can review exactly what changed.",
+    boundary: "Shell-based moves are outside Local Undo and are not a transactional filesystem migration. A manifest improves reviewability but does not guarantee automatic rollback."
+  },
+  "overnight-goals": {
+    prompt: "Use a bounded fixed plan when the work command and verification command are already known, with an explicit retry count and deadline.",
+    flow: "Persist the exact command, working directory, verification command, run limit and expiry. Repeat only the authorized plan until verification passes or the bound is reached; stop when a genuinely new strategy would be required.",
+    tools: "The workflow uses durable goal or automation controls plus terminal and background-task permission on the selected device.",
+    proof: "Run history, exit codes and the final verification result show whether the fixed plan actually succeeded.",
+    boundary: "This is deterministic orchestration rather than a continuously thinking AI. Unexpected failures that need a new strategy are surfaced for later user or AI reasoning instead of being improvised silently."
+  },
+  "long-running-jobs": {
+    prompt: "Save a known build, export or script as a Long Task instead of holding an interactive chat turn open until the process finishes.",
+    flow: "Store the command, working directory, recovery policy and expiry, start the managed process when the device is available, and retain bounded run state so the result can be checked later.",
+    tools: "Long Tasks use durable automation controls together with terminal and background-task permissions on the paired computer.",
+    proof: "Check the process exit code and the generated artifact on the device; a short textual summary alone does not prove that the output file is valid.",
+    boundary: "The task survives in durable state, not as a promise that the same PID always survives. If an acknowledged process handle is lost, recovery follows the configured restart-or-fail policy and unknown dispatch outcomes are not blindly replayed."
+  },
+  "scheduled-checks": {
+    prompt: "Save a fixed check for a future time or repeat it after a completion-based interval, with a clear stop condition and no unauthorized repair action.",
+    flow: "Confirm the schedule, permitted command and expiry, let the cloud scheduler mark each run due, wait for the paired computer to become available, then record each run separately.",
+    tools: "Scheduled work requires the task's normal device tools plus background and scheduled-task permission; adaptive goals require the corresponding reasoning permission as well.",
+    proof: "Per-run timestamps, exit codes, summaries and any configured verification evidence show what actually happened on each iteration.",
+    boundary: "Intervals begin after completion rather than at fixed wall-clock minutes. The scheduler is not a precision timer and does not currently promise calendar cron semantics, missed-run backfill or automatic computer power-on."
+  },
+  "ci-follow-up": {
+    prompt: "Wait for a specific authorized CI or webhook condition, then run one predefined follow-up action and stop at the configured deadline.",
+    flow: "Freeze the event match and action in advance, configure the source to deliver the callback, make the saved plan due only when the expected event matches, then inspect the action result and run history.",
+    tools: "Condition watches use durable task controls and the device tools required by the action. Cloud-side repository actions additionally need explicit repository and installation authorization.",
+    proof: "Evidence should include both the matched event and the actual action outcome rather than treating receipt of a callback as proof that the follow-up succeeded.",
+    boundary: "A successful workflow is not by itself permission to merge or change a repository. Inbound secret callback URLs and delivery deduplication are separate from provider-specific webhook-signature guarantees."
+  },
+  "data-work": {
+    prompt: "Use an existing Python, Node or other installed environment on the paired workstation to analyze local input and write a verified result into the chosen project directory.",
+    flow: "Inspect the input schema and runtime, run the approved analysis, keep generated artifacts in the project, and validate totals or output structure before returning the result.",
+    tools: "Common capabilities are read_file, get_file_info, start_process and write_file, with durable task controls added when processing must continue after the chat ends.",
+    proof: "Return the saved output path, validated totals or structure and the command exit status so the result can be independently checked.",
+    boundary: "Keeping the primary dataset on the device does not mean no data leaves it. Requested file contents and command results can pass through the hosted relay and the selected AI client, and durable observations can retain bounded excerpts."
+  },
+  "home-lab": {
+    prompt: "Inspect a headless host for facts such as disk usage, failed services and bounded log excerpts without automatically restarting or reconfiguring anything.",
+    flow: "Confirm the host is online, inspect only the requested state with bounded output, and separate diagnosis from any later proposal to repair or restart services.",
+    tools: "Read-oriented diagnosis can use process and file inspection; command-based checks require terminal access when the fact is not available through a narrower tool.",
+    proof: "A useful diagnosis cites the relevant log excerpts, process state and command output that support the conclusion.",
+    boundary: "Remote Arc uses an outbound user-session agent; it does not replace fleet configuration management, a hypervisor console or permanent supervision of arbitrary system services."
+  },
+  "browser-research": {
+    prompt: "Explicitly share a Chrome tab, then ask the AI to read the page, extract selected text, links or a table without navigating or submitting anything unless interaction was separately enabled.",
+    flow: "Install the browser companion, share the intended tab, select its tab identifier, request only the needed context and revoke sharing when the work is finished.",
+    tools: "Read capabilities include browser_read_page, selected text, link extraction and table extraction. Click and fill require a separate per-tab opt-in and fresh snapshot references.",
+    proof: "The returned facts should be tied to the explicitly shared page, such as extracted rows, visible links or selected text.",
+    boundary: "Tabs begin read-only. Recognized password, one-time-code, payment-card and file-upload fields are blocked from the ordinary fill path, and browser tools are not the same thing as unrestricted profile-wide browser control."
+  },
+  "remote-support": {
+    prompt: "On a computer you own or are authorized to administer, inspect logs and process state, explain the likely cause and ask before restarting or modifying anything.",
+    flow: "Pair only an authorized computer, observe facts within the granted tools and paths, separate diagnosis from repair, and verify the post-repair state only after the requested repair authority exists.",
+    tools: "Diagnosis commonly uses read_file and list_processes; repair commands require separately authorized terminal access.",
+    proof: "A diagnosis should be backed by observed state, and an authorized repair should include a post-change check rather than only reporting that a command was issued.",
+    boundary: "This is file and process support rather than GUI screen control. Prompt instructions are not an operating-system sandbox, and disabling future access does not undo changes that already occurred."
+  }
+};
+
 for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
   const path = "/use-cases/" + slug;
+  const detail = useCaseCrawlDetails[slug]!;
   crawlPages[path] = {
     h1: title,
     intro: description,
-    links: [["/use-cases", "All use cases"], ["/docs", "Documentation"], ["/security-model", "Security model"]]
+    sections: [
+      { heading: "Example request", text: detail.prompt },
+      { heading: "How the work proceeds", text: detail.flow },
+      { heading: "Tools and permissions", text: detail.tools },
+      { heading: "What useful evidence looks like", text: detail.proof },
+      { heading: "Know the boundary", text: detail.boundary }
+    ],
+    links: [["/use-cases", "All use cases"], ["/docs", "Documentation"], ["/docs/mcp", "MCP reference"], ["/security-model", "Security model"]]
   };
 }
 
@@ -415,7 +563,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       headline: page.title,
       description: page.description,
       url: page.canonical,
-      author: { "@type": "Organization", name: "Remote Arc" },
+      author: { "@id": SITE + "/#organization" },
       publisher: { "@id": SITE + "/#organization" },
       inLanguage: "en"
     });
@@ -519,10 +667,16 @@ export function renderMarketingHtml(html: string, pathname: string) {
     .replace(/<meta property="og:image"[^>]*>/, "")
     .replace("</head>", extra + "</head>");
 
-  // The homepage is a client-rendered SPA. Injecting crawl-only body copy into #root
-  // causes a visible text flash before React replaces it on first paint. Keep the
-  // metadata and JSON-LD above, but leave the homepage root empty for the app.
-  if (pathname === "/") return html;
+  // Keep the interactive homepage client-rendered, but provide a truthful
+  // no-JavaScript fallback with the same product facts. This avoids a pre-mount
+  // text flash for normal visitors while still giving non-JS clients a useful,
+  // semantic document instead of an empty application root.
+  if (pathname === "/") {
+    return html.replace(
+      '<div id="root"></div>',
+      '<div id="root"><noscript>' + crawlablePageHtml(pathname, resolved) + '</noscript></div>',
+    );
+  }
 
   if (!page) {
     return html.replace('<div id="root"></div>', '<div id="root">' + notFoundHtml(pathname) + '</div>');
@@ -569,7 +723,7 @@ export function sitemapXml() {
     paths.map(function(path) {
       const isRoot = path === "/";
       const isPrimary = path.startsWith("/install/") || path === "/chatgpt-computer-access" || path === "/claude-computer-access" || path === "/mcp-computer-access" || path === "/docs/mcp";
-      return '<url><loc>' + SITE + path + '</loc><lastmod>2026-10-04</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
+      return '<url><loc>' + SITE + path + '</loc><lastmod>2026-10-07</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
     }).join("") + '</urlset>';
 }
 

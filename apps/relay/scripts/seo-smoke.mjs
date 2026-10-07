@@ -57,6 +57,18 @@ assert.ok(llms.includes("/chatgpt-computer-access"));
 assert.ok(llms.includes("/claude-computer-access"));
 assert.ok(llms.includes("/security-model"));
 
+
+function bodyWordCount(html) {
+  const body = html.match(/<body>([\s\S]*?)<\/body>/)?.[1] || "";
+  const text = body
+    .replace(/<script[\s\S]*?<\/script>/g, " ")
+    .replace(/<style[\s\S]*?<\/style>/g, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&[^;]+;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text ? text.split(" ").length : 0;
+}
 const shell = '<!doctype html><html><head><title>Remote Arc</title><meta name="description" content="x" /><link rel="canonical" href="https://remotearc.app/" /><meta property="og:title" content="x" /><meta property="og:description" content="x" /><meta property="og:url" content="https://remotearc.app/" /><meta property="og:image" content="x" /></head><body><div id="root"></div></body></html>';
 
 const mcp = renderMarketingHtml(shell, "/mcp-computer-access");
@@ -67,8 +79,15 @@ assert.ok(mcp.includes('rel="canonical" href="https://remotearc.app/mcp-computer
 
 const home = renderMarketingHtml(shell, "/");
 assert.ok(home.includes('"@type":"SoftwareApplication"'));
-assert.ok(home.includes('<div id="root"></div>'), "homepage should keep an empty SPA root");
-assert.ok(!home.includes('<main class="seo-blog-shell">'), "homepage should not inject crawl-only body copy before React mounts");
+assert.ok(home.includes('<noscript><main class="seo-blog-shell">'), "homepage should provide a no-JavaScript semantic fallback");
+assert.ok(home.includes('<h1>Remote computer access for AI through MCP</h1>'));
+assert.ok(home.includes('Use the computer where the work already lives'));
+assert.ok(bodyWordCount(home) >= 350, "homepage fallback should contain substantive product copy");
+
+for (const path of ["/docs", "/docs/mcp", "/docs/long-running-work", "/security-model", "/mcp-computer-access"]) {
+  const rendered = renderMarketingHtml(shell, path);
+  assert.ok(bodyWordCount(rendered) >= 250, path + " should keep substantive server-rendered copy");
+}
 
 const missing = renderMarketingHtml(shell, "/definitely-not-a-real-page");
 assert.ok(missing.includes("<h1>Page not found</h1>"));
