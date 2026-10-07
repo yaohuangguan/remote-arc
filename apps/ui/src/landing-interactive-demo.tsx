@@ -78,6 +78,38 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
   }
 }
 
+type DemoProgress = { working: string; done: string };
+
+function progressFor(id: string, tr: (en: string, zh: string) => string): DemoProgress[] {
+  switch (id) {
+    case "job":
+      return [
+        { working: tr("Starting the report export…", "正在启动报表导出…"), done: tr("Report export started in the background.", "报表已在后台开始导出。") },
+        { working: tr("Checking whether the process finished…", "正在检查进程是否完成…"), done: tr("The export process exited successfully.", "导出进程已成功结束。") },
+        { working: tr("Verifying the output file…", "正在验证输出文件…"), done: tr("Confirmed that export.csv was created.", "已确认 export.csv 文件生成。") },
+      ];
+    case "schedule":
+      return [
+        { working: tr("Checking the available computer…", "正在检查可用电脑…"), done: tr("The home server is available.", "家庭服务器已就绪。") },
+        { working: tr("Saving the health-check schedule…", "正在保存健康检查计划…"), done: tr("The health check is scheduled.", "健康检查任务已安排。") },
+        { working: tr("Checking the saved task settings…", "正在核对已保存的任务…"), done: tr("Confirmed: status only, no service restart.", "已确认只检查状态，不会重启服务。") },
+      ];
+    case "inspect":
+      return [
+        { working: tr("Locating the running service…", "正在定位运行中的服务…"), done: tr("Found the running Node.js service.", "已找到正在运行的 Node.js 服务。") },
+        { working: tr("Reading the recent server logs…", "正在读取最近的服务器日志…"), done: tr("Repeated connection timeouts appear in the logs.", "日志中出现了重复的连接超时。") },
+        { working: tr("Confirming read-only access…", "正在确认只读操作…"), done: tr("Log inspection is complete; nothing was changed.", "日志检查完成，没有修改任何文件。") },
+      ];
+    default:
+      return [
+        { working: tr("Finding the relevant files and tests…", "正在定位相关代码和测试…"), done: tr("Located the source file and its tests.", "找到了目标源文件和相关测试。") },
+        { working: tr("Checking the failing edge case…", "正在检查失败的边界情况…"), done: tr("Identified the formatting edge case.", "定位了格式化逻辑中的边界问题。") },
+        { working: tr("Applying a focused, reversible fix…", "正在进行可撤销的针对性修改…"), done: tr("Updated the formatter; local undo is available.", "已修复格式化逻辑，支持本地撤销。") },
+        { working: tr("Running the test suite…", "正在运行测试套件…"), done: tr("All 24 tests passed.", "24 项测试全部通过。") },
+      ];
+  }
+}
+
 export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoScenario[] }) {
   const { tr } = useI18n();
   const [selected, setSelected] = useState(0);
@@ -130,7 +162,15 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
     setStep(0);
   };
 
-  const toolCount = Math.min(events.length, Math.max(0, Math.ceil(step / 2)));
+  const progress = progressFor(scenario.id, tr);
+  const progressIndex = Math.min(progress.length - 1, Math.max(0, Math.floor(step / 2)));
+  const progressTitle = finished
+    ? tr("Finished working on your request", "已完成本次任务")
+    : step < 1
+      ? tr("Thinking through the next steps…", "正在规划执行步骤…")
+      : step >= progress.length * 2
+        ? tr("Preparing the result…", "正在整理执行结果…")
+        : progress[progressIndex]?.working ?? tr("Working on your request…", "正在执行任务…");
   const prompt = scenario.request.replace(/^“|”$/g, "");
 
   return (
@@ -145,7 +185,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
         <div className="homeDemoClientSwitch" aria-label={tr("Preview the conversation in an AI client", "切换 AI 客户端界面")}>
           <span>{tr("CHAT VIEW", "对话界面")}</span>
           {(["ChatGPT", "Claude", "Cursor"] as const).map((name) => (
-            <button type="button" key={name} aria-pressed={name === client} onClick={() => setClient(name)}>
+            <button type="button" key={name} className={"homeDemoClientTab--" + name.toLowerCase()} aria-pressed={name === client} onClick={() => setClient(name)}>
               <img src={clientLogo[name]} alt="" />{name}
             </button>
           ))}
@@ -185,18 +225,31 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                 {client !== "Cursor" && <p className="homeDemoAssistantIntro">
                   {tr("I'll use Remote Arc to check this on your computer.", "我会通过 Remote Arc 在你的电脑上检查并处理。")}
                 </p>}
-                {step >= 1 && <div className="homeDemoToolActivity">
-                  <div className="homeDemoToolActivityIcon"><DemoGlyph name={finished ? "check" : "terminal"} size={15} /></div>
-                  <div className="homeDemoToolActivityText">
-                    <strong>{client === "Cursor" ? tr("Remote Arc tools", "Remote Arc 工具") : finished ? tr("Used Remote Arc", "已使用 Remote Arc") : tr("Using Remote Arc", "正在使用 Remote Arc")}</strong>
-                    <small>{finished ? tr(String(events.length) + " tool calls completed", "已完成 " + events.length + " 次工具调用") : tr(toolCount + " of " + events.length + " tool calls", "已调用 " + toolCount + " / " + events.length + " 个工具")}</small>
-                  </div>
-                  {finished ? <DemoGlyph name="check" size={14} /> : <span className="homeDemoMiniSpinner" aria-label={tr("Working", "执行中")} />}
-                </div>}
+                <div className="homeDemoActivity" aria-live="polite" aria-atomic="false">
+                  <header className="homeDemoActivityHeader">
+                    <img src="/remote-arc-app-icon.svg" alt="" className="homeDemoActivityLogo" />
+                    <div className="homeDemoActivityHeading">
+                      <span>Remote Arc</span>
+                      <strong>{progressTitle}</strong>
+                    </div>
+                    {finished ? <span className="homeDemoActivityCheck"><DemoGlyph name="check" size={15} /></span> : <span className="homeDemoMiniSpinner" aria-label={tr("Working", "正在执行")} />}
+                  </header>
+                  {step > 0 && <ol className="homeDemoProgressList">
+                    {progress.map((part, index) => {
+                      const started = step >= index * 2 + 1;
+                      const done = step >= index * 2 + 2;
+                      if (!started) return null;
+                      return <li key={index} className={done ? "homeDemoProgressDone" : "homeDemoProgressCurrent"}>
+                        <span className="homeDemoProgressMarker">{done ? <DemoGlyph name="check" size={11} /> : <span className="homeDemoProgressPulse" />}</span>
+                        <span>{done ? part.done : part.working}</span>
+                      </li>;
+                    })}
+                  </ol>}
+                </div>
                 {finished ? <>
                   <p className="homeDemoAssistantAnswer">{finalReply}</p>
                   <div className="homeDemoMessageTools" aria-hidden="true"><DemoGlyph name="paperclip" size={14} /><DemoGlyph name="share" size={14} /><DemoGlyph name="dots" size={16} /></div>
-                </> : <p className="homeDemoAssistantPending">{client === "Cursor" ? tr("Working in the connected workspace…", "正在连接的工作区中执行…") : tr("Checking the results…", "正在检查结果…")}</p>}
+                </> : null}
               </div>}
             </div>
 
