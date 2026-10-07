@@ -183,6 +183,61 @@ function sessionDb(options?: {
 }
 
 {
+  // One full-scope token must obey Dashboard changes on every call without reauthorization.
+  const deviceRow = {
+    id: "device-1",
+    allowed_tools: JSON.stringify(["read_file", "write_file", "start_process"]),
+    workspace_roots: JSON.stringify(["/trusted/project"]),
+    sensitive_paths: null,
+    sensitive_allow_paths: null,
+    protect_sensitive_paths: 1,
+    undo_enabled: 1,
+  };
+  const { db } = sessionDb({ deviceRow });
+  let forwarded = 0;
+  const env = {
+    DB: db,
+    REGISTRY: {
+      getByName() {
+        return {
+          async fetch() {
+            forwarded++;
+            return Response.json({ result: { ok: true } });
+          },
+        };
+      },
+    },
+  };
+  const fullScopeIdentity = {
+    userId: USER_ID,
+    clientId: "client-1",
+    grantId: "full-grant",
+    scope: "devices:read computer:read computer:write browser:read offline_access",
+    resource: APP_ORIGIN + "/mcp",
+  };
+  await callDevice(env as never, fullScopeIdentity, "device-1", "start_process", { command: "echo allowed" });
+  if (forwarded !== 1) throw new Error("enabled terminal did not reach the registry");
+
+  // Simulate Dashboard immediately disabling write + terminal for the same device.
+  deviceRow.allowed_tools = JSON.stringify(["read_file"]);
+  for (const [tool, args] of [
+    ["start_process", { command: "echo denied" }],
+    ["write_file", { path: "/trusted/project/file.txt", content: "denied" }],
+  ] as const) {
+    let denied = false;
+    try {
+      await callDevice(env as never, fullScopeIdentity, "device-1", tool, args);
+    } catch (error) {
+      denied = String(error).includes('tool "' + tool + '" is disabled for this device');
+    }
+    if (!denied) throw new Error("Dashboard toggle did not immediately revoke " + tool);
+  }
+  if (forwarded !== 1) throw new Error("disabled tools reached the registry after Dashboard toggle");
+  await callDevice(env as never, fullScopeIdentity, "device-1", "read_file", { path: "/trusted/project/file.txt" });
+  if (forwarded !== 2) throw new Error("read-only device could not continue reading");
+}
+
+{
   const { db } = sessionDb({
     deviceRow: {
       id: "device-1",

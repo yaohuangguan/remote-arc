@@ -12,6 +12,7 @@ const plannedGoalSchema = z.object({ planning_mode: z.enum(["fixed", "guided", "
   recovery_policy: z.object({ same_failure_limit: z.number().int().min(1).max(20).optional(), no_progress_iteration_limit: z.number().int().min(1).max(100).optional(), max_strategy_retries: z.number().int().min(0).max(10).optional(), on_stuck: z.literal("replan").optional(), on_repeated_failure: z.literal("rollback_and_switch").optional(), on_blocked: z.literal("park_and_continue").optional() }).optional(),
   continuation: z.object({ mode: z.enum(["none", "highest_value_safe_work"]) }).optional() });
 import { getDevicesForUser } from "./device.js";
+import { DEFAULT_MCP_SCOPES } from "./oauth.js";
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
 import { consumeToolCall } from "./usage.js";
@@ -108,10 +109,17 @@ const oauthToolMeta = (scope: Scope | readonly Scope[]) => ({
   securitySchemes: oauthSchemes(scope),
 });
 
-const authRequired = (env: Env, scope: Scope | readonly Scope[]) => {
+const authRequired = (env: Env, scope: Scope | readonly Scope[], identity: OAuthIdentity | null) => {
   const requiredScopes = scopeList(scope);
+  // Reauthorization replaces the client's token. Ask for the existing scopes
+  // as well as the missing ones so an incremental grant preserves access.
+  const requestedScopes = [...new Set([
+    ...(identity ? identity.scope.split(/\s+/).filter(Boolean) : DEFAULT_MCP_SCOPES),
+    ...requiredScopes,
+    "offline_access",
+  ])];
   const challenge =
-    `Bearer resource_metadata="${env.PUBLIC_ORIGIN}/.well-known/oauth-protected-resource", error="insufficient_scope", error_description="Sign in to Remote Arc to continue", scope="${requiredScopes.join(" ")}"`;
+    `Bearer resource_metadata="${env.PUBLIC_ORIGIN}/.well-known/oauth-protected-resource", error="insufficient_scope", error_description="Sign in to Remote Arc to continue", scope="${requestedScopes.join(" ")}"`;
 
   return {
     content: [
@@ -213,7 +221,7 @@ export function createRemoteLinkMcp(
       },
       async () => {
         if (!identity || !hasScope(identity, "devices:read")) {
-          return authRequired(env, "devices:read");
+          return authRequired(env, "devices:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -235,7 +243,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id }) => {
         if (!identity || !hasScope(identity, "devices:read")) {
-          return authRequired(env, "devices:read");
+          return authRequired(env, "devices:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -260,7 +268,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id }) => {
         if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read");
+          return authRequired(env, "browser:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -285,7 +293,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, tab_id }) => {
         if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read");
+          return authRequired(env, "browser:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -312,7 +320,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, tab_id }) => {
         if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read");
+          return authRequired(env, "browser:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -339,7 +347,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, tab_id }) => {
         if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read");
+          return authRequired(env, "browser:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -366,7 +374,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, tab_id }) => {
         if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read");
+          return authRequired(env, "browser:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -394,7 +402,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, tab_id, table_index }) => {
         if (!identity || !hasScope(identity, "browser:read")) {
-          return authRequired(env, "browser:read");
+          return authRequired(env, "browser:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -424,7 +432,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, tab_id, snapshot_id, ref }) => {
         if (!identity || !hasScope(identity, "browser:interact")) {
-          return authRequired(env, "browser:interact");
+          return authRequired(env, "browser:interact", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -456,7 +464,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, tab_id, snapshot_id, ref, value }) => {
         if (!identity || !hasScope(identity, "browser:interact")) {
-          return authRequired(env, "browser:interact");
+          return authRequired(env, "browser:interact", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -486,7 +494,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, path, depth }) => {
         if (!identity || !hasScope(identity, "computer:read")) {
-          return authRequired(env, "computer:read");
+          return authRequired(env, "computer:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -515,7 +523,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, path, offset, length }) => {
         if (!identity || !hasScope(identity, "computer:read")) {
-          return authRequired(env, "computer:read");
+          return authRequired(env, "computer:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -547,7 +555,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, path, offset, length, expected_revision }) => {
         if (!identity || !hasScope(identity, "computer:read")) {
-          return authRequired(env, "computer:read");
+          return authRequired(env, "computer:read", identity);
         }
         await requireFeature(env, identity.userId, "binary_read");
         const usageError = await consume(env, identity);
@@ -580,7 +588,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, path }) => {
         if (!identity || !hasScope(identity, "computer:read")) {
-          return authRequired(env, "computer:read");
+          return authRequired(env, "computer:read", identity);
         }
         await requireFeature(env, identity.userId, "binary_read");
         const usageError = await consume(env, identity);
@@ -605,7 +613,7 @@ export function createRemoteLinkMcp(
       },
       async ({ resource_id }) => {
         if (!identity || !hasScope(identity, "computer:read")) {
-          return authRequired(env, "computer:read");
+          return authRequired(env, "computer:read", identity);
         }
         await requireFeature(env, identity.userId, "binary_read");
         const usageError = await consume(env, identity);
@@ -630,7 +638,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, path }) => {
         if (!identity || !hasScope(identity, "computer:read")) {
-          return authRequired(env, "computer:read");
+          return authRequired(env, "computer:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -653,7 +661,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id }) => {
         if (!identity || !hasScope(identity, "computer:read")) {
-          return authRequired(env, "computer:read");
+          return authRequired(env, "computer:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -681,7 +689,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, command, timeout_ms, cwd, background }) => {
         if (!identity || !hasScope(identity, "computer:write")) {
-          return authRequired(env, "computer:write");
+          return authRequired(env, "computer:write", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -711,7 +719,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, process_id }) => {
         if (!identity || !hasScope(identity, "computer:write")) {
-          return authRequired(env, "computer:write");
+          return authRequired(env, "computer:write", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -738,7 +746,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, process_id }) => {
         if (!identity || !hasScope(identity, "computer:write")) {
-          return authRequired(env, "computer:write");
+          return authRequired(env, "computer:write", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -765,7 +773,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, process_id }) => {
         if (!identity || !hasScope(identity, "computer:write")) {
-          return authRequired(env, "computer:write");
+          return authRequired(env, "computer:write", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -794,7 +802,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id, path, content, mode }) => {
         if (!identity || !hasScope(identity, "computer:write")) {
-          return authRequired(env, "computer:write");
+          return authRequired(env, "computer:write", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -832,7 +840,7 @@ export function createRemoteLinkMcp(
         expected_replacements,
       }) => {
         if (!identity || !hasScope(identity, "computer:write")) {
-          return authRequired(env, "computer:write");
+          return authRequired(env, "computer:write", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -861,7 +869,7 @@ export function createRemoteLinkMcp(
       },
       async ({ device_id }) => {
         if (!identity || !hasScope(identity, "computer:write")) {
-          return authRequired(env, "computer:write");
+          return authRequired(env, "computer:write", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -966,7 +974,7 @@ export function createRemoteLinkMcp(
       },
       async (input) => {
         if (!identity || !hasScope(identity, "automation:write")) {
-          return authRequired(env, "automation:write");
+          return authRequired(env, "automation:write", identity);
         }
         const entitlements = await requireFeatures(
           env,
@@ -1059,7 +1067,7 @@ export function createRemoteLinkMcp(
           !hasScope(identity, "automation:write") ||
           !hasScope(identity, "agent:write")
         ) {
-          return authRequired(env, AGENT_WRITE_SCOPES);
+          return authRequired(env, AGENT_WRITE_SCOPES, identity);
         }
         if (input.trigger && input.task_version !== 1) throw new Error("trigger requires task_version=1.");
         if (input.task_version === 1 && input.schedule) throw new Error("Use trigger instead of legacy schedule with task_version=1.");
@@ -1149,7 +1157,7 @@ export function createRemoteLinkMcp(
       },
       async () => {
         if (!identity || !hasScope(identity, "automation:read")) {
-          return authRequired(env, "automation:read");
+          return authRequired(env, "automation:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -1190,7 +1198,7 @@ export function createRemoteLinkMcp(
       },
       async ({ automation_id }) => {
         if (!identity || !hasScope(identity, "automation:read")) {
-          return authRequired(env, "automation:read");
+          return authRequired(env, "automation:read", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;
@@ -1253,7 +1261,7 @@ export function createRemoteLinkMcp(
       annotations: { readOnlyHint: true, openWorldHint: false, destructiveHint: false },
       _meta: oauthToolMeta("automation:read"),
     }, async ({ automation_id, after_sequence }) => {
-      if (!identity || !hasScope(identity, "automation:read")) return authRequired(env, "automation:read");
+      if (!identity || !hasScope(identity, "automation:read")) return authRequired(env, "automation:read", identity);
       const usageError = await consume(env, identity);
       if (usageError) return usageError;
       return textResult(await getGoalContext(env.DB, identity.userId, automation_id, after_sequence));
@@ -1274,7 +1282,7 @@ export function createRemoteLinkMcp(
       annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: true, idempotentHint: true },
       _meta: oauthToolMeta(AGENT_WRITE_SCOPES),
     }, async (input) => {
-      if (!identity || !hasScope(identity, "automation:write") || !hasScope(identity, "agent:write")) return authRequired(env, AGENT_WRITE_SCOPES);
+      if (!identity || !hasScope(identity, "automation:write") || !hasScope(identity, "agent:write")) return authRequired(env, AGENT_WRITE_SCOPES, identity);
       const usageError = await consume(env, identity);
       if (usageError) return usageError;
       const submitted = await submitGoalDecision(env.DB, identity, input.automation_id,
@@ -1311,7 +1319,7 @@ export function createRemoteLinkMcp(
       },
       async ({ automation_id, action }) => {
         if (!identity || !hasScope(identity, "automation:write")) {
-          return authRequired(env, "automation:write");
+          return authRequired(env, "automation:write", identity);
         }
         const usageError = await consume(env, identity);
         if (usageError) return usageError;

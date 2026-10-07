@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import type { McpServer } from "@modelcontextprotocol/server";
 import { classifyExpectedMcpError, registerMcpTool } from "../src/mcp-errors.js";
 import { consumeToolCall, getMonthlyUsage } from "../src/usage.js";
+import { createRemoteLinkMcp } from "../src/mcp.js";
+import type { OAuthIdentity } from "../src/auth.js";
 
 const expectedCases: Array<[Error, string]> = [
   [new Error("start_process requires cwd when multiple Trusted Write Locations are configured."), "WORKSPACE_CWD_REQUIRED"],
@@ -125,4 +127,40 @@ assert.equal(normalUsage.unlimited, false);
 assert.equal(normalUsage.limit, 10000);
 assert.equal(normalUsage.remaining, 9877);
 
-console.log("PASS: MCP error contract and admin/operator unlimited usage regressions");
+const authEnv = {
+  PUBLIC_ORIGIN: "https://mcp.remotearc.app",
+  DB: { prepare() { throw new Error("An OAuth scope challenge must not access storage"); } } as unknown as D1Database,
+  REGISTRY: {} as DurableObjectNamespace,
+};
+const authIdentity = (scope: string): OAuthIdentity => ({
+  userId: "scope-test-user", clientId: "scope-test-client", grantId: null,
+  resource: authEnv.PUBLIC_ORIGIN + "/mcp", scope,
+});
+async function challengedScopes(identity: OAuthIdentity | null, name: string, args: Record<string, unknown>) {
+  const response = await createRemoteLinkMcp(authEnv, identity).fetch(new Request(authEnv.PUBLIC_ORIGIN + "/mcp", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }),
+  }));
+  const text = await response.text();
+  assert(response.ok, text);
+  const payload = JSON.parse(text.trim().startsWith("{") ? text : text.split("\n").find(line => line.startsWith("data: "))!.slice(6));
+  assert(!payload.error, JSON.stringify(payload));
+  assert.equal(payload.result.isError, true, "missing scopes must still block execution");
+  const challenge = payload.result._meta?.["mcp/www_authenticate"]?.[0] || "";
+  const scopes = /scope="([^"]+)"/.exec(challenge)?.[1].split(/\s+/) || [];
+  assert.equal(new Set(scopes).size, scopes.length, "challenge scopes must be unique");
+  return new Set(scopes);
+}
+
+assert.deepEqual(await challengedScopes(null, "list_devices", {}), new Set(["devices:read", "computer:read", "computer:write", "browser:read", "offline_access"]));
+assert.deepEqual(await challengedScopes(authIdentity("devices:read"), "read_file", {
+  device_id: "scope-test-device", path: "/scope-test.txt",
+}), new Set(["devices:read", "computer:read", "offline_access"]));
+assert.deepEqual(await challengedScopes(authIdentity("computer:read"), "list_devices", {}),
+  new Set(["computer:read", "devices:read", "offline_access"]));
+assert.deepEqual(await challengedScopes(authIdentity("devices:read computer:read computer:read offline_access"), "write_file", {
+  device_id: "scope-test-device", path: "/scope-test.txt", content: "scope test",
+}), new Set(["devices:read", "computer:read", "computer:write", "offline_access"]));
+
+console.log("PASS: MCP error contract, incremental OAuth scopes, and admin/operator unlimited usage regressions");
