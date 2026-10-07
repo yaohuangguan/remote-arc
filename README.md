@@ -413,6 +413,19 @@ The hosted architecture currently uses:
 Static JS/CSS/assets bypass the Worker runtime so normal website traffic does
 not unnecessarily consume the Workers request quota.
 
+Production deploys are intentionally single-path: a successful CI run on
+`master` triggers `.github/workflows/deploy-cloudflare.yml`, which is the normal
+way production is updated. Local `pnpm deploy:relay` is blocked to prevent a
+second Wrangler deploy racing the CI deployment. For an emergency-only manual
+production deploy, use:
+
+```bash
+REMOTEARC_MANUAL_PROD_DEPLOY=1 pnpm deploy:relay
+```
+
+Every allowed deploy writes the verified Git SHA into the Cloudflare version tag
+and message so production history can be traced back to its source commit.
+
 ## Remote MCP tools
 
 Hosted MCP currently exposes 31 user-facing tools. Device-execution tools are still filtered by the selected device's policy and live capabilities:
@@ -496,7 +509,8 @@ pnpm dev:ui
 
 pnpm build:cli
 pnpm build:ui
-pnpm deploy:relay
+pnpm test:deploy-policy
+# production deploys run automatically after CI on master
 ```
 
 Run only the native execution-core integration test:

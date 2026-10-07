@@ -85,4 +85,7 @@ jobs:
       - name: Deploy Remote Arc to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          REMOTEARC_PRODUCTION_DEPLOY: github-actions
+          REMOTEARC_DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          REMOTEARC_DEPLOY_REF: master
         run: pnpm deploy:relay
