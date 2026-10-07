@@ -4288,6 +4288,32 @@ body{font-size:18px;line-height:1.6}
   border-top:0!important;
 }
 .managedActions .dangerButton{margin-left:auto}
+.deviceDangerZone{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-top:14px;
+  padding:13px 14px;
+  border:1px solid rgba(248,113,113,.22);
+  border-radius:13px;
+  background:rgba(127,29,29,.08);
+}
+.deviceDangerZone>div{
+  min-width:0;
+  display:grid;
+  gap:4px;
+}
+.deviceDangerZone strong{
+  color:#f0b2b2;
+  font-size:12px;
+}
+.deviceDangerZone span{
+  color:#8e7478;
+  font-size:10px;
+  line-height:1.5;
+}
+.deviceDangerZone .dangerButton{flex:0 0 auto}
 
 :root[data-theme="light"] .deviceStatsGrid article,
 :root[data-theme="light"] .deviceSearch,
@@ -4312,6 +4338,12 @@ body{font-size:18px;line-height:1.6}
   background:#e7f7fa;
 }
 :root[data-theme="light"] .devicePresetRow button.active strong{color:#0b5267}
+:root[data-theme="light"] .deviceDangerZone{
+  border-color:#fecaca;
+  background:#fff7f7;
+}
+:root[data-theme="light"] .deviceDangerZone strong{color:#9f1239}
+:root[data-theme="light"] .deviceDangerZone span{color:#8a5d66}
 :root[data-theme="light"] .devicePresetRow button.danger.active{
   border-color:#d97706;
   background:#fff7ed;

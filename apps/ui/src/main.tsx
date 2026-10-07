@@ -3946,16 +3946,33 @@ function Dashboard({
   async function revoke(deviceId: string) {
     const device = devices.find((item) => item.id === deviceId);
     const confirmed = await askConfirm(
-      tr("Remove this computer from Remote Arc?", "从 Remote Arc 移除这台电脑？"),
+      tr("Forget this device?", "删除这台设备？"),
       tr(
-        (device?.name || "This computer") + " will lose its device credential and must be paired again before any AI can use it. This does not revoke your ChatGPT OAuth grants.",
-        (device?.name || "这台电脑") + " 的设备凭证会被撤销，之后必须重新配对才能继续被 AI 使用；这不会撤销 ChatGPT 的 OAuth 授权。",
+        (device?.name || "This device") + " will be removed from your Remote Arc account. Local files and software are not deleted. To use this runtime again, run Remote Arc locally and pair it again. Your AI-client authorizations are unchanged.",
+        (device?.name || "这台设备") + " 将从 Remote Arc 账户中移除。本机文件和软件不会被删除。如需再次使用这个运行环境，请在本机重新运行 Remote Arc 并重新配对。AI 客户端授权不会受影响。",
       ),
-      tr("Remove device", "移除设备"),
+      tr("Forget device", "删除设备"),
       "danger",
     );
     if (!confirmed) return;
-    await fetch("/api/devices/" + encodeURIComponent(deviceId) + "/revoke", { method: "POST" });
+
+    const response = await fetch(
+      "/api/devices/" + encodeURIComponent(deviceId) + "/revoke",
+      { method: "POST" },
+    );
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      await showNotice(
+        tr("Device was not removed", "设备未删除"),
+        payload.error || tr(
+          "Remote Arc could not remove this device. Its existing pairing is still active.",
+          "Remote Arc 无法删除这台设备，现有配对仍然有效。",
+        ),
+      );
+      return;
+    }
+
+    if (managedDeviceId === deviceId) setManagedDeviceId(null);
     await refreshAll();
   }
 
@@ -5238,7 +5255,16 @@ function Dashboard({
                     <div className="deviceActions managedActions">
                       <button className="ghostButton" onClick={() => void rename(device)}>{tr("Rename", "重命名")}</button>
                       <CopyButton value={device.id} label={tr("Copy ID", "复制 ID")}/>
-                      <button className="dangerButton" onClick={() => void revoke(device.id)}>{tr("Revoke", "撤销")}</button>
+                    </div>
+                    <div className="deviceDangerZone">
+                      <div>
+                        <strong>{tr("Forget device", "删除设备")}</strong>
+                        <span>{tr(
+                          "Remove this pairing from Remote Arc. Local files stay untouched, and this runtime can be paired again later.",
+                          "从 Remote Arc 删除这条设备配对。本机文件不会被删除，之后仍可以重新配对这个运行环境。",
+                        )}</span>
+                      </div>
+                      <button className="dangerButton" onClick={() => void revoke(device.id)}>{tr("Forget device", "删除设备")}</button>
                     </div>
                         </section>
                       </>}
