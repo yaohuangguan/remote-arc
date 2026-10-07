@@ -1,5 +1,6 @@
 import { nowIso, sha256Hex } from "./auth.js";
 import { LeaseLostError } from "./automation-store.js";
+import { isDeviceCallTimeoutError, UncertainDeviceDispatchError } from "./device-call.js";
 import { planAgentTurn, PlannerTransientError, type AgentPlannerDecision } from "./agent-planner.js";
 import { validateAgentToolArguments } from "./agent-tools.js";
 import { takeSourceDecision } from "./source-goals.js";
@@ -159,6 +160,13 @@ export async function executePlannedGoal(env: AutomationEnv, task: AutomationRow
       let status: { status?: string; exit_code?: number | null };
       try { status = await ops.call("process_status", { process_id: pid }) as typeof status; }
       catch (e) {
+        if (isDeviceCallTimeoutError(e)) {
+          // Keep the acknowledged PID and checkpoint intact. This is a
+          // read-only poll, so it can be repeated safely on the next tick.
+          await save("process_poll_retry", "waiting",
+            "Device status query timed out; process remains unverified. Retrying status only.");
+          return;
+        }
         if (!lost(e)) throw e;
         state.process_id = undefined; s.slice = undefined; s.process_started_at = undefined;
         s.inspection_required = true;
@@ -331,7 +339,7 @@ export async function executePlannedGoal(env: AutomationEnv, task: AutomationRow
     }
     await save("planned_observation", state.process_id ? "running" : "waiting");
   } catch (e) {
-    if (e instanceof LeaseLostError) throw e;
+    if (e instanceof LeaseLostError || e instanceof UncertainDeviceDispatchError) throw e;
     if (e instanceof PlannerTransientError) throw e;
     if (offline(e)) { await save("device_wait", "waiting_for_device", "Device offline; planned checkpoint retained."); return; }
     if (s.finalizing) { s.needs_reasoning = String(e).slice(0, 2000); s.finished_at = nowIso(); s.report = plannedReport(s); await ops.finish(compact(s.report, 6000), "completed"); return; }

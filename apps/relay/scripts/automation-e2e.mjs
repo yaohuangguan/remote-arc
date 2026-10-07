@@ -119,6 +119,7 @@ try {
   assert(updateTools.ok,"tools update "+updateTools.status+" "+await updateTools.text());
 
   let verifyStarts=0; let processSeq=0; let lostHandleInjected=false;
+  let statusTimeouts=0; let startTimeouts=0; let plannedStatusTimeouts=0;
   const processes=new Map();
   let socket=new WebSocket(base.replace("http","ws")+"/agent",{headers:{Authorization:"Bearer "+tokenBody.device_token}});
   const attachSocket=ws=>{
@@ -142,10 +143,24 @@ try {
           const id="p"+(++processSeq); const command=String(m.arguments.command||"");
           if(command==="verify-goal")verifyStarts++;
           processes.set(id,{command,statusChecks:0,verifyAttempt:verifyStarts});
+          if(command==="timeout-start"){
+            startTimeouts++;
+            // The process launched; its acknowledgement never reached Relay.
+            ws.send(JSON.stringify({type:"result",id:m.id,error:"device call timed out"}));
+            return;
+          }
           ws.send(JSON.stringify({type:"result",id:m.id,result:{process_id:id,pid:1000+processSeq,command,status:"running",started_at:new Date().toISOString()}}));
         } else if(m.tool==="process_status"){
           const proc=processes.get(String(m.arguments.process_id)); if(!proc)throw new Error("Managed process not found");
           if(proc.command==="lost-handle"&&!lostHandleInjected){lostHandleInjected=true;processes.delete(String(m.arguments.process_id));throw new Error("Managed process not found");}
+          if(proc.command==="timeout-status"&&statusTimeouts===0){
+            statusTimeouts++;
+            ws.send(JSON.stringify({type:"result",id:m.id,error:"device call timed out"}));return;
+          }
+          if(proc.command==="planned-first"&&plannedStatusTimeouts===0){
+            plannedStatusTimeouts++;
+            ws.send(JSON.stringify({type:"result",id:m.id,error:"device call timed out"}));return;
+          }
           proc.statusChecks++; let exit=0; let running=false;
           if(proc.command==="long-task"&&proc.statusChecks===1)running=true;
           if(proc.command==="verify-goal"&&proc.verifyAttempt===1)exit=1;
@@ -194,6 +209,49 @@ try {
   assert(afterStart.automations.find(task=>task.id===longId).run_started_count===1 && row.run_count===0,"A running first attempt must show one start while its completion counter is still zero");
   await poke(longId); await tick(); row=await get(longId); assert(row.status==="running","long stays running after first poll "+row.status);
   await poke(longId); await tick(); row=await get(longId); assert(row.status==="completed"&&row.run_count===1,"long completes "+JSON.stringify(row));
+
+  // A status-query timeout is not evidence that an acknowledged process
+  // failed. Keep its handle and original attempt, then poll again.
+  created=await api("/api/automations",{method:"POST",body:JSON.stringify({
+    task:{version:1,intent:"command",name:"E2E transient process-status timeout",
+      device_id:deviceId,trigger:{type:"now"},command:{text:"timeout-status",cwd:"/workspace",recovery:"fail"},
+      limits:{check_interval_seconds:60}}
+  })});
+  const statusTimeoutId=created.automation.id;
+  await tick(); row=await get(statusTimeoutId);
+  assert(row.status==="running","timeout fixture starts a managed process");
+  const originalHandle=JSON.parse(row.state_json).process_id;
+  await poke(statusTimeoutId);await tick();row=await get(statusTimeoutId);
+  assert(row.status==="waiting","poll timeout must not fail task "+JSON.stringify(row));
+  const timeoutCollection=await api("/api/automations");
+  const timeoutListRow=timeoutCollection.automations.find(task=>task.id===statusTimeoutId);
+  assert(JSON.parse(row.state_json).process_id===originalHandle && row.run_count===0 && timeoutListRow.run_started_count===1,
+    "poll timeout must preserve acknowledged handle and exactly one attempt: "+JSON.stringify(timeoutListRow));
+  assert(String(row.last_error||"").includes("Retrying status only"),"timeout should explain the read-only retry");
+  await poke(statusTimeoutId);await tick();row=await get(statusTimeoutId);
+  assert(row.status==="completed"&&row.run_count===1&&statusTimeouts===1,
+    "second status poll must complete without command replay "+JSON.stringify(row));
+  assert([...processes.values()].filter(p=>p.command==="timeout-status").length===1,
+    "a poll timeout must never dispatch a duplicate command");
+
+  // A timeout *during start_process* is different: the device may have
+  // launched the command. Pause for inspection, never blindly start it twice.
+  created=await api("/api/automations",{method:"POST",body:JSON.stringify({
+    task:{version:1,intent:"command",name:"E2E unknown command dispatch",
+      device_id:deviceId,trigger:{type:"now"},command:{text:"timeout-start",cwd:"/workspace",recovery:"fail"},
+      limits:{check_interval_seconds:60}}
+  })});
+  const startTimeoutId=created.automation.id;
+  await tick();row=await get(startTimeoutId);
+  assert(row.status==="paused"&&row.run_count===0&&startTimeouts===1,
+    "unacknowledged start must pause rather than fail or rerun "+JSON.stringify(row));
+  assert(JSON.parse(row.state_json).inflight_action?.tool==="start_process",
+    "unacknowledged mutation must retain its unresolved intent");
+  const blockedResume=await fetch(base+"/api/automations/"+startTimeoutId+"/resume",
+    {method:"POST",headers:authHeaders});
+  assert(blockedResume.status===400,"unresolved command must not be restartable via blind resume");
+  await tick();row=await get(startTimeoutId);
+  assert(row.status==="paused"&&startTimeouts===1,"scheduler must not silently replay an ambiguous dispatch");
 
   // Unattended recovery: a lost local process handle automatically restarts instead of waiting for approval.
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({name:"E2E unattended recovery",kind:"long_task",device_id:deviceId,command:"lost-handle",interval_seconds:60})});
@@ -320,13 +378,14 @@ try {
 
   created=await api("/api/automations",{method:"POST",body:JSON.stringify({task:{version:1,intent:"goal",name:"E2E source planned slices",device_id:deviceId,trigger:{type:"now"},limits:{check_interval_seconds:60},goal:{controller:"source",objective:"Execute saved validation phases",success_criteria:"Both checks pass",workspace:"/workspace",allowed_tools:["start_process"],plan:{planning_mode:"fixed",time_policy:{max_duration_seconds:3600,finalization_reserve_seconds:60},phases:[{id:"first",objective:"First check",success_criteria:"First exit zero",execution_slice:[{name:"first",command:"planned-first",timeout_seconds:20}]},{id:"second",objective:"Second check",success_criteria:"Second exit zero",depends_on:["first"],execution_slice:[{name:"second",command:"planned-second",timeout_seconds:20}]}]}}}})});
   const plannedId=created.automation.id, turnsBefore=plannerCalls;
-  for(let i=0;i<8;i++){row=await get(plannedId);if(row.status==="completed")break;await poke(plannedId);await tick();}
+  for(let i=0;i<12;i++){row=await get(plannedId);if(row.status==="completed")break;await poke(plannedId);await tick();}
   row=await get(plannedId);assert(row.status==="completed","planned source goal settles "+JSON.stringify(row));
   const plannedState=JSON.parse(row.state_json).planned;
   assert(plannedState.outcomes.length===2&&plannedState.outcomes.every(p=>p.outcome==="completed"),"phases persist accepted outcomes");
   assert(plannedState.report.accepted.length===2,"final phase report stored");
   assert(plannerCalls===turnsBefore,"source mode must not fall back to hosted planner");
-  assert([...processes.values()].filter(p=>p.command==="planned-first").length===1,"first slice exactly one acknowledged dispatch");
+  assert(plannedStatusTimeouts===1,"planned process poll timeout injected exactly once");
+  assert([...processes.values()].filter(p=>p.command==="planned-first").length===1,"planned process poll timeout must not replay the slice");
   assert([...processes.values()].filter(p=>p.command==="planned-second").length===1,"second slice exactly one acknowledged dispatch");
 
   // An event is a trigger for the same goal engine, not a separate task mode.
@@ -347,7 +406,7 @@ try {
   assert([...processes.values()].filter(p=>p.command==="goal-event-check").length===2,"Each acknowledged event should execute its goal once");
   reconnected.close();
 
-  console.log(JSON.stringify({ok:true,long:"completed",unattended_recovery:"completed_without_approval",goal:{status:"completed",attempts:2},agent_goal:{status:"completed",planner_turns:plannerCalls},policy_change:"failed_without_approval",condition:"completed",github_merge:{status:"completed",api_calls:githubMergeCalls},offline:"reconnected_and_completed",deviceId},null,2));
+  console.log(JSON.stringify({ok:true,long:"completed",poll_timeout:"retried_without_duplicate",unknown_dispatch:"paused_without_replay",unattended_recovery:"completed_without_approval",goal:{status:"completed",attempts:2},agent_goal:{status:"completed",planner_turns:plannerCalls},policy_change:"failed_without_approval",condition:"completed",github_merge:{status:"completed",api_calls:githubMergeCalls},offline:"reconnected_and_completed",deviceId},null,2));
 } finally {
   worker.kill("SIGTERM");
   await sleep(300);
