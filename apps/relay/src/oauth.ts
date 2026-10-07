@@ -76,6 +76,21 @@ export function authorizationServerMetadata(env: OAuthEnv) {
   });
 }
 
+function isSupportedRedirectUri(value: unknown): value is string {
+  if (typeof value !== "string" || value.includes("#")) return false;
+  try {
+    const url = new URL(value);
+    if (url.username || url.password) return false;
+    if (url.protocol === "https:") return true;
+    // RFC 8252 allows HTTP callbacks on loopback IP literals for native
+    // PKCE clients such as Codex. Other HTTP hosts remain unsupported.
+    return url.protocol === "http:" &&
+      (url.hostname === "127.0.0.1" || url.hostname === "[::1]");
+  } catch {
+    return false;
+  }
+}
+
 export async function handleDynamicClientRegistration(
   request: Request,
   env: OAuthEnv,
@@ -87,14 +102,7 @@ export async function handleDynamicClientRegistration(
   };
 
   const redirectUris = Array.isArray(body.redirect_uris)
-    ? body.redirect_uris.filter((value) => {
-        try {
-          const url = new URL(value);
-          return url.protocol === "https:";
-        } catch {
-          return false;
-        }
-      })
+    ? body.redirect_uris.filter(isSupportedRedirectUri)
     : [];
 
   if (!redirectUris.length) {
