@@ -20,6 +20,14 @@ Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients t
   </a>
 </p>
 
+<p align="center">
+  <a href="./docs/assets/remote-arc-real-device-demo.mp4">
+    <img src="./docs/assets/remote-arc-real-device-demo.gif" alt="Actual Windows File Explorer and Notepad recording: Remote Arc creates and verifies a file on a paired computer" width="100%" />
+  </a>
+  <br />
+  <sub>Real Windows screen recording, not a simulated UI. Click to watch the 22-second demo.</sub>
+</p>
+
 ## Why Remote Arc
 
 - **Durable deterministic tasks** — approved commands, schedules, and condition watches can continue beyond one chat turn and be inspected later; new AI judgment still requires an active reasoning host.
