@@ -22,7 +22,7 @@ import {
   type ExecutionPolicy,
 } from "@remotearc/execution-core";
 
-const VERSION = "0.4.6";
+const VERSION = "0.4.7";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -843,6 +843,20 @@ async function main() {
     if (!config) {
       if (agentMode || supervisorMode) return;
       config = await pair(origin, selectedMode());
+    }
+
+    if (!agentMode && !supervisorMode) {
+      try {
+        await validateSavedPairing(config);
+      } catch (error) {
+        if (!(error instanceof RevokedDeviceCredentialError)) throw error;
+        logLine("warn", error.message);
+        await disableBackgroundAgent({ stopCurrent: true }).catch(() => undefined);
+        await resetConfig();
+        logLine("event", "Starting a fresh device pairing…");
+        config = null;
+        continue;
+      }
     }
 
     if (disableBackground) {

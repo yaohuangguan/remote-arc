@@ -11308,14 +11308,38 @@ body{font-size:18px;line-height:1.6}
   .pairWorkspaceManual > div { grid-template-columns:1fr; }
 }
 
-/* Pairing completion should be comfortably readable on desktop and mobile. */
-.pairSetupSummary>div{font-size:12px}
-.pairAgentConnectIntro .eyebrow{font-size:11px}
+/* Pairing and onboarding are first-run product UI: keep every instruction readable. */
+.pairConnectedDevice strong{font-size:15px}
+.pairConnectedDevice span{font-size:12px}
+.pairPermissionHead strong{font-size:15px}
+.pairPermissionHead small{font-size:12px}
+.pairPermissionState{font-size:11px}
+.pairPermissionCard p,
+.pairPermissionCard ul{font-size:13px}
+.pairWorkspaceEnabled{font-size:11px}
+.pairTerminalConfirm>span{font-size:12px}
+.dangerConfirmButton{font-size:13px}
+.pairSetupFooter>span{font-size:11px}
+.pairSetupSummary>div{font-size:13px}
+.pairWorkspaceManual label{font-size:13px}
+.pairWorkspaceManual input{font-size:13px}
+.pairWorkspaceManual small{font-size:11px}
+.pairWorkspacePath code{font-size:12px}
+.pairWorkspaceList>button strong{font-size:13px}
+.pairWorkspaceList>button small{font-size:11px}
+.pairSetupEmpty{font-size:12px}
+.pairSetupNote{font-size:11px!important}
+.pairAgentConnectIntro .eyebrow{font-size:12px}
+.pairAgentConnectIntro h3{font-size:18px}
+.pairAgentConnectIntro p{font-size:14px}
+.pairAgentOption strong{font-size:15px}
 .pairAgentOption small,
-.pairAgentOption>b,
+.pairAgentOption>b{font-size:13px}
 .pairAgentEndpoint>span,
 .pairAgentEndpoint code,
 .pairDoneSecondary a{font-size:12px}
+.pairAgentOption .pairChatGptLogo{filter:invert(1)}
+:root[data-theme="light"] .pairAgentOption .pairChatGptLogo{filter:none}
 
 /* ==========================================================================
    Durable Automations — control-plane UI

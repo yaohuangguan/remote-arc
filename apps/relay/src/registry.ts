@@ -53,6 +53,10 @@ export class DeviceRegistry {
       return this.handleCall(request);
     }
 
+    if (url.pathname === "/disconnect" && request.method === "POST") {
+      return this.handleDisconnect(request);
+    }
+
     return new Response("Not found", { status: 404 });
   }
 
@@ -137,6 +141,34 @@ export class DeviceRegistry {
         background_connected_at: backgroundSocket?.device?.connectedAt ?? null,
       };
     });
+  }
+
+  private async handleDisconnect(request: Request): Promise<Response> {
+    const userId = request.headers.get("x-remote-link-user-id");
+    if (!userId) {
+      return Response.json({ error: "missing user identity" }, { status: 401 });
+    }
+
+    const body = (await request.json().catch(() => ({}))) as {
+      deviceId?: string;
+    };
+    if (!body.deviceId) {
+      return Response.json({ error: "deviceId is required" }, { status: 400 });
+    }
+
+    let disconnected = 0;
+    for (const socket of this.ctx.getWebSockets("device:" + body.deviceId)) {
+      const attachment = socket.deserializeAttachment() as SocketAttachment | null;
+      if (attachment?.userId !== userId) continue;
+      try {
+        socket.close(4001, "device revoked");
+        disconnected++;
+      } catch {
+        // Best effort: a socket may already be closing.
+      }
+    }
+
+    return Response.json({ ok: true, disconnected });
   }
 
   private async handleCall(request: Request): Promise<Response> {

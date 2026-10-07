@@ -1,6 +1,6 @@
 {
   "name": "remotelink",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "Controlled remote computer access for AI across computers you own.",
   "type": "module",
   "bin": {

@@ -2,6 +2,12 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.4.7
+
+- Make Forget device complete the full revocation lifecycle: live Relay sockets are disconnected immediately, and interactive CLI startup validates saved pairing before viewer/background attach so revoked local identities automatically stop old background owners, clear credentials and return to fresh pairing.
+- Improve first-run onboarding readability with larger permission, workspace, recovery and connector copy, and render the ChatGPT/OpenAI mark correctly for dark and light themes.
+- Keep the 0.4.6 controlled background handoff and runtime-version visibility improvements.
+
 ## 0.4.6
 
 - Fix in-place upgrades from lease-owning older background Agents: a known older worker now performs a controlled stop, lease release, bundle replacement and verified restart instead of leaving the new CLI as a passive viewer.

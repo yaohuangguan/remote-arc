@@ -1151,7 +1151,11 @@ function PairDevice({
                 onClick={agent.copyEndpoint ? copyEndpoint : undefined}
               >
                 {agent.icon ? (
-                  <img src={agent.icon} alt="" />
+                  <img
+                    src={agent.icon}
+                    alt=""
+                    className={agent.id === "chatgpt" ? "pairChatGptLogo" : undefined}
+                  />
                 ) : (
                   <span className="pairMcpIcon">MCP</span>
                 )}

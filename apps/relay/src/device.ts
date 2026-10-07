@@ -12,6 +12,7 @@ import { REVIEWER_DEMO_TOOLS } from "./reviewer-fixture.js";
 
 type DeviceEnv = {
   DB: D1Database;
+  REGISTRY: DurableObjectNamespace;
   PUBLIC_ORIGIN: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
 };
@@ -532,6 +533,27 @@ export async function listDevicesForUser(
   return Response.json(await getDevicesForUser(env, userId));
 }
 
+export async function disconnectRevokedDevice(
+  env: Pick<DeviceEnv, "REGISTRY">,
+  userId: string,
+  deviceId: string,
+) {
+  const requestFor = () =>
+    new Request("https://registry/disconnect", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-remote-link-user-id": userId,
+      },
+      body: JSON.stringify({ deviceId }),
+    });
+
+  await Promise.allSettled([
+    env.REGISTRY.getByName("user:" + userId).fetch(requestFor()),
+    env.REGISTRY.getByName("global").fetch(requestFor()),
+  ]);
+}
+
 export async function handleDeviceRevoke(request: Request, env: DeviceEnv) {
   const user = await getSessionUser(request, env);
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
@@ -557,6 +579,8 @@ export async function handleDeviceRevoke(request: Request, env: DeviceEnv) {
     deviceId,
     eventType: "device.revoked",
   });
+
+  await disconnectRevokedDevice(env, user.id, deviceId);
 
   return Response.json({ ok: true });
 }
