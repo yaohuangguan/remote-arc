@@ -80,6 +80,7 @@
     "MARKETING_ORIGIN": "https://remotearc.app",
     "ALLOW_SIGNUPS": "1",
     "MONTHLY_TOOL_CALL_LIMIT": "10000",
+    "OPERATOR_EMAIL": "moviegoer24@gmail.com",
     "REVIEWER_DEMO_DEVICE_ID": "review-desktop-v1",
     "REVIEWER_EMAIL": "openai-reviewer@remotearc.app",
     "ALERT_EMAIL": "moviegoer24@gmail.com",
