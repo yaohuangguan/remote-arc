@@ -453,10 +453,25 @@ export async function handleOAuthToken(request: Request, env: OAuthEnv) {
       return Response.json({ error: "invalid_grant" }, { status: 400 });
     }
 
+    const refreshedAt = nowIso();
+    const refreshGraceExpiresAt = addSecondsIso(120);
+
+    // Expire the old access token immediately, but keep its refresh token
+    // usable for a short, non-extending grace window. MCP hosts can issue
+    // overlapping refresh requests while reconnecting; invalidating the old
+    // refresh token on the first request can turn an otherwise healthy grant
+    // into an interactive "authentication expired" failure.
     await env.DB.prepare(
-      "UPDATE oauth_tokens SET revoked_at = ?1 WHERE access_token_hash = ?2",
+      `UPDATE oauth_tokens
+       SET expires_at = ?1,
+           refresh_expires_at = CASE
+             WHEN refresh_expires_at > ?2 THEN ?2
+             ELSE refresh_expires_at
+           END
+       WHERE access_token_hash = ?3
+         AND revoked_at IS NULL`,
     )
-      .bind(nowIso(), row.access_token_hash)
+      .bind(refreshedAt, refreshGraceExpiresAt, row.access_token_hash)
       .run();
 
     return Response.json(
