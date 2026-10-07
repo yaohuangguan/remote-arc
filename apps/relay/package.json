@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "node ../../scripts/deploy-relay.mjs --skip-build",
     "typecheck": "tsc --noEmit",
     "test:seo": "node scripts/seo-smoke.mjs",
     "test:security": "tsx scripts/oauth-security-test.ts && tsx scripts/security-controls-test.ts && tsx scripts/approval-broker-test.ts && tsx scripts/mcp-error-contract-test.ts && tsx scripts/device-revocation-test.ts"
