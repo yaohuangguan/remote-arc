@@ -1,4 +1,4 @@
-import { handleOAuthAuthorize, handleOAuthDecision, handleOAuthToken } from "../src/oauth.js";
+import { handleDynamicClientRegistration, handleOAuthAuthorize, handleOAuthDecision, handleOAuthToken } from "../src/oauth.js";
 
 const APP_ORIGIN = "https://mcp.remotearc.app";
 const REDIRECT_URI = "https://client.example/callback";
@@ -46,6 +46,73 @@ const envBase = {
   PUBLIC_ORIGIN: APP_ORIGIN,
   APP_ORIGIN,
 };
+
+async function registerRedirects(redirectUris: unknown[], method = "none") {
+  const registrations: unknown[][] = [];
+  const db = {
+    prepare(sql: string) {
+      if (!sql.includes("INSERT INTO oauth_clients")) throw new Error("Unexpected registration query");
+      return {
+        bind(...args: unknown[]) {
+          return {
+            async run() {
+              registrations.push(args);
+              return { success: true };
+            },
+          };
+        },
+      };
+    },
+  } as unknown as D1Database;
+  const response = await handleDynamicClientRegistration(new Request(APP_ORIGIN + "/oauth/register", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ redirect_uris: redirectUris, client_name: "Codex test", token_endpoint_auth_method: method }),
+  }), { ...envBase, DB: db });
+  return { response, registrations };
+}
+
+for (const redirect of [
+  REDIRECT_URI,
+  "http://127.0.0.1:49152/callback",
+  "http://[::1]:49153/callback",
+]) {
+  const { response, registrations } = await registerRedirects([redirect]);
+  if (response.status !== 201) throw new Error("Supported OAuth callback rejected: " + redirect);
+  const payload = await response.json() as { redirect_uris: string[]; token_endpoint_auth_method: string };
+  if (JSON.stringify(payload.redirect_uris) !== JSON.stringify([redirect]) ||
+      registrations.length !== 1 || registrations[0][2] !== JSON.stringify([redirect])) {
+    throw new Error("Registered OAuth callback was not preserved exactly: " + redirect);
+  }
+  if (payload.token_endpoint_auth_method !== "none") throw new Error("Native callback changed the public PKCE client contract");
+}
+
+for (const redirect of [
+  "http://client.example/callback",
+  "http://localhost:49152/callback",
+  "http://127.0.0.1.example.com:49152/callback",
+  "http://0.0.0.0:49152/callback",
+  "http://192.168.1.1:49152/callback",
+  "http://[::]:49152/callback",
+  "http://user:password@127.0.0.1:49152/callback",
+  "https://user:password@client.example/callback",
+  REDIRECT_URI + "#fragment",
+  REDIRECT_URI + "#",
+  "http://127.0.0.1:49152/callback#fragment",
+  "javascript:alert(1)",
+  "not-a-url",
+  42, null, {},
+]) {
+  const { response, registrations } = await registerRedirects([redirect]);
+  if (response.status !== 400 || registrations.length !== 0) {
+    throw new Error("Invalid OAuth callback was registered: " + JSON.stringify(redirect));
+  }
+}
+
+{
+  const { response, registrations } = await registerRedirects(["http://127.0.0.1:49152/callback"], "client_secret_post");
+  if (response.status !== 400 || registrations.length !== 0) throw new Error("Loopback registration accepted a confidential client");
+}
 
 function authUrl(extra = "") {
   const url = new URL(APP_ORIGIN + "/oauth/authorize");
