@@ -18,6 +18,36 @@ type DemoEvent = {
   duration: string;
 };
 
+
+type DemoClient = "ChatGPT" | "Claude" | "Cursor";
+
+const clientLogo: Record<DemoClient, string> = {
+  ChatGPT: "/demo-brands/chatgpt.svg",
+  Claude: "/demo-brands/claude.svg",
+  Cursor: "/demo-brands/cursor.svg",
+};
+
+type DemoGlyphName = "menu" | "new" | "share" | "dots" | "plus" | "mic" | "send" | "chevron" | "terminal" | "check" | "sidebar" | "paperclip" | "sparkle" | "search";
+
+function DemoGlyph({ name, size = 18 }: { name: DemoGlyphName; size?: number }) {
+  return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    {name === "menu" && <><path d="M4 7h16M4 12h16M4 17h16" /></>}
+    {name === "new" && <><path d="M12 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" /><path d="m13 11 7-7 1 1-7 7-3 1 1-3z" /></>}
+    {name === "share" && <><path d="M12 16V3m0 0-4 4m4-4 4 4" /><path d="M5 13v5a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-5" /></>}
+    {name === "dots" && <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></>}
+    {name === "plus" && <path d="M12 5v14M5 12h14" />}
+    {name === "mic" && <><rect x="9" y="3" width="6" height="12" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8" /></>}
+    {name === "send" && <><path d="M12 19V5m0 0-6 6m6-6 6 6" /></>}
+    {name === "chevron" && <path d="m6 9 6 6 6-6" />}
+    {name === "terminal" && <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m7 9 3 3-3 3m6 0h4" /></>}
+    {name === "check" && <path d="m5 12 4 4L19 6" />}
+    {name === "sidebar" && <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></>}
+    {name === "paperclip" && <path d="m20 11-8 8a5 5 0 0 1-7-7l9-9a3 3 0 0 1 4 4l-9 9a1 1 0 0 1-2-2l8-8" />}
+    {name === "sparkle" && <><path d="m12 3 1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8L12 3Z" /><path d="m19 18 .5 1.5L21 20l-1.5.5L19 22l-.5-1.5L17 20l1.5-.5L19 18Z" /></>}
+    {name === "search" && <><circle cx="10" cy="10" r="6" /><path d="m14.5 14.5 6 6" /></>}
+  </svg>;
+}
+
 function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEvent[] {
   switch (id) {
     case "job":
@@ -52,7 +82,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
   const { tr } = useI18n();
   const [selected, setSelected] = useState(0);
   const [step, setStep] = useState(-1);
-  const [client, setClient] = useState<"ChatGPT" | "Claude">("ChatGPT");
+  const [client, setClient] = useState<DemoClient>("ChatGPT");
   const demoRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const events = eventsFor(scenarios[selected]?.id ?? "code", tr);
@@ -100,56 +130,108 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
     setStep(0);
   };
 
+  const toolCount = Math.min(events.length, Math.max(0, Math.ceil(step / 2)));
+  const prompt = scenario.request.replace(/^“|”$/g, "");
+
   return (
     <div className="homeDemo" ref={demoRef}>
       <div className="homeDemoToolbar">
-        <div className="homeDemoExamples" aria-label={tr("Try an example request", "选择演示任务")}>
+        <div className="homeDemoExamples" aria-label={tr("Try an example request", "选择示例任务")}>
           {scenarios.map((example, index) => (
-            <button
-              key={example.id}
-              type="button"
-              className={index === selected ? "active" : ""}
-              aria-pressed={index === selected}
-              onClick={() => pickScenario(index)}
-            >{example.label}</button>
+            <button key={example.id} type="button" className={index === selected ? "active" : ""}
+              aria-pressed={index === selected} onClick={() => pickScenario(index)}>{example.label}</button>
           ))}
         </div>
-        <span className="homeDemoMode"><i aria-hidden="true" />{tr("INTERACTIVE DEMO", "互动演示")}</span>
+        <div className="homeDemoClientSwitch" aria-label={tr("Preview the conversation in an AI client", "切换 AI 客户端界面")}>
+          <span>{tr("CHAT VIEW", "对话界面")}</span>
+          {(["ChatGPT", "Claude", "Cursor"] as const).map((name) => (
+            <button type="button" key={name} aria-pressed={name === client} onClick={() => setClient(name)}>
+              <img src={clientLogo[name]} alt="" />{name}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="homeDemoSurface">
-        <section className="homeDemoChat" aria-label={tr("Example AI chat", "AI 对话示例")}>
-          <header className="homeDemoPanelHeader">
-            <div className="homeDemoAppMark"><span aria-hidden="true">✳</span><div><strong>{client}</strong><small>{tr("Connected to Remote Arc", "已连接 Remote Arc")}</small></div></div>
-            <div className="homeDemoClientSelect" aria-label={tr("Choose example AI client", "选择示例 AI 客户端")}>
-              {(["ChatGPT", "Claude"] as const).map((name) => (
-                <button type="button" key={name} aria-pressed={name === client} onClick={() => setClient(name)}>{name}</button>
-              ))}
+        <section className={"homeDemoChat homeDemoChat--" + client.toLowerCase()} aria-label={tr("Example conversation in " + client, client + " 对话示例")}>
+          {client !== "Cursor" && <aside className="homeDemoChatRail" aria-hidden="true">
+            <div className="homeDemoRailTop"><DemoGlyph name="sidebar" size={19} /><DemoGlyph name="new" size={19} /></div>
+            <div className="homeDemoRailBottom"><span className="homeDemoRailAvatar">S</span></div>
+          </aside>}
+          <div className="homeDemoChatMain">
+            <header className="homeDemoChatChrome">
+              {client === "ChatGPT" && <>
+                <div className="homeDemoBrandTitle"><img src={clientLogo.ChatGPT} alt="" /><strong>ChatGPT</strong><DemoGlyph name="chevron" size={14} /></div>
+                <div className="homeDemoChromeActions"><DemoGlyph name="share" size={17} /><DemoGlyph name="dots" size={19} /></div>
+              </>}
+              {client === "Claude" && <>
+                <div className="homeDemoBrandTitle"><img src={clientLogo.Claude} alt="" /><strong>Claude</strong></div>
+                <div className="homeDemoClaudeNav"><span className="selected">Chat</span><span>Cowork</span><span>Code</span></div>
+              </>}
+              {client === "Cursor" && <>
+                <div className="homeDemoCursorWindow"><span /><span /><span /></div>
+                <div className="homeDemoCursorTab"><img src={clientLogo.Cursor} alt="" /><span>Agent</span><DemoGlyph name="chevron" size={12} /></div>
+                <div className="homeDemoChromeActions"><DemoGlyph name="new" size={16} /><DemoGlyph name="dots" size={17} /></div>
+              </>}
+            </header>
+
+            <div className="homeDemoChatBody">
+              {client === "Cursor" && <div className="homeDemoCursorContext"><DemoGlyph name="sidebar" size={14} /><span>{tr("New chat", "新对话")}</span><span className="homeDemoCursorContextModel">Auto</span></div>}
+              <div className="homeDemoUserBubble">{prompt}</div>
+
+              {step >= 0 && <div className="homeDemoAssistant">
+                {client === "Claude" && <img className="homeDemoAssistantLogo" src={clientLogo.Claude} alt="" />}
+                {client === "Cursor" && <div className="homeDemoCursorAgent"><DemoGlyph name="sparkle" size={15} /><strong>Agent</strong><span>· Auto</span></div>}
+                {client !== "Cursor" && <p className="homeDemoAssistantIntro">
+                  {tr("I'll use Remote Arc to check this on your computer.", "我会通过 Remote Arc 在你的电脑上检查并处理。")}
+                </p>}
+                {step >= 1 && <div className="homeDemoToolActivity">
+                  <div className="homeDemoToolActivityIcon"><DemoGlyph name={finished ? "check" : "terminal"} size={15} /></div>
+                  <div className="homeDemoToolActivityText">
+                    <strong>{client === "Cursor" ? tr("Remote Arc tools", "Remote Arc 工具") : finished ? tr("Used Remote Arc", "已使用 Remote Arc") : tr("Using Remote Arc", "正在使用 Remote Arc")}</strong>
+                    <small>{finished ? tr(String(events.length) + " tool calls completed", "已完成 " + events.length + " 次工具调用") : tr(toolCount + " of " + events.length + " tool calls", "已调用 " + toolCount + " / " + events.length + " 个工具")}</small>
+                  </div>
+                  {finished ? <DemoGlyph name="check" size={14} /> : <span className="homeDemoMiniSpinner" aria-label={tr("Working", "执行中")} />}
+                </div>}
+                {finished ? <>
+                  <p className="homeDemoAssistantAnswer">{finalReply}</p>
+                  <div className="homeDemoMessageTools" aria-hidden="true"><DemoGlyph name="paperclip" size={14} /><DemoGlyph name="share" size={14} /><DemoGlyph name="dots" size={16} /></div>
+                </> : <p className="homeDemoAssistantPending">{client === "Cursor" ? tr("Working in the connected workspace…", "正在连接的工作区中执行…") : tr("Checking the results…", "正在检查结果…")}</p>}
+              </div>}
             </div>
-          </header>
-          <div className="homeDemoChatBody">
-            <div className="homeDemoChatStarter">{tr("You ask. Remote Arc gives your AI access to real tools.", "你说出需求，Remote Arc 为 AI 提供真实工具。")}</div>
-            <div className="homeDemoUserBubble">{scenario.request.replace(/^“|”$/g, "")}</div>
-            {step < 0 ? (
-              <div className="homeDemoAssistantHint">{tr("Send this example to see the tool calls.", "发送这个示例，看看工具如何执行。")}</div>
-            ) : (
-              <div className="homeDemoAssistant">
-                <span className="homeDemoAssistantSymbol">✳</span>
-                <div>
-                  <strong>{finished ? tr("Task completed", "任务完成") : tr("Working with Remote Arc…", "正在通过 Remote Arc 执行…")}</strong>
-                  {finished ? <p>{finalReply}</p> :
-                    <p>{tr("Calling approved tools on the example computer.", "正在示例电脑上调用已授权的工具。")}</p>}
-                  {finished && <div className="homeDemoComplete">✓ {tr("Results returned to this chat", "结果已返回 AI 对话")}</div>}
+
+            <div className="homeDemoComposer">
+              {client === "ChatGPT" && <div className="homeDemoComposerBox">
+                <div className="homeDemoComposerPlaceholder">{tr("Ask anything", "有问题，尽管问")}</div>
+                <div className="homeDemoComposerRow">
+                  <span className="homeDemoComposerRound"><DemoGlyph name="plus" size={19} /></span>
+                  <span className="homeDemoComposerTools"><DemoGlyph name="sparkle" size={16} />{tr("Tools", "工具")}</span>
+                  <span className="homeDemoComposerSpacer" />
+                  <DemoGlyph name="mic" size={19} />
+                  <span className="homeDemoComposerSend"><DemoGlyph name="send" size={18} /></span>
                 </div>
-              </div>
-            )}
-          </div>
-          <div className="homeDemoComposer">
-            <span>{tr("Example request", "示例请求")}</span>
-            <button type="button" disabled={active} onClick={() => setStep(0)}>
-              {step < 0 ? tr("Send request", "发送请求") : finished ? tr("Replay", "重新演示") : tr("Running…", "执行中…")}
-              <span aria-hidden="true"> ↗</span>
-            </button>
+              </div>}
+              {client === "Claude" && <div className="homeDemoComposerBox">
+                <div className="homeDemoComposerPlaceholder">{tr("Reply to Claude…", "回复 Claude…")}</div>
+                <div className="homeDemoComposerRow">
+                  <DemoGlyph name="plus" size={20} /><span className="homeDemoComposerSpacer" />
+                  <span className="homeDemoClaudeModel">Sonnet 4.6 <DemoGlyph name="chevron" size={13} /></span>
+                  <span className="homeDemoComposerSend"><DemoGlyph name="send" size={18} /></span>
+                </div>
+              </div>}
+              {client === "Cursor" && <div className="homeDemoComposerBox">
+                <div className="homeDemoCursorAddContext"><DemoGlyph name="plus" size={13} /> {tr("Add context", "添加上下文")}</div>
+                <div className="homeDemoComposerPlaceholder">{tr("Plan, search, build anything", "规划、搜索、构建任何内容")}</div>
+                <div className="homeDemoComposerRow">
+                  <span className="homeDemoCursorMode">∞ {tr("Agent", "智能体")} <DemoGlyph name="chevron" size={12} /></span>
+                  <span className="homeDemoCursorModel">Auto <DemoGlyph name="chevron" size={12} /></span>
+                  <span className="homeDemoComposerSpacer" />
+                  <DemoGlyph name="paperclip" size={16} />
+                  <span className="homeDemoComposerSend"><DemoGlyph name="send" size={16} /></span>
+                </div>
+              </div>}
+              <span className="homeDemoComposerDisclaimer">{client === "Cursor" ? tr("AI-generated code may contain errors.", "AI 生成的代码可能有误。") : client === "Claude" ? tr("Claude can make mistakes. Please double-check responses.", "Claude 可能出错，请核实回复。") : tr("ChatGPT can make mistakes. Check important info.", "ChatGPT 也可能出错。请核查重要信息。")}</span>
+            </div>
           </div>
         </section>
 
