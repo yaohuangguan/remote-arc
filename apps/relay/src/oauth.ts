@@ -25,13 +25,14 @@ const SUPPORTED_SCOPES = [
   "automation:read",
   "automation:write",
   "agent:write",
+  "offline_access",
 ] as const;
 
 const appOrigin = (env: OAuthEnv) => env.APP_ORIGIN || env.PUBLIC_ORIGIN;
 const mcpResource = (env: OAuthEnv) => appOrigin(env) + "/mcp";
 
 function normalizeScope(value: string | null) {
-  const requested = (value || "devices:read computer:read browser:read")
+  const requested = (value || "devices:read computer:read browser:read offline_access")
     .split(/\s+/)
     .filter(Boolean);
   const allowed = requested.filter((scope) =>
@@ -453,25 +454,26 @@ export async function handleOAuthToken(request: Request, env: OAuthEnv) {
       return Response.json({ error: "invalid_grant" }, { status: 400 });
     }
 
-    const refreshedAt = nowIso();
-    const refreshGraceExpiresAt = addSecondsIso(120);
+    const tokenGraceExpiresAt = addSecondsIso(120);
 
-    // Expire the old access token immediately, but keep its refresh token
-    // usable for a short, non-extending grace window. MCP hosts can issue
-    // overlapping refresh requests while reconnecting; invalidating the old
-    // refresh token on the first request can turn an otherwise healthy grant
-    // into an interactive "authentication expired" failure.
+    // Keep both the old access token and refresh token usable for a short,
+    // non-extending overlap window. MCP hosts can have in-flight tool calls
+    // while a refresh happens; invalidating either credential immediately can
+    // make an otherwise healthy session look unauthenticated.
     await env.DB.prepare(
       `UPDATE oauth_tokens
-       SET expires_at = ?1,
+       SET expires_at = CASE
+             WHEN expires_at > ?1 THEN ?1
+             ELSE expires_at
+           END,
            refresh_expires_at = CASE
-             WHEN refresh_expires_at > ?2 THEN ?2
+             WHEN refresh_expires_at > ?1 THEN ?1
              ELSE refresh_expires_at
            END
-       WHERE access_token_hash = ?3
+       WHERE access_token_hash = ?2
          AND revoked_at IS NULL`,
     )
-      .bind(refreshedAt, refreshGraceExpiresAt, row.access_token_hash)
+      .bind(tokenGraceExpiresAt, row.access_token_hash)
       .run();
 
     return Response.json(
