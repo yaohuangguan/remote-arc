@@ -12438,3 +12438,42 @@ body{font-size:18px;line-height:1.6}
 :root[data-theme="dark"] body{background:radial-gradient(ellipse at 30% 0,rgba(56,189,248,.06),transparent 46rem),#080b0e}
 :root[data-theme="dark"] .publicPage .clientGuideRows img.monoLogo{filter:invert(1)}
 :root[data-theme="light"] .publicPage .clientGuideRows img.monoLogo{filter:none}
+
+/* Public language control: visible on mobile as well as desktop.
+   Dashboard language settings continue using the same persisted preference. */
+.publicNavActions .languageSwitch.compact {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--neutral-line);
+  border-radius: 11px;
+  background: var(--control-bg);
+}
+.publicNavActions .languageSwitch.compact button {
+  min-width: 31px;
+  min-height: 34px;
+  padding: 5px 8px;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.publicNavActions .languageSwitch.compact button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 700px) {
+  .publicNavActions .languageSwitch.compact { display: inline-flex; }
+}
+@media (max-width: 480px) {
+  .publicNavActions { gap: 5px; }
+  .publicNavActions .themeSwitch.compact { display: none; }
+  .publicNavActions .languageSwitch.compact button {
+    min-width: 27px;
+    min-height: 32px;
+    padding: 5px 6px;
+    font-size: 12px;
+  }
+  .publicNavActions .navLogin,
+  .publicNavActions .navDashboard { padding: 0 10px !important; }
+}
