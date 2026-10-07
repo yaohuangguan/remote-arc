@@ -1607,6 +1607,8 @@ function OAuthConsent({ user }: { user: User | null | undefined }) {
                       ? tr("Read files, directories and process metadata.", "读取文件、目录与进程信息。")
                       : scope === "computer:write"
                         ? tr("Edit files and run commands on devices that allow it.", "在允许的设备上编辑文件并运行命令。")
+                        : scope === "offline_access"
+                          ? tr("Keep the connection signed in via refresh tokens. Device permissions remain in control.", "使用刷新令牌保持登录状态，设备权限仍独立生效。")
                         : scope === "browser:read"
                           ? tr("Read content from browser tabs you explicitly share.", "读取你明确共享的浏览器标签页内容。")
                           : scope === "browser:interact"

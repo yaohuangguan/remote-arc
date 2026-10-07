@@ -153,8 +153,23 @@ function authUrl(extra = "") {
     throw new Error("legacy consent decision flags leaked into consent URL");
   }
   const scopes = (consent.searchParams.get("scope") || "").split(/\s+/);
-  if (scopes.includes("computer:write")) {
-    throw new Error("omitted OAuth scope unexpectedly granted computer:write");
+  const expected = ["devices:read", "computer:read", "computer:write", "browser:read", "offline_access"];
+  if (JSON.stringify(scopes) !== JSON.stringify(expected)) {
+    throw new Error("new client should request the complete baseline scope bundle: " + scopes.join(" "));
+  }
+}
+
+{
+  // A client explicitly requesting read-only must remain read-only.
+  const { db } = fakeDb();
+  const response = await handleOAuthAuthorize(new Request(
+    authUrl("scope=devices%3Aread+computer%3Aread"), {
+      headers: { cookie: "rl_session=session-token" },
+    },
+  ), { ...envBase, DB: db as unknown as D1Database });
+  const scopes = new URL(response.headers.get("location") || "").searchParams.get("scope");
+  if (scopes !== "devices:read computer:read") {
+    throw new Error("explicit read-only authorization was widened: " + scopes);
   }
 }
 
@@ -269,6 +284,10 @@ function authUrl(extra = "") {
   for (let attempt = 0; attempt < 2; attempt++) {
     const response = await handleOAuthToken(refreshRequest(), { ...envBase, DB: db });
     if (!response.ok) throw new Error("overlapping refresh attempt was rejected");
+    const token = await response.json() as { scope: string };
+    if (token.scope !== "devices:read computer:read") {
+      throw new Error("refresh upgraded an existing read-only token: " + token.scope);
+    }
   }
 
   const graceUpdates = writes.filter(
@@ -287,6 +306,14 @@ function authUrl(extra = "") {
     if (update.sql.includes("SET revoked_at")) {
       throw new Error("refresh still revokes the old row immediately");
     }
+  }
+}
+
+{
+  const { mcpUnauthorized, DEFAULT_MCP_SCOPES } = await import("../src/oauth.js");
+  const challenge = mcpUnauthorized({ ...envBase, DB: {} as D1Database }).headers.get("WWW-Authenticate") || "";
+  if (!challenge.includes('scope="' + DEFAULT_MCP_SCOPES.join(" ") + '"')) {
+    throw new Error("first unauthenticated MCP challenge did not request baseline scopes");
   }
 }
 

@@ -28,11 +28,21 @@ const SUPPORTED_SCOPES = [
   "offline_access",
 ] as const;
 
+// First-time MCP clients ask for computer read/write/terminal together.
+// Per-device capability switches remain authoritative; a token is not permission to execute.
+export const DEFAULT_MCP_SCOPES = [
+  "devices:read",
+  "computer:read",
+  "computer:write",
+  "browser:read",
+  "offline_access",
+] as const;
+
 const appOrigin = (env: OAuthEnv) => env.APP_ORIGIN || env.PUBLIC_ORIGIN;
 const mcpResource = (env: OAuthEnv) => appOrigin(env) + "/mcp";
 
 function normalizeScope(value: string | null) {
-  const requested = (value || "devices:read computer:read browser:read offline_access")
+  const requested = (value || DEFAULT_MCP_SCOPES.join(" "))
     .split(/\s+/)
     .filter(Boolean);
   const allowed = requested.filter((scope) =>
@@ -506,7 +516,7 @@ export function mcpUnauthorized(env: OAuthEnv) {
       "WWW-Authenticate":
         'Bearer resource_metadata="' +
         metadata +
-        '", scope="devices:read computer:read browser:read"',
+        '", scope="' + DEFAULT_MCP_SCOPES.join(" ") + '"',
     },
   });
 }

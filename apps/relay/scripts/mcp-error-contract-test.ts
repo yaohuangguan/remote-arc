@@ -153,7 +153,7 @@ async function challengedScopes(identity: OAuthIdentity | null, name: string, ar
   return new Set(scopes);
 }
 
-assert.deepEqual(await challengedScopes(null, "list_devices", {}), new Set(["devices:read", "offline_access"]));
+assert.deepEqual(await challengedScopes(null, "list_devices", {}), new Set(["devices:read", "computer:read", "computer:write", "browser:read", "offline_access"]));
 assert.deepEqual(await challengedScopes(authIdentity("devices:read"), "read_file", {
   device_id: "scope-test-device", path: "/scope-test.txt",
 }), new Set(["devices:read", "computer:read", "offline_access"]));

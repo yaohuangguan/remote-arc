@@ -12,6 +12,7 @@ const plannedGoalSchema = z.object({ planning_mode: z.enum(["fixed", "guided", "
   recovery_policy: z.object({ same_failure_limit: z.number().int().min(1).max(20).optional(), no_progress_iteration_limit: z.number().int().min(1).max(100).optional(), max_strategy_retries: z.number().int().min(0).max(10).optional(), on_stuck: z.literal("replan").optional(), on_repeated_failure: z.literal("rollback_and_switch").optional(), on_blocked: z.literal("park_and_continue").optional() }).optional(),
   continuation: z.object({ mode: z.enum(["none", "highest_value_safe_work"]) }).optional() });
 import { getDevicesForUser } from "./device.js";
+import { DEFAULT_MCP_SCOPES } from "./oauth.js";
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
 import { consumeToolCall } from "./usage.js";
@@ -113,7 +114,7 @@ const authRequired = (env: Env, scope: Scope | readonly Scope[], identity: OAuth
   // Reauthorization replaces the client's token. Ask for the existing scopes
   // as well as the missing ones so an incremental grant preserves access.
   const requestedScopes = [...new Set([
-    ...(identity?.scope.split(/\s+/).filter(Boolean) || []),
+    ...(identity ? identity.scope.split(/\s+/).filter(Boolean) : DEFAULT_MCP_SCOPES),
     ...requiredScopes,
     "offline_access",
   ])];
