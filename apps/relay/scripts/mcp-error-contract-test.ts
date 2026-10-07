@@ -20,6 +20,13 @@ const expectedCases: Array<[Error, string]> = [
   [new Error("Goal not found."), "GOAL_NOT_FOUND"],
   [new Error("Goal revision changed or it is not awaiting a decision. Read context again."), "GOAL_DECISION_CONFLICT"],
   [new Error("Device did not return managed process id."), "DEVICE_PROTOCOL_ERROR"],
+  [new Error("Trusted Write Locations are enabled. start_process requires an in-scope cwd. Terminal commands are not an OS sandbox and may still access paths outside that directory."), "WORKSPACE_CWD_REQUIRED"],
+  [new Error("Managed process not found or its local retention window has expired."), "PROCESS_NOT_FOUND"],
+  [new Error("ENOENT: no such file or directory, stat '/tmp/missing'"), "PATH_NOT_FOUND"],
+  [new Error("Path is not a file: /tmp/folder"), "PATH_TYPE_MISMATCH"],
+  [new Error("Binary file detected. read_file currently supports text files only."), "BINARY_FILE_REQUIRES_BINARY_READ"],
+  [new Error("Expected 1 replacement(s) in /tmp/a.txt, found 0. No changes were written."), "EDIT_CONFLICT"],
+  [new Error("No reversible Remote Arc file change is available on this device."), "UNDO_UNAVAILABLE"],
 ];
 
 for (const [error, code] of expectedCases) {
