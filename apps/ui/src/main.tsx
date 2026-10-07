@@ -132,6 +132,14 @@ type ManagedProcess = {
   stderr_bytes: number;
 };
 
+type DeviceExecutionLog = {
+  source: "local-device";
+  lines: string[];
+  total_bytes: number;
+  truncated: boolean;
+  updated_at: string | null;
+};
+
 type Pairing = {
   user_code: string;
   device_name: string;
@@ -3419,6 +3427,9 @@ function Dashboard({
   const [processesByDevice, setProcessesByDevice] = useState<Record<string, ManagedProcess[]>>({});
   const [processLoading, setProcessLoading] = useState<string | null>(null);
   const [processErrors, setProcessErrors] = useState<Record<string, string>>({});
+  const [executionLogsByDevice, setExecutionLogsByDevice] = useState<Record<string, DeviceExecutionLog>>({});
+  const [executionLogLoading, setExecutionLogLoading] = useState<string | null>(null);
+  const [executionLogErrors, setExecutionLogErrors] = useState<Record<string, string>>({});
   const [directoryPicker, setDirectoryPicker] = useState<{
     device: Device;
     browser: DirectoryBrowser | null;
@@ -4292,6 +4303,46 @@ function Dashboard({
     if (saved) setDirectoryPicker(null);
   }
 
+  async function loadDeviceExecutionLog(device: Device) {
+    setExecutionLogLoading(device.id);
+    setExecutionLogErrors((current) => ({ ...current, [device.id]: "" }));
+    try {
+      const response = await fetch(
+        "/api/devices/" + encodeURIComponent(device.id) + "/execution-log?limit=100",
+      );
+      const payload = await response.json().catch(() => ({})) as {
+        log?: DeviceExecutionLog;
+        error?: string;
+      };
+      if (!response.ok || !payload.log) {
+        setExecutionLogErrors((current) => ({
+          ...current,
+          [device.id]:
+            payload.error ||
+            tr(
+              "Local execution log is unavailable on this device.",
+              "这台设备暂时无法读取本地执行日志。",
+            ),
+        }));
+        return;
+      }
+      setExecutionLogsByDevice((current) => ({
+        ...current,
+        [device.id]: payload.log!,
+      }));
+    } catch {
+      setExecutionLogErrors((current) => ({
+        ...current,
+        [device.id]: tr(
+          "Could not reach this device to read its execution log.",
+          "无法连接到这台设备读取执行日志。",
+        ),
+      }));
+    } finally {
+      setExecutionLogLoading((current) => (current === device.id ? null : current));
+    }
+  }
+
   async function loadManagedProcesses(device: Device) {
     setProcessLoading(device.id);
     setProcessErrors((current) => ({ ...current, [device.id]: "" }));
@@ -4711,6 +4762,8 @@ function Dashboard({
                 const enabledTools = device.allowed_tools == null ? advertisedTools : device.allowed_tools;
                 const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools]));
                 const accessPreset = deviceAccessPreset(enabledTools, advertisedTools);
+                const executionLog = executionLogsByDevice[device.id];
+                const executionLogError = executionLogErrors[device.id];
                 const runtimeVersion = device.agent_version
                   ? device.platform === "browser"
                     ? device.agent_version.replace(/^browser-/, "")
@@ -4750,7 +4803,17 @@ function Dashboard({
                     <div id={"device-management-" + device.id} hidden={managedDeviceId !== device.id} className="deviceManagementPanel">
                       {managedDeviceId === device.id && <>
                         <div className="deviceManagementTabs" role="group" aria-label={tr("Device settings", "设备设置")}>
-                          {([ ["access", tr("Access & files", "权限与文件")], ["tasks", tr("Background & tasks", "后台与任务")], ["activity", tr("Activity & details", "活动与详情")] ] as const).map(([panel, label]) => <button key={panel} aria-pressed={devicePanel === panel} className={devicePanel === panel ? "active" : ""} onClick={() => setDevicePanel(panel)}>{label}</button>)}
+                          {([ ["access", tr("Access & files", "权限与文件")], ["tasks", tr("Background & tasks", "后台与任务")], ["activity", tr("Activity & details", "活动与详情")] ] as const).map(([panel, label]) => <button key={panel} aria-pressed={devicePanel === panel} className={devicePanel === panel ? "active" : ""} onClick={() => {
+                            setDevicePanel(panel);
+                            if (
+                              panel === "activity" &&
+                              device.status === "online" &&
+                              !executionLog &&
+                              executionLogLoading !== device.id
+                            ) {
+                              void loadDeviceExecutionLog(device);
+                            }
+                          }}>{label}</button>)}
                         </div>
                         <section aria-label={tr("Access and files", "权限与文件")} hidden={devicePanel !== "access"}>
                     <div className="deviceAccessSummary">
@@ -5183,6 +5246,78 @@ function Dashboard({
                         </section>
                         <section aria-label={tr("Activity and details", "活动与详情")} hidden={devicePanel !== "activity"}>
                           <div className="deviceTechnicalIdentity"><span>{tr("Device ID", "设备 ID")} <code>{device.id}</code></span><span>{tr("Architecture", "架构")} <code>{device.arch || "—"}</code></span></div>
+
+                    <div className="deviceExecutionLogPanel">
+                      <div className="policyBlockHead">
+                        <div>
+                          <strong>{tr("Device execution log", "设备执行日志")}</strong>
+                          <p>{tr(
+                            "Read on demand from this computer's local Remote Arc operation log. File contents, full command output and raw MCP payloads are not stored here.",
+                            "按需读取这台电脑本地的 Remote Arc 操作日志。这里不会保存文件内容、完整命令输出或原始 MCP Payload。",
+                          )}</p>
+                        </div>
+                        <button
+                          className="ghostButton small"
+                          disabled={device.status !== "online" || executionLogLoading === device.id}
+                          onClick={() => void loadDeviceExecutionLog(device)}
+                        >
+                          {executionLogLoading === device.id ? tr("Loading…", "加载中…") : tr("Refresh log", "刷新日志")}
+                        </button>
+                      </div>
+
+                      {device.status !== "online" && (
+                        <p className="policyWarning">{tr(
+                          "This device is offline. Its execution log remains local and can be read after it reconnects.",
+                          "这台设备当前离线。执行日志仍保留在本机，重新上线后即可读取。",
+                        )}</p>
+                      )}
+
+                      {!!executionLogError && (
+                        <p className="policyWarning">{executionLogError}</p>
+                      )}
+
+                      {!!executionLog?.lines.length && (
+                        <>
+                          <div className="deviceExecutionLogMeta">
+                            <span>{tr("Source", "来源")}: {tr("Local device", "本机")}</span>
+                            <span>{executionLog.updated_at
+                              ? tr("Updated ", "更新于 ") + timeAgo(executionLog.updated_at)
+                              : tr("No timestamp", "无时间戳")}</span>
+                            {executionLog.truncated && <span>{tr("Showing recent entries", "仅显示最近记录")}</span>}
+                          </div>
+                          <div className="deviceExecutionLog" role="log" aria-label={tr("Recent Remote Arc execution log", "最近 Remote Arc 执行日志")}>
+                            {executionLog.lines.map((line, index) => (
+                              <code
+                                key={index}
+                                className={
+                                  line.includes("  error  ") || line.includes("tool.fail")
+                                    ? "error"
+                                    : line.includes("  warn  ")
+                                      ? "warn"
+                                      : line.includes("  success  ") || line.includes("tool.done")
+                                        ? "success"
+                                        : line.includes("  event  ") || line.includes("tool.call")
+                                          ? "event"
+                                          : ""
+                                }
+                              >
+                                {line}
+                              </code>
+                            ))}
+                          </div>
+                        </>
+                      )}
+
+                      {executionLog !== undefined &&
+                        !executionLog.lines.length &&
+                        !executionLogError && (
+                          <p className="policyEmpty">{tr(
+                            "No Remote Arc execution events have been recorded locally yet.",
+                            "本机暂时还没有 Remote Arc 执行记录。",
+                          )}</p>
+                        )}
+                    </div>
+
                     <details className="deviceProcessDetails">
                       <summary>
                         {tr("Managed background processes", "后台进程管理")}

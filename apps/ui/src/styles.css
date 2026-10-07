@@ -6076,6 +6076,53 @@ body{font-size:18px;line-height:1.6}
 .directoryPickerEmpty{padding:28px 12px;text-align:center;color:#78919a;font-size:13px}
 .directoryPickerNote{margin:9px 0 0!important;color:#78919a!important;font-size:12px!important}
 
+/* Device-local execution log */
+.deviceExecutionLogPanel{
+  margin:10px 0 14px;
+  padding:12px;
+  border:1px solid rgba(148,163,184,.09);
+  border-radius:12px;
+  background:#061018;
+}
+.deviceExecutionLogPanel .policyBlockHead>div:first-child{min-width:0}
+.deviceExecutionLogPanel .policyBlockHead p{
+  margin:4px 0 0;
+  max-width:760px;
+  color:#718b94;
+  font-size:12px;
+  line-height:1.55;
+}
+.deviceExecutionLogMeta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 14px;
+  margin:10px 0 8px;
+  color:#66838d;
+  font-size:11px;
+}
+.deviceExecutionLog{
+  display:grid;
+  gap:2px;
+  max-height:360px;
+  overflow:auto;
+  padding:10px 12px;
+  border:1px solid rgba(148,163,184,.08);
+  border-radius:10px;
+  background:#03080c;
+}
+.deviceExecutionLog code{
+  display:block;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  color:#91aab2;
+  font-size:11px;
+  line-height:1.55;
+}
+.deviceExecutionLog code.event{color:#7dd3fc}
+.deviceExecutionLog code.success{color:#86efac}
+.deviceExecutionLog code.warn{color:#fbbf24}
+.deviceExecutionLog code.error{color:#fca5a5}
+
 /* Managed background process UI */
 .deviceProcessDetails{
   border-top:1px solid rgba(148,163,184,.08);
@@ -6120,6 +6167,7 @@ body{font-size:18px;line-height:1.6}
 :root[data-theme="light"] .toolToggle,
 :root[data-theme="light"] .deviceToolDetails,
 :root[data-theme="light"] .deviceSafetyDetails,
+:root[data-theme="light"] .deviceExecutionLogPanel,
 :root[data-theme="light"] .deviceProcessDetails,
 :root[data-theme="light"] .policyBlock,
 :root[data-theme="light"] .undoHistorySection,
@@ -6142,6 +6190,17 @@ body{font-size:18px;line-height:1.6}
 :root[data-theme="light"] .securityGrantState small,
 :root[data-theme="light"] .securityGrantIdentity small,
 :root[data-theme="light"] .securityGrantDetails span{color:#55727b}
+:root[data-theme="light"] .deviceExecutionLog{
+  border-color:#d8e7eb;
+  background:#fff;
+}
+:root[data-theme="light"] .deviceExecutionLogPanel .policyBlockHead p,
+:root[data-theme="light"] .deviceExecutionLogMeta{color:#55727b}
+:root[data-theme="light"] .deviceExecutionLog code{color:#496974}
+:root[data-theme="light"] .deviceExecutionLog code.event{color:#0369a1}
+:root[data-theme="light"] .deviceExecutionLog code.success{color:#15803d}
+:root[data-theme="light"] .deviceExecutionLog code.warn{color:#a16207}
+:root[data-theme="light"] .deviceExecutionLog code.error{color:#b91c1c}
 :root[data-theme="light"] .managedProcessCommand code,
 :root[data-theme="light"] .securityGrantDetails strong,
 :root[data-theme="light"] .policyPathChip code,

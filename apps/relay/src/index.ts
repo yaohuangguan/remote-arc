@@ -26,6 +26,7 @@ import {
   handleDeviceUndoAction,
   handleDeviceDirectoryBrowse,
   handleDeviceBackgroundUpdate,
+  handleDeviceExecutionLog,
   handleDeviceManagedProcesses,
   handleDeviceManagedProcessOutput,
   handleDeviceManagedProcessStop,
@@ -511,6 +512,13 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       request.method === "POST"
     ) {
       return handleDeviceBackgroundUpdate(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/execution-log$/.test(url.pathname) &&
+      request.method === "GET"
+    ) {
+      return handleDeviceExecutionLog(request, env);
     }
 
     if (

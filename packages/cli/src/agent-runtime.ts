@@ -70,6 +70,48 @@ export async function readAgentEvents(
   }
 }
 
+export async function readAgentEventTail(
+  directory: string,
+  requestedLimit = 100,
+) {
+  const limit = Math.max(20, Math.min(200, Math.trunc(requestedLimit || 100)));
+  const file = path.join(directory, "events.log");
+  let handle;
+  try {
+    handle = await fs.open(file, "r");
+    const stat = await handle.stat();
+    const start = Math.max(0, stat.size - 128 * 1024);
+    const buffer = Buffer.alloc(Math.min(stat.size - start, 128 * 1024));
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, start);
+    let lines = buffer
+      .subarray(0, bytesRead)
+      .toString("utf8")
+      .split("\n");
+
+    // Starting mid-file can leave the first entry partial.
+    if (start > 0) lines = lines.slice(1);
+    lines = lines.map((line) => line.trimEnd()).filter(Boolean);
+
+    return {
+      source: "local-device" as const,
+      lines: lines.slice(-limit),
+      total_bytes: stat.size,
+      truncated: start > 0 || lines.length > limit,
+      updated_at: stat.mtime.toISOString(),
+    };
+  } catch {
+    return {
+      source: "local-device" as const,
+      lines: [],
+      total_bytes: 0,
+      truncated: false,
+      updated_at: null,
+    };
+  } finally {
+    await handle?.close();
+  }
+}
+
 export async function superviseAgent(options: {
   enabled: () => Promise<boolean>;
   signal: AbortSignal;

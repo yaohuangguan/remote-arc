@@ -26,13 +26,13 @@ copy is required.
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.4.7 — Pairing repair and clearer onboarding**
+**remotelink 0.4.8 — Device-local execution logs in Dashboard**
 
-Published 2026-10-07
+Published 2026-10-08
 
-- Make Forget device complete the full revocation lifecycle: live Relay sockets are disconnected immediately, and interactive CLI startup validates saved pairing before viewer/background attach so revoked local identities automatically stop old background owners, clear credentials and return to fresh pairing.
-- Improve first-run onboarding readability with larger permission, workspace, recovery and connector copy, and render the ChatGPT/OpenAI mark correctly for dark and light themes.
-- Keep the 0.4.6 controlled background handoff and runtime-version visibility improvements.
+- Add a live Device execution log to Dashboard → Activity & details, read on demand from the paired computer's local Remote Arc operation log.
+- Show recent tool calls, completion/failure state, reconnect and recovery events without turning the hosted audit store into a file-content or stdout archive.
+- Keep logs local when a device is offline and surface a clear update requirement for older remotelink Agents that do not support on-demand log reads.
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/yaohuangguan/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->

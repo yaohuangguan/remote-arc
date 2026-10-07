@@ -446,6 +446,7 @@ export async function getDevicesForUser(
       "list_managed_processes",
       "background_agent_status",
       "set_background_agent",
+      "agent_execution_log",
     ]);
     const availableTools = rawAvailableTools.filter((tool) => !internalTools.has(tool));
     let allowedTools: string[] | null = reviewerFixture
@@ -1123,6 +1124,53 @@ export async function handleDeviceDirectoryBrowse(
   }
 
   return Response.json({ available: true, browser: call.result });
+}
+
+export async function handleDeviceExecutionLog(
+  request: Request,
+  env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
+) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const match = url.pathname.match(/^\/api\/devices\/([^/]+)\/execution-log$/);
+  const deviceId = match?.[1];
+  if (!deviceId) return new Response("Not found", { status: 404 });
+
+  const device = await loadOwnedDevicePolicy(env, user.id, deviceId);
+  if (!device) return Response.json({ error: "device not found" }, { status: 404 });
+
+  const requestedLimit = Number(url.searchParams.get("limit") || "100");
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.max(20, Math.min(200, Math.trunc(requestedLimit)))
+    : 100;
+
+  const call = await callInternalDeviceTool(
+    env,
+    user.id,
+    device,
+    "agent_execution_log",
+    { limit },
+  );
+
+  if (!call.ok) {
+    const unsupported =
+      call.status === 404 ||
+      /unknown tool|not found|disabled|agent_execution_log/i.test(call.error);
+    return Response.json(
+      {
+        error: unsupported
+          ? "Update remotelink on this device to view its local execution log."
+          : call.error,
+        available: false,
+        unsupported,
+      },
+      { status: unsupported ? 409 : call.status || 409 },
+    );
+  }
+
+  return Response.json({ available: true, log: call.result });
 }
 
 export async function handleDeviceManagedProcesses(

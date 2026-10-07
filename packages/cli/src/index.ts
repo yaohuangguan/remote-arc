@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { createTaskKeepAwakeManager } from "./keep-awake.js";
 import { goalWorkspace } from "./goal-workspace.js";
-import { appendAgentEvent, readAgentEvents, startSupervisedAgent, superviseAgent, tryAgentLease } from "./agent-runtime.js";
+import { appendAgentEvent, readAgentEvents, readAgentEventTail, startSupervisedAgent, superviseAgent, tryAgentLease } from "./agent-runtime.js";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
@@ -22,7 +22,7 @@ import {
   type ExecutionPolicy,
 } from "@remotearc/execution-core";
 
-const VERSION = "0.4.7";
+const VERSION = "0.4.8";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -422,7 +422,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
   );
 
   const tools = await core.tools();
-  const internalTools = ["background_agent_status", "set_background_agent", "set_task_keep_awake", "goal_workspace"];
+  const internalTools = ["background_agent_status", "set_background_agent", "set_task_keep_awake", "goal_workspace", "agent_execution_log"];
   let keepAwake = createTaskKeepAwakeManager();
   logLine("success", `Local tools ready: ${tools.length} exposed`);
   process.stdout.write("       " + dim(tools.map((tool) => tool.name).join(" · ")) + "\n");
@@ -664,6 +664,11 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
                 enabled: status.enabled,
                 desired_enabled: config.backgroundEnabled ?? null,
               };
+            } else if (message.tool === "agent_execution_log") {
+              result = await readAgentEventTail(
+                path.join(CONFIG_DIR, "logs"),
+                Number(message.arguments?.limit || 100),
+              );
             } else if (message.tool === "set_background_agent") {
               const enabled = message.arguments?.enabled;
               if (typeof enabled !== "boolean") {

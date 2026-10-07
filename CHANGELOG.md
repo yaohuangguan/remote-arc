@@ -2,6 +2,14 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.4.8 - 2026-10-08
+
+### Device-local execution logs in Dashboard
+
+- Add a live Device execution log to Dashboard → Activity & details, read on demand from the paired computer's local Remote Arc operation log.
+- Show recent tool calls, completion/failure state, reconnect and recovery events without turning the hosted audit store into a file-content or stdout archive.
+- Keep logs local when a device is offline and surface a clear update requirement for older remotelink Agents that do not support on-demand log reads.
+
 ## 0.4.7 - 2026-10-07
 
 ### Pairing repair and clearer onboarding
