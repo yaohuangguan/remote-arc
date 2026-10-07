@@ -4,7 +4,7 @@ import { TaskResults, taskNeedsAgent, taskNeedsAttention, taskProgress, taskActi
 import { newPlannedDraft, buildPlannedContract } from "./planned-goal-form.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { I18nProvider, useI18n } from "./i18n.js";
+import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
@@ -541,6 +541,7 @@ function PublicHeader({ user }: { user?: User | null }) {
           </div>
         </nav>
         <div className="publicNavActions">
+          <LanguageSwitcher compact syncUrl />
           <ThemeSwitcher compact />
           {user ? (
             <a className="navDashboard" href={dashboardHref("/overview")}>{tr("Dashboard", "控制台")} <span>↗</span></a>
@@ -1643,21 +1644,22 @@ function PublicLayout({
   children: React.ReactNode;
   user?: User | null;
 }) {
+  const { tr } = useI18n();
   return (
     <main className="landing publicPage">
       <PublicHeader user={user} />
       {children}
       <footer className="publicFooter">
         <Brand compact />
-        <nav className="publicFooterLinks" aria-label="Remote Arc guides">
+        <nav className="publicFooterLinks" aria-label={tr("Remote Arc guides", "Remote Arc 使用指南")}>
           <a href="/mcp-computer-access">Remote MCP</a>
           <a href="/chatgpt-computer-access">ChatGPT</a>
           <a href="/claude-computer-access">Claude</a>
-          <a href="/docs/mcp">MCP Docs</a>
-          <a href="/security-model">Security</a>
+          <a href="/docs/mcp">{tr("MCP Docs", "MCP 文档")}</a>
+          <a href="/security-model">{tr("Security", "安全")}</a>
         </nav>
         <div className="publicFooterMeta">
-          <span>© 2026 Remote Arc · Proprietary</span>
+          <span>© 2026 Remote Arc · {tr("Proprietary", "专有软件")}</span>
           <a href="https://github.com/yaohuangguan/remote-arc">GitHub</a>
         </div>
       </footer>
