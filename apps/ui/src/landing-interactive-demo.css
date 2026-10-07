@@ -1,0 +1,169 @@
+
+.homeDemo{margin-top:32px}
+.homeDemoToolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.homeDemoExamples{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.homeDemoExamples button{min-height:39px;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:transparent;color:var(--landing-muted);font-size:13px;font-weight:650;cursor:pointer;transition:background .15s,border-color .15s}
+.homeDemoExamples button:hover{background:var(--panel);color:var(--text)}
+.homeDemoExamples button.active{background:var(--panel);color:var(--text);border-color:#299bb7;box-shadow:inset 0 0 0 1px rgba(41,155,183,.15)}
+.homeDemoClientSwitch{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.homeDemoClientSwitch>span{font-size:11px;letter-spacing:.085em;font-weight:800;color:var(--landing-muted);margin-right:7px}
+.homeDemoClientSwitch button{display:flex;align-items:center;gap:7px;padding:7px 10px;min-height:39px;border:1px solid transparent;background:transparent;border-radius:8px;cursor:pointer;font-weight:650;font-size:12px;color:var(--landing-muted)}
+.homeDemoClientSwitch button:hover{background:var(--panel);color:var(--text)}
+.homeDemoClientSwitch button[aria-pressed=true]{border-color:var(--line);background:var(--panel);color:var(--text);box-shadow:0 2px 7px rgba(10,20,33,.055)}
+.homeDemoClientSwitch img{width:17px;height:17px;object-fit:contain}
+.homeDemoSurface{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.04fr);border:1px solid var(--line);border-radius:15px;overflow:hidden;background:var(--panel)}
+.homeDemoChat{--chat-bg:#fff;--chat-fg:#232323;--chat-muted:#858585;--chat-rail:#f9f9f9;--chat-user:#f3f3f3;--chat-border:#e9e9e9;--chat-tool:#f8f8f8;--chat-action:#1a1a1a;display:flex;min-width:0;min-height:615px;background:var(--chat-bg);color:var(--chat-fg);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;text-align:left}
+.homeDemoChatRail{display:flex;flex:0 0 48px;flex-direction:column;align-items:center;justify-content:space-between;padding:18px 6px;background:var(--chat-rail);border-right:1px solid var(--chat-border)}
+.homeDemoRailTop{display:flex;flex-direction:column;align-items:center;gap:24px;color:#686868}
+.homeDemoRailBottom{margin-top:auto}
+.homeDemoRailAvatar{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#c6d7ba;color:#31402d;font-size:12px;font-weight:700}
+.homeDemoChatMain{display:flex;flex-direction:column;min-width:0;min-height:615px;flex:1}
+.homeDemoChatChrome{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:57px;padding:11px 18px;background:var(--chat-bg)}
+.homeDemoBrandTitle{display:flex;align-items:center;gap:5px;min-width:0;color:var(--chat-fg)}
+.homeDemoBrandTitle strong{font-size:17px;font-weight:650;letter-spacing:-.035em}
+.homeDemoBrandTitle img{width:23px;height:23px;object-fit:contain;margin-right:5px}
+.homeDemoBrandTitle>svg{color:var(--chat-muted)}
+.homeDemoChromeActions{display:flex;align-items:center;gap:15px;color:var(--chat-fg);opacity:.8}
+.homeDemoChatBody{display:flex;flex:1;flex-direction:column;gap:21px;align-items:flex-start;min-height:0;max-height:455px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#c2c2c2 transparent;padding:30px 23px 16px}
+.homeDemoUserBubble{align-self:flex-end;max-width:97%;border:0;border-radius:21px;padding:12px 16px;background:var(--chat-user);color:var(--chat-fg);font-size:14px;line-height:1.65;font-weight:450;overflow-wrap:anywhere}
+.homeDemoAssistant{display:flex;flex-direction:column;gap:13px;align-items:flex-start;max-width:100%;width:100%;animation:homeDemoFade .25s ease-out;font-size:14px;line-height:1.65}
+.homeDemoAssistantIntro,.homeDemoAssistantAnswer{font-size:14px!important;font-weight:440;line-height:1.7!important;color:var(--chat-fg)!important;margin:0!important}
+.homeDemoAssistantPending{font-size:13px!important;line-height:1.6!important;margin:0!important;color:var(--chat-muted)!important}
+.homeDemoActivity{width:100%;padding:2px 0 3px;min-width:0}
+.homeDemoActivityHeader{display:flex;align-items:center;gap:10px;min-height:39px;padding:0;background:transparent;border:0}
+.homeDemoActivityLogo{flex:0 0 30px;width:30px;height:30px;border-radius:9px;object-fit:cover}
+.homeDemoActivityHeading{display:flex;flex:1;flex-direction:column;gap:2px;min-width:0}
+.homeDemoActivityHeading>span{color:var(--chat-muted);font-size:11px;line-height:1.25;font-weight:600}
+.homeDemoActivityHeading>strong{color:var(--chat-fg);font-size:13px;font-weight:650;line-height:1.4;overflow-wrap:anywhere}
+.homeDemoActivityCheck{display:grid;place-items:center;color:#258d66}
+.homeDemoMiniSpinner{width:13px;height:13px;flex-shrink:0;border:2px solid var(--chat-border);border-top-color:var(--chat-fg);border-radius:50%;animation:homeDemoSpin .8s linear infinite}
+.homeDemoProgressList{display:flex;flex-direction:column;gap:0;margin:8px 0 0 14px;padding:0 0 0 17px;border-left:1px solid var(--chat-border);list-style:none}
+.homeDemoProgressList li{display:flex;align-items:flex-start;gap:9px;margin:0;padding:4px 0;color:var(--chat-muted);font-size:12px;line-height:1.45;animation:homeDemoFade .23s ease-out}
+.homeDemoProgressList li.homeDemoProgressCurrent{color:var(--chat-fg)}
+.homeDemoProgressMarker{display:grid;place-items:center;flex:0 0 15px;width:15px;height:15px;border-radius:50%;margin-left:-25px;margin-right:1px;background:var(--chat-bg);color:#26886a}
+.homeDemoProgressCurrent .homeDemoProgressMarker{color:var(--chat-fg)}
+.homeDemoProgressPulse{width:7px;height:7px;border-radius:50%;background:currentColor;animation:homeDemoBlink 1s ease-in-out infinite}
+.homeDemoClientTab--chatgpt img{width:19px;height:19px;border-radius:50%;background:#fff;padding:2px;box-shadow:0 0 0 1px rgba(80,80,80,.19)}
+.homeDemoClientTab--cursor img{filter:invert(1)}
+.homeDemoMessageTools{display:flex;align-items:center;gap:16px;color:var(--chat-muted);opacity:.7}
+.homeDemoComposer{display:flex;flex-direction:column;gap:9px;flex-shrink:0;padding:13px 16px 12px;margin-top:auto;background:var(--chat-bg)}
+.homeDemoComposerBox{width:100%;border:1px solid var(--chat-border);border-radius:22px;padding:12px 12px 10px;box-shadow:0 1px 4px rgba(0,0,0,.045);background:var(--chat-bg)}
+.homeDemoComposerPlaceholder{height:36px;padding:1px 4px;font-size:14px;color:var(--chat-muted);font-weight:400}
+.homeDemoComposerRow{display:flex;align-items:center;gap:10px;color:var(--chat-fg);min-height:33px}
+.homeDemoComposerSpacer{flex:1}
+.homeDemoComposerRound{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:var(--chat-fg)}
+.homeDemoComposerTools{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--chat-fg)}
+.homeDemoComposerSend{width:31px;height:31px;flex-shrink:0;display:grid;place-items:center;background:var(--chat-action);color:#fff;border-radius:50%}
+.homeDemoComposerDisclaimer{font-size:11px;line-height:1.5;color:var(--chat-muted);text-align:center}
+.homeDemoChat--claude{--chat-bg:#fdfbf8;--chat-fg:#30302e;--chat-muted:#8c8a86;--chat-rail:#f3f1ec;--chat-user:#f0eee9;--chat-border:#e6e1d9;--chat-tool:#f8f6f2;--chat-action:#c15f3c;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+.homeDemoChat--claude .homeDemoBrandTitle strong{font-family:Georgia,"Times New Roman",serif;font-size:23px;letter-spacing:-.055em;font-weight:500}
+.homeDemoClaudeNav{display:flex;align-items:center;gap:4px;font-size:11px;color:#77716b}
+.homeDemoClaudeNav span{padding:6px 8px;border-radius:6px}
+.homeDemoClaudeNav .selected{background:#eae7e1;color:#3b3934;font-weight:650}
+.homeDemoChat--claude .homeDemoChatBody{padding-top:33px}
+.homeDemoChat--claude .homeDemoUserBubble{border-radius:12px;background:#efede8}
+.homeDemoAssistantLogo{width:22px;height:22px;object-fit:contain;margin-bottom:-6px}
+.homeDemoChat--claude .homeDemoComposerBox{border-radius:14px;box-shadow:0 2px 8px rgba(35,30,25,.035);padding:13px 13px 10px;background:#fff}
+.homeDemoClaudeModel{display:flex;align-items:center;gap:5px;color:#6b6760;font-size:11px;white-space:nowrap}
+.homeDemoChat--claude .homeDemoComposerSend{border-radius:8px}
+.homeDemoChat--cursor{--chat-bg:#181818;--chat-fg:#dfdfdf;--chat-muted:#999;--chat-border:#393939;--chat-user:#292929;--chat-tool:#242424;--chat-action:#e9e9e9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.homeDemoChat--cursor .homeDemoChatChrome{min-height:45px;background:#252525;border-bottom:1px solid #343434;padding:8px 12px;gap:9px}
+.homeDemoCursorWindow{display:flex;gap:5px}
+.homeDemoCursorWindow span{width:9px;height:9px;border-radius:50%;background:#ff6057}
+.homeDemoCursorWindow span:nth-child(2){background:#ffbd2e}
+.homeDemoCursorWindow span:nth-child(3){background:#28c840}
+.homeDemoCursorTab{display:flex;align-items:center;gap:7px;margin-right:auto;font-size:12px;color:#d9d9d9}
+.homeDemoCursorTab img{width:17px;height:17px;filter:invert(1)}
+.homeDemoCursorTab>svg{color:#888}
+.homeDemoChat--cursor .homeDemoChatBody{padding:17px 19px 19px;gap:22px;max-height:432px}
+.homeDemoCursorContext{display:flex;align-items:center;gap:8px;align-self:stretch;border-bottom:1px solid #343434;padding-bottom:13px;color:#c3c3c3;font-size:12px}
+.homeDemoCursorContextModel{margin-left:auto;color:#858585;font-size:11px}
+.homeDemoChat--cursor .homeDemoUserBubble{align-self:stretch;max-width:none;border:1px solid #353535;border-radius:8px;font-size:13px;line-height:1.65;padding:12px;background:#252525}
+.homeDemoChat--cursor .homeDemoAssistant{gap:15px}
+.homeDemoCursorAgent{display:flex;align-items:center;gap:7px;color:#ddd;font-size:12px}
+.homeDemoCursorAgent svg{color:#b3b3b3}
+.homeDemoCursorAgent strong{font-size:12px}
+.homeDemoCursorAgent span{font-size:11px;color:#878787}
+.homeDemoChat--cursor .homeDemoAssistantAnswer{font-size:13px!important}
+.homeDemoChat--cursor .homeDemoActivityLogo{border:1px solid #444}
+.homeDemoChat--cursor .homeDemoProgressMarker{color:#85cbb2}
+.homeDemoChat--cursor .homeDemoActivityHeading>strong{font-weight:600}
+.homeDemoChat--cursor .homeDemoComposer{padding:10px 13px}
+.homeDemoChat--cursor .homeDemoComposerBox{background:#242424;border:1px solid #404040;border-radius:9px;box-shadow:none;padding:8px 10px}
+.homeDemoCursorAddContext{display:inline-flex;align-items:center;gap:5px;border:1px solid #414141;padding:3px 7px;border-radius:5px;font-size:11px;color:#a4a4a4;margin-bottom:9px}
+.homeDemoChat--cursor .homeDemoComposerPlaceholder{font-size:13px;padding:0;min-height:38px}
+.homeDemoChat--cursor .homeDemoComposerRow{gap:9px;font-size:11px;color:#afafaf}
+.homeDemoCursorMode,.homeDemoCursorModel{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.homeDemoCursorMode{color:#e5e5e5}
+.homeDemoChat--cursor .homeDemoComposerSend{width:26px;height:26px;border-radius:6px;background:#d7d7d7;color:#282828}
+.homeDemoChat--cursor .homeDemoComposerDisclaimer{text-align:left;font-size:11px;color:#858585}
+.homeDemoTerminal{display:flex;flex-direction:column;min-width:0;min-height:530px;background:#0c131d;color:#d6e3ea;border-left:1px solid #28394a}
+.homeDemoTerminalHeader{display:flex;align-items:center;gap:13px;min-height:75px;padding:15px 21px;border-bottom:1px solid #293544;font-size:13px;color:#dce8f2}
+.homeDemoTerminalHeader>span:nth-child(2){font-weight:700}
+.homeDemoTerminalHeader b{color:#728694;margin:0 4px}
+.homeDemoTerminalDots{display:flex;gap:5px}
+.homeDemoTerminalDots i{width:8px;height:8px;border-radius:50%;background:#4c687a}
+.homeDemoTerminalDots i:first-child{background:#ef867c}
+.homeDemoTerminalDots i:nth-child(2){background:#dfb265}
+.homeDemoTerminalDots i:last-child{background:#65c39b}
+.homeDemoTerminalDevice{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:11px;color:#97afbf}
+.homeDemoTerminalBody{flex:1;min-height:0;max-height:458px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#32485b transparent;padding:22px 23px 27px;font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,Monaco,monospace}
+.homeDemoTerminalBanner{font-size:13px;margin-bottom:7px;color:#c6d7e2}
+.homeDemoMonoAccent{font-weight:750;color:#4bc1df}
+.homeDemoTerminalInfo{font-size:12px;color:#78bd9f;margin-bottom:17px}
+.homeDemoTerminalWaiting{color:#708b9d;font-size:12px;margin-top:23px}
+.homeDemoTraceLine{display:flex;align-items:baseline;gap:11px;min-width:0;animation:homeDemoFade .2s ease-out;margin:9px 0 0}
+.homeDemoTraceTime{flex:0 0 39px;font-size:11px;color:#6f899d}
+.homeDemoTraceEvent{flex:0 0 65px;color:#56b8dc;font-weight:750}
+.homeDemoTraceSuccess{flex:0 0 65px;color:#6cd7a6;font-weight:750}
+.homeDemoTraceLine code{font:inherit;font-size:12px;color:#e9f4fa;overflow-wrap:anywhere;min-width:0}
+.homeDemoTraceLine small{color:#8a9faf;font-size:11px}
+.homeDemoTraceArgs{padding-left:115px;margin:2px 0 14px;color:#a3b6c7;animation:homeDemoFade .2s ease-out}
+.homeDemoTraceArgs code{font:inherit;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
+.homeDemoTraceResult{margin:0 0 17px}
+.homeDemoTraceResult code{color:#ccebdc}
+.homeDemoTerminalFinished{margin-top:21px;padding-top:15px;border-top:1px solid #253748;font-size:12px;color:#70d3a2;font-weight:720}
+.homeDemoTerminalCursor{display:inline-block;animation:homeDemoBlink 1s step-end infinite;color:#55c4e0;margin-top:12px}
+.homeDemoTerminalFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 22px;border-top:1px solid #293544;font-size:11px;color:#9eb0be}
+.homeDemoTerminalFooter>span:last-child{font-weight:700;color:#74c6a4}
+.homeDemoUnder{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 25px;margin-top:13px}
+.homeDemoUnder p{margin:0;max-width:730px;font-size:12px;line-height:1.6;color:var(--landing-muted)}
+.homeDemoUnder a{font-size:13px;font-weight:700;color:var(--text);text-decoration:none}
+.homeDemoUnder a:hover{text-decoration:underline}
+.homeDemo button:focus-visible{outline:3px solid #2596b7;outline-offset:3px}
+@keyframes homeDemoFade{from{opacity:.35;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes homeDemoBlink{50%{opacity:0}}
+@media(max-width:1020px){.homeDemoToolbar{align-items:flex-start;flex-direction:column}.homeDemoSurface{grid-template-columns:1fr 1fr}.homeDemoPanelHeader{padding:13px 15px}.homeDemoTerminalHeader{padding:13px 15px}.homeDemoChatBody{padding:25px 19px}.homeDemoTerminalBody{padding:19px 14px}.homeDemoTraceLine{gap:6px}.homeDemoTraceTime{flex-basis:36px}.homeDemoTraceEvent,.homeDemoTraceSuccess{flex-basis:59px}.homeDemoTraceArgs{padding-left:103px}}
+@media(max-width:760px){.homeDemoSurface{grid-template-columns:minmax(0,1fr)}.homeDemoChat{min-height:360px}.homeDemoChatBody{min-height:240px}.homeDemoTerminal{min-height:350px;border-left:0;border-top:1px solid #293544}.homeDemoTerminalBody{max-height:360px;min-height:250px}.homeDemoExamples{gap:6px}.homeDemoExamples button{font-size:13px;min-height:40px;padding:8px 11px}.homeDemoMode{font-size:10px}.homeDemoChatBody{gap:17px}.homeDemoUserBubble{font-size:16px}.homeDemoTerminalFooter{padding:11px 16px}.homeDemoUnder{align-items:flex-start}}
+@media(max-width:390px){.homeDemoClientSelect button{padding:5px 6px;font-size:11px}.homeDemoPanelHeader{padding:12px}.homeDemoAppMark small{font-size:11px}.homeDemoTerminalHeader{gap:7px}.homeDemoTerminalDevice{font-size:10px}.homeDemoTraceLine code{font-size:11px}.homeDemoTraceArgs{padding-left:96px}}
+@media(prefers-reduced-motion:reduce){.homeDemoTraceLine,.homeDemoTraceArgs,.homeDemoAssistant,.homeDemoTerminalCursor{animation:none}.homeDemoExamples button{transition:none}}
+
+@keyframes homeDemoSpin{to{transform:rotate(360deg)}}
+@media(max-width:1130px){
+  .homeDemoToolbar{align-items:flex-start}
+  .homeDemoClientSwitch{width:100%}
+  .homeDemoChatRail{flex-basis:40px}
+  .homeDemoChatChrome{padding:10px 12px}
+  .homeDemoChatBody{padding:24px 15px 16px}
+  .homeDemoComposer{padding:10px 12px}
+  .homeDemoClaudeNav span{padding:5px}
+}
+@media(max-width:760px){
+  .homeDemoSurface{grid-template-columns:minmax(0,1fr)}
+  .homeDemoChat,.homeDemoChatMain{min-height:660px}
+  .homeDemoChatBody{max-height:510px;min-height:320px}
+  .homeDemoChat--cursor .homeDemoChatBody{max-height:510px}
+  .homeDemoChatRail{flex-basis:46px}
+  .homeDemoClientSwitch>span{width:100%;margin-bottom:3px}
+  .homeDemoClientSwitch button{font-size:12px}
+}
+@media(max-width:380px){
+  .homeDemoChatRail{flex-basis:36px}
+  .homeDemoChatChrome{padding:10px 8px}
+  .homeDemoChatBody{padding:20px 10px}
+  .homeDemoChat--claude .homeDemoBrandTitle strong{font-size:20px}
+  .homeDemoClaudeNav{gap:0}
+  .homeDemoClaudeNav span{padding:5px 4px;font-size:10px}
+  .homeDemoClientSwitch button{padding:7px 8px}
+}
+@media(prefers-reduced-motion:reduce){.homeDemoMiniSpinner{animation:none}}

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n.js";
+import { InteractiveWorkDemo } from "./landing-interactive-demo.js";
 import "./landing-content.css";
 
 export function HeroHeadline() {
@@ -79,7 +80,6 @@ export function ConnectionFilm() {
 
 export function LandingContent() {
   const { tr } = useI18n();
-  const [selected, setSelected] = useState(0);
   const [faqCategory, setFaqCategory] = useState(0);
   const scenarios = [
     { id: "code", label: tr("Fix a project", "修复项目"), request: tr("“On my workstation, find the failing test, fix the code and show me the verified diff.”", "“在我的工作站上找到失败测试、修复代码，给我看验证后的 diff。”"), result: tr("An actual change in your checkout, with test results you can inspect.", "真实仓库中的修改，以及可检查的测试结果。"), steps: [tr("Find the named computer and its permitted tools", "确认指定电脑与可用工具"), tr("Read the code and reproduce the failure", "读取代码、复现失败"), tr("Edit the affected files and rerun tests", "修改相关文件、重新测试"), tr("Return the diff, evidence and remaining issues", "返回 diff、证据与未解决问题")], tools: "read_file · edit_block · start_process", permission: tr("File editing + terminal", "文件编辑 + 终端"), link: "remote-development" },
@@ -87,7 +87,6 @@ export function LandingContent() {
     { id: "schedule", label: tr("Check it later", "稍后检查"), request: tr("“At the agreed time, run the health check on home-server. Save the result. Do not restart services.”", "“在约定时间检查 home-server 的健康状态并保存结果，不重启服务。”"), result: tr("A scheduled run and its result, within the action you authorized.", "在已授权动作范围内执行的定时检查与结果。"), steps: [tr("Confirm the start time, action and deadline", "确认开始时间、动作与期限"), tr("Save the schedule in Remote Arc", "在 Remote Arc 保存调度"), tr("Wait until due and the computer is available", "等待到期且电脑可用"), tr("Record each run for later inspection", "记录每轮结果供之后查看")], tools: "create_automation · manage_automation", permission: tr("Required tools + scheduled tasks · Plus", "所需工具 + 定时任务 · Plus"), link: "scheduled-checks" },
     { id: "inspect", label: tr("Understand a problem", "排查问题"), request: tr("“Read the service logs on my mini PC and explain the failure before changing anything.”", "“读取我 Mini PC 上的服务日志，先解释失败原因，不修改任何东西。”"), result: tr("A diagnosis tied to real files and process state on your computer.", "由电脑上真实文件和进程状态支撑的诊断。"), steps: [tr("Resolve the selected device", "确认目标设备"), tr("Read the relevant logs and processes", "读取相关日志与进程"), tr("Explain the cause from observed facts", "依据观察事实解释原因"), tr("Keep repair separate from diagnosis", "修复与诊断分别授权")], tools: "read_file · list_processes", permission: tr("Read-only tools", "只读工具"), link: "remote-support" },
   ] as const;
-  const scenario = scenarios[selected] ?? scenarios[0];
   const faqGroups: { id: string; title: string; entries: [string, React.ReactNode][] }[] = [
     { id: "product", title: tr("Product & setup", "产品与使用"), entries: [
       [tr("What is Remote Arc? Is it a remote desktop?", "Remote Arc 是什么？是远程桌面吗？"), <>{tr("Remote Arc gives the AI client you already use controlled access to files, processes, terminals and explicitly shared browser tabs on computers you own. It can also persist deterministic Tasks such as long commands, schedules and condition watches. It does not stream your desktop or claim that ordinary Chat keeps reasoning after the chat ends.", "Remote Arc 让你正在使用的 AI 客户端以受控权限访问自己电脑上的文件、进程、终端和明确共享的浏览器标签页，也能保存长命令、定时任务和条件监听等确定性 Task。它不串流桌面，也不声称普通 Chat 结束后 AI 仍会自动持续推理。")} <a href="/use-cases">{tr("Explore workflows", "查看使用场景")} →</a></>],
@@ -113,16 +112,8 @@ export function LandingContent() {
 
   return <div className="landingContent">
     <section className="landingWork sectionBlock" id="how-it-works">
-      <header className="modernSectionIntro"><span className="eyebrow">{tr("START WITH THE WORK", "先看能完成什么")}</span><h2>{tr("Ask for a result. Use the computer where the work lives.", "说出想要的结果，在项目所在电脑上完成。")}</h2><p>{tr("Your files, dependencies and tools stay in their existing environment. Remote Arc gives your AI a controlled path to read, edit and run there.", "文件、依赖和工具继续使用现有环境。Remote Arc 为 AI 提供受控的读取、编辑与执行通道。")}</p></header>
-      <div className="workSelector" role="tablist" aria-label={tr("Choose a workflow", "选择工作场景")}>{scenarios.map((item, index) => <button role="tab" id={"scenario-tab-" + item.id} aria-controls={"scenario-panel-" + item.id} aria-selected={selected === index} tabIndex={selected === index ? 0 : -1} key={item.id} onClick={() => setSelected(index)} onKeyDown={event => {
-        const next = event.key === "ArrowRight" ? (index + 1) % scenarios.length : event.key === "ArrowLeft" ? (index + scenarios.length - 1) % scenarios.length : event.key === "Home" ? 0 : event.key === "End" ? scenarios.length - 1 : null;
-        if (next === null) return; event.preventDefault(); setSelected(next); document.getElementById("scenario-tab-" + scenarios[next]!.id)?.focus();
-      }}>{item.label}</button>)}</div>
-      <div className="workExample" role="tabpanel" id={"scenario-panel-" + scenario.id} aria-labelledby={"scenario-tab-" + scenario.id} tabIndex={0}>
-        <div className="workRequest"><span>{tr("YOU ASK IN YOUR AI CHAT", "在 AI 聊天中提出请求")}</span><blockquote>{scenario.request}</blockquote><p>{scenario.result}</p><a href={"/use-cases/" + scenario.link}>{tr("See the complete workflow", "查看完整流程")} ↗</a></div>
-        <div className="workExecution"><span className="executionCaption">{tr("ON YOUR COMPUTER", "在你的电脑上")}</span><ol>{scenario.steps.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol><div className="executionTools"><code>{scenario.tools}</code><p>{scenario.permission}</p></div></div>
-      </div>
-      <p className="workExampleNote">{tr("Illustrative workflows. Durable Tasks require Plus and enabled device permissions; they can persist deterministic work but do not keep ordinary Chat reasoning alive.", "以上为流程示例。持久 Task 需要 Plus 与已开启的设备权限；它们能持久执行确定性工作，但不会让普通 Chat 的 AI 推理自动持续。")}</p>
+      <header className="modernSectionIntro"><span className="eyebrow">{tr("FROM CHAT TO ACTION", "从 AI 对话到真实执行")}</span><h2>{tr("Watch your AI use real tools.", "看看 AI 如何真正动手。")}</h2><p>{tr("Choose a task, then watch the conversation, tool calls and results unfold side by side. This guided demo shows what Remote Arc makes possible on your own computer.", "选择一个任务，直观看到 AI 对话、工具调用和执行结果如何联动。通过引导式演示，了解 Remote Arc 如何让 AI 使用你电脑上的工具。")}</p></header>
+      <InteractiveWorkDemo scenarios={scenarios} />
     </section>
 
     <section className="landingSetup sectionBlock" id="connect-once">
