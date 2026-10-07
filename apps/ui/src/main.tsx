@@ -4541,6 +4541,16 @@ function Dashboard({
                 const enabledTools = device.allowed_tools == null ? advertisedTools : device.allowed_tools;
                 const allTools = Array.from(new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools]));
                 const accessPreset = deviceAccessPreset(enabledTools, advertisedTools);
+                const runtimeVersion = device.agent_version
+                  ? device.platform === "browser"
+                    ? device.agent_version.replace(/^browser-/, "")
+                    : device.agent_version
+                  : null;
+                const backgroundVersionDiffers = Boolean(
+                  device.background_agent_version &&
+                  device.agent_version &&
+                  device.background_agent_version !== device.agent_version,
+                );
                 return (
                   <article className={"deviceCard managed " + device.status} key={device.id}>
                     <div className="deviceTop">
@@ -4555,6 +4565,7 @@ function Dashboard({
 
                     <div className="deviceOverviewFacts">
                       <span><i aria-hidden="true">◇</i>{accessPreset === "safe" ? tr("Read only", "只读访问") : accessPreset === "developer" ? tr("Read & edit", "读取与编辑") : accessPreset === "full" ? tr("Terminal enabled", "已启用终端") : tr("Custom permissions", "自定义权限")}</span>
+                      <span className="deviceRuntimeVersion"><i aria-hidden="true">⌁</i>{device.platform === "browser" ? tr("Browser", "浏览器") : tr("Agent", "Agent")} {runtimeVersion ? "v" + runtimeVersion : tr("version unknown", "版本未知")}{backgroundVersionDiffers ? " · " + tr("Background", "后台") + " v" + device.background_agent_version : ""}</span>
                       <span>{(device.workspace_roots || []).length} {tr("trusted folders", "个可信目录")}</span>
                       <span>{device.background_guard_active ? tr("Recovery supervisor running", "恢复守护运行中") : device.background_enabled ? tr("Startup configured · recovery unconfirmed", "自启已配置，恢复待确认") : tr("Automatic recovery off", "自动恢复关闭")}</span>
                       <span>{tr("Seen ", "最后在线：")}{timeAgo(device.last_seen)}</span>

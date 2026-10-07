@@ -4,7 +4,7 @@
   "app_info": {
     "display_name": "Remote Arc",
     "subtitle": "Controlled remote access to your computers",
-    "description": "Remote Arc connects ChatGPT and Codex to Windows, macOS, Linux, and explicitly shared Chrome tabs on computers the user authorizes. It can inspect local state, run approved commands, modify files, create and manage deterministic durable tasks, and let the user pause, resume, or cancel saved work. Computer writes, browser interaction, and persistent automation use separate permissions and OAuth scopes. Browser interaction is per-tab, stale snapshot refs are rejected, and recognized password, one-time-code, payment-card, and file-picker fields remain blocked. Each device has an independent revocable credential and policy. Remote Arc uses an OAuth-protected Remote MCP endpoint and an outbound-only device connection. Continuous autonomous AI reasoning after a normal Chat turn ends is not part of the production capability.",
+    "description": "Remote Arc connects ChatGPT and Codex to Windows, macOS, Linux, and explicitly shared Chrome tabs on computers the user authorizes. It can inspect local state, run approved commands, modify files, create and manage deterministic durable tasks, and let the user pause, resume, or cancel saved work. Each computer reports its connected Agent runtime metadata, including the running Agent version and background Agent version when available, so users can verify what is actually executing. Computer writes are constrained by per-device Trusted Write Locations; when a device has multiple trusted roots, terminal execution requires an explicit in-scope cwd. Computer writes, browser interaction, and persistent automation use separate permissions and OAuth scopes. Browser interaction is per-tab, stale snapshot refs are rejected, and recognized password, one-time-code, payment-card, and file-picker fields remain blocked. Expected policy, device, entitlement, and validation refusals are returned as structured recoverable tool results, while authentication challenges and unexpected server failures remain errors. Each device has an independent revocable credential and policy. Remote Arc uses an OAuth-protected Remote MCP endpoint and an outbound-only device connection. Continuous autonomous AI reasoning after a normal Chat turn ends is not part of the production capability.",
     "category": "DEVELOPER_TOOLS"
   },
   "tools": {
@@ -15,7 +15,7 @@
         "destructiveHint": false
       },
       "justifications": {
-        "read_only_justification": "Reads account-scoped paired-device metadata and online state without changing any device or account state.",
+        "read_only_justification": "Reads account-scoped paired-device metadata, online state, enabled capabilities, and reported Agent/background Agent runtime versions without changing any device or account state.",
         "open_world_justification": "Only reads Remote Arc control-plane metadata for devices owned by the authenticated user; it does not access public internet services.",
         "destructive_justification": "Does not modify, delete, overwrite, stop, execute, or otherwise change user or external state."
       }
@@ -161,7 +161,7 @@
       "justifications": {
         "read_only_justification": "Runs an arbitrary terminal command, so it can change local system state and is not read-only.",
         "open_world_justification": "A terminal command may access or modify public internet services, for example by calling APIs, pushing code, deploying software, or publishing packages.",
-        "destructive_justification": "Commands can overwrite or delete local data, change repositories or environments, stop services, or cause irreversible external side effects; Remote Arc therefore treats this tool as consequential."
+        "destructive_justification": "Commands can overwrite or delete local data, change repositories or environments, stop services, or cause irreversible external side effects; Remote Arc therefore treats this tool as consequential. Trusted Write Locations constrain the selected cwd, and devices with multiple trusted roots require the caller to choose an explicit in-scope cwd before execution."
       }
     },
     "process_status": {
