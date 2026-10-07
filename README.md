@@ -16,7 +16,7 @@ Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients t
 
 <p align="center">
   <a href="https://remotearc.app/#how-it-works">
-    <img src="./docs/assets/interactive-workflow.gif" alt="Remote Arc workflow preview: ChatGPT on the left and device tool activity on the right, from the interactive demo in PR #101" width="100%" />
+    <img src="./docs/assets/interactive-workflow.webp" alt="High-resolution animated Remote Arc workflow: ChatGPT on the left, device tool activity on the right, captured from PR #101" width="100%" />
   </a>
   <br />
   <sub>Chat → Remote Arc → your computer. Animated preview from the interactive demo in PR #101 (example data, no real device commands). Click to explore the workflow.</sub>
