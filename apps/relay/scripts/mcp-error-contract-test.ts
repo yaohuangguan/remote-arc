@@ -53,9 +53,11 @@ registerMcpTool(fakeServer, "start_process", {}, async () => {
 });
 assert(registeredHandler, "safe MCP handler was not registered");
 const structured = await registeredHandler!({});
-assert.equal(structured.isError, true);
-assert.match(structured.content[0].text, /WORKSPACE_CWD_REQUIRED/);
-assert.match(structured.content[0].text, /requires cwd/);
+assert.equal(structured.isError, undefined);
+const structuredPayload = JSON.parse(structured.content[0].text);
+assert.equal(structuredPayload.ok, false);
+assert.equal(structuredPayload.error.code, "WORKSPACE_CWD_REQUIRED");
+assert.match(structuredPayload.error.message, /requires cwd/);
 
 registerMcpTool(fakeServer, "internal_probe", {}, async () => {
   throw new Error("D1_ERROR: unexpected storage failure");

@@ -58,10 +58,19 @@ const toolErrorResult = (message: string, code?: string) => ({
   content: [
     {
       type: "text" as const,
-      text: code ? `${message}\n\nCode: ${code}` : message,
+      text: JSON.stringify(
+        {
+          ok: false,
+          error: {
+            code: code || "TOOL_ERROR",
+            message,
+          },
+        },
+        null,
+        2,
+      ),
     },
   ],
-  isError: true,
 });
 
 const consume = async (env: Env, identity: OAuthIdentity) => {

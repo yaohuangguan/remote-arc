@@ -452,7 +452,7 @@ try {
   const deniedBinary = await callMcp("tools/call", { name: "read_binary_file", arguments: {
     device_id: "device", path: "/workspace/image.png", offset: 0, length: 4,
   } });
-  assert(deniedBinary.isError, JSON.stringify(deniedBinary));
+  assert.equal(JSON.parse(deniedBinary.content[0].text).error.code, "PLAN_UPGRADE_REQUIRED", JSON.stringify(deniedBinary));
   assert.equal(usageCount(), usageBeforeDenied, "Denied Plus binary read must not consume monthly usage");
   assert.equal(calls.length, callsBeforeDenied, "Denied Plus binary read must not reach the device");
 
@@ -460,7 +460,7 @@ try {
     name: "Denied Free source goal", device_id: "device", controller: "source",
     objective: "Inspect file", success_criteria: "File inspected", allowed_tools: ["read_file"],
   } });
-  assert(deniedGoalPlan.isError, JSON.stringify(deniedGoalPlan));
+  assert.equal(JSON.parse(deniedGoalPlan.content[0].text).error.code, "PLAN_UPGRADE_REQUIRED", JSON.stringify(deniedGoalPlan));
   assert.equal(usageCount(), usageBeforeDenied, "Denied Plus Agent Goal must not consume monthly usage");
 
   sqlite.prepare("UPDATE users SET plan = 'plus' WHERE id = 'owner'").run();
@@ -591,9 +591,9 @@ try {
   assert(!kickedDecision.isError, JSON.stringify(kickedDecision));
   assert.equal(schedulerKicks, kicksBeforeDecision + 1, "Accepted source decisions must request an immediate scheduler kick");
   const missingExecutor = await callMcp("tools/call", { name: "create_agent_goal", arguments: { ...goalArgs, controller: undefined, task_version: 1 } });
-  assert(missingExecutor.isError, "New contract requires explicit executor selection");
+  assert.equal(JSON.parse(missingExecutor.content[0].text).error.code, "INVALID_TOOL_REQUEST", "New contract requires explicit executor selection");
   const mixedTrigger = await callMcp("tools/call", { name: "create_agent_goal", arguments: { ...goalArgs, trigger: { type: "now" } } });
-  assert(mixedTrigger.isError, "Legacy and new trigger semantics cannot be silently mixed");
+  assert.equal(JSON.parse(mixedTrigger.content[0].text).error.code, "INVALID_TOOL_REQUEST", "Legacy and new trigger semantics cannot be silently mixed");
 
   await assert.rejects(runtime.createAutomation({ ...env, GITHUB_APP_ID: "test", GITHUB_APP_PRIVATE_KEY: "not-used", GITHUB_APP_INSTALLATION_ID: "7" }, "owner", {
     name: "Unauthorized cloud merge", kind: "condition_watch", github_merge: { owner: "owner", repo: "repo", pull_number: 1 },

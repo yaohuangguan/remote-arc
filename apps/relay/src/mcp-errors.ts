@@ -133,14 +133,23 @@ export function classifyExpectedMcpError(error: unknown): ExpectedMcpError | nul
   return null;
 }
 
-const errorResult = (error: ExpectedMcpError) => ({
+export const expectedMcpFailureResult = (error: ExpectedMcpError) => ({
   content: [
     {
       type: "text" as const,
-      text: `Remote Arc error: ${error.message}\n\nCode: ${error.code}`,
+      text: JSON.stringify(
+        {
+          ok: false,
+          error: {
+            code: error.code,
+            message: error.message,
+          },
+        },
+        null,
+        2,
+      ),
     },
   ],
-  isError: true,
 });
 
 export function registerMcpTool(
@@ -161,7 +170,7 @@ export function registerMcpTool(
         code: expected.code,
         message: expected.message,
       });
-      return errorResult(expected);
+      return expectedMcpFailureResult(expected);
     }
   });
 }
