@@ -1,4 +1,4 @@
-import { handleOAuthAuthorize, handleOAuthDecision } from "../src/oauth.js";
+import { handleOAuthAuthorize, handleOAuthDecision, handleOAuthToken } from "../src/oauth.js";
 
 const APP_ORIGIN = "https://mcp.remotearc.app";
 const REDIRECT_URI = "https://client.example/callback";
@@ -156,4 +156,71 @@ function authUrl(extra = "") {
   }
 }
 
-console.log("OAuth consent security regression tests passed");
+{
+  const writes: Array<{ sql: string; args: unknown[] }> = [];
+  const db = {
+    prepare(sql: string) {
+      return {
+        bind(...args: unknown[]) {
+          return {
+            async first() {
+              if (sql.includes("FROM oauth_clients")) return { client_id: CLIENT_ID };
+              if (sql.includes("FROM oauth_tokens")) {
+                return {
+                  access_token_hash: "old-access-hash",
+                  user_id: "user-1",
+                  client_id: CLIENT_ID,
+                  resource: APP_ORIGIN + "/mcp",
+                  scope: "devices:read computer:read",
+                  grant_id: "grant-1",
+                };
+              }
+              return null;
+            },
+            async run() {
+              writes.push({ sql, args });
+              return { success: true };
+            },
+          };
+        },
+      };
+    },
+  } as unknown as D1Database;
+
+  const refreshRequest = () =>
+    new Request(APP_ORIGIN + "/oauth/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: CLIENT_ID,
+        resource: APP_ORIGIN + "/mcp",
+        refresh_token: "refresh-test-value",
+      }),
+    });
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await handleOAuthToken(refreshRequest(), { ...envBase, DB: db });
+    if (!response.ok) throw new Error("overlapping refresh attempt was rejected");
+  }
+
+  const graceUpdates = writes.filter(
+    (item) => item.sql.includes("UPDATE oauth_tokens") && item.sql.includes("refresh_expires_at"),
+  );
+  if (graceUpdates.length !== 2) {
+    throw new Error("overlapping refresh did not retain a bounded grace window");
+  }
+  for (const update of graceUpdates) {
+    if (!update.sql.includes("SET expires_at = ?1")) {
+      throw new Error("old access token was not expired immediately");
+    }
+    if (!update.sql.includes("WHEN refresh_expires_at > ?2 THEN ?2")) {
+      throw new Error("refresh grace window can be extended");
+    }
+    if (update.sql.includes("SET revoked_at")) {
+      throw new Error("refresh still revokes the old row immediately");
+    }
+  }
+}
+
+console.log("OAuth consent and refresh security regression tests passed");
