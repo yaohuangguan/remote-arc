@@ -4,6 +4,8 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.4.6
 
+- Fix in-place upgrades from lease-owning older background Agents: a known older worker now performs a controlled stop, lease release, bundle replacement and verified restart instead of leaving the new CLI as a passive viewer.
+- Surface running Agent and installed recovery-bundle versions in Dashboard and flag devices that are behind the current CLI release.
 - Restore the shipped product boundary to controlled remote-computer access plus deterministic durable Tasks; autonomous ordinary-Chat reasoning remains experimental and is no longer advertised as production capability.
 - Hide experimental Agent Goal/source-decision tools from the production MCP surface while retaining the implementation behind an explicit deployment flag for continued research.
 - Keep core device discovery and computer tool calls compatible with production databases that have not yet received the optional background/task-permission migrations.

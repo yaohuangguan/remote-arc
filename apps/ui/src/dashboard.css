@@ -22,6 +22,9 @@
 :root[data-theme] .appFrame .deviceManagementGrid { grid-template-columns: minmax(0,1fr) !important; }
 :root[data-theme] .appFrame .deviceCard.managed { padding: 24px; min-width: 0; min-height:0; }
 :root[data-theme] .appFrame .deviceOverviewActions { display:flex; align-items:center; gap:16px; }
+:root[data-theme] .appFrame .badge.updateAvailable { border-color:color-mix(in srgb,var(--dash-accent) 38%,transparent); color:var(--dash-accent); background:color-mix(in srgb,var(--dash-accent) 9%,transparent); }
+:root[data-theme] .appFrame .badge.updateAvailable i { background:var(--dash-accent); }
+:root[data-theme] .appFrame .deviceUpdateRow { border-color:color-mix(in srgb,var(--dash-accent) 24%,var(--dash-line)); }
 :root[data-theme] .appFrame .deviceOverviewFacts { display:flex; flex-wrap:wrap; gap:12px 24px; margin-top:20px; color:var(--dash-muted); font-size:14px; }
 :root[data-theme] .appFrame .deviceOverviewFacts span:first-child { color:var(--dash-text); font-weight:650; }
 :root[data-theme] .appFrame .deviceOverviewFacts .deviceRuntimeVersion { color:var(--dash-text); font-weight:650; }

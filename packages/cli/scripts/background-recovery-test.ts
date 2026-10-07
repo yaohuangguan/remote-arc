@@ -109,7 +109,7 @@ try {
       return result();
     },
     wait: async () => undefined,
-    leaseActive: async () => false,
+    leaseActive: async () => legacyLoaded,
   });
   const upgradedLegacy = await legacy.enableBackgroundAgent(source, {
     version: "0.4.5",
@@ -206,6 +206,72 @@ try {
   const win = await windows.enableBackgroundAgent(source);
   assert.equal(win.active, true);
   assert.equal(win.pid, 7654);
+
+  const upgradeHome = path.join(temp, "Windows upgrade home");
+  const upgradeAgentDir = path.join(upgradeHome, ".remotearc", "agent");
+  await fs.mkdir(upgradeAgentDir, { recursive: true });
+  await fs.writeFile(path.join(upgradeAgentDir, "version"), "0.4.5\n");
+  let upgradeEnabled = true;
+  let upgradeSupervisor = true;
+  let upgradeWorker = true;
+  let stoppedOldWorker = false;
+  let stoppedOldSupervisor = false;
+  const upgradeWindows = createBackgroundController({
+    platform: "win32",
+    home: upgradeHome,
+    nodePath: "C:\\Program Files\\nodejs\\node.exe",
+    run: async (command, args) => {
+      if (command === "reg.exe" && args[0] === "query") {
+        return upgradeEnabled ? result() : result(1);
+      }
+      if (command === "reg.exe" && args[0] === "delete") {
+        upgradeEnabled = false;
+        return result();
+      }
+      if (command === "reg.exe" && args[0] === "add") {
+        upgradeEnabled = true;
+        return result();
+      }
+      if (command === "powershell.exe") {
+        const script = args.at(-1)!;
+        if (script.includes("Get-CimInstance")) {
+          if (script.includes("--supervise")) {
+            return result(0, upgradeSupervisor ? "7654" : "");
+          }
+          if (script.includes("--agent")) {
+            return result(0, upgradeWorker ? "8765" : "");
+          }
+        }
+        if (script.includes("Stop-Process -Id 8765")) {
+          stoppedOldWorker = true;
+          upgradeWorker = false;
+          return result();
+        }
+        if (script.includes("Stop-Process -Id 7654")) {
+          stoppedOldSupervisor = true;
+          upgradeSupervisor = false;
+          return result();
+        }
+        if (script.includes("Start-Process")) {
+          upgradeSupervisor = true;
+          upgradeWorker = true;
+          return result();
+        }
+      }
+      return result();
+    },
+    wait: async () => undefined,
+    leaseActive: async () => upgradeWorker,
+  });
+  const upgradedWindows = await upgradeWindows.enableBackgroundAgent(source, {
+    version: "0.4.6",
+  });
+  assert.equal(upgradedWindows.version, "0.4.6");
+  assert.equal(upgradedWindows.workerPid, 8765);
+  assert.equal(upgradedWindows.active, true);
+  assert(stoppedOldWorker, "A known older lease-owning Windows Agent must stop during upgrade");
+  assert(stoppedOldSupervisor, "The older Windows supervisor must stop before replacement startup");
+
   supervisor = false;
   const dead = createBackgroundController({
     platform: "win32",

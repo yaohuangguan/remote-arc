@@ -519,23 +519,13 @@ WantedBy=default.target
   ) {
     const preserveCurrent = options.preserveCurrent ?? false;
     const before = await backgroundAgentStatus();
+    let upgradeHandoff = false;
     if (before.workerPid && before.workerPid !== process.pid) {
-      let participates = await leaseActive(AGENT_DIR);
-      for (let attempt = 0; !participates && attempt < 6; attempt++) {
-        await wait(500);
-        participates = await leaseActive(AGENT_DIR);
-      }
+      const knownOlderRelease =
+        before.enabled && isOlderRelease(before.version, options.version);
 
-      if (!participates) {
-        const canUpgradeLegacy =
-          isOlderRelease(before.version, options.version) && before.enabled;
-
-        if (!canUpgradeLegacy) {
-          throw new LegacyBackgroundAgentError(
-            "An existing background Agent does not hold the execution lease and cannot be identified as a safe older release. Stop it locally before retrying; this launch will not create a competing executor.",
-          );
-        }
-
+      if (knownOlderRelease) {
+        upgradeHandoff = true;
         if (platform === "darwin") await disableMac(true);
         else if (platform === "win32") await disableWindows(true);
         else if (platform === "linux") await disableLinux(true);
@@ -559,6 +549,29 @@ WantedBy=default.target
             "The older background Agent did not stop cleanly. Automatic upgrade was aborted before installing the new executor.",
           );
         }
+
+        let leaseReleased = !(await leaseActive(AGENT_DIR));
+        for (let attempt = 0; !leaseReleased && attempt < 60; attempt++) {
+          await wait(250);
+          leaseReleased = !(await leaseActive(AGENT_DIR));
+        }
+        if (!leaseReleased) {
+          throw new LegacyBackgroundAgentError(
+            "The older background Agent stopped, but its execution lease did not release in time. Automatic upgrade was aborted before starting the replacement executor.",
+          );
+        }
+      } else {
+        let participates = await leaseActive(AGENT_DIR);
+        for (let attempt = 0; !participates && attempt < 6; attempt++) {
+          await wait(500);
+          participates = await leaseActive(AGENT_DIR);
+        }
+
+        if (!participates) {
+          throw new LegacyBackgroundAgentError(
+            "An existing background Agent does not hold the execution lease and cannot be identified as a safe older release. Stop it locally before retrying; this launch will not create a competing executor.",
+          );
+        }
       }
     }
     if (platform === "darwin")
@@ -568,11 +581,19 @@ WantedBy=default.target
     else if (platform === "linux")
       await enableLinux(sourcePath, preserveCurrent, options.version);
     else return backgroundAgentStatus();
-    for (let attempt = 0; attempt < 20; attempt++) {
+    const verifyAttempts = upgradeHandoff ? 80 : 20;
+    for (let attempt = 0; attempt < verifyAttempts; attempt++) {
       const status = await backgroundAgentStatus();
-      if (status.enabled && status.active) return status;
+      if (status.enabled && status.active) {
+        if (!upgradeHandoff) return status;
+        const versionMatches =
+          !options.version || status.version === options.version;
+        const workerOwnsLease =
+          Boolean(status.workerPid) && (await leaseActive(AGENT_DIR));
+        if (versionMatches && workerOwnsLease) return status;
+      }
       if (!status.supported) return status;
-      await wait(200);
+      await wait(upgradeHandoff ? 250 : 200);
     }
     const status = await backgroundAgentStatus();
     throw new Error(

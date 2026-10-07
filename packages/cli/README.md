@@ -53,7 +53,7 @@ npx remotelink --help          Show help
 
 The package also exposes the aliases `remote-link` and `remote-arc`.
 
-In 0.4.5, background recovery and Relay reconnect are separate. A normal npx remotelink@latest launch can safely hand off a known older background Agent to the current release without creating two executors.
+In 0.4.6, background recovery and Relay reconnect are separate. A normal npx remotelink@latest launch can safely hand off a known older background Agent to the current release without creating two executors.
 Recovery installs a user service (macOS/Linux) or a hidden login supervisor
 (Windows), which takes over when the executing Agent ends. Only one updated
 Agent owns execution; additional terminals follow its operation log and offer
@@ -62,7 +62,7 @@ execution lease. Turning recovery off preserves current execution. Explicit
 Stop background Agent also ends that Agent's work. Windows recovery needs the
 supervisor to remain running; killing it requires a local relaunch or login.
 Sleep/power loss still makes the device unavailable. All concurrent instances
-must be updated; pre-0.4.4 Agents do not participate in the execution lease. When the installed version is identified as an older release, 0.4.5 stops that legacy background process, preserves pairing and policy, installs the replacement bundle, and verifies the replacement service. Unknown legacy processes still fail closed instead of being killed automatically.
+must be updated; pre-0.4.4 Agents do not participate in the execution lease. When the installed version is identified as an older release, 0.4.6 performs a controlled handoff even when that older Agent still owns the execution lease: it stops the known Remote Arc worker and supervisor, waits for the lease to release, preserves pairing and policy, installs the replacement bundle, and verifies that the replacement worker owns execution. Unknown processes still fail closed instead of being killed automatically. Unknown legacy processes still fail closed instead of being killed automatically.
 
 ## Native execution core
 

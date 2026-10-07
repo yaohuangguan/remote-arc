@@ -29,6 +29,7 @@ export type DeviceMetadata = {
   supervisorActive?: boolean;
   supervisorPid?: number | null;
   supervisorService?: string;
+  recoveryVersion?: string | null;
   connectedAt?: string;
   lastSeen?: string;
 };

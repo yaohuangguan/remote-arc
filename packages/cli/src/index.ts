@@ -22,7 +22,7 @@ import {
   type ExecutionPolicy,
 } from "@remotearc/execution-core";
 
-const VERSION = "0.4.5";
+const VERSION = "0.4.6";
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
 const CONFIG_DIR = path.join(os.homedir(), ".remotearc");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -542,6 +542,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
               supervisorActive: recovery?.active,
               supervisorPid: recovery?.pid,
               supervisorService: recovery?.service,
+              recoveryVersion: recovery?.version ?? null,
             },
             tools: [...tools.map((tool) => tool.name), ...internalTools],
             capabilities: [

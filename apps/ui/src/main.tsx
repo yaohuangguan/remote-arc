@@ -12,6 +12,25 @@ import { parsePendingApprovals, parseSecurityState, type PendingApproval } from 
 import "./styles.css";
 import "./dashboard.css";
 
+declare const __REMOTEARC_CLI_VERSION__: string;
+
+const LATEST_AGENT_VERSION = __REMOTEARC_CLI_VERSION__;
+
+function releaseTuple(value: string | null | undefined) {
+  const match = String(value || "").trim().match(/^(\d+)\.(\d+)\.(\d+)$/);
+  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] as const : null;
+}
+
+function isOlderRelease(current: string | null | undefined, latest = LATEST_AGENT_VERSION) {
+  const left = releaseTuple(current);
+  const right = releaseTuple(latest);
+  if (!left || !right) return false;
+  if (left[0] !== right[0]) return left[0] < right[0];
+  if (left[1] !== right[1]) return left[1] < right[1];
+  if (left[2] !== right[2]) return left[2] < right[2];
+  return false;
+}
+
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
 const PlannedGoalEditor = React.lazy(() => import("./planned-goal-view.js").then(module => ({ default: module.PlannedGoalEditor })));
 
@@ -61,6 +80,7 @@ type Device = {
   execution_mode?: string | null;
   background_enabled?: boolean | null;
   background_service?: string | null;
+  recovery_bundle_version?: string | null;
   background_seen_at?: string | null;
   background_active?: boolean;
   background_pid?: number | null;
@@ -4546,11 +4566,15 @@ function Dashboard({
                     ? device.agent_version.replace(/^browser-/, "")
                     : device.agent_version
                   : null;
-                const backgroundVersionDiffers = Boolean(
-                  device.background_agent_version &&
-                  device.agent_version &&
-                  device.background_agent_version !== device.agent_version,
-                );
+                const recoveryVersion = device.recovery_bundle_version || null;
+                const updateAvailable =
+                  device.platform !== "browser" &&
+                  Boolean(runtimeVersion) &&
+                  isOlderRelease(runtimeVersion);
+                const updateCommand =
+                  device.background_enabled === true
+                    ? `npx -y remotelink@${LATEST_AGENT_VERSION} --background`
+                    : `npx -y remotelink@${LATEST_AGENT_VERSION}`;
                 return (
                   <article className={"deviceCard managed " + device.status} key={device.id}>
                     <div className="deviceTop">
@@ -4558,14 +4582,16 @@ function Dashboard({
                         <div className="deviceIcon large">{platformGlyph(device.platform)}</div>
                         <div><h3>{device.name}</h3><span>{platformLabel(device.platform)} · {device.hostname || tr("No hostname", "未提供主机名")}</span></div>
                       </div>
-                      <div className="deviceOverviewActions"><span className={"badge " + device.status}><i/>{device.status === "online" ? tr("Online", "在线") : tr("Offline", "离线")}</span>
+                      <div className="deviceOverviewActions">
+                        {updateAvailable && <span className="badge updateAvailable"><i/>{tr("Update available", "可更新")}</span>}
+                        <span className={"badge " + device.status}><i/>{device.status === "online" ? tr("Online", "在线") : tr("Offline", "离线")}</span>
                         <button className="ghostButton" aria-expanded={managedDeviceId === device.id} aria-controls={"device-management-" + device.id} aria-label={tr("Manage " + device.name, "管理 " + device.name)} onClick={() => { setManagedDeviceId(managedDeviceId === device.id ? null : device.id); setDevicePanel("access"); }}>{managedDeviceId === device.id ? tr("Close", "收起") : tr("Manage", "管理")}</button>
                       </div>
                     </div>
 
                     <div className="deviceOverviewFacts">
                       <span><i aria-hidden="true">◇</i>{accessPreset === "safe" ? tr("Read only", "只读访问") : accessPreset === "developer" ? tr("Read & edit", "读取与编辑") : accessPreset === "full" ? tr("Terminal enabled", "已启用终端") : tr("Custom permissions", "自定义权限")}</span>
-                      <span className="deviceRuntimeVersion"><i aria-hidden="true">⌁</i>{device.platform === "browser" ? tr("Browser", "浏览器") : tr("Agent", "Agent")} {runtimeVersion ? "v" + runtimeVersion : tr("version unknown", "版本未知")}{backgroundVersionDiffers ? " · " + tr("Background", "后台") + " v" + device.background_agent_version : ""}</span>
+                      <span className="deviceRuntimeVersion"><i aria-hidden="true">⌁</i>{device.platform === "browser" ? tr("Browser", "浏览器") : tr("Running", "运行中")} {runtimeVersion ? "v" + runtimeVersion : tr("version unknown", "版本未知")}{device.platform !== "browser" && recoveryVersion && recoveryVersion !== runtimeVersion ? " · " + tr("Recovery", "恢复包") + " v" + recoveryVersion : ""}{updateAvailable ? " · " + tr("Latest", "最新") + " v" + LATEST_AGENT_VERSION : ""}</span>
                       <span>{(device.workspace_roots || []).length} {tr("trusted folders", "个可信目录")}</span>
                       <span>{device.background_guard_active ? tr("Recovery supervisor running", "恢复守护运行中") : device.background_enabled ? tr("Startup configured · recovery unconfirmed", "自启已配置，恢复待确认") : tr("Automatic recovery off", "自动恢复关闭")}</span>
                       <span>{tr("Seen ", "最后在线：")}{timeAgo(device.last_seen)}</span>
@@ -4914,6 +4940,29 @@ function Dashboard({
 
                         </section>
                         <section aria-label={tr("Background and tasks", "后台与任务")} hidden={devicePanel !== "tasks"}>
+                    {updateAvailable && (
+                      <div className="deviceBackgroundRow deviceUpdateRow">
+                        <div>
+                          <strong>{tr("Remote Arc update available", "Remote Arc 有可用更新")}</strong>
+                          <span>{tr("Running: ", "运行版本：")}v{runtimeVersion} · {tr("Latest: ", "最新版本：")}v{LATEST_AGENT_VERSION}</span>
+                          {recoveryVersion && <span>{tr("Installed recovery bundle: ", "已安装恢复包：")}v{recoveryVersion}</span>}
+                          <span>{device.background_enabled === true
+                            ? tr("The update command performs a controlled handoff to the new background Agent without creating a second executor.", "更新命令会安全交接到新版后台 Agent，不会创建第二个执行器。")
+                            : tr("Automatic recovery is off. Stop the current Agent before starting the newer foreground version.", "自动恢复未开启。启动新版前台 Agent 前，请先停止当前 Agent。")}</span>
+                        </div>
+                        <button className="ghostButton small" onClick={async () => {
+                          try {
+                            if (navigator.clipboard) await navigator.clipboard.writeText(updateCommand);
+                            await showNotice(
+                              tr("Update command", "更新命令"),
+                              updateCommand + (navigator.clipboard ? "\n\n" + tr("Copied to clipboard.", "已复制到剪贴板。") : ""),
+                            );
+                          } catch {
+                            await showNotice(tr("Update command", "更新命令"), updateCommand);
+                          }
+                        }}>{tr("Copy update command", "复制更新命令")}</button>
+                      </div>
+                    )}
                     <div className="deviceBackgroundRow">
                       <div>
                         <div className="labelWithHelp">

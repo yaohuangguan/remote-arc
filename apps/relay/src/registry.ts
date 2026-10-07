@@ -129,6 +129,7 @@ export class DeviceRegistry {
         background_guard_active: attachment?.device?.supervisorActive === true,
         background_guard_pid: attachment?.device?.supervisorPid ?? null,
         background_guard_service: attachment?.device?.supervisorService ?? null,
+        recovery_bundle_version: attachment?.device?.recoveryVersion ?? null,
         execution_mode: attachment?.device?.backgroundProcess ? "background" : "foreground",
         background_active: Boolean(backgroundSocket),
         background_pid: backgroundSocket?.device?.pid ?? null,

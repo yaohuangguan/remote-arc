@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "remote-arc",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Controlled remote computer access for AI across computers you authorize.",
   "homepage": "https://remotearc.app",
   "repository": "https://github.com/yaohuangguan/remote-arc",
