@@ -20,6 +20,22 @@ export function resolveProductionDeployPolicy(env = process.env) {
   };
 }
 
+export function shouldSkipStaleProductionDeploy({
+  source,
+  ref,
+  requestedSha,
+  latestMasterSha,
+}) {
+  const normalizedRef = (ref || "").replace(/^refs\/heads\//, "");
+  return (
+    source === "github-actions" &&
+    normalizedRef === "master" &&
+    Boolean(requestedSha) &&
+    Boolean(latestMasterSha) &&
+    requestedSha !== latestMasterSha
+  );
+}
+
 export function deploymentMetadata({
   source,
   sha,
