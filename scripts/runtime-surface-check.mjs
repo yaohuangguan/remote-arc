@@ -5,7 +5,7 @@ const submission = JSON.parse(fs.readFileSync(new URL("../chatgpt-app-submission
 const plugin = JSON.parse(fs.readFileSync(new URL("../plugin.json", import.meta.url), "utf8"));
 
 const registered = new Set(
-  [...relaySource.matchAll(/server\.registerTool\(\s*[\r\n\t ]*["']([^"']+)["']/g)].map((match) => match[1]),
+  [...relaySource.matchAll(/(?:server\.registerTool\(|registerMcpTool\(server,)\s*[\r\n\t ]*["']([^"']+)["']/g)].map((match) => match[1]),
 );
 
 const expected = [

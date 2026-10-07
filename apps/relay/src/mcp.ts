@@ -15,6 +15,7 @@ import { getDevicesForUser } from "./device.js";
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice } from "./device-call.js";
 import { consumeToolCall } from "./usage.js";
+import { registerMcpTool } from "./mcp-errors.js";
 import { requireFeature, requireFeatures } from "./entitlements.js";
 import { binaryBytesRead, recordPlusUsage } from "./plus-usage.js";
 import { createFileResource, revokeFileResource } from "./file-resources.js";
@@ -192,7 +193,7 @@ export function createRemoteLinkMcp(
       { capabilities: { tools: {} } },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "list_devices",
       {
         title: "List Remote Arc devices",
@@ -211,7 +212,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "device_tools",
       {
         title: "List tools on a device",
@@ -236,7 +237,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "browser_list_tabs",
       {
         title: "List explicitly shared browser tabs",
@@ -260,7 +261,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "browser_get_current_tab",
       {
         title: "Get the currently shared browser tab",
@@ -287,7 +288,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "browser_read_page",
       {
         title: "Read the shared browser page",
@@ -314,7 +315,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "browser_get_selected_text",
       {
         title: "Read selected text in the shared browser tab",
@@ -341,7 +342,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "browser_extract_links",
       {
         title: "Extract links from the shared browser tab",
@@ -368,7 +369,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "browser_extract_table",
       {
         title: "Extract a table from the shared browser tab",
@@ -397,7 +398,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "browser_click",
       {
         title: "Click an element in a shared browser tab",
@@ -428,7 +429,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "browser_fill",
       {
         title: "Fill a field in a shared browser tab",
@@ -461,7 +462,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "list_directory",
       {
         title: "List directory on a remote computer",
@@ -489,7 +490,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "read_file",
       {
         title: "Read a file on a remote computer",
@@ -519,7 +520,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "read_binary_file",
       {
         title: "Read a binary file chunk on a remote computer",
@@ -555,7 +556,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "create_file_resource",
       {
         title: "Create a temporary file resource",
@@ -581,7 +582,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "revoke_file_resource",
       {
         title: "Revoke a temporary file resource",
@@ -606,7 +607,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "get_file_info",
       {
         title: "Get remote file info",
@@ -630,7 +631,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "list_processes",
       {
         title: "List processes on a remote computer",
@@ -653,12 +654,12 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "start_process",
       {
         title: "Run a command on a remote computer",
         description:
-          "Run a terminal command on a linked computer when the start_process skill is enabled for that device. The local Remote Arc Safety Guard blocks a narrow set of catastrophic system commands.",
+          "Run a terminal command on a linked computer when the start_process skill is enabled for that device. The local Remote Arc Safety Guard blocks a narrow set of catastrophic system commands. If the device has multiple Trusted Write Locations, cwd is required; with exactly one Trusted Write Location, that location is used by default.",
         inputSchema: z.object({
           device_id: z.string(),
           command: z.string(),
@@ -686,7 +687,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "process_status",
       {
         title: "Get background process status",
@@ -713,7 +714,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "process_output",
       {
         title: "Read background process output",
@@ -740,7 +741,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "stop_process",
       {
         title: "Stop a background process",
@@ -767,7 +768,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "write_file",
       {
         title: "Write a file on a remote computer",
@@ -798,7 +799,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "edit_block",
       {
         title: "Edit text on a remote computer",
@@ -837,7 +838,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "undo_last_change",
       {
         title: "Undo the last Remote Arc file change",
@@ -869,7 +870,7 @@ export function createRemoteLinkMcp(
       z.null(),
     ]);
 
-    server.registerTool(
+    registerMcpTool(server,
       "create_automation",
       {
         title: "Create a persistent Remote Arc automation",
@@ -993,7 +994,7 @@ export function createRemoteLinkMcp(
 
 
     if (env.ENABLE_EXPERIMENTAL_AGENT_GOALS !== "0") {
-    server.registerTool(
+    registerMcpTool(server,
       "create_agent_goal",
       {
         title: "Create a self-directed durable Agent Goal",
@@ -1124,7 +1125,7 @@ export function createRemoteLinkMcp(
 
     }
 
-    server.registerTool(
+    registerMcpTool(server,
       "list_automations",
       {
         title: "List persistent Remote Arc automations",
@@ -1162,7 +1163,7 @@ export function createRemoteLinkMcp(
       },
     );
 
-    server.registerTool(
+    registerMcpTool(server,
       "get_automation",
       {
         title: "Get a Remote Arc automation",
@@ -1236,7 +1237,7 @@ export function createRemoteLinkMcp(
     );
 
     if (env.ENABLE_EXPERIMENTAL_AGENT_GOALS !== "0") {
-    server.registerTool("get_goal_context", {
+    registerMcpTool(server, "get_goal_context", {
       title: "Read durable Agent Goal context",
       description: "Read the objective, revision, latest observation, factual working memory, completion evidence and ordered progress journal. Use after a pause or a new conversation to continue without replaying uncertain actions.",
       inputSchema: z.object({ automation_id: z.string(), after_sequence: z.number().int().min(0).default(0) }),
@@ -1244,11 +1245,12 @@ export function createRemoteLinkMcp(
       _meta: oauthToolMeta("automation:read"),
     }, async ({ automation_id, after_sequence }) => {
       if (!identity || !hasScope(identity, "automation:read")) return authRequired(env, "automation:read");
-      await consume(env, identity);
+      const usageError = await consume(env, identity);
+      if (usageError) return usageError;
       return textResult(await getGoalContext(env.DB, identity.userId, automation_id, after_sequence));
     });
 
-    server.registerTool("submit_goal_decision", {
+    registerMcpTool(server, "submit_goal_decision", {
       title: "Submit the next source Agent Goal decision",
       description: "Submit one bounded next action for a source-controlled goal using the current context revision and a unique idempotency key. Reuse the same key and payload on network retry. After a revision conflict, read context again. A complete decision requires concrete evidence and configured verification must pass.",
       inputSchema: z.object({
@@ -1264,7 +1266,8 @@ export function createRemoteLinkMcp(
       _meta: oauthToolMeta(AGENT_WRITE_SCOPES),
     }, async (input) => {
       if (!identity || !hasScope(identity, "automation:write") || !hasScope(identity, "agent:write")) return authRequired(env, AGENT_WRITE_SCOPES);
-      await consume(env, identity);
+      const usageError = await consume(env, identity);
+      if (usageError) return usageError;
       const submitted = await submitGoalDecision(env.DB, identity, input.automation_id,
         input.expected_revision, input.idempotency_key, input);
       try {
@@ -1280,7 +1283,7 @@ export function createRemoteLinkMcp(
 
     }
 
-    server.registerTool(
+    registerMcpTool(server,
       "manage_automation",
       {
         title: "Pause, resume, or cancel an automation",
