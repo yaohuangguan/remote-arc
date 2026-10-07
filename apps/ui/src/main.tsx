@@ -5256,6 +5256,7 @@ function Dashboard({
                       <button className="ghostButton" onClick={() => void rename(device)}>{tr("Rename", "重命名")}</button>
                       <CopyButton value={device.id} label={tr("Copy ID", "复制 ID")}/>
                     </div>
+                        </section>
                     <div className="deviceDangerZone">
                       <div>
                         <strong>{tr("Forget device", "删除设备")}</strong>
@@ -5266,7 +5267,6 @@ function Dashboard({
                       </div>
                       <button className="dangerButton" onClick={() => void revoke(device.id)}>{tr("Forget device", "删除设备")}</button>
                     </div>
-                        </section>
                       </>}
                     </div>
                   </article>

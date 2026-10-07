@@ -8,6 +8,11 @@ assert.match(source, /Local files and software are not deleted/);
 assert.match(source, /if \(!response\.ok\) \{/);
 assert.match(source, /tr\("Device was not removed", "设备未删除"\)/);
 assert.match(source, /className="deviceDangerZone"/);
+assert.match(
+  source,
+  /<\/section>\s*<div className="deviceDangerZone">/,
+  "Forget device must stay visible outside the currently selected device settings tab.",
+);
 assert.match(source, /tr\("Forget device", "删除设备"\)/);
 
 console.log("PASS: device removal is explicit, reversible by re-pairing, and surfaces failures");
