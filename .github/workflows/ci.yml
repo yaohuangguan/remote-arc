@@ -21,10 +21,58 @@ jobs:
           package-manager-cache: false
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm device:contract --check
       - run: pnpm run ci
       - run: pnpm build:ui
       - run: pnpm test:automations
       - run: pnpm test:recovery
+
+  go-distribution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/device/go.mod
+          cache-dependency-path: apps/device/go.sum
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:device --release
+      - run: node scripts/verify-device-artifacts.mjs
+      - uses: actions/upload-artifact@v6
+        with:
+          name: go-device-binaries
+          path: work/go-device/*
+
+  go-device:
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/device/go.mod
+          cache-dependency-path: apps/device/go.sum
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:device
 
   native-core:
     timeout-minutes: 15

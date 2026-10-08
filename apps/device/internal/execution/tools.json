@@ -1,0 +1,304 @@
+[
+  {
+    "name": "list_directory",
+    "description": "List files and directories on this computer without following directory symlinks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 2
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "browse_directories",
+    "description": "List child directories for the Remote Arc dashboard directory picker.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "read_file",
+    "description": "Read a text file by line range. Negative offsets read from the end.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "read_binary_file",
+    "description": "Read a bounded binary file chunk as base64. Offset and length are byte counts; pass expected_revision on later chunks to detect file changes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 262144,
+          "default": 65536
+        },
+        "expected_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_file_info",
+    "description": "Get local file or directory metadata.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_processes",
+    "description": "List processes running on this computer.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "write_file",
+    "description": "Write or append UTF-8 text. Remote Arc creates a local-only Undo snapshot first.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "rewrite",
+            "append"
+          ],
+          "default": "rewrite"
+        }
+      },
+      "required": [
+        "path",
+        "content"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "edit_block",
+    "description": "Apply an exact text replacement with conflict-safe Local Undo.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string"
+        },
+        "old_string": {
+          "type": "string"
+        },
+        "new_string": {
+          "type": "string"
+        },
+        "expected_replacements": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "required": [
+        "file_path",
+        "old_string",
+        "new_string"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_undo_actions",
+    "description": "List reversible Remote Arc file changes currently stored on this device.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "undo_change",
+    "description": "Restore one specific local Remote Arc undo snapshot by action id.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "action_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "undo_last_change",
+    "description": "Undo the newest reversible Remote Arc file edit stored only on this device.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "start_process",
+    "description": "Run a shell command with timeout and output capture. Catastrophic command patterns are blocked locally.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 120000,
+          "default": 5000
+        },
+        "cwd": {
+          "type": "string"
+        },
+        "background": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "command"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "process_status",
+    "description": "Get status for a Remote Arc managed background process.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "process_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "process_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "process_output",
+    "description": "Read captured stdout and stderr from a Remote Arc managed background process.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "process_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "process_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_managed_processes",
+    "description": "List background processes started and managed by Remote Arc on this device.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "stop_process",
+    "description": "Stop a Remote Arc managed background process and its child process tree.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "process_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "process_id"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

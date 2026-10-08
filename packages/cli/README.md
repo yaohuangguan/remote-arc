@@ -26,13 +26,14 @@ copy is required.
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.4.8 — Device-local execution logs in Dashboard**
+**remotelink 0.5.0 — Complete native Go device runtime**
 
 Published 2026-10-08
 
-- Add a live Device execution log to Dashboard → Activity & details, read on demand from the paired computer's local Remote Arc operation log.
-- Show recent tool calls, completion/failure state, reconnect and recovery events without turning the hosted audit store into a file-content or stdout archive.
-- Keep logs local when a device is offline and surface a clear update requirement for older remotelink Agents that do not support on-demand log reads.
+- Add an opt-in complete Go device agent with native pairing, Relay connection, filesystem and process tools, Local Undo, task checkpoints, local MCP, execution logs and background recovery.
+- Select Go with `npx remotelink@latest --go`; retain the TS default and explicit `--ts` fallback during the transition. Both runtimes share device identity and a single execution lease.
+- Publish verified native binaries for Windows, macOS and Linux on amd64 and arm64, plus a Homebrew formula for installation without Node.
+- Cover the Go runtime with three-platform race and integration tests, bidirectional TS/Go Undo and task compatibility, real MCP negotiation, native crash recovery and process cleanup.
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/yaohuangguan/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->
@@ -188,6 +189,30 @@ you control.
 
 - Node.js 20 or later
 - Windows, macOS, or Linux
+
+### Go runtime transition
+
+The CLI supports `--go` for the complete native Go device runtime and `--ts` for
+the existing TS runtime. TS remains the transition default. Native Go executables
+run without Node; npx requires Node for the installation and launch entry.
+The Go runtime uses the same paired device identity, permissions and execution
+lease. Stop the executing agent before switching runtimes.
+
+Start Go with `npx remotelink@latest --go --foreground`. Use
+`npx remotelink@latest --go --status` to inspect the native runtime, or
+`npx remotelink@latest --go --stop` to stop it before returning to TS.
+
+For native installation on macOS/Linux without Node:
+
+```sh
+brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
+brew install yaohuangguan/remote-arc/remotelink-go
+remotelink --foreground
+```
+
+Go binaries accompany the matching npm release. For development builds,
+installation, compatibility coverage and recovery behavior, see the
+[Go device runtime guide](https://github.com/yaohuangguan/remote-arc/blob/master/apps/device/README.md).
 
 ## Product vs package name
 

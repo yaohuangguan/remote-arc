@@ -9,3 +9,5 @@ dist/
 .DS_Store
 Thumbs.db
 apps/relay/wrangler.e2e.json
+work/
+apps/device/coverage.out

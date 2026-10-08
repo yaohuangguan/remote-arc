@@ -1,6 +1,6 @@
 {
   "name": "remotearc-monorepo",
-  "version": "0.4.8",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.17.1",
@@ -23,6 +23,9 @@
     "deploy:relay": "node scripts/deploy-relay.mjs",
     "test:deploy-policy": "node scripts/deploy-relay-policy-test.mjs",
     "build:cli": "pnpm --filter remotelink build",
+    "device:contract": "pnpm --filter @remotearc/execution-core exec tsx ../../scripts/generate-device-contract.ts",
+    "build:device": "pnpm build:cli && node scripts/build-device.mjs",
+    "test:device": "pnpm device:contract --check && pnpm build:device && node scripts/test-device.mjs",
     "publish:cli": "pnpm build:cli && CLI_VERSION=$(node -p \"require('./packages/cli/package.json').version\") && grep -q \"$CLI_VERSION\" packages/cli/dist/index.js && grep -q 'https://mcp.remotearc.app' packages/cli/dist/index.js && grep -q '/api/device/heartbeat' packages/cli/dist/index.js && cd packages/cli && npm publish",
     "test:browser": "node apps/browser-extension/test.mjs",
     "test:seo": "pnpm --filter @remotearc/relay test:seo",

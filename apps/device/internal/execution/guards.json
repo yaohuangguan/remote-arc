@@ -1,0 +1,38 @@
+[
+  {
+    "pattern": "(?i)(?:^|[;&|]\\s*)(?:sudo\\s+)?rm\\s+[^\\n]*(?:-rf|-fr|-[a-z]*r[a-z]*f)[^\\n]*(?:\\s/\\s*$|\\s/\\*|\\s~(?:\\s|$)|\\s\\$HOME(?:\\s|$))",
+    "reason": "recursive deletion of a root or home path"
+  },
+  {
+    "pattern": "(?i)(?:^|(?:&&|\\|\\||[;&|])\\s*|(?:-Command|-c)\\s+[\"']?\\s*)(?:sudo\\s+)?(?:mkfs(?:\\.\\w+)?|wipefs|fdisk|parted)\\b",
+    "reason": "disk or filesystem destructive operation"
+  },
+  {
+    "pattern": "(?i)\\bdd\\b[^\\n]*\\bof=/dev/(?:sd|nvme|vd|xvd|mmcblk)",
+    "reason": "raw disk overwrite"
+  },
+  {
+    "pattern": "(?i)\\bdiskutil\\s+erase(?:disk|volume)\\b",
+    "reason": "disk erase"
+  },
+  {
+    "pattern": "(?i)(?:^|(?:&&|\\|\\||[;&|])\\s*|(?:-Command|-c)\\s+[\"']?\\s*)(?:format(?:\\.com)?\\s+[a-z]:|diskpart\\b|clear-disk\\b|initialize-disk\\b)",
+    "reason": "Windows disk destructive operation"
+  },
+  {
+    "pattern": "(?i)(?:^|(?:&&|\\|\\||[;&|])\\s*|(?:-Command|-c)\\s+[\"']?\\s*)(?:sudo\\s+)?(?:shutdown(?:\\.exe)?|reboot|halt|poweroff)\\b",
+    "reason": "system shutdown or reboot"
+  },
+  {
+    "pattern": "(?i)(?:^|(?:&&|\\|\\||[;&|])\\s*|(?:-Command|-c)\\s+[\"']?\\s*)remove-item\\b[^\\n]*(?:-recurse[^\\n]*-force|-force[^\\n]*-recurse)[^\\n]*(?:[a-z]:\\\\(?:\\*|\\s|$)|\\$env:systemdrive)",
+    "reason": "recursive forced deletion of a drive root"
+  },
+  {
+    "pattern": "(?i)(?:^|(?:&&|\\|\\||[;&|])\\s*|(?:-Command|-c)\\s+[\"']?\\s*)(?:del|erase|rd|rmdir)\\b[^\\n]*/s[^\\n]*/q[^\\n]*[a-z]:\\\\",
+    "reason": "recursive Windows drive deletion"
+  },
+  {
+    "pattern": ":\\(\\)\\s*\\{\\s*:\\|:&\\s*\\};\\s*:",
+    "reason": "fork bomb"
+  }
+]

@@ -2,6 +2,15 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.5.0 - 2026-10-08
+
+### Complete native Go device runtime
+
+- Add an opt-in complete Go device agent with native pairing, Relay connection, filesystem and process tools, Local Undo, task checkpoints, local MCP, execution logs and background recovery.
+- Select Go with `npx remotelink@latest --go`; retain the TS default and explicit `--ts` fallback during the transition. Both runtimes share device identity and a single execution lease.
+- Publish verified native binaries for Windows, macOS and Linux on amd64 and arm64, plus a Homebrew formula for installation without Node.
+- Cover the Go runtime with three-platform race and integration tests, bidirectional TS/Go Undo and task compatibility, real MCP negotiation, native crash recovery and process cleanup.
+
 ## 0.4.8 - 2026-10-08
 
 ### Device-local execution logs in Dashboard
