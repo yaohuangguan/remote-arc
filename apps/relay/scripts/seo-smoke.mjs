@@ -22,6 +22,7 @@ const known = [
   "/chatgpt-computer-access",
   "/claude-computer-access",
   "/mcp-computer-access",
+  "/remote-mcp",
   "/docs",
   "/docs/mcp",
   "/security-model",
@@ -74,6 +75,17 @@ function bodyWordCount(html) {
   return text ? text.split(" ").length : 0;
 }
 const shell = '<!doctype html><html><head><title>Remote Arc</title><meta name="description" content="x" /><link rel="canonical" href="https://remotearc.app/" /><meta property="og:title" content="x" /><meta property="og:description" content="x" /><meta property="og:url" content="https://remotearc.app/" /><meta property="og:image" content="x" /></head><body><div id="root"></div></body></html>';
+
+const remoteMcp = renderMarketingHtml(shell, "/remote-mcp");
+assert.ok(remoteMcp.includes("<h1>Remote MCP Server: what it is and how to connect</h1>"), "guide needs a distinct educational H1");
+assert.ok(remoteMcp.includes('rel="canonical" href="https://remotearc.app/remote-mcp"'), "remote guide needs self canonical");
+assert.ok(remoteMcp.includes('"@type":"TechArticle"'), "remote guide should expose tech-article structured data");
+assert.ok(remoteMcp.includes('name="robots" content="index,follow'), "guide must be indexable");
+assert.ok(remoteMcp.includes("Local MCP versus remote MCP"), "guide explains local versus remote");
+assert.ok(remoteMcp.includes("https://mcp.remotearc.app/mcp"), "guide includes an actual endpoint");
+assert.ok(remoteMcp.includes('href="/install/claude"'), "guide links to practical client setup");
+assert.ok(bodyWordCount(remoteMcp) >= 650, "guide should provide useful standalone search-engine-readable content");
+assert.ok(llmsTxt().includes("/remote-mcp"), "LLM index should link guide");
 
 const mcp = renderMarketingHtml(shell, "/mcp-computer-access");
 assert.ok(mcp.includes("<h1>Remote MCP computer access for AI agents</h1>"));

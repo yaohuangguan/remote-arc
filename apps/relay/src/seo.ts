@@ -97,6 +97,11 @@ const pages: Record<string, SeoPage> = {
   "/demo": { title: "Remote Arc Plugin Demo — ChatGPT to a real computer", description: "Watch a real Remote Arc demo showing ChatGPT connecting to a paired Mac, inspecting a Node.js project and running its tests.", canonical: SITE + "/demo" },
   "/docs": { title: "Remote Arc Docs — Remote MCP & Computer Access", description: "Set up Remote Arc, connect AI clients, understand device permissions, MCP tools, long-running work, restart recovery, scheduling, isolation and task data.", canonical: SITE + "/docs" },
   "/docs/long-running-work": { title: "Remote Arc Long-running Work — Durable commands and schedules", description: "Learn how deterministic long tasks, schedules, device permissions and reconnect recovery work, and where fresh AI reasoning is still required.", canonical: SITE + "/docs/long-running-work" },
+  "/remote-mcp": {
+    title: "Remote MCP Server: What It Is & How to Connect | Remote Arc",
+    description: "Learn remote vs local MCP, how to connect ChatGPT, Claude and Cursor to a Remote MCP server, and how Remote Arc reaches your own computer securely.",
+    canonical: SITE + "/remote-mcp"
+  },
   "/docs/mcp": { title: "Remote Arc MCP Reference — OAuth, Tools & Browser", description: "Remote MCP connection, OAuth scopes, device tools, deterministic task controls and browser companion setup for Remote Arc.", canonical: SITE + "/docs/mcp" },
   "/connect-ai": { title: "Connect an AI client to Remote Arc", description: "Pair a computer, choose its device permissions, then connect ChatGPT, Claude, Cursor or another compatible MCP client through OAuth.", canonical: SITE + "/connect-ai" },
   "/security-model": { title: "Remote Arc Security and Trust Model", description: "Remote Arc trust boundaries, per-device skills, directory and sensitive-path controls, encrypted transport, data handling, Local Undo and revocation.", canonical: SITE + "/security-model" },
@@ -167,7 +172,7 @@ const crawlPages: Record<string, CrawlPage> = {
       { heading: "Keep the AI client replaceable", text: "Remote Arc uses MCP as the product boundary exposed to compatible AI clients. That means the client can change without rebuilding the device connection model. You can connect ChatGPT, Claude, Cursor or another supported MCP client to the same account while keeping paired computers, device policy and revocation controls independent from the conversation interface." },
       { heading: "Support short actions and durable work", text: "For immediate work, an AI can inspect state and call device tools during the conversation. For deterministic work that must outlive one chat turn, Remote Arc can persist bounded commands, schedules, condition watches and task state on supported plans. Fresh reasoning is still treated separately: a saved task can continue deterministic execution, but Remote Arc does not claim that a model remains continuously conscious after the chat ends." }
     ],
-    links: [["/install/chatgpt", "Install for ChatGPT"], ["/install/claude", "Install for Claude"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"], ["/docs", "Documentation"], ["/use-cases", "Use cases"]]
+    links: [["/remote-mcp", "Remote MCP guide"], ["/install/chatgpt", "Install for ChatGPT"], ["/install/claude", "Install for Claude"], ["/mcp-computer-access", "MCP computer access"], ["/security-model", "Security model"], ["/docs", "Documentation"], ["/use-cases", "Use cases"]]
   },
   "/install/chatgpt": {
     h1: "Install Remote Arc for ChatGPT",
@@ -248,6 +253,20 @@ const crawlPages: Record<string, CrawlPage> = {
     ],
     links: [["/docs/mcp", "MCP reference"], ["/docs/long-running-work", "Long-running work"], ["/security-model", "Security model"], ["/use-cases", "Use cases"], ["/connect-ai", "Connect an AI client"]]
   },
+  "/remote-mcp": {
+    h1: "Remote MCP Server: what it is and how to connect",
+    intro: "Remote MCP lets an AI client discover and call tools exposed by a server reachable over the network. Learn how this differs from locally launched MCP processes, how to connect a compatible ChatGPT, Claude or Cursor client, and how Remote Arc uses one hosted MCP endpoint to bridge approved tools on computers you explicitly pair.",
+    sections: [
+      { heading: "What is a remote MCP server?", text: "MCP, the Model Context Protocol, defines how a client discovers and invokes tools made available by a server. With a local MCP setup the AI host commonly starts the tool server as a child process and exchanges protocol messages over standard input and output (stdio). A remote MCP server is reachable through a network transport such as Streamable HTTP, so the AI host need not launch that MCP server as a local child process. Authentication and individual client compatibility still matter; a reachable URL alone does not make every MCP client able to connect or use every tool." },
+      { heading: "Local MCP versus remote MCP", text: "Local stdio MCP is useful when an AI client and tools live in the same development environment, or when you can configure and run a tool process next to your assistant. Remote MCP is useful for managed network services, centrally controlled OAuth integrations and clients that need tools hosted elsewhere. The word remote describes how the client reaches an MCP endpoint. It does not require every downstream operation to run on the server hosting that endpoint. Remote Arc, for example, routes permitted calls from a hosted MCP control plane to the local agent on a paired computer." },
+      { heading: "How to connect a Remote MCP server in three steps", text: "First, choose a supported remote MCP server and understand what capabilities it provides. For Remote Arc, run npx remotelink on the Windows, macOS or Linux computer that should receive tool calls, then approve pairing through the Remote Arc dashboard. Second, open the MCP apps or connectors configuration inside your AI client and add https://mcp.remotearc.app/mcp using its supported remote HTTP setup. Complete OAuth to authorize that client to your Remote Arc account. The menus and the availability of custom remote MCP connections depend on client version, account and workspace settings. Third, list paired devices through the connected client and make a harmless read-only test call before authorizing file edits, shell commands or other broader tools." },
+      { heading: "Remote MCP setup for ChatGPT, Claude and Cursor", text: "ChatGPT requires a supported app or MCP connector entry point; Remote Arc can be installed when available or connected through the appropriate developer setup. Claude exposes custom connector setup with OAuth where supported. Cursor supports remote MCP server configuration; confirm authorization and tool discovery before requesting work on a project. Follow the current Remote Arc install guide for each client instead of copying a configuration meant for a different application. Running a computer agent alone does not automatically add its hosted MCP endpoint to your ChatGPT, Claude or Cursor account." },
+      { heading: "Remote Arc architecture: from AI client to your computer", text: "Remote Arc separates the AI's reasoning from tool execution. Your AI client sends authenticated MCP requests over HTTPS to the Remote Arc endpoint. The hosted service checks account authorization and the selected device's policy, then routes the request through an outbound connection already established by that computer's local agent. Files, processes and approved terminal commands run on the selected computer. Ordinary setup does not open an inbound public MCP port on your laptop, expose a router port or require a VPN. A device still needs power, network connectivity and a working local agent to receive calls." },
+      { heading: "Security: OAuth is not permission to run everything", text: "OAuth grants a supported AI client access to the Remote Arc account, not a shared operating-system login or unconditional control of every paired machine. Each computer has its own revocable device identity and configurable tool permissions. Start with read access; enable writing or terminal calls only for workflows you trust. Trusted Write Locations and sensitive path rules narrow supported file operations. Terminal commands, when separately enabled, run under the local OS user and are not placed in an operating-system sandbox by those file rules. Requested data and tool results can pass through the hosted relay and AI provider, so review the security and privacy documentation." },
+      { heading: "Troubleshooting remote MCP connections", text: "If a client cannot discover tools, verify that your particular AI account supports remote MCP apps or connectors, that the endpoint is configured in that client and that OAuth completed. If the client connects but a computer appears offline, inspect the computer's power and network state and run npx remotelink to confirm the local agent is available. If a tool is denied, check the exact target device and its permissions; a successful OAuth login is separate from write or terminal authorization. The Free plan includes background agent recovery, but planned durable jobs, scheduling and keep-awake are separate Plus capabilities. Neither tier can execute on a powered-off computer." }
+    ],
+    links: [["/docs/mcp", "Remote Arc tool and OAuth reference"], ["/install/chatgpt", "Connect ChatGPT"], ["/install/claude", "Connect Claude"], ["/install/cursor", "Connect Cursor"], ["/mcp-computer-access", "Remote MCP computer access architecture"], ["/security-model", "Security and authorization"], ["/pricing", "Free and Plus capabilities"]]
+  },
   "/docs/mcp": {
     h1: "Remote Arc Remote MCP reference",
     intro: "Reference for the Remote Arc MCP endpoint, OAuth authorization, device discovery, file and process tools, browser capabilities, durable task controls and client integration.",
@@ -258,7 +277,7 @@ const crawlPages: Record<string, CrawlPage> = {
       { heading: "Browser companion capabilities", text: "When a Chrome tab is explicitly shared, Remote Arc can expose a simplified snapshot, selected text, links or table data. Click and fill capabilities require additional per-tab permission. Password, one-time-code, payment-card and file-upload fields remain outside the ordinary browser fill path." },
       { heading: "Durable tasks and reasoning boundaries", text: "Remote Arc can persist long commands, schedules, condition watches and bounded goal state so deterministic work can survive disconnects and chat endings. Task state and recovery do not imply that an AI model is continuously running. Any step that requires fresh interpretation still needs a reasoning controller to resume from saved context and choose the next allowed action." }
     ],
-    links: [["/mcp-computer-access", "MCP computer access overview"], ["/install/chatgpt", "ChatGPT setup"], ["/install/claude", "Claude setup"], ["/docs/long-running-work", "Long-running work"], ["/security-model", "Security model"]]
+    links: [["/remote-mcp", "What is Remote MCP? Connection guide"], ["/mcp-computer-access", "MCP computer access overview"], ["/install/chatgpt", "ChatGPT setup"], ["/install/claude", "Claude setup"], ["/docs/long-running-work", "Long-running work"], ["/security-model", "Security model"]]
   },
   "/docs/long-running-work": {
     h1: "Long-running AI work on your own computer",
@@ -589,7 +608,7 @@ function jsonLd(page: SeoPage, pathname: string) {
     graph.push({ "@type": "CollectionPage", name: page.title, description: page.description, url: page.canonical, isPartOf: { "@id": SITE + "/#website" } });
   } else if (pathname === "/use-cases") {
     graph.push({ "@type": "CollectionPage", name: page.title, description: page.description, url: page.canonical, isPartOf: { "@id": SITE + "/#website" } });
-  } else if (pathname.startsWith("/docs") || pathname === "/security-model" || pathname === "/mcp-computer-access") {
+  } else if (pathname.startsWith("/docs") || pathname === "/security-model" || pathname === "/mcp-computer-access" || pathname === "/remote-mcp") {
     graph.push({
       "@type": "TechArticle",
       headline: page.title,
@@ -730,6 +749,7 @@ const sitemapPaths = [
   "/chatgpt-computer-access",
   "/claude-computer-access",
   "/mcp-computer-access",
+  "/remote-mcp",
   "/connect-ai",
   "/docs",
   "/docs/long-running-work",
@@ -754,8 +774,8 @@ export function sitemapXml() {
   return '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
     paths.map(function(path) {
       const isRoot = path === "/";
-      const isPrimary = path.startsWith("/install/") || path === "/chatgpt-computer-access" || path === "/claude-computer-access" || path === "/mcp-computer-access" || path === "/docs/mcp";
-      return '<url><loc>' + SITE + path + '</loc><lastmod>2026-10-07</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
+      const isPrimary = path.startsWith("/install/") || path === "/chatgpt-computer-access" || path === "/claude-computer-access" || path === "/mcp-computer-access" || path === "/remote-mcp" || path === "/docs/mcp";
+      return '<url><loc>' + SITE + path + '</loc><lastmod>' + (path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
     }).join("") + '</urlset>';
 }
 
@@ -774,6 +794,7 @@ export function llmsTxt() {
     "",
     "## Core pages",
     "- [Home](" + SITE + "/): product overview and setup path",
+    "- [Remote MCP guide](" + SITE + "/remote-mcp): remote vs local MCP, how to connect ChatGPT, Claude and Cursor, OAuth and troubleshooting",
     "- [Remote MCP computer access](" + SITE + "/mcp-computer-access): vendor-neutral architecture and capability overview",
     "- [ChatGPT computer access](" + SITE + "/chatgpt-computer-access): ChatGPT-specific setup and trust model",
     "- [Claude computer access](" + SITE + "/claude-computer-access): Claude-specific remote MCP setup",

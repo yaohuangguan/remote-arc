@@ -37,6 +37,7 @@ const PlannedGoalEditor = React.lazy(() => import("./planned-goal-view.js").then
 
 const Documentation = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.Documentation })));
 const McpReference = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.McpReference })));
+const RemoteMcpGuide = React.lazy(() => import("./remote-mcp-guide.js").then(module => ({ default: module.RemoteMcpGuide })));
 const UseCaseCatalog = React.lazy(() => import("./use-cases.js").then(module => ({ default: module.UseCaseCatalog })));
 const UseCaseDetail = React.lazy(() => import("./use-cases.js").then(module => ({ default: module.UseCaseDetail })));
 
@@ -1653,7 +1654,7 @@ function PublicLayout({
       <footer className="publicFooter">
         <Brand compact />
         <nav className="publicFooterLinks" aria-label={tr("Remote Arc guides", "Remote Arc 使用指南")}>
-          <a href="/mcp-computer-access">Remote MCP</a>
+          <a href="/remote-mcp">{tr("Remote MCP guide", "Remote MCP 指南")}</a>
           <a href="/chatgpt-computer-access">ChatGPT</a>
           <a href="/claude-computer-access">Claude</a>
           <a href="/docs/mcp">{tr("MCP Docs", "MCP 文档")}</a>
@@ -7047,6 +7048,7 @@ function App() {
   if (location.pathname === "/blogs/powerful-ai-access-without-exposing-your-computer") return <PowerfulAccessArticlePage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/how-remote-arc-works") return <ArchitectureArticlePage user={user === undefined ? null : user} />;
   if (location.pathname === "/resources") return <ResourcesRedirect />;
+  if (location.pathname === "/remote-mcp") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading guide…", "正在加载指南…")}</main>}><RemoteMcpGuide /></React.Suspense></PublicLayout>;
   if (location.pathname === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
   if (location.pathname === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
   if (location.pathname === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
