@@ -1,0 +1,34 @@
+.chromeExtensionPage{max-width:1210px;margin:0 auto;padding:0 28px 100px;color:var(--text)}
+.chromeDownloadHero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);align-items:center;gap:42px;margin:0;padding:52px 36px 48px;border:1px solid var(--line);border-radius:20px;background:var(--panel)}
+.chromeDownloadCopy{min-width:0}.chromeDownloadCopy .eyebrow{color:var(--sky-light)}
+.chromeDownloadCopy h1{margin:13px 0 19px;font-size:clamp(32px,4.5vw,56px);letter-spacing:-.047em;line-height:1.1;max-width:700px}
+.chromeDownloadCopy>p{color:var(--muted);font-size:16px;line-height:1.8;margin:0 0 25px;max-width:670px}
+.chromeDownloadCtas{display:flex;align-items:center;gap:14px 20px;flex-wrap:wrap}
+.chromeDownloadPrimary{display:inline-flex;align-items:center;justify-content:center;gap:14px;min-height:51px;padding:13px 21px;font-weight:700;font-size:15px;white-space:normal;text-decoration:none}
+.chromeDownloadVersion{color:var(--muted);font-size:12px;line-height:1.5}
+.chromeDownloadCopy .chromeDownloadWarning{max-width:680px;margin:16px 0 0;font-size:12px;line-height:1.7}
+.chromeDownloadGraphic{min-width:0;border:1px solid #2c4450;border-radius:16px;overflow:hidden;background:#0e1d26;color:#e6f4f9;box-shadow:0 18px 40px rgba(0,0,0,.12)}
+.chromeGraphicTop{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:15px;border-bottom:1px solid #263f49;font-size:12px;color:#b5d0db}
+.chromeGraphicTop strong{font-size:11px;color:#77d8bb;font-weight:700}.chromeGraphicDots{color:#76a8b7;letter-spacing:2px}
+.chromeGraphicContent{padding:23px 19px 20px}.chromeGraphicTab{display:flex;align-items:center;gap:12px;padding:16px 12px;background:#1d333e;border-radius:10px;margin-bottom:14px}
+.chromeGraphicTab>span:first-child{font-size:20px;color:#76d7f0}.chromeGraphicTab>div{flex:1;min-width:0}
+.chromeGraphicTab strong{display:block;font-size:13px}.chromeGraphicTab small{display:block;margin-top:5px;font-size:11px;color:#9ab6c4}
+.chromeGraphicOn{font-size:10px;color:#7fe3c0;background:#224d44;padding:5px 7px;border-radius:6px}
+.chromeGraphicPermission{display:flex;align-items:center;gap:9px;padding:12px;border-bottom:1px solid #263e49;font-size:13px}
+.chromeGraphicPermission strong{margin-left:auto;font-size:11px;color:#a7f1d4}.chromeGraphicPermission:last-of-type strong{color:#9cb3bd}
+.chromePermissionDot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#53d5a8}.chromePermissionDot.muted{background:#78929e}
+.chromeGraphicContent>p{margin:16px 0 0;color:#9cb6c1;font-size:11px;line-height:1.6}
+.chromeGuideSteps{padding-top:66px}.chromeGuideIntro .eyebrow{font-size:12px;color:var(--sky-light);font-weight:750}
+.chromeGuideIntro h2{font-size:clamp(26px,3vw,35px);margin:10px 0;letter-spacing:-.03em}
+.chromeGuideIntro p{margin:0;color:var(--muted);font-size:15px;line-height:1.8}
+.chromeStepsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:26px 0 0;padding:0;list-style:none}
+.chromeStepsGrid li{min-width:0;padding:24px 25px;border:1px solid var(--line);border-radius:13px;background:var(--panel)}
+.chromeStepsGrid li>span{color:var(--sky-light);font-weight:750;font:700 13px ui-monospace,monospace}
+.chromeStepsGrid h3{margin:10px 0;font-size:18px}.chromeStepsGrid p{margin:0;color:var(--muted);font-size:14px;line-height:1.75}
+.chromeStepsGrid code{display:inline-block;margin-top:12px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;font-size:12px;color:var(--text)}
+.chromeGuideDetails{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;margin-top:47px}
+.chromeGuideDetails h2{font-size:22px;margin:0 0 12px}.chromeGuideDetails p{font-size:14px;color:var(--muted);line-height:1.85;margin:0}
+.chromeGuideFooter{display:flex;gap:12px 26px;flex-wrap:wrap;margin:45px 0 0;padding-top:24px;border-top:1px solid var(--line)}
+.chromeGuideFooter a{font-size:14px;font-weight:650;color:var(--sky-light)}
+@media(max-width:900px){.chromeDownloadHero{gap:25px;padding:35px 26px;grid-template-columns:1fr}.chromeDownloadGraphic{max-width:650px}}
+@media(max-width:680px){.chromeExtensionPage{padding:0 16px 72px}.chromeDownloadHero{padding:27px 20px}.chromeDownloadCopy h1{font-size:clamp(30px,9vw,40px)}.chromeDownloadPrimary{width:100%}.chromeDownloadCtas{display:block}.chromeDownloadVersion{display:block;margin-top:10px}.chromeStepsGrid,.chromeGuideDetails{grid-template-columns:1fr}.chromeStepsGrid li{padding:20px}.chromeGuideSteps{padding-top:45px}}

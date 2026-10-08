@@ -25,6 +25,7 @@ const known = [
   "/remote-mcp",
   "/docs",
   "/docs/mcp",
+  "/chrome-extension",
   "/security-model",
   "/use-cases/browser-research",
   "/use-cases/presentation-deck",
@@ -106,7 +107,7 @@ for (const path of ["/use-cases/presentation-deck", "/use-cases/spreadsheet-repo
   assert.ok(rendered.includes('<h1>') && bodyWordCount(rendered) >= 150, path + " should provide real crawlable detail");
 }
 
-for (const path of ["/docs", "/docs/mcp", "/docs/long-running-work", "/security-model", "/mcp-computer-access"]) {
+for (const path of ["/docs", "/docs/mcp", "/chrome-extension", "/docs/long-running-work", "/security-model", "/mcp-computer-access"]) {
   const rendered = renderMarketingHtml(shell, path);
   assert.ok(bodyWordCount(rendered) >= 250, path + " should keep substantive server-rendered copy");
 }

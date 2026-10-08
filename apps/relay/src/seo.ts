@@ -103,6 +103,7 @@ const pages: Record<string, SeoPage> = {
     canonical: SITE + "/remote-mcp"
   },
   "/docs/mcp": { title: "Remote Arc MCP Reference — OAuth, Tools & Browser", description: "Remote MCP connection, OAuth scopes, device tools, deterministic task controls and browser companion setup for Remote Arc.", canonical: SITE + "/docs/mcp" },
+  "/chrome-extension": { title: "Download Chrome Companion for Remote Arc — Extension Setup", description: "Download Remote Arc Chrome Companion, load the unpacked extension in Chrome, approve browser pairing and choose which tabs to share with AI.", canonical: SITE + "/chrome-extension" },
   "/connect-ai": { title: "Connect an AI client to Remote Arc", description: "Pair a computer, choose its device permissions, then connect ChatGPT, Claude, Cursor or another compatible MCP client through OAuth.", canonical: SITE + "/connect-ai" },
   "/security-model": { title: "Remote Arc Security and Trust Model", description: "Remote Arc trust boundaries, per-device skills, directory and sensitive-path controls, encrypted transport, data handling, Local Undo and revocation.", canonical: SITE + "/security-model" },
   "/blogs": { title: "Remote Arc Blog — MCP, Security & Remote AI Engineering", description: "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.", canonical: SITE + "/blogs" },
@@ -266,6 +267,17 @@ const crawlPages: Record<string, CrawlPage> = {
       { heading: "Troubleshooting remote MCP connections", text: "If a client cannot discover tools, verify that your particular AI account supports remote MCP apps or connectors, that the endpoint is configured in that client and that OAuth completed. If the client connects but a computer appears offline, inspect the computer's power and network state and run npx remotelink to confirm the local agent is available. If a tool is denied, check the exact target device and its permissions; a successful OAuth login is separate from write or terminal authorization. The Free plan includes background agent recovery, but planned durable jobs, scheduling and keep-awake are separate Plus capabilities. Neither tier can execute on a powered-off computer." }
     ],
     links: [["/docs/mcp", "Remote Arc tool and OAuth reference"], ["/install/chatgpt", "Connect ChatGPT"], ["/install/claude", "Connect Claude"], ["/install/cursor", "Connect Cursor"], ["/mcp-computer-access", "Remote MCP computer access architecture"], ["/security-model", "Security and authorization"], ["/pricing", "Free and Plus capabilities"]]
+  },
+  "/chrome-extension": {
+    h1: "Download Chrome Companion for Remote Arc",
+    intro: "Install the scoped Chrome Companion extension to share individual Chrome browser tabs with your AI through Remote Arc. Get the current ZIP download immediately at the top of the page, then follow the Chrome installation instructions. This optional browser tool is not needed for file or terminal operations.",
+    sections: [
+      { heading: "Download the unpacked Chrome extension", text: "Download the Chrome Companion ZIP from the first card on this page. Unzip the package to a stable folder on your computer. Chrome Companion is currently distributed as an unpacked beta rather than through Chrome Web Store." },
+      { heading: "Install from chrome://extensions", text: "Open the Chrome extensions management page at chrome://extensions, enable Developer mode, choose Load unpacked and select the directory containing manifest.json. Open the extension popup, choose Connect to Remote Arc, confirm browser pairing and share the browser tab you want the AI to use." },
+      { heading: "Every shared tab starts read-only", text: "A newly shared Chrome tab provides read-only tools for page snapshots, selected text, links and tables. Click & fill requires separate explicit permission for that tab. Stale element references are rejected and recognized password, one-time-code, payment-card and file-picker fields are not available to normal browser filling." },
+      { heading: "Unpacked extensions need manual updates", text: "The download ZIP is rebuilt from current extension source when the production website is deployed, but Chrome does not automatically update an extension loaded using Load unpacked. To upgrade, download and unpack a new ZIP and reload the unpacked extension in Chrome." }
+    ],
+    links: [["/docs/mcp", "Browser MCP tools and scopes"], ["/security-model", "Security and per-device permissions"], ["/connect-ai", "Connect a ChatGPT, Claude or Cursor MCP app"]]
   },
   "/docs/mcp": {
     h1: "Remote Arc Remote MCP reference",
@@ -754,6 +766,7 @@ const sitemapPaths = [
   "/docs",
   "/docs/long-running-work",
   "/docs/mcp",
+  "/chrome-extension",
   "/security-model",
   "/use-cases",
   "/pricing",
