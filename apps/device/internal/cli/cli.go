@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/yaohuangguan/remote-arc/apps/device/internal/agent"
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/config"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/config"
 	"github.com/yaohuangguan/remote-arc/apps/device/internal/control"
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/execution"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/execution"
 	"github.com/yaohuangguan/remote-arc/apps/device/internal/journal"
 	"github.com/yaohuangguan/remote-arc/apps/device/internal/lease"
 	"github.com/yaohuangguan/remote-arc/apps/device/internal/localmcp"

@@ -42,7 +42,9 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: apps/device/go.mod
-          cache-dependency-path: apps/device/go.sum
+          cache-dependency-path: |
+            apps/device/go.sum
+            packages/execution-core-go/go.sum
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:device --release
       - run: node scripts/verify-device-artifacts.mjs
@@ -70,7 +72,9 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: apps/device/go.mod
-          cache-dependency-path: apps/device/go.sum
+          cache-dependency-path: |
+            apps/device/go.sum
+            packages/execution-core-go/go.sum
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:device
 

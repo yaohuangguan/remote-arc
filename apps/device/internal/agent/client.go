@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/config"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/config"
 )
 
 var ErrRevoked = errors.New("Saved device credential has been revoked.")

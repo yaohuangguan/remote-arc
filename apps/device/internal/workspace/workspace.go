@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/config"
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/policy"
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/protocol"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/config"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/policy"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/protocol"
 )
 
 type Receipt struct {

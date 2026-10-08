@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/protocol"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/protocol"
 )
 
 func call(t *testing.T, c *Core, name string, args map[string]any, p protocol.Policy) protocol.Result {

@@ -2,6 +2,15 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.5.1 - Unreleased
+
+### Separate the Go Execution Core without changing runtime behavior
+
+- Move the Go filesystem, process, permission policy, protocol and local Undo implementations into the independently testable `packages/execution-core-go` module within this repository.
+- Keep device configuration and Undo snapshots in the existing local `~/.remotearc` location and preserve current operation contracts, guards and runtime fallback.
+- Extend device verification to include Go Core formatting, `go vet`, race tests and the existing TS/Go compatibility and recovery checks.
+- **Release gate:** ship only after Linux, macOS and Windows CI plus real-device regression; retain both TS and Go engines through benchmark comparison.
+
 ## 0.5.0 - 2026-10-08
 
 ### Complete native Go device runtime

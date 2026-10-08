@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/protocol"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/protocol"
 )
 
 func repository(t *testing.T) string {

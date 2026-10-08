@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/config"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/config"
 	"github.com/yaohuangguan/remote-arc/apps/device/internal/lease"
 )
 

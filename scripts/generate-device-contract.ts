@@ -19,8 +19,8 @@ if (rules.length !== 9)
     "Safety guard contract changed; review the Go port before regenerating.",
   );
 const outputs = {
-  "apps/device/internal/execution/tools.json": toolDefinitions,
-  "apps/device/internal/execution/guards.json": rules,
+  "packages/execution-core-go/execution/tools.json": toolDefinitions,
+  "packages/execution-core-go/execution/guards.json": rules,
 };
 for (const [name, value] of Object.entries(outputs)) {
   const content = JSON.stringify(value, null, 2) + "\n";

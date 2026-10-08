@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/execution"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/execution"
 )
 
 func TestOfficialClientNegotiationToolsValidationAndMutation(t *testing.T) {

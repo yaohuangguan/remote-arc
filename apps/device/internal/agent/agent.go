@@ -15,11 +15,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/config"
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/execution"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/config"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/execution"
 	"github.com/yaohuangguan/remote-arc/apps/device/internal/journal"
 	"github.com/yaohuangguan/remote-arc/apps/device/internal/power"
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/protocol"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/protocol"
 	"github.com/yaohuangguan/remote-arc/apps/device/internal/service"
 	"github.com/yaohuangguan/remote-arc/apps/device/internal/workspace"
 )

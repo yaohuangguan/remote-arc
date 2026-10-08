@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/execution"
-	"github.com/yaohuangguan/remote-arc/apps/device/internal/protocol"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/execution"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/protocol"
 )
 
 func content(result protocol.Result) *mcp.CallToolResult {
