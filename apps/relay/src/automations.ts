@@ -1368,6 +1368,11 @@ const isDeviceOfflineError = (error: unknown) =>
     .toLowerCase()
     .includes("device offline");
 
+// Managed-process polls are separate from the task's recurrence/retry cadence.
+// A short command should not remain "running" for the default five minutes.
+export const managedProcessPollSeconds = (intervalSeconds: number) =>
+  Math.min(intervalSeconds, 30);
+
 const isLostProcessError = (error: unknown) => {
   const text = String(error instanceof Error ? error.message : error).toLowerCase();
   return (
@@ -1524,7 +1529,7 @@ async function executeAgentGoal(
         // The managed PID is still authoritative. Retry the *read-only*
         // status query on the next tick; never run start_process again.
         await persistRuntime(env, automation, state, "waiting",
-          addSeconds(now, automation.interval_seconds),
+          addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
           "Device status query timed out; managed process is not known to have failed. Retrying status only.",
           { event: "process_poll_retry", summary: "Transient status timeout; preserved managed process handle." });
         return;
@@ -1554,7 +1559,7 @@ async function executeAgentGoal(
         automation,
         state,
         "running",
-        addSeconds(now, automation.interval_seconds),
+        addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
       );
       return;
     }
@@ -2002,7 +2007,7 @@ async function executeAutomation(
         // The managed PID is still authoritative. Retry the *read-only*
         // status query on the next tick; never run start_process again.
         await persistRuntime(env, automation, state, "waiting",
-          addSeconds(now, automation.interval_seconds),
+          addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
           "Device status query timed out; managed process is not known to have failed. Retrying status only.",
           { event: "process_poll_retry", summary: "Transient status timeout; preserved managed process handle." });
         return;
@@ -2049,7 +2054,7 @@ async function executeAutomation(
         automation,
         state,
         "running",
-        addSeconds(now, automation.interval_seconds),
+        addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
       );
       return;
     }
@@ -2217,7 +2222,7 @@ async function executeAutomation(
         automation,
         state,
         "running",
-        addSeconds(now, automation.interval_seconds),
+        addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
       );
       return;
     }
@@ -2254,7 +2259,7 @@ async function executeAutomation(
       automation,
       state,
       "running",
-      addSeconds(now, automation.interval_seconds),
+      addSeconds(now, managedProcessPollSeconds(automation.interval_seconds)),
     );
     return;
   }
