@@ -3,7 +3,7 @@ import { useI18n } from "./i18n.js";
 import { TaskAvailability } from "./product-docs.js";
 import "./public-docs.css";
 
-export const useCaseSlugs = ["remote-development", "file-organization", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support"] as const;
+export const useCaseSlugs = ["remote-development", "file-organization", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support", "presentation-deck", "spreadsheet-report", "desktop-automation", "cross-device-handoff"] as const;
 export type UseCaseSlug = typeof useCaseSlugs[number];
 type Tr = (en: string, zh: string) => string;
 
@@ -71,6 +71,46 @@ function cases(tr: Tr) {
       steps: [tr("Inspect the schema and the installed runtime.", "检查数据结构和已安装运行时。"), tr("Run the approved analysis and keep outputs in the project.", "运行已批准分析，将结果保存在项目中。"), tr("Validate totals or output structure and return a concise report.", "验证合计或输出结构，返回简洁报告。")],
       proof: tr("Saved output path, validated totals and the command's exit status.", "输出路径、已验证合计和命令退出状态。"),
       limit: tr("File reads and command results can pass through the relay and AI client. Durable observations can retain excerpts. Keeping the dataset on the device does not mean no data ever leaves it.", "文件读取和命令结果可能经过 Relay 与 AI 客户端；持久观察可以保存片段。数据集留在设备上，不代表绝无数据离开设备。"), durable: false,
+    },
+    {
+      slug: "presentation-deck", category: tr("PRESENTATIONS", "演示文稿"),
+      title: tr("Turn local notes into a PowerPoint deck", "把本机资料变成 PowerPoint 演示文稿"),
+      intro: tr("Ask your AI to turn existing notes, reports and assets into an editable .pptx, using an authorized local script and installed document libraries.", "让 AI 使用已授权的本机脚本和已安装的文档库，把现有笔记、报告与配图整理成可编辑的 .pptx。"),
+      prompt: tr("On my workstation, turn slides/outline.md and the charts in reports/ into a 12-slide product presentation. Use the installed PPTX library, save slides/review.pptx, validate its slide count, and show the result before sharing.", "在我的工作站上，把 slides/outline.md 和 reports/ 里的图表整理成 12 页产品介绍 PPT。使用已安装的 PPTX 库，保存到 slides/review.pptx，检查页数，分享前让我确认。"),
+      tools: "read_file · list_directory · start_process · get_file_info", permission: tr("Read sources + enabled local terminal and output-directory access", "读取素材 + 本机终端授权及输出目录权限"),
+      steps: [tr("Inspect the outline, assets, installed library and intended slide structure.", "检查大纲、图片素材、已安装的文档库和幻灯片结构。"), tr("Generate the .pptx in the chosen local project folder.", "在指定项目文件夹内生成 .pptx。"), tr("Open or inspect the slide structure, count slides and report any layout limits.", "打开或检查演示文稿结构，核对页数并说明可能的排版限制。")],
+      proof: tr("An editable .pptx on the workstation, the generated slide count and verification output.", "工作站上的可编辑 .pptx、生成页数与验证结果。"),
+      limit: tr("This is a workflow using start_process and user-installed libraries such as PptxGenJS or python-pptx, not a built-in PowerPoint authoring MCP tool. Rendering depends on software installed on the computer; AI output needs visual review before delivery.", "这是通过 start_process 与本机已安装的 PptxGenJS 或 python-pptx 等文档库完成的工作流，不是内置 PowerPoint 制作 MCP 工具。渲染效果取决于电脑软件，交付前应人工检查。"), durable: false,
+    },
+    {
+      slug: "spreadsheet-report", category: tr("SPREADSHEETS", "电子表格"),
+      title: tr("Turn hundreds of files into a checked Excel report", "把数百个文件整理成可核验的 Excel"),
+      intro: tr("Read selected CSVs or structured documents in a local folder and generate an .xlsx with formulas, summaries and charts using the existing runtime.", "读取本机指定文件夹内的 CSV 或结构化资料，借助现有运行时生成带公式、汇总与图表的 .xlsx。"),
+      prompt: tr("On data-pc, combine reports/2026/*.csv into output/quarterly.xlsx, deduplicate by invoice ID, add monthly totals and a trend chart. Reconcile the input and output totals, and report any mismatches.", "在 data-pc 上合并 reports/2026/*.csv 到 output/quarterly.xlsx，按发票号去重，添加每月汇总和趋势图，核对输入输出合计并列出差异。"),
+      tools: "list_directory · read_file · start_process · get_file_info", permission: tr("Read access to input files + enabled terminal for workbook generation", "输入文件读取权限 + 用于生成工作簿的终端权限"),
+      steps: [tr("Inspect formats, headers and possible duplicates.", "检查文件格式、表头及潜在重复记录。"), tr("Run a reviewed script using Excel libraries already installed.", "运行使用已安装 Excel 文档库的已审查脚本。"), tr("Reconcile totals, inspect worksheets and return the path plus validation results.", "核对合计、检查工作表，并返回文件路径和验证结果。")],
+      proof: tr("A real .xlsx file with checked row counts, formulas and relevant discrepancy report.", "真实 .xlsx 文件、已核对行数与公式，以及差异报告。"),
+      limit: tr("Excel output requires a suitable installed runtime/library, and may not calculate formulas until opened in a compatible spreadsheet app. It is not a built-in spreadsheet API, and confidential data read by AI can pass through the relay.", "Excel 生成需要安装合适的运行时和文档库，公式可能要在兼容的表格软件中打开后才计算。它不是内置表格 API，AI 读取的敏感数据可能经过 Relay。"), durable: false,
+    },
+    {
+      slug: "desktop-automation", category: tr("DESKTOP AUTOMATION", "桌面自动化"),
+      title: tr("Run an approved mouse-and-keyboard automation script", "用已授权脚本操作鼠标与键盘"),
+      intro: tr("If the computer already has an OS automation utility, Remote Arc can run your reviewed script through the terminal to drive local desktop actions.", "如果电脑已安装系统自动化工具，Remote Arc 可以经由终端运行你确认过的脚本，间接执行本地桌面操作。"),
+      prompt: tr("On my unlocked test workstation, review the existing scripts/export-ui.js and tell me the clicks and keypresses it will make in the demo application. After approval, run it once and check the generated export. Stop if a dialog differs from the expected screen.", "在我已解锁的测试工作站上，先检查 scripts/export-ui.js，说明会在测试软件中做哪些鼠标点击和按键。经我确认后执行一次并检查导出结果；遇到不符合预期的弹窗立即停止。"),
+      tools: "read_file · start_process · get_file_info", permission: tr("Explicit terminal authorization, local interactive desktop session and OS input/accessibility permission", "明确的终端授权、本地图形桌面会话及系统输入或辅助功能权限"),
+      steps: [tr("Read the script and identify window targets, actions and high-impact side effects.", "审查脚本、目标窗口、操作步骤和高影响副作用。"), tr("Confirm the user is present or has explicitly approved the bounded workflow.", "确认用户在场或已明确批准该有界工作流。"), tr("Run the local script with enabled terminal permissions and verify the exported result.", "在已开启终端权限的设备上运行本机脚本并验证导出结果。")],
+      proof: tr("Script output, application export and an explicit report of what was actually verified.", "脚本输出、软件导出文件以及明确说明哪些操作已验证。"),
+      limit: tr("Remote Arc does NOT currently offer native screen capture, mouse-move, click or keyboard-input MCP tools. This example depends entirely on user-installed tools such as PowerShell UI Automation, AppleScript or other desktop scripting software, plus a logged-in interactive session. Browser click/fill uses a separate per-tab permission.", "Remote Arc 目前没有原生屏幕截图、移动鼠标、点击或键盘输入的 MCP 工具。本场景依赖本机安装的 PowerShell UI Automation、AppleScript 等桌面脚本软件，以及已登录的交互桌面会话。浏览器点击与填写另有独立的逐标签页授权。"), durable: false,
+    },
+    {
+      slug: "cross-device-handoff", category: tr("MULTI-COMPUTER", "多电脑协同"),
+      title: tr("Fix on one computer, verify on another", "在一台电脑修复，在另一台电脑验证"),
+      intro: tr("Ask your AI to inspect two explicitly paired devices, work in their existing checkouts and compare actual test results without remote desktop.", "让 AI 检查两台明确配对的设备，在各自已有的仓库中工作、对照真实测试结果，而不需要远程桌面。"),
+      prompt: tr("Use the linked Windows and Mac developer machines: inspect the same repository version on both, fix the cross-platform issue in the approved working tree and run the appropriate tests on each. Report the two results and do not deploy without confirmation.", "使用已连接的 Windows 和 Mac 开发机：检查两台机器上相同版本的代码，在已批准的工作区修复跨平台问题，分别运行测试并汇报；未经确认不要部署。"),
+      tools: "list_devices · read_file · edit_block · start_process", permission: tr("Separate device authorization, file editing and terminal permissions on each computer", "每台电脑单独授权文件编辑和终端权限"),
+      steps: [tr("Select each device and validate that it is online and authorized.", "分别选择设备、确认在线与已授权。"), tr("Run a bounded diagnostic and permitted edits in the correct checkout.", "在正确的代码库内执行有界诊断和允许的修改。"), tr("Verify tests separately on Windows and macOS and compare outcomes.", "分别验证 Windows 与 macOS 的测试，再对照结果。")],
+      proof: tr("Two actual run logs tied to each device plus a reviewed diff.", "分别对应设备的两份实际运行记录与已审核 diff。"),
+      limit: tr("There is no automatic cross-device file sync. The AI must coordinate explicitly, and each device needs to be online, independently authorized, and equipped with the required toolchain.", "Remote Arc 不会自动跨设备同步文件。AI 必须明确协调；每台设备都需要在线、独立授权并安装所需工具链。"), durable: false,
     },
     {
       slug: "home-lab", category: tr("HOME LAB", "家庭实验室"), title: tr("Inspect a headless host through its outbound connection", "通过出站连接检查无头主机"),

@@ -12477,3 +12477,53 @@ body{font-size:18px;line-height:1.6}
   .publicNavActions .navLogin,
   .publicNavActions .navDashboard { padding: 0 10px !important; }
 }
+
+/* Compact accessible public language selector. The menu replaces the old EN / 中文 toggle. */
+.publicNavActions .languageDropdown { position: relative; flex: 0 0 auto; z-index: 20; }
+.publicNavActions .languageDropdownTrigger {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-width: 82px; height: 42px; padding: 0 10px;
+  border: 1px solid var(--neutral-line); border-radius: 11px;
+  background: var(--control-bg); color: var(--text);
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.publicNavActions .languageDropdownTrigger:hover, .publicNavActions .languageDropdownTrigger[aria-expanded="true"] {
+  background: var(--control-hover); border-color: var(--accent);
+}
+.publicNavActions .languageDropdownTrigger:focus-visible,
+.languageDropdownMenu button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.languageDropdownMenu {
+  position: absolute; z-index: 50; top: calc(100% + 8px); right: 0;
+  min-width: 166px; padding: 5px; border: 1px solid var(--neutral-line);
+  border-radius: 12px; box-shadow: 0 18px 46px rgba(0,0,0,.25);
+  background: var(--panel); color: var(--text);
+}
+.languageDropdownMenu button {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 12px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--text);
+  text-align: left; white-space: nowrap; cursor: pointer; font-size: 14px;
+}
+.languageDropdownMenu button:hover, .languageDropdownMenu button[aria-checked="true"] { background: var(--control-hover); }
+.languageDropdownMenu button span { color: var(--accent); }
+@media (max-width: 480px) {
+  .publicNavActions .languageDropdownTrigger { min-width: 61px; height: 38px; padding: 0 7px; gap: 3px; font-size: 12px; }
+  .publicNavActions .languageDropdownTrigger svg:first-child { width: 16px; height: 16px; }
+}
+/* Durable docs: restore native table columns, row spacing, borders and horizontal overflow. */
+.productDocs .technicalArticle .tableScroll { max-width: 100%; margin: 18px 0 12px; overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+.productDocs .technicalArticle .tableScroll > table {
+  width: 100%; min-width: 580px; border-collapse: collapse; border-spacing: 0;
+  table-layout: auto; text-align: left; font-size: 15px; line-height: 1.7;
+}
+.productDocs .technicalArticle .tableScroll th,
+.productDocs .technicalArticle .tableScroll td { padding: 15px 20px; vertical-align: top; border-bottom: 1px solid var(--line); }
+.productDocs .technicalArticle .tableScroll th { background: var(--panel); font-weight: 700; color: var(--text); font-size: 14px; }
+.productDocs .technicalArticle .tableScroll th:first-child,
+.productDocs .technicalArticle .tableScroll td:first-child { width: 26%; min-width: 140px; color: var(--text); font-weight: 650; }
+.productDocs .technicalArticle .tableScroll td { color: var(--muted); overflow-wrap: anywhere; }
+.productDocs .technicalArticle .tableScroll tbody tr:last-child td { border-bottom: 0; }
+@media (max-width: 640px) {
+  .productDocs .technicalArticle .tableScroll th,
+  .productDocs .technicalArticle .tableScroll td { padding: 12px 14px; }
+}

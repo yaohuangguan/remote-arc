@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 export type Locale = "en" | "zh";
 
@@ -62,8 +62,22 @@ export function useI18n() {
   return value;
 }
 
-export function LanguageSwitcher({ compact = false, syncUrl = false }: { compact?: boolean; syncUrl?: boolean }) {
+export function LanguageSwitcher({ compact = false, syncUrl = false, dropdown = false }: { compact?: boolean; syncUrl?: boolean; dropdown?: boolean }) {
   const { locale, setLocale } = useI18n();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: PointerEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setOpen(false); menuRef.current?.querySelector<HTMLButtonElement>(".languageDropdownTrigger")?.focus(); }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape); };
+  }, [open]);
   const choose = (next: Locale) => {
     if (syncUrl) {
       const url = new URL(window.location.href);
@@ -71,7 +85,29 @@ export function LanguageSwitcher({ compact = false, syncUrl = false }: { compact
       window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
     }
     setLocale(next);
+    setOpen(false);
   };
+  if (dropdown) return (
+    <div className="languageDropdown" ref={menuRef}>
+      <button type="button" className="languageDropdownTrigger"
+        aria-label={locale === "zh" ? "选择网站语言" : "Select website language"}
+        aria-haspopup="menu" aria-expanded={open}
+        onClick={() => setOpen(previous => !previous)}>
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 5h12M9 3v2m3 0c-.4 5-2.7 8.2-7 10m2-7c1 2.1 3 4.1 6 5"/>
+          <path d="m14 21 4-10 4 10m-6.8-3h5.6"/>
+        </svg>
+        <span className="languageDropdownCode">{locale === "zh" ? "中文" : "EN"}</span>
+        <svg aria-hidden="true" viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m2 4 4 4 4-4" /></svg>
+      </button>
+      {open && <div className="languageDropdownMenu" role="menu" aria-label={locale === "zh" ? "语言" : "Languages"}>
+        <button type="button" role="menuitemradio" lang="en" aria-checked={locale === "en"}
+          onClick={() => choose("en")}>English <span>{locale === "en" ? "✓" : ""}</span></button>
+        <button type="button" role="menuitemradio" lang="zh-CN" aria-checked={locale === "zh"}
+          onClick={() => choose("zh")}>简体中文 <span>{locale === "zh" ? "✓" : ""}</span></button>
+      </div>}
+    </div>
+  );
   return (
     <div className={"languageSwitch" + (compact ? " compact" : "")} role="group"
       aria-label={locale === "zh" ? "网站语言" : "Website language"}>
