@@ -42,12 +42,28 @@ const formula = await fs.readFile(
   path.join(output, "remotelink-go.rb"),
   "utf8",
 );
-assert.equal(
-  (
-    await fs.readFile(path.join(root, "Formula/remotelink-go.rb"), "utf8")
-  ).replaceAll("\r\n", "\n"),
-  formula,
-);
+const candidate = process.argv.includes("--candidate");
+if (candidate) {
+  // Do not overwrite the published Formula for an unreleased source change.
+  for (const platform of ["darwin", "linux"]) {
+    for (const arch of ["amd64", "arm64"]) {
+      const name = `remotelink-go-v${version}-${platform}-${arch}`;
+      assert.ok(
+        formula.includes(`sha256 "${manifest.checksums[name]}"`),
+        `Candidate Homebrew formula checksum missing: ${name}`,
+      );
+    }
+  }
+} else {
+  assert.equal(
+    (
+      await fs.readFile(path.join(root, "Formula/remotelink-go.rb"), "utf8")
+    ).replaceAll("\r\n", "\n"),
+    formula,
+  );
+}
 console.log(
-  "Native distribution verified: six binaries, npm manifest, SHA256SUMS and committed Homebrew formula.",
+  candidate
+    ? "Native candidate verified: six binaries, npm manifest, SHA256SUMS and generated Homebrew checksums; published Formula unchanged."
+    : "Native distribution verified: six binaries, npm manifest, SHA256SUMS and committed Homebrew formula.",
 );

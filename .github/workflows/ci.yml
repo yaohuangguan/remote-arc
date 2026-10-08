@@ -47,7 +47,10 @@ jobs:
             packages/execution-core-go/go.sum
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:device --release
+      - run: node scripts/verify-device-artifacts.mjs --candidate
+        if: github.ref != 'refs/heads/master'
       - run: node scripts/verify-device-artifacts.mjs
+        if: github.ref == 'refs/heads/master'
       - uses: actions/upload-artifact@v6
         with:
           name: go-device-binaries
