@@ -121,6 +121,10 @@ const useCaseSeo: Record<string, [string, string]> = {
   "home-lab": ["Inspect a headless host", "Inspect logs and services through an outbound device connection without opening an inbound Remote Arc port."],
   "browser-research": ["Work with explicitly shared browser tabs", "Read text, selections, links and tables, then optionally enable scoped click and fill on individual shared Chrome tabs."],
   "remote-support": ["Diagnose an authorized computer", "Read real logs and processes while keeping diagnosis and repair authorization separate."],
+  "presentation-deck": ["Create an editable PowerPoint on your own computer", "Turn local notes and charts into a checked PPTX using an authorized script and document libraries installed on the paired computer."],
+  "spreadsheet-report": ["Build a verified Excel workbook from local data", "Combine local CSV files into an XLSX, check totals and inspect formulas or charts using your installed runtime and spreadsheet libraries."],
+  "desktop-automation": ["Run reviewed desktop mouse and keyboard scripts", "Use an authorized local terminal to run user-installed desktop automation software, with interactive-session requirements and explicit approval."],
+  "cross-device-handoff": ["Work across Windows and macOS from one AI chat", "Coordinate actions on separately paired Windows and Mac computers, enforcing each device's own tool permissions and verifying results independently."],
 };
 for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
   const path = "/use-cases/" + slug;
@@ -417,6 +421,34 @@ const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools:
     tools: "Read capabilities include browser_read_page, selected text, link extraction and table extraction. Click and fill require a separate per-tab opt-in and fresh snapshot references.",
     proof: "The returned facts should be tied to the explicitly shared page, such as extracted rows, visible links or selected text.",
     boundary: "Tabs begin read-only. Recognized password, one-time-code, payment-card and file-upload fields are blocked from the ordinary fill path, and browser tools are not the same thing as unrestricted profile-wide browser control."
+  },
+  "presentation-deck": {
+    prompt: "Ask your AI to build a 12-slide editable PPTX from an outline and charts stored in an approved folder on the workstation.",
+    flow: "Read source notes and chart files, inspect the available local PPTX library, generate the presentation using an authorized terminal script, then validate slide count and document structure.",
+    tools: "This workflow uses read_file, list_directory, start_process and get_file_info. It requires an enabled terminal tool and a suitable PPTX library installed on the computer.",
+    proof: "Provide the real presentation file path, number of generated slides and the output of the document verification step.",
+    boundary: "Remote Arc has no built-in PowerPoint editor MCP tool. The locally installed software is responsible for file generation and rendering, and generated layouts should be visually reviewed before sharing."
+  },
+  "spreadsheet-report": {
+    prompt: "Ask your AI to combine authorized monthly CSV files into an Excel workbook with reconciled totals, deduplication and useful charts.",
+    flow: "Inspect input headers and schemas, run a reviewed local Python or Node XLSX generation script and check the output file, row counts and aggregate totals.",
+    tools: "This workflow requires file-read tools plus authorized start_process access and an appropriate local spreadsheet-generation library.",
+    proof: "Return an actual XLSX path, checked input/output totals and any discrepancies or formula issues found during validation.",
+    boundary: "An installed library is required and some Excel formulas calculate only when opened in a spreadsheet app. No built-in XLSX manipulation MCP tool is currently advertised, and tool results may pass through the hosted relay."
+  },
+  "desktop-automation": {
+    prompt: "Review a local mouse-and-keyboard automation script and, after explicit approval, execute it once in an unlocked test desktop session.",
+    flow: "Inspect the existing script, list the intended app interactions and side effects, confirm user authorization, then run the local utility through an enabled terminal and verify the result.",
+    tools: "Remote Arc can run locally installed automation software through start_process when authorized. Interactive OS session and appropriate accessibility or input permissions are required.",
+    proof: "Collect the actual script exit status and exported app output, and distinguish verified interactions from assumptions.",
+    boundary: "Remote Arc currently has no native screen capture, mouse-move, click or keyboard-control MCP tools. This is optional local scripting, not native remote GUI control; sensitive interaction should not run unattended without review."
+  },
+  "cross-device-handoff": {
+    prompt: "Use one chat to inspect a Windows workstation and a Mac developer machine, run authorized checks on each and compare cross-platform results.",
+    flow: "Identify both paired devices, check their separate availability and permissions, inspect the intended checkout on each, and validate any edits with platform-specific tests.",
+    tools: "Explicit device discovery, file inspection, edit_block and start_process are used independently for each connected computer.",
+    proof: "Return two device-identified test logs and a reviewed diff rather than a single merged claim that work succeeded everywhere.",
+    boundary: "Remote Arc does not automatically sync repositories across devices. Both machines must be reachable, separately authorized and equipped with their required local toolchain."
   },
   "remote-support": {
     prompt: "On a computer you own or are authorized to administer, inspect logs and process state, explain the likely cause and ask before restarting or modifying anything.",

@@ -26,6 +26,10 @@ const known = [
   "/docs/mcp",
   "/security-model",
   "/use-cases/browser-research",
+  "/use-cases/presentation-deck",
+  "/use-cases/spreadsheet-report",
+  "/use-cases/desktop-automation",
+  "/use-cases/cross-device-handoff",
 ];
 
 for (const path of known) {
@@ -83,6 +87,12 @@ assert.ok(home.includes('<noscript><main class="seo-blog-shell">'), "homepage sh
 assert.ok(home.includes('<h1>Remote computer access for AI through MCP</h1>'));
 assert.ok(home.includes('Use the computer where the work already lives'));
 assert.ok(bodyWordCount(home) >= 350, "homepage fallback should contain substantive product copy");
+
+for (const path of ["/use-cases/presentation-deck", "/use-cases/spreadsheet-report", "/use-cases/desktop-automation", "/use-cases/cross-device-handoff"]) {
+  const rendered = renderMarketingHtml(shell, path);
+  assert.ok(rendered.includes('name="robots" content="index,follow'), path + " should be indexable");
+  assert.ok(rendered.includes('<h1>') && bodyWordCount(rendered) >= 150, path + " should provide real crawlable detail");
+}
 
 for (const path of ["/docs", "/docs/mcp", "/docs/long-running-work", "/security-model", "/mcp-computer-access"]) {
   const rendered = renderMarketingHtml(shell, path);
