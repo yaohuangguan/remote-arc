@@ -1,0 +1,70 @@
+.installMustDo {
+  display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px;
+  margin: 28px 0 18px;
+}
+.installMustDoCard {
+  display: flex; flex-direction: column; gap: 9px; min-width:0;
+  border: 1px solid var(--line); border-radius: 14px; padding: 21px 23px;
+  background: var(--panel);
+}
+.installMustDoCard>span { color: var(--sky-light); letter-spacing: .055em; font-size: 11px; font-weight: 750; }
+.installMustDoCard h2 { font-size: 18px; line-height: 1.34; letter-spacing:-.02em; margin:0; }
+.installMustDoCard p { color: var(--muted); font-size: 13px; line-height: 1.68; margin:0; flex:1; }
+.installMustDoCard .docsCodeLine { margin-top: 6px; min-width:0; }
+.installMustDoCard>a { margin-top: 8px; color: var(--sky-light); font-size: 14px; font-weight: 700; }
+.installMustDoCard .installMustDoCaption { font-size: 12px; }
+.installClientDetails { scroll-margin-top: 98px; }
+.installClientDetailsHeading { display:flex; align-items: start; justify-content:space-between; gap:18px; }
+.installClientDetailsHeading>div { min-width:0; }
+.installClientDetailsHeading h2 { margin: 5px 0 8px; font-size: clamp(20px,2.2vw,26px); }
+.installClientDetailsHeading p { margin: 0 0 17px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.installClientDetailsHeading>a {
+  display:inline-flex; flex: 0 0 auto; margin-top:20px; padding:10px 13px;
+  color: var(--text); font-size:13px; font-weight:700; text-decoration:none;
+  border: 1px solid var(--line); border-radius:9px; background:var(--panel);
+}
+.installClientDetailsHeading>a:hover { border-color:var(--sky); }
+.installUiTrail { padding:14px 17px; border: 1px solid var(--line); border-radius:11px; background:var(--panel); }
+.installUiTrail small { display:block; margin-bottom:8px; color:var(--muted); font-size:11px; letter-spacing:.035em; }
+.installUiTrail strong { color:var(--text); font-size:14px; line-height:1.8; overflow-wrap:anywhere; font-weight:650; }
+.installClientChecklist { display:grid; gap:0; list-style:none; padding:0; margin:12px 0 14px; }
+.installClientChecklist li { display:flex; gap:15px; align-items:baseline; padding:11px 0; border-bottom:1px solid var(--line); }
+.installClientChecklist li span { color:var(--sky-light); font:700 12px ui-monospace,SFMono-Regular,Consolas,monospace; }
+.installClientChecklist li p { color:var(--muted); font-size:14px; line-height:1.7; margin:0; }
+.installEndpointPanel { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; }
+.installEndpointPanel small { display:block; color:var(--muted); margin-bottom:10px; font-size:11px; letter-spacing:.03em; }
+.installEndpointPanel .docsCodeLine { margin:0; }
+.installEndpointPanel p { font-size:12px; color:var(--muted); margin:10px 0 0; line-height:1.6; }
+.installEndpointPanel p strong { color:var(--text); font-weight:650; }
+.installCursorJson { margin-top:17px; border:1px solid var(--line); border-radius:10px; padding:14px 17px; }
+.installCursorJson strong { font-size:12px; color:var(--text); }
+.installCursorJson pre { margin:10px 0 0; font-size:12px; line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--muted); }
+.installClientSupport { margin-top:14px; padding:15px; border-left:3px solid var(--sky); background:var(--sky-soft); }
+.installClientSupport p { margin:0 0 10px; color:var(--muted); font-size:13px; line-height:1.7; }
+.installClientSupport nav { display:flex; flex-wrap:wrap; gap:8px 22px; }
+.installClientSupport a { font-size:13px; font-weight:700; color:var(--sky-light); }
+.installCompanionNotice { display:flex; justify-content:space-between; align-items:center; gap:28px;
+ margin: 0 0 22px; padding:22px 24px; border:1px solid var(--line); border-radius:14px;
+ background:var(--panel); scroll-margin-top:96px; }
+.installCompanionBody { min-width:0; max-width:800px; }
+.installCompanionBody h2 { margin:5px 0 9px; font-size:20px; line-height:1.35; }
+.installCompanionBody p { margin:7px 0; color:var(--muted); font-size:13px; line-height:1.7; }
+.installCompanionBody .installCompanionSteps { color:var(--text); font-weight:600; }
+.installCompanionBody .installCompanionVersion { font-size:12px; }
+.installCompanionActions { display:flex; flex-direction:column; align-items:flex-start; flex:0 0 auto; gap:12px; }
+.installCompanionActions .primaryButton { white-space:nowrap; font-size:13px; padding:12px 16px; text-align:center; }
+.installCompanionActions>a:not(.primaryButton) { color:var(--sky-light); font-size:12px; font-weight:700; }
+.installAgentVersionNote { margin:8px 0 0!important; font-size:12px!important; line-height:1.6!important; color:var(--muted)!important; }
+@media(max-width:900px) {
+ .installCompanionNotice { flex-direction:column; align-items:stretch; }
+ .installCompanionActions { flex-direction:row; align-items:center; flex-wrap:wrap; }
+}
+@media(max-width:700px) {
+ .installMustDo { grid-template-columns:1fr; }
+ .installClientDetailsHeading { flex-direction:column; gap:0; }
+ .installClientDetailsHeading>a { margin:0 0 15px; }
+ .installMustDoCard { padding:18px; }
+ .installCompanionNotice { padding:18px; }
+ .installCompanionActions { flex-direction:column; align-items:stretch; }
+ .installCompanionActions .primaryButton { white-space:normal; }
+}

@@ -1,4 +1,5 @@
 import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
+import { ClientMcpGuide, InstallCompanionNotice } from "./client-setup-guides.js";
 import type { UseCaseSlug } from "./use-cases.js";
 import { TaskResults, taskNeedsAgent, taskNeedsAttention, taskProgress, taskActivity } from "./dashboard-task-view.js";
 import { newPlannedDraft, buildPlannedContract } from "./planned-goal-form.js";
@@ -1988,8 +1989,8 @@ function ClientInstallPage({
           "Remote Arc is preparing its public ChatGPT Plugin listing. Until it is live, eligible accounts can use the developer-mode MCP connection in Plugins.",
           "Remote Arc 正在准备公开 ChatGPT Plugin 上架。在正式上线前，符合条件的账户仍可通过Plugins 中的开发模式 MCP 连接接入。",
         ),
-        externalHref: "https://chatgpt.com/",
-        externalLabel: tr("Open ChatGPT", "打开 ChatGPT"),
+        externalHref: CHATGPT_PLUGIN_DIRECTORY_URL,
+        externalLabel: tr("Open ChatGPT Plugins", "打开 ChatGPT Plugins"),
         steps: [
           {
             title: tr("Pair your computer", "配对你的电脑"),
@@ -1999,8 +2000,8 @@ function ClientInstallPage({
           {
             title: tr("Connect the Remote Arc Plugin", "连接 Remote Arc Plugin"),
             body: tr(
-              "Open ChatGPT Plugins and install Remote Arc when it is available to your account. Before publication, developer testing uses Settings → Security and login → Developer mode, then the Plugins plus button to add the MCP endpoint. Complete Remote Arc OAuth; account and workspace policy can limit availability.",
-              "打开 ChatGPT Plugins，账户可见时安装 Remote Arc。发布前开发测试使用 Settings → Security and login → Developer mode，再从 Plugins 加号添加 MCP 地址并完成 Remote Arc OAuth；可用性取决于账户和工作区策略。",
+              "Open ChatGPT Plugins → + → Add custom MCP server (where available), enter the HTTPS endpoint, complete OAuth and install or enable the created plugin. Account and workspace permissions apply.",
+              "打开 ChatGPT Plugins → ＋ → Add custom MCP server（若账户支持），填写 HTTPS 地址、完成 OAuth，再安装或启用创建好的插件。具体权限受账户和工作区限制。",
             ),
             code: MCP_ENDPOINT,
           },
@@ -2038,8 +2039,8 @@ function ClientInstallPage({
             "Claude Custom Connectors 支持 Remote MCP。添加一次 Remote Arc 并完成授权后，你配对的电脑即可通过 Connector 使用。",
           ),
           availability: tr("Available through Claude custom connectors using remote MCP.", "可通过 Claude 的 Remote MCP Custom Connector 接入。"),
-          externalHref: "https://claude.ai/",
-          externalLabel: tr("Open Claude", "打开 Claude"),
+          externalHref: CLAUDE_CONNECTORS_URL,
+          externalLabel: tr("Open Claude Connectors", "打开 Claude Connectors"),
           steps: [
             {
               title: tr("Pair your computer", "配对你的电脑"),
@@ -2049,8 +2050,8 @@ function ClientInstallPage({
             {
               title: tr("Add a custom connector", "添加 Custom Connector"),
               body: tr(
-                "In Claude, open Settings → Connectors and add a custom connector that points to the Remote Arc MCP endpoint. Complete OAuth when Claude redirects you.",
-                "在 Claude 中打开 Settings → Connectors，添加一个指向 Remote Arc MCP 地址的 Custom Connector，并在跳转后完成 OAuth。",
+                "In Claude, open Customize → Connectors → + Add → Custom → Web (or Add custom connector). Enter the Remote Arc URL, select OAuth sign-in, then enable the connector in your conversation.",
+                "在 Claude 中进入 Customize → Connectors → ＋ Add → Custom → Web，输入 Remote Arc MCP 地址并完成 OAuth，随后在对话中启用连接。",
               ),
               code: MCP_ENDPOINT,
             },
@@ -2088,7 +2089,7 @@ function ClientInstallPage({
             "Cursor 支持带 OAuth 的 Remote HTTP MCP Server。把 Cursor 指向 Remote Arc，就能让文件系统和终端仍然运行在你配对的真实电脑上。",
           ),
           availability: tr("Supported through Cursor remote HTTP MCP with OAuth.", "可通过 Cursor 的 Remote HTTP MCP + OAuth 接入。"),
-          externalHref: "https://cursor.com/",
+          externalHref: "https://cursor.com/docs/mcp",
           externalLabel: tr("Open Cursor", "打开 Cursor"),
           steps: [
             {
@@ -2152,12 +2153,12 @@ function ClientInstallPage({
               <p>{config.intro}</p>
             </div>
             <div className="installPrimaryCommand compactCommand">
-              <span>{tr("RUN ON THE COMPUTER", "在电脑上运行")}</span>
+              <span>{tr("CONNECT THIS MCP SERVER IN YOUR AI", "在 AI 平台里添加此 MCP 地址")}</span>
               <div className="installHeroCommand">
-                <code>npx remotelink</code>
-                <CopyButton value="npx remotelink" />
+                <code>{MCP_ENDPOINT}</code>
+                <CopyButton value={MCP_ENDPOINT} />
               </div>
-              <small>{tr("Node.js 20+ · Windows, macOS or Linux · opens the pairing page automatically", "Node.js 20+ · Windows、macOS 或 Linux · 自动打开配对页面")}</small>
+              <small>{tr("Remote HTTPS + OAuth · paste into your MCP App / Connector setup", "远程 HTTPS + OAuth · 粘贴至平台的 MCP App / Connector 配置")}</small>
             </div>
           </div>
 
@@ -2167,16 +2168,37 @@ function ClientInstallPage({
           </div>
         </header>
 
+        <div className="installMustDo" aria-label={tr("Both setup steps are required", "安装必须完成两端设置")}>
+          <article className="installMustDoCard">
+            <span>{tr("REQUIRED 01 · AI CLIENT", "必需 01 · AI 客户端")}</span>
+            <h2>{tr("Add the MCP App / Connector", "添加 MCP App / Connector")}</h2>
+            <p>{tr("Add Remote Arc in " + config.name + " and finish OAuth. Without this step your AI cannot access the computer.", "在 " + config.name + " 里添加 Remote Arc 并完成 OAuth。缺少这一步，AI 就无法访问电脑。")}</p>
+            <a href="#installation-client">{tr("See UI setup steps", "查看平台内点击步骤")} ↗</a>
+          </article>
+          <article className="installMustDoCard">
+            <span>{tr("REQUIRED 02 · LOCAL COMPUTER", "必需 02 · 目标电脑")}</span>
+            <h2>{tr("Start and pair the local agent", "启动并配对本地 Agent")}</h2>
+            <p>{tr("Run the CLI on the machine you want the AI to use. The MCP connection alone cannot access local files.", "在需要使用的电脑上运行本地命令。只有 MCP 连接仍无法访问本机文件。")}</p>
+            <div className="docsCodeLine"><code>npx remotelink</code><CopyButton value="npx remotelink" /></div>
+            <a href="#installation">{tr("Device pairing steps", "查看电脑配对步骤")} ↗</a>
+          </article>
+        </div>
+        <InstallCompanionNotice />
+
         <div className="manualLayout">
           <aside className="manualToc">
             <strong>{tr("SETUP", "配置")}</strong>
-            <a href="#installation">{tr("Three steps", "三个步骤")}</a>
+            <a href="#installation-client">{tr("MCP App / Connector (required)", "MCP App / Connector（必需）")}</a>
+            <a href="#installation">{tr("Computer setup (required)", "电脑端配置（必需）")}</a>
+            <a href="#installation-browser">{tr("Chrome Companion (optional)", "Chrome Companion（可选）")}</a>
             <a href="#installation-example">{tr("Example session", "示例会话")}</a>
             <a href="/connect-ai">{tr("Connect another AI", "连接其他 AI")}</a>
             <a href="/docs">{tr("Documentation", "文档")}</a>
           </aside>
 
           <article className="manualArticle">
+            <ClientMcpGuide client={slug} endpoint={MCP_ENDPOINT}
+              cursorInstallUrl={cursorMcpInstallUrl()} copyEndpoint={<CopyButton value={MCP_ENDPOINT} />} />
             <section id="installation">
               <h2>{tr("Setup", "配置")}</h2>
               <p>{tr(
@@ -2191,6 +2213,7 @@ function ClientInstallPage({
                     <h3>{tr("Run Remote Arc on the computer", "在电脑上运行 Remote Arc")}</h3>
                     <p>{tr("The CLI creates a short-lived pairing request and opens the browser approval page.", "CLI 会创建一个短期配对请求，并自动打开浏览器确认页面。")}</p>
                     <div className="docsCodeLine"><code>npx remotelink</code><CopyButton value="npx remotelink" /></div>
+                    <p className="installAgentVersionNote">{tr("To explicitly fetch the latest published CLI, run npx --yes remotelink@latest. Previously installed background agents do not upgrade automatically.", "需要明确从 npm 获取最新 CLI 时运行 npx --yes remotelink@latest。之前安装的后台 Agent 不会自动升级。")}</p>
                   </div>
                 </li>
                 <li>
