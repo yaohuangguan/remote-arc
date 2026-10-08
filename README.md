@@ -10,6 +10,8 @@ Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients t
 
 [Website](https://remotearc.app) · [Dashboard](https://mcp.remotearc.app) · [Remote MCP](https://mcp.remotearc.app/mcp) · [Security](./SECURITY.md)
 
+<sub>Source available for transparency and security review under a [proprietary license](./LICENSE). Not open-source licensed.</sub>
+
 [![M8ven Verified](https://m8ven.ai/badge/mcp/yaohuangguan/remote-arc?variant=verified)](https://m8ven.ai/mcp/yaohuangguan/remote-arc)
 
 </div>
