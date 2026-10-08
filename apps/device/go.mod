@@ -2,6 +2,8 @@ module github.com/yaohuangguan/remote-arc/apps/device
 
 go 1.25.0
 
+toolchain go1.25.5
+
 require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/modelcontextprotocol/go-sdk v1.8.0

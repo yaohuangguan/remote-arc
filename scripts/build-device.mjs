@@ -33,6 +33,7 @@ for (const { os, arch } of targets) {
     [
       "build",
       "-trimpath",
+      "-buildvcs=false",
       "-ldflags",
       `-s -w -X main.version=${pkg.version}`,
       "-o",
@@ -67,7 +68,7 @@ if (all) {
     const name = `remotelink-go-v${pkg.version}-${os}-${arch}`;
     return `      url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v${pkg.version}/${name}", using: :nounzip\n      sha256 "${checksums[name]}"`;
   };
-  const formula = `class RemotelinkGo < Formula\n  desc "Controlled remote computer access for AI"\n  homepage "https://remotearc.app"\n  version "${pkg.version}"\n\n  on_macos do\n    on_arm do\n${block("darwin", "arm64")}\n    end\n    on_intel do\n${block("darwin", "amd64")}\n    end\n  end\n  on_linux do\n    on_arm do\n${block("linux", "arm64")}\n    end\n    on_intel do\n${block("linux", "amd64")}\n    end\n  end\n\n  def install\n    bin.install Dir["remotelink-go-v*"].first => "remotelink"\n  end\n\n  test do\n    assert_equal "${pkg.version}", shell_output("#{bin}/remotelink --version").strip\n  end\nend\n`;
+  const formula = `class RemotelinkGo < Formula\n  desc "Controlled remote computer access for AI"\n  homepage "https://remotearc.app"\n  version "${pkg.version}"\n\n  on_macos do\n    on_arm do\n${block("darwin", "arm64")}\n    end\n    on_intel do\n${block("darwin", "amd64")}\n    end\n  end\n  on_linux do\n    on_arm do\n${block("linux", "arm64")}\n    end\n    on_intel do\n${block("linux", "amd64")}\n    end\n  end\n\n  def install\n    bin.install Dir["remotelink-go-v*"].first => "remotelink"\n    chmod 0755, bin/"remotelink"\n  end\n\n  test do\n    assert_equal "${pkg.version}", shell_output("#{bin}/remotelink --version").strip\n  end\nend\n`;
   await fs.writeFile(path.join(output, "remotelink-go.rb"), formula);
 }
 await fs.mkdir(path.join(root, "packages/cli/dist"), { recursive: true });

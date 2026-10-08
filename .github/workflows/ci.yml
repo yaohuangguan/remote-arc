@@ -45,6 +45,7 @@ jobs:
           cache-dependency-path: apps/device/go.sum
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:device --release
+      - run: node scripts/verify-device-artifacts.mjs
       - uses: actions/upload-artifact@v6
         with:
           name: go-device-binaries

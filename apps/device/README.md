@@ -25,10 +25,23 @@ Go runtime; `--ts` selects the complete TS runtime. The selected runtime is not
 automatically replaced or retried through the other engine when an operation
 fails.
 
-The public npm version must be released with its matching Go assets before
-`npx remotelink --go` can download a binary. A development build includes its
-host binary. `REMOTEARC_GO_BINARY` accepts an absolute path to a local binary of
-the same release version. Public release wiring is a separate deployment step.
+Published releases support `npx remotelink@latest --go`. The npm launcher downloads
+the matching platform binary and checks its SHA-256 digest against the manifest
+in the installed npm package. A development build includes its host binary.
+`REMOTEARC_GO_BINARY` accepts an absolute path to a local binary of the same
+release version.
+
+For native installation without Node on macOS/Linux:
+
+```sh
+brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
+brew install yaohuangguan/remote-arc/remotelink-go
+remotelink --foreground
+```
+
+Windows and other native installations can download the matching executable and
+`SHA256SUMS` from the `go-agent-v<version>` GitHub release. On macOS/Linux, set
+the downloaded file executable with `chmod +x` before running it.
 
 ## Compatibility and ownership
 
@@ -113,6 +126,15 @@ cached executables. An unavailable or corrupt Go binary produces an error and
 preserves the TS fallback entry. Publishing the matching Go assets must precede
 publishing a Go-enabled npm release.
 
-The generated Homebrew formula installs the native `remotelink` executable once
-matching release assets exist. It is a local artifact ready to review for a tap;
-this change does not create a public tap or modify the production release workflow.
+The generated Homebrew formula installs the native `remotelink` executable. The
+committed `Formula/remotelink-go.rb` makes this repository available as a custom
+tap. CI checks the committed formula against the six-platform build, so version
+and checksum changes cannot silently drift.
+
+The publish workflow builds the npm bundle and six Go assets with the pinned Go
+toolchain and VCS stamping disabled. It publishes and downloads the native release
+to verify all digests before smoke-testing the packed npm CLI's real Go download
+and publishing npm. Re-running a release verifies existing assets and refuses a
+different manifest instead of overwriting binaries. After publication, all three
+systems install the public npm release and verify Go selection; macOS also runs
+the native Homebrew install and formula test.

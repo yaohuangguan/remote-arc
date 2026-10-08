@@ -34,6 +34,12 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/device/go.mod
+          cache-dependency-path: apps/device/go.sum
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -57,8 +63,35 @@ jobs:
       - name: Verify
         run: pnpm --filter remotelink typecheck
 
-      - name: Build CLI
-        run: pnpm build:cli
+      - name: Build CLI and native Go distribution
+        run: pnpm build:device --release
+
+      - name: Verify native distribution and Homebrew formula
+        run: node scripts/verify-device-artifacts.mjs
+
+      - name: Publish and verify native Go release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          GO_TAG="go-agent-v$CLI_VERSION"
+          node scripts/sync-release-docs.mjs --notes "$CLI_VERSION" > /tmp/go-release-notes.md
+          if ! gh release view "$GO_TAG" >/dev/null 2>&1; then
+            gh release create "$GO_TAG" \
+              work/go-device/remotelink-go-v"$CLI_VERSION"-* \
+              work/go-device/SHA256SUMS work/go-device/go-binaries.json work/go-device/remotelink-go.rb \
+              --target "$GITHUB_SHA" --title "Remote Arc Go agent $CLI_VERSION" \
+              --notes-file /tmp/go-release-notes.md --latest=false
+          fi
+          VERIFY_DIR="$(mktemp -d)"
+          gh release download "$GO_TAG" --dir "$VERIFY_DIR" \
+            --pattern "remotelink-go-v$CLI_VERSION-*" \
+            --pattern SHA256SUMS --pattern go-binaries.json --pattern remotelink-go.rb
+          cmp work/go-device/go-binaries.json "$VERIFY_DIR/go-binaries.json"
+          cmp work/go-device/SHA256SUMS "$VERIFY_DIR/SHA256SUMS"
+          cmp Formula/remotelink-go.rb "$VERIFY_DIR/remotelink-go.rb"
+          (cd "$VERIFY_DIR" && sha256sum --check SHA256SUMS)
 
       - name: Verify publish artifact
         run: |
@@ -81,6 +114,12 @@ jobs:
           ACTUAL="$(./node_modules/.bin/remotelink --version)"
           test "$ACTUAL" = "$CLI_VERSION" || {
             echo "Packed CLI reported $ACTUAL, expected $CLI_VERSION"
+            exit 1
+          }
+          # This must download and execute the public, checksum-pinned Go asset.
+          GO_ACTUAL="$(REMOTEARC_HOME="$TMP_DIR/go-home" ./node_modules/.bin/remotelink --go --version)"
+          test "$GO_ACTUAL" = "$CLI_VERSION" || {
+            echo "Packed Go CLI reported $GO_ACTUAL, expected $CLI_VERSION"
             exit 1
           }
 
@@ -132,3 +171,27 @@ jobs:
               --title "remotelink $CLI_VERSION" \
               --notes-file /tmp/release-notes.md
           fi
+
+  public-install:
+    needs: publish
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Verify public npm and native Go installation
+        run: node scripts/public-device-smoke.mjs
+      - name: Verify Homebrew installation without Node
+        if: runner.os == 'macOS'
+        run: |
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
+          brew install yaohuangguan/remote-arc/remotelink-go
+          test "$(remotelink --version)" = "$CLI_VERSION"
+          brew test yaohuangguan/remote-arc/remotelink-go
