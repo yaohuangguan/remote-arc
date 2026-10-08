@@ -14,7 +14,7 @@
     "dev:ui": "pnpm --filter @remotearc/ui dev",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @remotearc/execution-core test:integration && pnpm --filter @remotearc/mcp test:smoke && pnpm test:browser",
-    "test:automations": "node apps/relay/scripts/automation-e2e.mjs",
+    "test:automations": "pnpm --filter @remotearc/relay exec tsx scripts/managed-process-poll-test.ts && node apps/relay/scripts/automation-e2e.mjs",
     "test:recovery": "pnpm --filter @remotearc/execution-core exec tsx ../cli/scripts/background-recovery-test.ts && node packages/cli/scripts/revoked-pairing-test.mjs && pnpm build:cli && pnpm --filter @remotearc/execution-core exec tsx ../cli/scripts/attached-terminal-test.ts",
     "test:agent-log": "pnpm --filter @remotearc/execution-core exec tsx ../cli/scripts/agent-log-test.ts",
     "test:goals": "node apps/relay/scripts/goal-continuation-test.mjs && node apps/relay/scripts/planned-goal-test.mjs && pnpm --filter @remotearc/execution-core exec tsx ../cli/scripts/goal-workspace-test.ts",
