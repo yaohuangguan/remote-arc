@@ -12,7 +12,13 @@ if (!releases.length) throw new Error("No release sections found in CHANGELOG.md
 
 const cliPackage = JSON.parse(readFileSync(cliPackagePath, "utf8"));
 const latest = releases[0];
-if (latest.version !== cliPackage.version) {
+const candidateMatch = cliPackage.version.match(/^(\d+\.\d+\.\d+)-(?:alpha|beta|rc|canary)\.[0-9A-Za-z.-]+$/);
+if (candidateMatch) {
+  // An RC is not the published "Latest release": keep stable docs untouched.
+  if (!changelog.includes("## " + candidateMatch[1] + " - Unreleased")) {
+    throw new Error("Candidate " + cliPackage.version + " needs an unreleased CHANGELOG section.");
+  }
+} else if (latest.version !== cliPackage.version) {
   throw new Error("Latest CHANGELOG version " + latest.version + " does not match remotelink package version " + cliPackage.version);
 }
 
