@@ -22,6 +22,7 @@ export function PricingContent({
     tr("10,000 hosted MCP tool calls per account / month", "每个账户每月 10,000 次托管 MCP 工具调用"),
     tr("Text files, folders, metadata and process inspection", "文本文件、目录、元数据与进程检查"),
     tr("File editing and terminal tools when you explicitly enable them", "明确授权后可使用文件编辑与终端工具"),
+    tr("Background Agent with login startup and crash recovery (device must be online)", "后台 Agent 支持登录自启和异常恢复（设备需保持在线）"),
     tr("Explicitly shared browser-tab context", "明确共享的浏览器标签页上下文"),
     tr("Per-device permissions, Trusted Write Locations and Sensitive Path Policy", "每设备权限、可信写入区域与 Sensitive Path Policy"),
   ];
@@ -40,6 +41,7 @@ export function PricingContent({
     feature?: AccountFeature;
   }> = [
     { label: tr("Core remote tools", "核心远程工具") },
+    { label: tr("Background Agent & login startup", "后台 Agent 与登录自启") },
     { label: tr("Text file reads", "文本文件读取") },
     { label: tr("Binary file reads", "二进制文件读取"), feature: "binary_read" },
     { label: tr("Durable / overnight Tasks", "持久 / 隔夜 Task"), feature: "durable_tasks" },

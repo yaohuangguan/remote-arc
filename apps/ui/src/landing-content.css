@@ -147,6 +147,8 @@
 .finishCommand>span{font-size:11px;font-weight:750;letter-spacing:.09em;color:var(--landing-muted)}
 .finishCommand>code{font-size:clamp(23px,2.6vw,30px);color:var(--text);letter-spacing:-.025em}
 .finishCommand>a{font-size:14px;color:var(--landing-muted);line-height:1.6}
+.finishCommand>small{font-size:12px;line-height:1.6;color:var(--landing-muted)}
+.finishCommand>small>a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 :root[data-theme="light"] .landingContent{--landing-muted:#536c77}
 :root[data-theme="dark"] .landingContent{--landing-muted:#9eb0ba}
 @media(max-width:950px){.landingGoals{gap:32px}.landingQuestions{grid-template-columns:1fr;gap:20px}.landingQuestions .modernSectionIntro{max-width:650px}.workRequest{padding:28px}.workExecution{padding:28px}.setupSteps{gap:22px}.setupSteps article{gap:12px}.setupSteps h3{font-size:19px}.permissionLevels article{padding:25px}.controlDetails{gap:30px}}
