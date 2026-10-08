@@ -7,7 +7,9 @@ and responses, **not** production Relay latency.
 - `REMOTEARC_FILE_DURABILITY=atomic`: atomic replacement without explicit
   fsync; process crash safety does not mean power-loss durability.
 - `REMOTEARC_FILE_DURABILITY=durable`: file sync + parent directory sync
-  (best effort on Windows); the default in the 0.5.1 preview.
+  (best effort on Windows); the Go default in the 0.5.1 preview.
+  The TypeScript compatibility runtime defaults to `atomic`, retaining its
+  old no-explicit-fsync behavior. Profiles are identical when set explicitly.
 - Undo safeguards are checked separately. The existing write-ahead snapshot
   protocol has a crash window before manifest finalization; such snapshots
   deliberately refuse automatic restoration.

@@ -2,11 +2,12 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-// Both engines deliberately use the same explicit durability profiles.
-// The default retains Go's fsync semantics and upgrades the TS fallback.
+// Both engines support equivalent explicit durability profiles for benchmark
+// parity. Preserve the TS fallback's legacy atomic default; Go separately
+// retains its durable default. Never silently slow all existing TS users.
 export type FileDurability = "atomic" | "durable";
 export function fileDurability(): FileDurability {
-  return process.env.REMOTEARC_FILE_DURABILITY === "atomic" ? "atomic" : "durable";
+  return process.env.REMOTEARC_FILE_DURABILITY === "durable" ? "durable" : "atomic";
 }
 
 export async function syncDirectory(dir: string) {

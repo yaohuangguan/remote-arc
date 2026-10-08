@@ -35,6 +35,23 @@ func Decision(answer string) string {
 	}
 	return ""
 }
+
+// approvalExpiryLabel renders the server UTC instant in the device's local
+// timezone. The request TTL is 15 minutes; the 10-minute grant starts only
+// after approval and is a separate authorization deadline.
+func approvalExpiryLabel(raw string, now time.Time) string {
+	deadline, err := time.Parse(time.RFC3339Nano, raw)
+	if err != nil {
+		return "unknown time"
+	}
+	remaining := deadline.Sub(now)
+	if remaining <= 0 {
+		return deadline.In(now.Location()).Format("Mon 02 Jan 15:04 MST") + " (expired)"
+	}
+	minutes := int((remaining + time.Minute - 1) / time.Minute)
+	return fmt.Sprintf("%s (in %d min)", deadline.In(now.Location()).Format("Mon 02 Jan 15:04 MST"), minutes)
+}
+
 func (c *Client) PromptApproval(ctx context.Context, cfg config.Config, output io.Writer, ask Ask) error {
 	var pending []Approval
 	_, e := c.Request(ctx, cfg.Origin, cfg.DeviceToken, "GET", "/api/device/approvals/pending", nil, &pending)
@@ -52,10 +69,19 @@ func (c *Client) PromptApproval(ctx context.Context, cfg config.Config, output i
 	if client == "" {
 		client = "AI client"
 	}
-	fmt.Fprintf(output, "\nApproval required · %s\n       %s\n       %s · expires %s\n", a.ToolName, a.TargetPath, client, a.ExpiresAt)
+	color := false
+	if styled, ok := output.(interface{ TerminalColor() bool }); ok {
+		color = styled.TerminalColor()
+	}
+	head, target := "!  Approval required", a.TargetPath
+	if color {
+		head = "\x1b[33m!\x1b[0m  \x1b[1mApproval required\x1b[0m"
+		target = "\x1b[1m" + target + "\x1b[0m"
+	}
+	fmt.Fprintf(output, "\n%s · %s\n   Target   %s\n   Client   %s\n   Expires  %s\n   Pending request: 15 min · Allow 10 min: grant after approval\n", head, a.ToolName, target, client, approvalExpiryLabel(a.ExpiresAt, time.Now()))
 	promptCtx := ctx
 	cancel := func() {}
-	if expires, err := time.Parse(time.RFC3339, a.ExpiresAt); err == nil {
+	if expires, err := time.Parse(time.RFC3339Nano, a.ExpiresAt); err == nil {
 		promptCtx, cancel = context.WithDeadline(ctx, expires)
 	}
 	defer cancel()

@@ -104,7 +104,10 @@ func Parse(args []string) (Options, error) {
 type synchronizedWriter struct {
 	sync.Mutex
 	io.Writer
+	colored bool
 }
+
+func (s *synchronizedWriter) TerminalColor() bool { return s.colored }
 
 func (s *synchronizedWriter) Write(b []byte) (int, error) {
 	s.Lock()
@@ -148,9 +151,9 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 		fmt.Fprintln(errorOutput, "Remote Arc Local MCP started in "+mode+" mode using the Go execution core")
 		return localmcp.Run(ctx, execution.New(mode), version)
 	}
-	out := &synchronizedWriter{Writer: output}
+	out := &synchronizedWriter{Writer: output, colored: output == os.Stdout && isOutputTerminal() && os.Getenv("NO_COLOR") == ""}
 	dir := filepath.Join(config.Dir(), "agent")
-	log := &journal.Journal{Dir: filepath.Join(config.Dir(), "logs"), Output: out}
+	log := &journal.Journal{Dir: filepath.Join(config.Dir(), "logs"), Output: out, Color: out.TerminalColor()}
 	bg := service.New(version)
 	if o.Logs {
 		return json.NewEncoder(output).Encode(log.Tail(100))
@@ -223,6 +226,9 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 	}
 	if o.Supervise {
 		return supervise(ctx, version, log)
+	}
+	if log.Color && !o.Agent {
+		fmt.Fprintf(out, "\n\x1b[1mRemote Arc\x1b[0m  \x1b[2mv%s\x1b[0m\n\x1b[2mControlled remote access for AI\x1b[0m\n\x1b[36m●\x1b[0m  Native Go runtime  ·  Dashboard-managed permissions\n\n", version)
 	}
 	client := agent.NewClient()
 	ask := terminalAsk(input, out)
@@ -307,13 +313,13 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 					return errors.New("Another runtime owns execution; stop it locally before launching Go.")
 				}
 				if !announced {
-					fmt.Fprintln(out, "A Go agent owns execution. Following its operation log; Ctrl+C closes this viewer.")
+					log.Log("info", "A Go agent owns execution. Following its operation log; Ctrl+C closes this viewer.")
 					announced = true
 				}
 				next, text := log.Read(cursor)
 				cursor = &next
 				if text != "" {
-					fmt.Fprint(out, text)
+					fmt.Fprint(out, journal.FormatHistory(text, log.Color))
 				}
 			}
 			if e = wait(ctx, 500*time.Millisecond); e != nil {

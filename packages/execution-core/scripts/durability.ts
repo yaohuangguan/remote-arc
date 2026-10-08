@@ -4,6 +4,18 @@ import os from "node:os";
 import path from "node:path";
 import { RemoteArcExecutionCore } from "../src/index.js";
 import { createUndoSnapshot, undoChange } from "../src/safety.js";
+import { fileDurability } from "../src/durability.js";
+
+// Existing TS installations must not implicitly start paying for fsync.
+// Explicit durable mode remains available for parity testing.
+const previousDurability = process.env.REMOTEARC_FILE_DURABILITY;
+delete process.env.REMOTEARC_FILE_DURABILITY;
+assert.equal(fileDurability(), "atomic");
+process.env.REMOTEARC_FILE_DURABILITY = "durable";
+assert.equal(fileDurability(), "durable");
+if (previousDurability === undefined) delete process.env.REMOTEARC_FILE_DURABILITY;
+else process.env.REMOTEARC_FILE_DURABILITY = previousDurability;
+
 
 for (const mode of ["atomic","durable"]) {
  const root=await fs.mkdtemp(path.join(os.tmpdir(),"ra-ts-durability-"));

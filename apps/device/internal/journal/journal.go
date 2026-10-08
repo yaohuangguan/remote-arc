@@ -18,15 +18,22 @@ var ansi = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 type Journal struct {
 	Dir    string
 	Output io.Writer
+	Color  bool // only interactive stdout; never the on-disk journal
 	mu     sync.Mutex
 }
 
 func (j *Journal) Log(level, message string) {
-	line := fmt.Sprintf("[%s] %-7s %s\n", time.Now().Format("15:04:05"), level, ansi.ReplaceAllString(message, ""))
+	now := time.Now()
+	clean := ansi.ReplaceAllString(message, "")
+	line := fmt.Sprintf("[%s] %-7s %s\n", now.Format("15:04:05"), level, clean)
 	j.mu.Lock()
 	defer j.mu.Unlock()
 	if j.Output != nil {
-		fmt.Fprint(j.Output, line)
+		if j.Color && os.Getenv("NO_COLOR") == "" {
+			fmt.Fprint(j.Output, FormatConsoleLine(now, level, clean, true))
+		} else {
+			fmt.Fprint(j.Output, line)
+		}
 	}
 	if os.MkdirAll(j.Dir, 0700) != nil {
 		return

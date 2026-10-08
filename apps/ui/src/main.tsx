@@ -6187,7 +6187,7 @@ function Dashboard({
                     <div className="securityGrantDetails">
                       <span>{tr("Target", "目标")} <strong><code>{approval.target_path}</code></strong></span>
                       <span>{tr("Request", "请求")} <strong>{approval.request_id?.slice(0, 8) || "—"}</strong></span>
-                      <span>{tr("Expires", "过期")} <strong>{new Date(approval.expires_at).toLocaleTimeString(locale === "zh" ? "zh-CN" : "en-NZ", { hour: "2-digit", minute: "2-digit" })}</strong></span>
+                      <span>{tr("Request expires", "请求过期时间")} <strong>{new Date(approval.expires_at).toLocaleTimeString(locale === "zh" ? "zh-CN" : "en-NZ", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}</strong></span>
                     </div>
                     <div className="securityGrantScopes">
                       <button className="goldButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_once")}>{tr("Allow once", "仅允许一次")}</button>
