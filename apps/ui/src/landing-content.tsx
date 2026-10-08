@@ -78,9 +78,10 @@ export function ConnectionFilm() {
   </div>;
 }
 
-export function LandingContent() {
+
+/** Reused by the homepage and the Remote MCP guide so example behavior stays identical. */
+export function LandingInteractiveDemo() {
   const { tr } = useI18n();
-  const [faqCategory, setFaqCategory] = useState(0);
   const scenarios = [
     { id: "code", label: tr("Fix a project", "修复项目"), request: tr("“On my workstation, find the failing test, fix the code and show me the verified diff.”", "“在我的工作站上找到失败测试、修复代码，给我看验证后的 diff。”"), result: tr("An actual change in your checkout, with test results you can inspect.", "真实仓库中的修改，以及可检查的测试结果。"), steps: [tr("Find the named computer and its permitted tools", "确认指定电脑与可用工具"), tr("Read the code and reproduce the failure", "读取代码、复现失败"), tr("Edit the affected files and rerun tests", "修改相关文件、重新测试"), tr("Return the diff, evidence and remaining issues", "返回 diff、证据与未解决问题")], tools: "read_file · edit_block · start_process", permission: tr("File editing + terminal", "文件编辑 + 终端"), link: "remote-development" },
     { id: "job", label: tr("Run a long job", "运行长任务"), request: tr("“Run the report export on data-pc. Save it as a task and keep the result for when I return.”", "“在 data-pc 上导出报表，保存为任务，我回来时能看到结果。”"), result: tr("A saved task with run history, exit status and a bounded result summary.", "保存的任务、运行历史、退出状态与受限结果摘要。"), steps: [tr("Save the approved command and recovery choice", "保存已批准命令与恢复方式"), tr("Run on the paired computer", "在已配对电脑执行"), tr("Track progress without an open chat turn", "无需保持聊天轮次也能跟踪进度"), tr("Record completion or the reason it stopped", "记录完成或停止原因")], tools: "create_automation · get_automation", permission: tr("Terminal + background tasks · Plus", "终端 + 后台任务 · Plus"), link: "long-running-jobs" },
@@ -89,6 +90,22 @@ export function LandingContent() {
     { id: "excel", label: tr("Build an Excel report", "生成 Excel"), request: tr("“Combine my monthly CSVs into an Excel workbook with deduplicated rows, totals and a trend chart. Check the totals.”", "“把月度 CSV 合并为 Excel，去重、汇总并绘制趋势图，最后核对合计。”"), result: tr("A checked .xlsx workbook with reconciled source totals.", "带有合计核验结果的 .xlsx 工作簿。"), steps: [tr("Inspect source CSVs and their columns", "检查 CSV 和字段"), tr("Build the workbook with locally installed tools", "使用本机安装的工具生成 Excel"), tr("Reconcile totals and check the output file", "核对总数并检查输出文件")], tools: "read_file · start_process · get_file_info", permission: tr("Files + authorized terminal + installed XLSX library", "文件 + 已授权终端 + 本机 XLSX 库"), link: "spreadsheet-report" },
     { id: "inspect", label: tr("Understand a problem", "排查问题"), request: tr("“Read the service logs on my mini PC and explain the failure before changing anything.”", "“读取我 Mini PC 上的服务日志，先解释失败原因，不修改任何东西。”"), result: tr("A diagnosis tied to real files and process state on your computer.", "由电脑上真实文件和进程状态支撑的诊断。"), steps: [tr("Resolve the selected device", "确认目标设备"), tr("Read the relevant logs and processes", "读取相关日志与进程"), tr("Explain the cause from observed facts", "依据观察事实解释原因"), tr("Keep repair separate from diagnosis", "修复与诊断分别授权")], tools: "read_file · list_processes", permission: tr("Read-only tools", "只读工具"), link: "remote-support" },
   ] as const;
+  return <InteractiveWorkDemo scenarios={scenarios} />;
+}
+
+/** The homepage's existing AI / MCP / computer architecture illustration. */
+export function LandingArchitectureDiagram() {
+  const { tr } = useI18n();
+  return <>
+      <div className="goalContract"><header><span>{tr("YOUR CHAT → REAL TOOLS", "AI 对话 → 真实工具")}</span><strong>{tr("One chat. Real execution.", "一个对话，真正执行。")}</strong></header><dl>
+        <div><dt>{tr("The brain", "负责思考")}</dt><dd>{tr("Your existing AI chat and model", "你已经在使用的 AI 聊天与模型")}</dd></div><div><dt>{tr("The bridge", "负责连接")}</dt><dd>{tr("Remote Arc · MCP, device permissions and routing", "Remote Arc · MCP、设备权限与路由")}</dd></div><div><dt>{tr("The tools", "负责执行")}</dt><dd>{tr("Your computer · files, terminal and processes", "你的电脑 · 文件、终端与进程")}</dd></div>
+      </dl><div className="goalCycle"><span>{tr("Think", "思考")}</span><b>→</b><span>{tr("Use tools", "调用工具")}</span><b>→</b><span>{tr("Verify", "验证")}</span><b>↺</b></div><p>{tr("No separate model API key is required. Your AI provider's plan, message and context limits still apply; Remote Arc has separate tool-call limits. Stronger models may handle harder work, but permissions stay under your control.", "无需单独配置模型 API Key。AI 服务商的套餐、消息和上下文限制仍适用，Remote Arc 另有工具调用额度。更强的模型可以处理更难的任务，但授权始终由你掌控。")}</p></div>
+  </>;
+}
+
+export function LandingContent() {
+  const { tr } = useI18n();
+  const [faqCategory, setFaqCategory] = useState(0);
   const faqGroups: { id: string; title: string; entries: [string, React.ReactNode][] }[] = [
     { id: "product", title: tr("Product & setup", "产品与使用"), entries: [
       [tr("What is Remote Arc? Is it a remote desktop?", "Remote Arc 是什么？是远程桌面吗？"), <>{tr("Remote Arc gives the AI client you already use controlled access to files, processes, terminals and explicitly shared browser tabs on computers you own. It can also persist deterministic Tasks such as long commands, schedules and condition watches. It does not stream your desktop or claim that ordinary Chat keeps reasoning after the chat ends.", "Remote Arc 让你正在使用的 AI 客户端以受控权限访问自己电脑上的文件、进程、终端和明确共享的浏览器标签页，也能保存长命令、定时任务和条件监听等确定性 Task。它不串流桌面，也不声称普通 Chat 结束后 AI 仍会自动持续推理。")} <a href="/use-cases">{tr("Explore workflows", "查看使用场景")} →</a></>],
@@ -115,7 +132,7 @@ export function LandingContent() {
   return <div className="landingContent">
     <section className="landingWork sectionBlock" id="how-it-works">
       <header className="modernSectionIntro"><span className="eyebrow">{tr("FROM CHAT TO ACTION", "从 AI 对话到真实执行")}</span><h2>{tr("Watch your AI use real tools.", "看看 AI 如何真正动手。")}</h2><p>{tr("Choose a task, then watch the conversation, tool calls and results unfold side by side. This guided demo shows what Remote Arc makes possible on your own computer.", "选择一个任务，直观看到 AI 对话、工具调用和执行结果如何联动。通过引导式演示，了解 Remote Arc 如何让 AI 使用你电脑上的工具。")}</p></header>
-      <InteractiveWorkDemo scenarios={scenarios} />
+      <LandingInteractiveDemo />
     </section>
 
     <section className="landingUnexpected sectionBlock" id="unexpected-workflows">
@@ -133,6 +150,8 @@ export function LandingContent() {
       <p className="unexpectedDisclosure">{tr("These use existing file/terminal capabilities and user-installed applications, not built-in PPT, Excel or desktop-control MCP tools. Results require validation.", "以上依赖现有文件/终端能力与用户已安装的软件，不代表内置 PPT、Excel 或桌面控制 MCP 工具；实际结果仍需验收。")}</p>
     </section>
 
+    <div className="sectionResourceLinks"><a href="/remote-mcp">{tr("New to Remote MCP? Read the practical guide", "初次接触 Remote MCP？查看实用指南")} →</a><a href="/docs/mcp">{tr("MCP technical reference", "MCP 技术参考")} →</a></div>
+
     <section className="landingSetup sectionBlock" id="connect-once">
       <header className="modernSectionIntro"><span className="eyebrow">{tr("BEYOND THE CONNECTION", "连接，只是开始")}</span><h2>{tr("More than an MCP server.", "不止是 MCP 服务器。")}<br /><span>{tr("Controlled access to your computers, with durable tasks.", "再加上可持久保存的确定性任务。")}</span></h2><p>{tr("MCP connects your AI to tools. Remote Arc brings those tools to your own computers, persists approved deterministic tasks, and gives you control over the access behind every action.", "MCP 让 AI 连接工具。Remote Arc 把工具带到你自己的电脑上，持久保存已授权的确定性任务，并让你掌控每次操作背后的权限。")}</p></header>
       <div className="platformCapabilities">
@@ -144,9 +163,7 @@ export function LandingContent() {
 
     <section className="landingGoals sectionBlock" id="bring-your-ai">
       <div className="goalIntro"><span className="eyebrow">{tr("BRING YOUR CHAT. GIVE IT REAL TOOLS.", "带上你的 AI 对话，接入真实工具。")}</span><h2>{tr("Turn your AI chat into a power tool.", "让你的 AI 对话，真正拥有动手能力。")}</h2><p>{tr("Keep the AI model and chat plan you already use. Remote Arc connects it to files, terminals and processes on your own computers — without a separate model API key or an additional model-token bill from Remote Arc.", "继续使用你熟悉的 AI 模型和聊天套餐。Remote Arc 将它连接到你自己电脑上的文件、终端与进程，不需要额外的模型 API Key，也不会向你另收模型 Token 费用。")}</p><div className="aiPowerBenefits"><span>{tr("No separate API key", "无须额外 API Key")}</span><span>{tr("Use your existing plan", "沿用现有聊天套餐")}</span><span>{tr("Better model, smarter tool use", "模型越强，工具使用越聪明")}</span></div><a href="/connect-ai">{tr("Connect your AI", "连接你的 AI")} →</a><span className="stagedFeature">{tr("YOUR MODEL THINKS · REMOTE ARC CONNECTS & EXECUTES", "你的模型负责思考 · REMOTE ARC 负责连接与执行")}</span></div>
-      <div className="goalContract"><header><span>{tr("YOUR CHAT → REAL TOOLS", "AI 对话 → 真实工具")}</span><strong>{tr("One chat. Real execution.", "一个对话，真正执行。")}</strong></header><dl>
-        <div><dt>{tr("The brain", "负责思考")}</dt><dd>{tr("Your existing AI chat and model", "你已经在使用的 AI 聊天与模型")}</dd></div><div><dt>{tr("The bridge", "负责连接")}</dt><dd>{tr("Remote Arc · MCP, device permissions and routing", "Remote Arc · MCP、设备权限与路由")}</dd></div><div><dt>{tr("The tools", "负责执行")}</dt><dd>{tr("Your computer · files, terminal and processes", "你的电脑 · 文件、终端与进程")}</dd></div>
-      </dl><div className="goalCycle"><span>{tr("Think", "思考")}</span><b>→</b><span>{tr("Use tools", "调用工具")}</span><b>→</b><span>{tr("Verify", "验证")}</span><b>↺</b></div><p>{tr("No separate model API key is required. Your AI provider's plan, message and context limits still apply; Remote Arc has separate tool-call limits. Stronger models may handle harder work, but permissions stay under your control.", "无需单独配置模型 API Key。AI 服务商的套餐、消息和上下文限制仍适用，Remote Arc 另有工具调用额度。更强的模型可以处理更难的任务，但授权始终由你掌控。")}</p></div>
+      <LandingArchitectureDiagram />
     </section>
 
     <section className="landingControl sectionBlock" id="your-controls">
