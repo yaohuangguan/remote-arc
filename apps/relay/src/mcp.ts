@@ -1253,7 +1253,10 @@ export function createRemoteLinkMcp(
       },
     );
 
-    if (env.ENABLE_EXPERIMENTAL_AGENT_GOALS !== "0") {
+    // Reading an existing checkpoint is safe even when new experimental
+    // Agent Goals and source-side mutations are disabled in production.
+    // Keep this tool registered for older clients whose MCP tool catalog
+    // includes it. Source mutations remain behind the feature flag.
     registerMcpTool(server, "get_goal_context", {
       title: "Read durable Agent Goal context",
       description: "Read the objective, revision, latest observation, factual working memory, completion evidence and ordered progress journal. Use after a pause or a new conversation to continue without replaying uncertain actions.",
@@ -1267,6 +1270,7 @@ export function createRemoteLinkMcp(
       return textResult(await getGoalContext(env.DB, identity.userId, automation_id, after_sequence));
     });
 
+    if (env.ENABLE_EXPERIMENTAL_AGENT_GOALS !== "0") {
     registerMcpTool(server, "submit_goal_decision", {
       title: "Submit the next source Agent Goal decision",
       description: "Submit one bounded next action for a source-controlled goal using the current context revision and a unique idempotency key. Reuse the same key and payload on network retry. After a revision conflict, read context again. A complete decision requires concrete evidence and configured verification must pass.",

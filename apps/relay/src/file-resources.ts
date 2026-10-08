@@ -1,23 +1,25 @@
 import type { OAuthIdentity } from "./auth.js";
 import { callDevice, type DeviceCallEnv } from "./device-call.js";
 import { requireFeature } from "./entitlements.js";
-import { binaryBytesRead, recordPlusUsage } from "./plus-usage.js";
+import { binaryBytesRead, binaryChunkResult, recordPlusUsage } from "./plus-usage.js";
 
 type FileResourceEnv = DeviceCallEnv & {
   PUBLIC_ORIGIN: string;
 };
 
-type BinaryChunk = {
-  path: string;
-  mime_type: string;
-  encoding: "base64";
-  size: number;
-  file_revision: string;
-  offset: number;
-  bytes_read: number;
-  eof: boolean;
-  data: string;
-};
+type BinaryChunk = NonNullable<ReturnType<typeof binaryChunkResult>>;
+
+// Go agents return the established MCP text-result envelope, whereas some
+// legacy/fixture agents return the binary chunk directly. The same decoder must
+// be used for creating resources and for each streamed chunk.
+export function fileResourceChunk(value: unknown): BinaryChunk {
+  const chunk = binaryChunkResult(value);
+  if (!chunk || !chunk.file_revision || !Number.isSafeInteger(chunk.size) ||
+      typeof chunk.data !== "string") {
+    throw new Error("Device did not return a valid binary file resource descriptor.");
+  }
+  return chunk;
+}
 
 type StoredFileResource = {
   id: string;
@@ -71,21 +73,13 @@ export async function createFileResource(
   deviceId: string,
   filePath: string,
 ) {
-  const first = (await callDevice(
+  const first = fileResourceChunk(await callDevice(
     env,
     identity,
     deviceId,
     "read_binary_file",
     { path: filePath, offset: 0, length: 1 },
-  )) as BinaryChunk;
-  if (
-    !first ||
-    first.encoding !== "base64" ||
-    typeof first.file_revision !== "string" ||
-    !Number.isFinite(first.size)
-  ) {
-    throw new Error("Device did not return a valid binary file resource descriptor.");
-  }
+  ));
   if (first.size > MAX_RESOURCE_BYTES) {
     throw new Error(
       "File is too large for a temporary Remote Arc resource (maximum 512 MiB).",
@@ -274,7 +268,7 @@ export async function handleFileResource(
         return;
       }
       try {
-        const chunk = (await callDevice(
+        const chunk = fileResourceChunk(await callDevice(
           env,
           identity,
           resource.device_id,
@@ -285,7 +279,7 @@ export async function handleFileResource(
             length: Math.min(CHUNK_BYTES, range.endExclusive - offset),
             expected_revision: resource.file_revision,
           },
-        )) as BinaryChunk;
+        ));
 
         if (
           chunk.file_revision !== resource.file_revision ||
