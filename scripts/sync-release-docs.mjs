@@ -25,7 +25,17 @@ if (candidateMatch) {
 const mode = process.argv[2] || "--write";
 if (mode === "--notes") {
   const requested = process.argv[3] || latest.version;
-  const release = releases.find((item) => item.version === requested);
+  const candidateSection = candidateMatch && requested === cliPackage.version
+    ? changelog.split("## " + candidateMatch[1] + " - Unreleased\n")[1]?.split(/\n## \d+\.\d+\.\d+ -/)[0]
+    : null;
+  const candidateChanges = candidateSection
+    ? [...candidateSection.matchAll(/^-[ \t]+(.+)$/gm)].map((match) => match[1].trim())
+    : [];
+  const release = releases.find((item) => item.version === requested)
+    || (candidateChanges.length
+      ? { version: requested, title: "Remote Arc " + requested + " prerelease",
+          date: "2026-10-09 (release candidate)", changes: candidateChanges }
+      : null);
   if (!release) throw new Error("Release " + requested + " was not found in CHANGELOG.md");
   process.stdout.write(releaseNotesMarkdown(release));
   process.exit(0);

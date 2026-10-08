@@ -4,6 +4,13 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.5.1 - Unreleased
 
+### RC.2 test release (not the stable channel)
+
+- Restore Go terminal styling and local-time approval expiry labels; make approval dates/timezones explicit in Dashboard.
+- Preserve legacy TS atomic-write defaults while supporting explicit identical durability modes in benchmarks.
+- Include matched TS/Go durability tests, Go Undo hot-path optimization, native runtime parity and three-platform RC distribution.
+- This prerelease is installed with `remotelink@rc`; the stable `latest` channel must remain 0.5.0.
+
 ### Separate the Go Execution Core without changing runtime behavior
 
 - Move the Go filesystem, process, permission policy, protocol and local Undo implementations into the independently testable `packages/execution-core-go` module within this repository.
