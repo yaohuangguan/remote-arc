@@ -189,6 +189,18 @@ you control.
 - Node.js 20 or later
 - Windows, macOS, or Linux
 
+### Go runtime transition
+
+The CLI supports `--go` for the complete native Go device runtime and `--ts` for
+the existing TS runtime. TS remains the transition default. Native Go executables
+run without Node; npx requires Node for the installation and launch entry.
+The Go runtime uses the same paired device identity, permissions and execution
+lease. Stop the executing agent before switching runtimes.
+
+Go binaries must accompany the matching npm release. For development builds,
+installation, compatibility coverage and recovery behavior, see the
+[Go device runtime guide](https://github.com/yaohuangguan/remote-arc/blob/master/apps/device/README.md).
+
 ## Product vs package name
 
 **Remote Arc** is the product name.

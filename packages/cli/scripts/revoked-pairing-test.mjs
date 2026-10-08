@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const source = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+const source = readFileSync(new URL("../src/legacy.ts", import.meta.url), "utf8");
 
 const startupValidation = source.indexOf("if (!agentMode && !supervisorMode) {");
 const backgroundAttach = source.indexOf("if (!agentMode && !foregroundMode && config.backgroundEnabled === true)");
