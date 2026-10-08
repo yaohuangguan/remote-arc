@@ -34,10 +34,22 @@ try {
       { stdio: "inherit" },
     );
   } else {
-    execFileSync("zip", ["-qr", output, "."], {
-      cwd: staging,
-      stdio: "inherit",
-    });
+    try {
+      execFileSync("zip", ["-qr", output, "."], {
+        cwd: staging,
+        stdio: "inherit",
+      });
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+      // Minimal environments may not provide the zip executable.
+      // Python's standard library is a dependency-free packaging fallback.
+      execFileSync("python3", [
+        "-c",
+        "from pathlib import Path; from zipfile import ZipFile, ZIP_DEFLATED; import sys; root=Path(sys.argv[1]); out=Path(sys.argv[2]); z=ZipFile(out, 'w', compression=ZIP_DEFLATED); [(z.write(f, f.relative_to(root).as_posix())) for f in sorted(root.rglob('*')) if f.is_file()]; z.close()",
+        staging,
+        output,
+      ], { stdio: "inherit" });
+    }
   }
 
   const manifest = JSON.parse(

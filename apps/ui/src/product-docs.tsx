@@ -1,5 +1,6 @@
 import React from "react";
 import { useI18n } from "./i18n.js";
+import companionManifest from "../../browser-extension/manifest.json" with { type: "json" };
 import "./public-docs.css";
 
 const endpoint = "https://mcp.remotearc.app/mcp";
@@ -187,7 +188,7 @@ export function McpReference() {
       ["mcp-tools", tr("Tools and scopes", "工具与 Scope")], ["chrome-browser", tr("Browser companion", "浏览器 Companion")],
     ].map(([id, label]) => <a key={id} href={"#" + id}>{label}</a>)}</aside><article className="technicalArticle">
       <section id="mcp-connect"><h2>{tr("Connect using the client installation path", "通过客户端安装入口连接")}</h2>
-        <p>{tr("Pair your computer first. In ChatGPT, open Plugins and install Remote Arc when it is available to your account. For developer testing before publication, enable Developer mode under Settings → Security and login, add an MCP connection from the Plugins plus button and enter the endpoint above. Availability depends on your account and workspace policy.", "先配对电脑。在 ChatGPT 中打开 Plugins，账户可以看到 Remote Arc 时即可安装。发布前开发测试可在 Settings → Security and login 开启 Developer mode，再从 Plugins 加号添加 MCP 连接并填写上方地址。功能可用性取决于账户与工作区策略。")}</p>
+        <p>{tr("Pair your computer and separately add the MCP connection inside the AI app. For eligible ChatGPT accounts, open Plugins → + → Add custom MCP server, enter the Remote Arc HTTPS endpoint, complete OAuth and enable the resulting plugin. A public directory listing is not yet available. See the client-specific install guide for the complete UI steps.", "先配对电脑，再在 AI 客户端独立添加 MCP 连接。具备权限的 ChatGPT 账户可打开 Plugins → ＋ → Add custom MCP server，输入 Remote Arc HTTPS 地址、完成 OAuth 并启用插件。当前尚未公开上架。具体 UI 步骤见各客户端安装指南。")}</p>
         <p><a href="https://developers.openai.com/plugins/deploy/connect-chatgpt" target="_blank" rel="noreferrer">{tr("Official OpenAI connection guide", "OpenAI 官方连接指南")} ↗</a></p>
         <p>{tr("Claude uses a custom Remote MCP connector and OAuth. Cursor can use the generated MCP installation link or its remote server configuration. Other clients must support the endpoint transport and OAuth discovery; compatibility does not imply they can continue an agent overnight.", "Claude 使用自定义 Remote MCP Connector 和 OAuth；Cursor 可使用生成的 MCP 安装链接或远程服务器配置。其他客户端需要支持此端点的传输和 OAuth 发现。连接兼容不代表具备过夜 Agent 续接能力。")}</p>
         <div className="articleMetaLinks"><a href="/install/chatgpt">ChatGPT →</a><a href="/install/claude">Claude →</a><a href="/install/cursor">Cursor →</a></div>
@@ -203,8 +204,8 @@ export function McpReference() {
       </section>
       <section id="mcp-tools"><h2>{tr("Tools and required scopes", "工具与所需 Scope")}</h2><ToolReference /></section>
       <section id="chrome-browser"><h2>{tr("Install the scoped Chrome companion", "安装受控 Chrome Companion")}</h2>
-        <p>{tr("Download and unzip the extension. In chrome://extensions, enable Developer mode, choose Load unpacked and select the extracted directory. Link it to the local agent, then explicitly share a tab. This beta is distributed as an unpacked extension, not through the Chrome Web Store.", "下载并解压扩展。在 chrome://extensions 开启 Developer mode，选择 Load unpacked 并选中解压目录。连接本地 Agent 后明确共享标签页。此 Beta 通过未打包扩展分发，未上架 Chrome Web Store。")}</p>
-        <p><a href="/downloads/remote-arc-browser.zip" download>{tr("Download Chrome companion (.zip)", "下载 Chrome Companion (.zip)")} ↓</a></p>
+        <p>{tr("Download and unzip the companion. In chrome://extensions, enable Developer mode, choose Load unpacked and select the extracted folder. Open its popup, select Connect to Remote Arc and approve browser pairing, then explicitly Share this tab. It is an unpacked beta, not a Chrome Web Store extension; downloaded versions must be reloaded manually.", "下载并解压 Companion，在 chrome://extensions 开启开发者模式，选择「加载已解压的扩展程序」并指定解压文件夹。打开扩展，点击 Connect to Remote Arc 并批准浏览器配对，再手动 Share this tab。此 Beta 尚未上架 Chrome Web Store；以后更新仍需重新下载并加载。")}</p>
+        <p><a href={"/downloads/remote-arc-browser.zip?v=" + encodeURIComponent(companionManifest.version)} download>{tr("Download Chrome companion (.zip)", "下载 Chrome Companion (.zip)")} ↓</a></p>
         <p>{tr("Use browser_list_tabs to select tab_id when several tabs are shared. browser_read_page returns a snapshotId plus stable refs for that snapshot. browser_click and browser_fill require both that snapshot and an explicit per-tab Click & fill grant; a click invalidates the snapshot and the page must be read again.", "同时共享多个标签页时，用 browser_list_tabs 选择 tab_id。browser_read_page 会返回 snapshotId 和当前快照内的元素 ref；browser_click 与 browser_fill 只有在该标签页明确开启 Click & fill 后才能使用。每次点击都会使当前快照失效，下一次交互前必须重新读取页面。")}</p>
       </section>
       <footer className="articleEndLinks"><a href="/docs">{tr("Product documentation", "产品文档")} →</a><a href="/security-model">{tr("Security model", "安全模型")} →</a></footer>

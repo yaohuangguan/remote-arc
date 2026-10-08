@@ -13,4 +13,16 @@ assert.match(styles, /\.pairAgentOption strong\{font-size:15px\}/);
 assert.match(styles, /\.pairAgentOption \.pairChatGptLogo\{filter:invert\(1\)\}/);
 assert.match(styles, /:root\[data-theme="light"\] \.pairAgentOption \.pairChatGptLogo\{filter:none\}/);
 
-console.log("PASS: onboarding copy remains readable and ChatGPT logo follows theme");
+const installGuide = readFileSync(new URL("../src/client-setup-guides.tsx", import.meta.url), "utf8");
+assert.match(source, /<ClientMcpGuide client=\{slug\}/, "each installation page needs MCP platform directions");
+assert.match(source, /className="installMustDo"/, "both setup sides should be prominent");
+assert.match(source, /<InstallCompanionNotice \/>/, "companion download must be near the top");
+for (const path of [
+  "https://chatgpt.com/plugins",
+  "https://claude.ai/settings/connectors",
+  "https://cursor.com/docs/mcp",
+  "https://developers.openai.com/plugins/deploy/connect-chatgpt",
+]) assert.ok(installGuide.includes(path), "missing official setup link: " + path);
+assert.ok(installGuide.includes("remote-arc-browser.zip?v="), "versioned companion download");
+assert.match(installGuide, /auto-update|automatically updated/i, "manual update disclosure");
+console.log("PASS: readable onboarding and required two-sided MCP setup instructions");
