@@ -541,7 +541,7 @@ function PublicHeader({ user }: { user?: User | null }) {
           </div>
         </nav>
         <div className="publicNavActions">
-          <LanguageSwitcher compact syncUrl />
+          <LanguageSwitcher compact syncUrl dropdown />
           <ThemeSwitcher compact />
           {user ? (
             <a className="navDashboard" href={dashboardHref("/overview")}>{tr("Dashboard", "控制台")} <span>↗</span></a>
@@ -7009,7 +7009,7 @@ function App() {
   if (location.pathname === "/docs") return <DocsPage user={user === undefined ? null : user} />;
   if (location.pathname === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
   if (location.pathname === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
-  const useCaseMatch = location.pathname.match(/^\/use-cases\/(remote-development|file-organization|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support)$/);
+  const useCaseMatch = location.pathname.match(/^\/use-cases\/(remote-development|file-organization|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);
   if (useCaseMatch) {
     return <UseCaseDetailPage slug={useCaseMatch[1] as UseCaseSlug} user={user === undefined ? null : user} />;
   }

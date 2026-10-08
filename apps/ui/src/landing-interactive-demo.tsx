@@ -62,6 +62,18 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
         { tool: "create_automation", arguments: '{"device":"home-server","type":"schedule"}', output: tr("schedule saved · awaiting due time", "计划已保存 · 等待执行时间"), duration: "88ms" },
         { tool: "get_automation", arguments: '{"id":"example_schedule"}', output: tr("status: scheduled · no service restart", "状态：已计划 · 不重启服务"), duration: "16ms" },
       ];
+    case "slides":
+      return [
+        { tool: "read_file", arguments: '{"path":"~/slides/outline.md"}', output: tr("Outline and references read", "已读取大纲与引用素材"), duration: "31ms" },
+        { tool: "start_process", arguments: '{"command":"node scripts/build-deck.js","cwd":"~/slides"}', output: tr("PPTX generator · exit_code: 0", "PPTX 生成脚本 · 退出码 0"), duration: "2.3s" },
+        { tool: "get_file_info", arguments: '{"path":"~/slides/review.pptx"}', output: tr("review.pptx · slide count: 12", "review.pptx · 12 页"), duration: "18ms" },
+      ];
+    case "excel":
+      return [
+        { tool: "list_directory", arguments: '{"path":"~/reports/2026"}', output: tr("Monthly CSV inputs located", "找到月度 CSV 输入文件"), duration: "23ms" },
+        { tool: "start_process", arguments: '{"command":"python make_workbook.py","cwd":"~/reports"}', output: tr("Workbook generated · totals reconciled", "已生成工作簿 · 合计已核对"), duration: "2.8s" },
+        { tool: "get_file_info", arguments: '{"path":"~/reports/output/summary.xlsx"}', output: tr("summary.xlsx · file exists", "summary.xlsx · 文件已生成"), duration: "12ms" },
+      ];
     case "inspect":
       return [
         { tool: "list_processes", arguments: '{"device":"mini-pc"}', output: tr("node service found · pid 2048", "已找到 Node 服务 · pid 2048"), duration: "36ms" },
@@ -93,6 +105,18 @@ function progressFor(id: string, tr: (en: string, zh: string) => string): DemoPr
         { working: tr("Checking the available computer…", "正在检查可用电脑…"), done: tr("The home server is available.", "家庭服务器已就绪。") },
         { working: tr("Saving the health-check schedule…", "正在保存健康检查计划…"), done: tr("The health check is scheduled.", "健康检查任务已安排。") },
         { working: tr("Checking the saved task settings…", "正在核对已保存的任务…"), done: tr("Confirmed: status only, no service restart.", "已确认只检查状态，不会重启服务。") },
+      ];
+    case "slides":
+      return [
+        { working: tr("Reading the presentation materials…", "正在读取演示素材…"), done: tr("Found the outline and local charts.", "已读取本机大纲与图表。") },
+        { working: tr("Generating the editable presentation…", "正在生成可编辑 PPT…"), done: tr("The local PPTX generation script finished.", "本机 PPTX 生成脚本已执行完毕。") },
+        { working: tr("Checking the document structure…", "正在检查文档结构…"), done: tr("Verified that the presentation has 12 slides.", "已确认演示文稿包含 12 页。") },
+      ];
+    case "excel":
+      return [
+        { working: tr("Reading the monthly CSV files…", "正在读取月度 CSV…"), done: tr("Found the source files and columns.", "已定位输入文件和字段。") },
+        { working: tr("Generating the workbook and checking totals…", "正在生成 Excel 并核对合计…"), done: tr("The workbook and reconciliation were generated.", "工作簿及核对结果已生成。") },
+        { working: tr("Verifying the output file…", "正在检查输出文件…"), done: tr("Confirmed that summary.xlsx exists.", "已确认 summary.xlsx 存在。") },
       ];
     case "inspect":
       return [
@@ -155,6 +179,10 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
       ? tr("The logs point to repeated connection timeouts. I haven't changed any files or restarted the service.", "日志显示反复发生连接超时。我没有修改任何文件，也没有重启服务。")
       : scenarios[selected]?.id === "schedule"
         ? tr("The health check is scheduled. It will collect status only; no service restart is included.", "健康检查已安排，届时只采集状态，不包含重启服务。")
+        : scenarios[selected]?.id === "slides"
+          ? tr("The local script generated review.pptx with 12 slides. Please visually review the layout before sharing.", "本机脚本已生成 12 页的 review.pptx。分享前请检查每页的实际版式。")
+          : scenarios[selected]?.id === "excel"
+            ? tr("The local script generated summary.xlsx and checked the totals. Review the workbook before delivery.", "本机脚本已生成 summary.xlsx 并核对合计，请检查工作簿后再交付。")
         : tr("The export finished successfully. The result and task status are available to inspect when you return.", "报表导出已成功完成，稍后回来可以查看结果与任务状态。");
 
   const pickScenario = (index: number) => {
