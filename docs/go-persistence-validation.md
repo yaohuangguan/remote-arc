@@ -45,6 +45,11 @@ the hash fence refuses automatic restoration.
 - If a failed operation demonstrably left the file unchanged, discard its
   prepared snapshot as before. Unknown states keep evidence.
 - A prepared manifest without `postChangeHash` cannot authorize auto-Undo.
+- Undo timestamps are reserved monotonically relative to the existing store.
+  Same-millisecond writes and wall-clock rollback cannot reorder receipts by
+  their random IDs. The JSON shape is unchanged; logical timestamps may be
+  slightly ahead of the wall clock. An older receipt dated far ahead after a
+  clock correction carries that logical offset until it is removed.
 - Go Undo of a newly created file now syncs its parent directory when the
   workspace policy is durable.
 - The file format, hash fence, workspace checks, seven-day retention and

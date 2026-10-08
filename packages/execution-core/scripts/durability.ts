@@ -53,6 +53,21 @@ for (const mode of ["atomic","durable","layered"]) {
   assert.equal(await fs.readFile(concurrent,"utf8"),"value-15");
   assert.equal(val(await core.callTool("undo_last_change",{},policy)).restored,true);
   assert.equal(await fs.readFile(concurrent,"utf8"),"value-14");
+  process.env.REMOTEARC_UNDO_ROOT=path.join(root,"clock-undo");
+  const clockTarget=path.join(trusted,"clock.txt");
+  await fs.writeFile(clockTarget,"original");
+  await core.callTool("write_file",{path:clockTarget,content:"first"},policy);
+  const [receipt]=await fs.readdir(process.env.REMOTEARC_UNDO_ROOT);
+  assert.ok(receipt);
+  const manifestPath=path.join(process.env.REMOTEARC_UNDO_ROOT,receipt,"manifest.json");
+  const manifest=JSON.parse(await fs.readFile(manifestPath,"utf8"));
+  manifest.createdAt=new Date(Date.now()+60000).toISOString();
+  await fs.writeFile(manifestPath,JSON.stringify(manifest));
+  await core.callTool("write_file",{path:clockTarget,content:"second"},policy);
+  for(const expected of ["first","original"]){
+    await core.callTool("undo_last_change",{},policy);
+    assert.equal(await fs.readFile(clockTarget,"utf8"),expected);
+  }
   await core.close(); await restarted.close();
   console.log(mode+": TS atomic, restart-Undo, conflict and precommit-crash guard passed");
  } finally { await fs.rm(root,{recursive:true,force:true}); }

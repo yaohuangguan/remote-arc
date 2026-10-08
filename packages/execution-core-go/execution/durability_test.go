@@ -2,9 +2,11 @@ package execution
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/protocol"
 )
@@ -81,5 +83,47 @@ func TestDurabilityProfilesAndInterruptedUndo(t *testing.T) {
 			}
 			discardSnapshot(snap)
 		})
+	}
+}
+
+func TestUndoOrderSurvivesClockRollback(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("REMOTEARC_UNDO_ROOT", filepath.Join(root, "undo"))
+	t.Setenv("REMOTEARC_FILE_DURABILITY", "atomic")
+	t.Setenv("REMOTEARC_UNDO_DURABILITY", "atomic")
+	target := filepath.Join(root, "target.txt")
+	if err := os.WriteFile(target, []byte("original"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	core := New("full")
+	defer core.Close()
+	policy := protocol.Policy{WorkspaceRoots: []string{root}}
+	if _, err := core.Call(context.Background(), "write_file", map[string]any{"path": target, "content": "first"}, policy); err != nil {
+		t.Fatal(err)
+	}
+	items, err := undoCandidates()
+	if err != nil || len(items) != 1 {
+		t.Fatal("missing first receipt", err)
+	}
+	// An older persisted record can be ahead of today's clock after NTP correction.
+	items[0].Manifest.Created = time.Now().Add(time.Minute).UTC().Format(time.RFC3339Nano)
+	b, err := json.Marshal(items[0].Manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(items[0].Dir, "manifest.json"), b, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := core.Call(context.Background(), "write_file", map[string]any{"path": target, "content": "second"}, policy); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"first", "original"} {
+		if _, err := core.Call(context.Background(), "undo_last_change", nil, policy); err != nil {
+			t.Fatal(err)
+		}
+		b, err := os.ReadFile(target)
+		if err != nil || string(b) != expected {
+			t.Fatalf("Undo order: %q, expected %q (%v)", b, expected, err)
+		}
 	}
 }

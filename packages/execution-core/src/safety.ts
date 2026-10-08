@@ -54,6 +54,7 @@ async function snapshotDirectories() {
 
 async function cleanupUndoStore() {
   const now = Date.now();
+  let latestCreated = 0;
   const snapshots: Array<{ directory: string; manifest: UndoManifest }> = [];
 
   for (const directory of await snapshotDirectories()) {
@@ -70,6 +71,7 @@ async function cleanupUndoStore() {
     }
 
     snapshots.push({ directory, manifest });
+    latestCreated = Math.max(latestCreated, created);
   }
 
   snapshots.sort(
@@ -82,6 +84,7 @@ async function cleanupUndoStore() {
     await fs.rm(item.directory, { recursive: true, force: true }).catch(() => undefined);
     total -= item.manifest.bytes;
   }
+  return latestCreated;
 }
 
 function mutationPath(
@@ -99,7 +102,7 @@ export async function createUndoSnapshot(
   const targetPath = mutationPath(tool, args);
   if (!targetPath) return null;
 
-  await cleanupUndoStore();
+  const latestCreated = await cleanupUndoStore();
 
   let existed = false;
   let mode: number | undefined;
@@ -122,7 +125,9 @@ export async function createUndoSnapshot(
     if (code !== "ENOENT") throw error;
   }
 
-  const id = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  // Store-relative order survives same-ms mutations and a clock rollback.
+  const created = Math.max(Date.now(), latestCreated + 1);
+  const id = `${created}-${crypto.randomUUID().slice(0, 8)}`;
   const directory = path.join(undoRoot(), id);
   await fs.mkdir(directory, { recursive: true, mode: 0o700 });
   await syncDirectory(undoRoot(), undoDurability());
@@ -133,7 +138,7 @@ export async function createUndoSnapshot(
 
   const manifest: UndoManifest = {
     id,
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(created).toISOString(),
     tool,
     targetPath,
     existed,

@@ -97,10 +97,20 @@ func undoCandidates() ([]snapshot, error) {
 	return items, nil
 }
 func createSnapshot(tool, target string) (*snapshot, error) {
-	if _, e := undoCandidates(); e != nil {
+	items, e := undoCandidates()
+	if e != nil {
 		return nil, e
 	}
-	m := manifest{Tool: tool, Target: target, Created: time.Now().UTC().Format("2006-01-02T15:04:05.000Z")}
+	// Reserve a store-relative millisecond timestamp. Fast mutations and clock
+	// rollback must not leave order to the random suffix of a snapshot ID.
+	created := time.Now().UnixMilli()
+	for _, item := range items {
+		stamp, err := time.Parse(time.RFC3339Nano, item.Manifest.Created)
+		if err == nil && stamp.UnixMilli() >= created {
+			created = stamp.UnixMilli() + 1
+		}
+	}
+	m := manifest{Tool: tool, Target: target, Created: time.UnixMilli(created).UTC().Format("2006-01-02T15:04:05.000Z")}
 	var original []byte
 	s, e := os.Stat(target)
 	if e == nil {
@@ -117,7 +127,7 @@ func createSnapshot(tool, target string) (*snapshot, error) {
 	} else if !errors.Is(e, os.ErrNotExist) {
 		return nil, e
 	}
-	m.ID = fmt.Sprintf("%d-%s", time.Now().UnixMilli(), randomID()[:8])
+	m.ID = fmt.Sprintf("%d-%s", created, randomID()[:8])
 	snap := &snapshot{Dir: filepath.Join(undoRoot(), m.ID), Manifest: m}
 	if e = os.Mkdir(snap.Dir, 0700); e != nil {
 		return nil, e
