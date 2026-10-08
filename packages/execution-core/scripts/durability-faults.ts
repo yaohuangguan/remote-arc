@@ -12,7 +12,9 @@ assert.equal(fileDurability(), "atomic");
 assert.equal(undoDurability(), "atomic");
 process.env.REMOTEARC_UNDO_DURABILITY = "typo";
 assert.equal(undoDurability(), "durable");
-const root = await fs.mkdtemp(path.join(os.tmpdir(), "ra-sync-fault-"));
+// macOS /var is an alias of /private/var; policy resolves the target before
+// writing, so the injected directory failure must use that same real path.
+const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "ra-sync-fault-")));
 const target = path.join(root, "file.txt");
 const injected = new Error("injected sync failure");
 const open = fs.open.bind(fs);
