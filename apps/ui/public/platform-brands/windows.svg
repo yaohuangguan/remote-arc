@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img">
+  <title>Windows</title>
+  <desc>Four-color Windows-style window mark.</desc>
+  <path fill="#F25022" d="M2 4.5 11 3.2V11H2z"/>
+  <path fill="#7FBA00" d="m13 2.9 9-1.3V11h-9z"/>
+  <path fill="#00A4EF" d="M2 13h9v7.8L2 19.5z"/>
+  <path fill="#FFB900" d="M13 13h9v9.4l-9-1.3z"/>
+</svg>

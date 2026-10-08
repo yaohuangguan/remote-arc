@@ -5,6 +5,13 @@ import "./remote-mcp-guide.css";
 
 const endpoint = "https://mcp.remotearc.app/mcp";
 
+const platforms = [
+  { name: "macOS", logo: "/platform-brands/macos.svg" },
+  { name: "Windows", logo: "/platform-brands/windows.svg" },
+  { name: "Linux", logo: "/platform-brands/linux.svg" },
+] as const;
+
+
 const steps = [
   {
     id: "pair",
@@ -35,6 +42,10 @@ const clients = [
 export function RemoteMcpGuide() {
   const { tr } = useI18n();
   const [copied, setCopied] = React.useState(false);
+  const [highlightedBrand, setHighlightedBrand] = React.useState<string | null>(null);
+  const toggleBrand = (name: string) =>
+    setHighlightedBrand(previous => previous === name ? null : name);
+
   const copyEndpoint = async () => {
     try {
       await navigator.clipboard.writeText(endpoint);
@@ -64,11 +75,21 @@ export function RemoteMcpGuide() {
       <div className="rmgHeroVisual" aria-label={tr("Remote MCP connection overview", "Remote MCP 连接概览")}>
         <div className="rmgVisualTop"><span className="rmgWindowDots">● ● ●</span><span>remote-mcp / connection</span><span className="rmgActive"><i />{tr("Ready", "就绪")}</span></div>
         <div className="rmgVisualBody">
-          <div className="rmgVisualClients"><span><img src="/demo-brands/chatgpt.svg" alt="" /> ChatGPT</span><span><img src="/demo-brands/claude.svg" alt="" /> Claude</span><span><img src="/demo-brands/cursor.svg" alt="" /> Cursor</span></div>
+          <div className="rmgVisualClients">{clients.map(client =>
+            <button type="button" key={client.name} className={"rmgBrandChip rmgBrandChip--" + client.name.toLowerCase()}
+              aria-pressed={highlightedBrand === client.name} onClick={() => toggleBrand(client.name)}
+              title={tr("Show " + client.name + " brand colors", "展示 " + client.name + " 品牌色")}>
+              <img src={client.logo} alt="" /><span>{client.name}</span>
+            </button>)}</div>
           <div className="rmgVisualFlow"><span className="rmgFlowDash" /> <small>HTTPS · MCP · OAuth</small> <span className="rmgFlowDash" /></div>
           <div className="rmgVisualCore"><img src="/remote-arc-app-icon.svg" alt="" /><div><strong>Remote Arc</strong><small>Remote MCP Server</small></div><span className="rmgVerified">✓</span></div>
           <div className="rmgVisualFlow"><span className="rmgFlowDash" /> <small>{tr("Outbound connection", "设备主动出站")}</small> <span className="rmgFlowDash" /></div>
-          <div className="rmgVisualDevices"><span>⌘ <b>macOS</b></span><span>▣ <b>Windows</b></span><span>⌁ <b>Linux</b></span></div>
+          <div className="rmgVisualDevices">{platforms.map(platform =>
+            <button type="button" key={platform.name} className="rmgPlatformChip"
+              aria-pressed={highlightedBrand === platform.name} onClick={() => toggleBrand(platform.name)}
+              title={tr("Show " + platform.name + " logo colors", "展示 " + platform.name + " 图标颜色")}>
+              <img src={platform.logo} alt="" /><span>{platform.name}</span>
+            </button>)}</div>
         </div>
         <div className="rmgVisualFooter"><span className="rmgStatusDot" /> {tr("Your computers keep control of their permissions.", "每台电脑独立管理自己的权限。")}</div>
       </div>
@@ -96,7 +117,7 @@ export function RemoteMcpGuide() {
         {steps.map(step => <article id={"rmg-"+step.id} key={step.id}><span className="rmgStepNumber">{step.index}</span><div><h3>{tr(step.title[0], step.title[1])}</h3><p>{tr(step.body[0], step.body[1])}</p>{step.id === "pair" && <div className="rmgCommand"><code>npx remotelink</code><a href="/install/chatgpt">{tr("View pairing instructions", "查看设备配对指南")} ↗</a></div>}{step.id === "connect" && <div className="rmgCommand"><code>{endpoint}</code><button type="button" onClick={() => void copyEndpoint()} aria-label={tr("Copy MCP endpoint URL", "复制 MCP 端点地址")}>{copied ? tr("Copied ✓", "已复制 ✓") : tr("Copy", "复制")}</button></div>}{step.id === "verify" && <div className="rmgExamplePrompt">{tr("“List my Remote Arc devices. On my Mac, inspect the project directory without editing anything.”", "“列出我的 Remote Arc 设备。只读取 Mac 上的项目目录，不修改任何内容。”")}</div>}</div></article>)}
       </div>
       <div className="rmgClientHeader"><h3>{tr("Choose your client to see the exact setup screens", "选择客户端，查看详细的配置步骤")}</h3><p>{tr("Adding the MCP endpoint inside the AI application is required. Running the local agent alone does not connect the app.", "必须在 AI 应用内添加 MCP 端点，仅运行本地 Agent 并不能让 AI 自动连接。")}</p></div>
-      <div className="rmgClientGrid">{clients.map(client => <a key={client.name} href={client.url} className="rmgClient"><img src={client.logo} alt="" /><div><strong>{client.name}</strong><span>{tr(client.hint[0],client.hint[1])}</span></div><b aria-hidden="true">↗</b></a>)}</div>
+      <div className="rmgClientGrid">{clients.map(client => <a key={client.name} href={client.url} className={"rmgClient rmgClient--" + client.name.toLowerCase()}><img src={client.logo} alt="" /><div><strong>{client.name}</strong><span>{tr(client.hint[0],client.hint[1])}</span></div><b aria-hidden="true">↗</b></a>)}</div>
     </section>
 
     <section className="rmgSection rmgArchitecture" id="rmg-architecture">

@@ -17,8 +17,22 @@
 .rmgActive i,.rmgStatusDot{height:7px;width:7px;border-radius:50%;background:#41cda2;display:inline-block}
 .rmgVisualBody{padding:37px 30px 32px}
 .rmgVisualClients,.rmgVisualDevices{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.rmgVisualClients>span,.rmgVisualDevices>span{display:flex;align-items:center;gap:8px;background:#23353e;border:1px solid #37505c;border-radius:9px;padding:11px 12px;font-size:13px;font-weight:650}
-.rmgVisualClients img{width:19px;height:19px;object-fit:contain;filter:brightness(0) invert(1)}
+.rmgVisualClients>.rmgBrandChip,.rmgVisualDevices>.rmgPlatformChip{display:flex;align-items:center;gap:8px;background:#23353e;border:1px solid #37505c;border-radius:9px;padding:11px 12px;font-family:inherit;font-size:13px;font-weight:650;color:#e9f4f7;cursor:pointer;transition:background .2s,border-color .2s,box-shadow .2s,transform .2s}
+.rmgVisualClients>.rmgBrandChip img,.rmgVisualDevices>.rmgPlatformChip img{width:19px;height:19px;object-fit:contain;flex-shrink:0;filter:grayscale(1) brightness(0) invert(1);opacity:.82;transition:filter .23s ease,opacity .23s ease,transform .23s ease}
+.rmgVisualClients>.rmgBrandChip:is(:hover,:focus-visible,[aria-pressed="true"]),.rmgVisualDevices>.rmgPlatformChip:is(:hover,:focus-visible,[aria-pressed="true"]){background:#2b414c;border-color:#4d8394;box-shadow:0 5px 16px rgba(22,156,187,.13);transform:translateY(-1px)}
+.rmgVisualClients>.rmgBrandChip:is(:hover,:focus-visible,[aria-pressed="true"]) img,.rmgVisualDevices>.rmgPlatformChip:is(:hover,:focus-visible,[aria-pressed="true"]) img{filter:none;opacity:1;transform:scale(1.1)}
+.rmgVisualClients>.rmgBrandChip--chatgpt:is(:hover,:focus-visible,[aria-pressed="true"]) img{filter:brightness(0) saturate(100%) invert(55%) sepia(84%) saturate(457%) hue-rotate(119deg) brightness(102%) contrast(102%)}
+.rmgVisualClients>.rmgBrandChip--cursor:is(:hover,:focus-visible,[aria-pressed="true"]) img{filter:brightness(0) saturate(100%) invert(68%) sepia(23%) saturate(1578%) hue-rotate(204deg) brightness(105%) contrast(106%)}
+.rmgVisualClients>.rmgBrandChip:focus-visible,.rmgVisualDevices>.rmgPlatformChip:focus-visible{outline:2px solid #8bdbf0;outline-offset:3px}
+/* Restore recognizable accent colors only while explored or explicitly selected. */
+.rmgVisualClients>.rmgBrandChip--chatgpt:is(:hover,:focus-visible,[aria-pressed="true"]){border-color:#10a37f;background:#183c39}
+.rmgVisualClients>.rmgBrandChip--claude:is(:hover,:focus-visible,[aria-pressed="true"]){border-color:#c87851;background:#41332f}
+.rmgVisualClients>.rmgBrandChip--cursor:is(:hover,:focus-visible,[aria-pressed="true"]){border-color:#9d9df8;background:#323447}
+.rmgVisualDevices>.rmgPlatformChip:nth-child(1):is(:hover,:focus-visible,[aria-pressed="true"]){border-color:#ad91ed;background:#36374d}
+.rmgVisualDevices>.rmgPlatformChip:nth-child(2):is(:hover,:focus-visible,[aria-pressed="true"]){border-color:#00a4ef;background:#223e53}
+.rmgVisualDevices>.rmgPlatformChip:nth-child(3):is(:hover,:focus-visible,[aria-pressed="true"]){border-color:#f6c94e;background:#454030}
+
+
 .rmgVisualFlow{display:flex;align-items:center;flex-direction:column;gap:3px;margin:11px 0;color:#8fa7b2}
 .rmgFlowDash{width:1px;height:16px;background:linear-gradient(#81cada,#277184)}
 .rmgVisualFlow small{font-size:10px;letter-spacing:.04em}
@@ -63,8 +77,22 @@
 .rmgClientHeader p{font-size:14px;color:var(--landing-muted);line-height:1.75}
 .rmgClientGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:19px}
 .rmgClient{display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:18px 15px;text-decoration:none;color:var(--text)}
-.rmgClient:hover{border-color:#1596b8}
-.rmgClient img{width:26px;height:26px;object-fit:contain;border-radius:4px;flex-shrink:0}
+.rmgClient{transition:border-color .2s,box-shadow .2s,transform .2s}
+.rmgClient:is(:hover,:focus-visible){border-color:#1596b8;box-shadow:0 8px 25px rgba(17,137,172,.09);transform:translateY(-2px)}
+.rmgClient:focus-visible{outline:2px solid #1596b8;outline-offset:3px}
+.rmgClient img{width:26px;height:26px;object-fit:contain;border-radius:4px;flex-shrink:0;filter:grayscale(1);opacity:.73;transition:filter .23s ease,opacity .23s ease,transform .23s ease}
+.rmgClient:is(:hover,:focus-visible,:active) img{filter:none;opacity:1;transform:scale(1.08)}
+.rmgClient--chatgpt:is(:hover,:focus-visible,:active) img{filter:brightness(0) saturate(100%) invert(49%) sepia(74%) saturate(511%) hue-rotate(115deg) brightness(92%) contrast(101%)}
+.rmgClient--cursor:is(:hover,:focus-visible,:active) img{filter:brightness(0) saturate(100%) invert(44%) sepia(68%) saturate(1203%) hue-rotate(220deg) brightness(100%) contrast(105%)}
+.rmgClient--chatgpt:is(:hover,:focus-visible,:active){border-color:#10a37f}
+.rmgClient--claude:is(:hover,:focus-visible,:active){border-color:#c87851}
+.rmgClient--cursor:is(:hover,:focus-visible,:active){border-color:#8b87de}
+/* The shared demo's client picker follows the same default mono -> hover color pattern on this guide. */
+.remoteMcpGuide .homeDemoClientSwitch img{filter:grayscale(1) brightness(0) invert(.73);opacity:.8;transition:filter .2s,opacity .2s,transform .2s}
+.remoteMcpGuide .homeDemoClientSwitch button:is(:hover,:focus-visible,[aria-pressed="true"]) img{filter:none;opacity:1;transform:scale(1.08)}
+.remoteMcpGuide .homeDemoClientSwitch .homeDemoClientTab--chatgpt:is(:hover,:focus-visible,[aria-pressed="true"]) img{filter:brightness(0) saturate(100%) invert(49%) sepia(74%) saturate(511%) hue-rotate(115deg) brightness(92%) contrast(101%)}
+.remoteMcpGuide .homeDemoClientSwitch .homeDemoClientTab--cursor:is(:hover,:focus-visible,[aria-pressed="true"]) img{filter:brightness(0) saturate(100%) invert(66%) sepia(32%) saturate(1134%) hue-rotate(203deg) brightness(109%) contrast(105%)}
+
 .rmgClient div{display:flex;flex-direction:column;gap:3px;min-width:0}
 .rmgClient strong{font-size:16px}
 .rmgClient span{color:var(--landing-muted);font-size:11px;line-height:1.35}
@@ -106,5 +134,5 @@
 .rmgNextLinks a{border:1px solid var(--line);border-radius:9px;padding:13px 16px;text-decoration:none;font-size:14px;font-weight:650;color:var(--text)}
 .rmgNextLinks a:hover{border-color:#1596b8}
 @media(max-width:990px){.rmgHero{gap:25px}.rmgHero h1{font-size:clamp(40px,5vw,58px)}.rmgArchGrid{grid-template-columns:1fr}.rmgRecorded{grid-template-columns:1fr}}
-@media(max-width:720px){.remoteMcpGuide{padding:0 18px 55px}.rmgHero{grid-template-columns:1fr;gap:25px;padding:48px 0}.rmgHero h1{font-size:clamp(39px,9vw,52px)}.rmgHeroCopy>p{font-size:16px}.rmgVisualBody{padding:26px 12px}.rmgVisualCore{width:92%}.rmgVisualClients>span,.rmgVisualDevices>span{font-size:11px;padding:8px}.rmgJump{padding:14px;gap:15px;justify-content:flex-start}.rmgJump a{font-size:12px}.rmgSection{padding-top:68px}.rmgCompare,.rmgClientGrid,.rmgSecurityCards,.rmgNext{grid-template-columns:1fr}.rmgCompare article{padding:22px}.rmgCompare p{min-height:0}.rmgSteps{padding:3px 18px}.rmgSteps article{grid-template-columns:35px minmax(0,1fr);gap:10px}.rmgStepNumber{font-size:17px}.rmgSectionHeading p{font-size:15px}.rmgNext{gap:13px;margin-top:62px;padding:24px}.rmgRecorded{gap:15px}.rmgClientGrid{gap:8px}.rmgClient{padding:14px}}
-@media(prefers-reduced-motion:reduce){.rmgFaq details[open] summary span{transition:none}}
+@media(max-width:720px){.remoteMcpGuide{padding:0 18px 55px}.rmgHero{grid-template-columns:1fr;gap:25px;padding:48px 0}.rmgHero h1{font-size:clamp(39px,9vw,52px)}.rmgHeroCopy>p{font-size:16px}.rmgVisualBody{padding:26px 12px}.rmgVisualCore{width:92%}.rmgVisualClients>.rmgBrandChip,.rmgVisualDevices>.rmgPlatformChip{font-size:11px;padding:8px}.rmgJump{padding:14px;gap:15px;justify-content:flex-start}.rmgJump a{font-size:12px}.rmgSection{padding-top:68px}.rmgCompare,.rmgClientGrid,.rmgSecurityCards,.rmgNext{grid-template-columns:1fr}.rmgCompare article{padding:22px}.rmgCompare p{min-height:0}.rmgSteps{padding:3px 18px}.rmgSteps article{grid-template-columns:35px minmax(0,1fr);gap:10px}.rmgStepNumber{font-size:17px}.rmgSectionHeading p{font-size:15px}.rmgNext{gap:13px;margin-top:62px;padding:24px}.rmgRecorded{gap:15px}.rmgClientGrid{gap:8px}.rmgClient{padding:14px}}
+@media(prefers-reduced-motion:reduce){.rmgFaq details[open] summary span{transition:none}.rmgVisualClients>.rmgBrandChip,.rmgVisualDevices>.rmgPlatformChip,.rmgVisualClients>.rmgBrandChip img,.rmgVisualDevices>.rmgPlatformChip img,.rmgClient,.rmgClient img,.remoteMcpGuide .homeDemoClientSwitch img{transition:none;transform:none!important}}
