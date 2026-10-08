@@ -37,6 +37,7 @@ const PlannedGoalEditor = React.lazy(() => import("./planned-goal-view.js").then
 
 const Documentation = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.Documentation })));
 const McpReference = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.McpReference })));
+const ChromeExtensionPage = React.lazy(() => import("./chrome-extension-page.js").then(module => ({ default: module.ChromeExtensionPage })));
 const RemoteMcpGuide = React.lazy(() => import("./remote-mcp-guide.js").then(module => ({ default: module.RemoteMcpGuide })));
 const UseCaseCatalog = React.lazy(() => import("./use-cases.js").then(module => ({ default: module.UseCaseCatalog })));
 const UseCaseDetail = React.lazy(() => import("./use-cases.js").then(module => ({ default: module.UseCaseDetail })));
@@ -505,7 +506,7 @@ function PublicHeader({ user }: { user?: User | null }) {
                 <strong>Cursor</strong>
                 <small>{tr("Installation guide", "安装指南")}</small>
               </a>
-              <a href="/docs/mcp#chrome-browser">
+              <a href="/chrome-extension">
                 <strong>Chrome Browser <span className="navBeta">Beta</span></strong>
                 <small>{tr("Share selected tabs with AI", "把指定浏览器标签页共享给 AI")}</small>
               </a>
@@ -7047,6 +7048,7 @@ function App() {
   if (location.pathname === "/blogs/how-remote-arc-works") return <ArchitectureArticlePage user={user === undefined ? null : user} />;
   if (location.pathname === "/resources") return <ResourcesRedirect />;
   if (location.pathname === "/remote-mcp") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading guide…", "正在加载指南…")}</main>}><RemoteMcpGuide /></React.Suspense></PublicLayout>;
+  if (location.pathname === "/chrome-extension") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="chromeExtensionPage" role="status">{tr("Loading Chrome extension…", "正在加载 Chrome 扩展页面…")}</main>}><ChromeExtensionPage /></React.Suspense></PublicLayout>;
   if (location.pathname === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
   if (location.pathname === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
   if (location.pathname === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;

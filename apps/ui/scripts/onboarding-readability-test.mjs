@@ -26,7 +26,12 @@ for (const path of [
 const mcpDocs = readFileSync(new URL("../src/product-docs.tsx", import.meta.url), "utf8");
 assert.ok(!installGuide.includes("remote-arc-browser.zip"), "AI client setup guides must not include Chrome download");
 const chromeSection = mcpDocs.slice(mcpDocs.indexOf('<section id="chrome-browser">'));
-assert.ok(chromeSection.indexOf("chromeCompanionDownload") > 0, "Chrome Browser section needs download at its top");
-assert.ok(chromeSection.indexOf("chromeCompanionDownload") < chromeSection.indexOf("Download and unzip"), "download must come before instructions");
-assert.ok(chromeSection.includes("remote-arc-browser.zip?v="), "keep versioned Chrome download");
+assert.ok(chromeSection.includes("/chrome-extension"), "old MCP reference should link to dedicated download page");
+assert.ok(!chromeSection.includes("chromeCompanionDownload"), "download card must not be buried within MCP reference");
+assert.match(source, /href="\/chrome-extension"/, "Chrome Browser navigation must open a dedicated page, not scroll a guide");
+const chromePage = readFileSync(new URL("../src/chrome-extension-page.tsx", import.meta.url), "utf8");
+assert.match(chromePage, /chromeDownloadHero/, "standalone Chrome extension page needs a top download card");
+assert.match(chromePage, /remote-arc-browser.zip\?v=/, "versioned download belongs in top hero card");
+assert.ok(chromePage.indexOf("chromeDownloadHero") < chromePage.indexOf("chromeGuideSteps"), "download hero must precede installation steps");
+assert.doesNotMatch(source, /\/docs\/mcp#chrome-browser/, "Chrome Browser navigation must not jump to an anchor");
 console.log("PASS: readable onboarding and required two-sided MCP setup instructions");
