@@ -163,4 +163,25 @@ assert.deepEqual(await challengedScopes(authIdentity("devices:read computer:read
   device_id: "scope-test-device", path: "/scope-test.txt", content: "scope test",
 }), new Set(["devices:read", "computer:read", "computer:write", "offline_access"]));
 
+// Production deliberately disables experimental goal creation/decisions, but
+// read-only context for an existing goal must still be discoverable by clients.
+const disabledGoalsMcp = createRemoteLinkMcp(
+  { ...authEnv, ENABLE_EXPERIMENTAL_AGENT_GOALS: "0" },
+  authIdentity("automation:read"),
+);
+const listed = await disabledGoalsMcp.fetch(new Request(authEnv.PUBLIC_ORIGIN + "/mcp", {
+  method: "POST",
+  headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+  body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+}));
+const listedText = await listed.text();
+assert(listed.ok, listedText);
+const listedJson = JSON.parse(listedText.trim().startsWith("{")
+  ? listedText : listedText.split("\n").find(line => line.startsWith("data: "))!.slice(6));
+assert(!listedJson.error, listedText);
+const listedNames = new Set<string>(listedJson.result.tools.map((tool: { name: string }) => tool.name));
+assert(listedNames.has("get_goal_context"), "existing goal checkpoints remain readable in production");
+assert(!listedNames.has("create_agent_goal"), "experimental goal creation must stay disabled");
+assert(!listedNames.has("submit_goal_decision"), "experimental mutations must stay disabled");
+
 console.log("PASS: MCP error contract, incremental OAuth scopes, and admin/operator unlimited usage regressions");
