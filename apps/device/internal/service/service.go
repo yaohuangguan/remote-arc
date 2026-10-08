@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/config"
 	"github.com/yaohuangguan/remote-arc/apps/device/internal/lease"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core-go/config"
 )
 
 const Label = "app.remotearc.agent"
