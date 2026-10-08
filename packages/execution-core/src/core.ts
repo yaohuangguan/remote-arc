@@ -20,7 +20,7 @@ import {
 import {
   assertCommandAllowed,
   createUndoSnapshot,
-  discardUndoSnapshot,
+  discardUnchangedUndoSnapshot,
   finalizeUndoSnapshot,
   listUndoActions,
   undoChange,
@@ -500,7 +500,9 @@ export class RemoteArcExecutionCore {
             undo_storage: undoAvailable ? "local-device-only" : null,
           });
         } catch (error) {
-          await discardUndoSnapshot(snapshot);
+          // A post-rename sync failure can leave the file changed. Retain the
+          // prepared snapshot for inspection; it cannot authorize auto-Undo.
+          await discardUnchangedUndoSnapshot(snapshot);
           throw error;
         }
       }

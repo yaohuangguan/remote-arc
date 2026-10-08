@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { RemoteArcExecutionCore } from "../src/index.js";
 import { createUndoSnapshot, undoChange } from "../src/safety.js";
-import { fileDurability } from "../src/durability.js";
+import { fileDurability, undoDurability } from "../src/durability.js";
 
 // Existing TS installations must not implicitly start paying for fsync.
 // Explicit durable mode remains available for parity testing.
@@ -17,9 +17,11 @@ if (previousDurability === undefined) delete process.env.REMOTEARC_FILE_DURABILI
 else process.env.REMOTEARC_FILE_DURABILITY = previousDurability;
 
 
-for (const mode of ["atomic","durable"]) {
+for (const mode of ["atomic","durable","layered"]) {
  const root=await fs.mkdtemp(path.join(os.tmpdir(),"ra-ts-durability-"));
- process.env.REMOTEARC_FILE_DURABILITY=mode;
+ process.env.REMOTEARC_FILE_DURABILITY=mode === "layered" ? "atomic" : mode;
+ process.env.REMOTEARC_UNDO_DURABILITY=mode === "layered" ? "durable" : mode;
+ assert.equal(undoDurability(), mode === "atomic" ? "atomic" : "durable");
  process.env.REMOTEARC_UNDO_ROOT=path.join(root,"undo");
  const trusted=path.join(root,"trusted"),target=path.join(trusted,"file.txt");
  await fs.mkdir(trusted,{recursive:true});

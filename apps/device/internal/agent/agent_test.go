@@ -171,10 +171,19 @@ func TestAuthenticatedWebsocketToolCallsReconnectAndPrivateJournal(t *testing.T)
 	done := make(chan error, 1)
 	go func() { done <- a.Run(ctx) }()
 	defer cancel()
+	var previousConnection map[string]any
 	for i := 0; i < 4; i++ {
 		select {
 		case reply := <-replies:
 			if reply["type"] == "hello" {
+				device := reply["device"].(map[string]any)
+				if device["connectionSequence"] != float64(connections.Load()) {
+					t.Fatal("session counter did not follow WebSocket handshakes")
+				}
+				if previousConnection != nil && (device["connectedAt"] == previousConnection["connectedAt"] || device["pid"] != previousConnection["pid"]) {
+					t.Fatal("reconnect did not keep PID and update session timestamp")
+				}
+				previousConnection = device
 				if reply["device"].(map[string]any)["id"] != cfg.DeviceID {
 					t.Fatal("device identity changed")
 				}
@@ -187,6 +196,11 @@ func TestAuthenticatedWebsocketToolCallsReconnectAndPrivateJournal(t *testing.T)
 		case <-time.After(10 * time.Second):
 			t.Fatal("websocket/reconnect timed out")
 		}
+	}
+	// Publishing presence on the same socket must not fabricate a reconnect.
+	presence := a.hello(ctx)["device"].(map[string]any)
+	if presence["connectedAt"] != previousConnection["connectedAt"] || presence["connectionSequence"] != uint64(2) {
+		t.Fatal("presence changed session identity")
 	}
 	cancel()
 	select {

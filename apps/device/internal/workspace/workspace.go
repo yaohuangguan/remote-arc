@@ -228,7 +228,7 @@ func (m *Manager) Call(ctx context.Context, args map[string]any, p protocol.Poli
 		}
 	}
 	b, _ = json.Marshal(s)
-	if e = config.AtomicWrite(file, b, 0600); e != nil {
+	if e = config.DurableWrite(file, b, 0600); e != nil {
 		return nil, e
 	}
 	r := result()

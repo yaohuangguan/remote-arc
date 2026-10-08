@@ -12,10 +12,15 @@ import (
 // Both explicit profiles must preserve atomic replace, persisted restart-Undo
 // and conflict protection. A pre-commit crash must never authorize rollback.
 func TestDurabilityProfilesAndInterruptedUndo(t *testing.T) {
-	for _, mode := range []string{"atomic", "durable"} {
+	for _, mode := range []string{"atomic", "durable", "layered"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
-			t.Setenv("REMOTEARC_FILE_DURABILITY", mode)
+			fileMode, undoMode := mode, mode
+			if mode == "layered" {
+				fileMode, undoMode = "atomic", "durable"
+			}
+			t.Setenv("REMOTEARC_FILE_DURABILITY", fileMode)
+			t.Setenv("REMOTEARC_UNDO_DURABILITY", undoMode)
 			t.Setenv("REMOTEARC_UNDO_ROOT", filepath.Join(root, "undo"))
 			t.Setenv("REMOTEARC_HOME", root)
 			target := filepath.Join(root, "trusted", "file.txt")

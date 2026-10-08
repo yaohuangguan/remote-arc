@@ -80,6 +80,13 @@ jobs:
             packages/execution-core-go/go.sum
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:device
+      - run: node scripts/go-device-soak.mjs --duration-seconds 60 --report work/benchmarks/soak.json
+      - run: node benchmarks/agent.mjs --samples 20 --rounds 1 --profiles atomic --report work/benchmarks/agent-smoke.json
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: agent-validation-${{ matrix.os }}
+          path: work/benchmarks/*.json
 
   native-core:
     timeout-minutes: 15

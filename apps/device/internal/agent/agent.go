@@ -30,20 +30,22 @@ type Background interface {
 	Disable(context.Context) error
 }
 type Agent struct {
-	Config            config.Config
-	Version           string
-	BackgroundProcess bool
-	Client            *Client
-	Core              *execution.Core
-	Journal           *journal.Journal
-	Background        Background
-	Stop              func()
-	Save              func(config.Config) error
-	Load              func() (config.Config, error)
-	mu                sync.Mutex
-	connected         bool
-	workspace         workspace.Manager
-	settings          sync.Mutex
+	Config             config.Config
+	Version            string
+	BackgroundProcess  bool
+	Client             *Client
+	Core               *execution.Core
+	Journal            *journal.Journal
+	Background         Background
+	Stop               func()
+	Save               func(config.Config) error
+	Load               func() (config.Config, error)
+	mu                 sync.Mutex
+	connected          bool
+	connectedAt        string
+	connectionSequence uint64
+	workspace          workspace.Manager
+	settings           sync.Mutex
 }
 
 func New(cfg config.Config, version string, background bool, log *journal.Journal) *Agent {
@@ -62,7 +64,7 @@ func (a *Agent) cfg() config.Config { a.mu.Lock(); defer a.mu.Unlock(); return a
 func (a *Agent) Status() map[string]any {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	return map[string]any{"engine": "go", "version": a.Version, "pid": os.Getpid(), "deviceId": a.Config.DeviceID, "mode": a.Config.Mode, "connected": a.connected, "backgroundProcess": a.BackgroundProcess}
+	return map[string]any{"engine": "go", "version": a.Version, "pid": os.Getpid(), "deviceId": a.Config.DeviceID, "mode": a.Config.Mode, "connected": a.connected, "connectedAt": a.connectedAt, "connectionSequence": a.connectionSequence, "fileDurability": config.FileDurability(), "undoDurability": config.UndoDurability(), "backgroundProcess": a.BackgroundProcess}
 }
 func (a *Agent) identityValid() bool {
 	saved, e := a.Load()
@@ -78,6 +80,9 @@ func (a *Agent) identityValid() bool {
 }
 func (a *Agent) hello(ctx context.Context) map[string]any {
 	cfg := a.cfg()
+	a.mu.Lock()
+	connectedAt, sequence := a.connectedAt, a.connectionSequence
+	a.mu.Unlock()
 	status := a.Background.Status(ctx)
 	hostname, _ := os.Hostname()
 	names := []string{}
@@ -85,7 +90,7 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 		names = append(names, t.Name)
 	}
 	names = append(names, "background_agent_status", "set_background_agent", "set_task_keep_awake", "goal_workspace", "agent_execution_log")
-	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "connectedAt": time.Now().UTC().Format(time.RFC3339Nano), "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version}, "tools": names, "capabilities": []string{"native_core_v1", "device_policy_v1", "undo_history_v1", "background_agent_v1", "background_recovery_v2", "go_agent_v1"}}
+	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version}, "tools": names, "capabilities": []string{"native_core_v1", "device_policy_v1", "undo_history_v1", "background_agent_v1", "background_recovery_v2", "go_agent_v1"}}
 }
 func (a *Agent) heartbeat(ctx context.Context) error {
 	cfg := a.cfg()
@@ -222,6 +227,11 @@ func (a *Agent) Run(ctx context.Context) error {
 	return ctx.Err()
 }
 func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
+	a.mu.Lock()
+	a.connectionSequence++
+	a.connectedAt = time.Now().UTC().Format(time.RFC3339Nano)
+	sequence := a.connectionSequence
+	a.mu.Unlock()
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 	awake := power.New()
@@ -240,7 +250,7 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 	a.connected = true
 	a.mu.Unlock()
 	defer func() { a.mu.Lock(); a.connected = false; a.mu.Unlock() }()
-	a.log("success", "Connected · Go agent "+a.Version)
+	a.log("success", fmt.Sprintf("Connected · Go agent %s · session %d", a.Version, sequence))
 	conn.SetReadLimit(32 << 20)
 	conn.SetReadDeadline(time.Now().Add(75 * time.Second))
 	conn.SetPongHandler(func(string) error { return conn.SetReadDeadline(time.Now().Add(75 * time.Second)) })

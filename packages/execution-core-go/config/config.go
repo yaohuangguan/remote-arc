@@ -72,7 +72,7 @@ func SaveAt(dir string, c Config) error {
 	if e != nil {
 		return e
 	}
-	return AtomicWrite(filepath.Join(dir, "config.json"), append(b, '\n'), 0600)
+	return DurableWrite(filepath.Join(dir, "config.json"), append(b, '\n'), 0600)
 }
 
 // FileDurability selects equal atomic/durable profiles in the Go and TS cores.
@@ -83,8 +83,24 @@ func FileDurability() string {
 	}
 	return "durable"
 }
+
+// UndoDurability can be explicitly separated from ordinary workspace writes.
+// Unset retains the existing profile; invalid values retain stronger syncing.
+func UndoDurability() string {
+	switch os.Getenv("REMOTEARC_UNDO_DURABILITY") {
+	case "":
+		return FileDurability()
+	case "atomic":
+		return "atomic"
+	default:
+		return "durable"
+	}
+}
 func SyncDirectory(dir string) error {
-	if FileDurability() != "durable" || runtime.GOOS == "windows" {
+	return SyncDirectoryWithDurability(dir, FileDurability())
+}
+func SyncDirectoryWithDurability(dir, durability string) error {
+	if durability != "durable" || runtime.GOOS == "windows" {
 		return nil
 	}
 	f, e := os.Open(dir)
@@ -99,6 +115,25 @@ func SyncDirectory(dir string) error {
 	return ce
 }
 func AtomicWrite(path string, b []byte, mode os.FileMode) error {
+	return AtomicWriteWithDurability(path, b, mode, FileDurability())
+}
+
+// DurableWrite protects Agent state independently of workspace/benchmark flags.
+func DurableWrite(path string, b []byte, mode os.FileMode) error {
+	return AtomicWriteWithDurability(path, b, mode, "durable")
+}
+func AtomicWriteWithDurability(path string, b []byte, mode os.FileMode, durability string) error {
+	return atomicWrite(path, b, mode, durability, writeOperations{sync: (*os.File).Sync, rename: os.Rename, syncDirectory: SyncDirectoryWithDurability})
+}
+
+// Per-call operations let tests inject storage failures without global hooks.
+type writeOperations struct {
+	sync          func(*os.File) error
+	rename        func(string, string) error
+	syncDirectory func(string, string) error
+}
+
+func atomicWrite(path string, b []byte, mode os.FileMode, durability string, ops writeOperations) error {
 	if e := os.MkdirAll(filepath.Dir(path), 0700); e != nil {
 		return e
 	}
@@ -111,8 +146,8 @@ func AtomicWrite(path string, b []byte, mode os.FileMode) error {
 	if e = f.Chmod(mode.Perm()); e == nil {
 		_, e = f.Write(b)
 	}
-	if e == nil && FileDurability() == "durable" {
-		e = f.Sync()
+	if e == nil && durability == "durable" {
+		e = ops.sync(f)
 	}
 	ce := f.Close()
 	if e != nil {
@@ -121,10 +156,10 @@ func AtomicWrite(path string, b []byte, mode os.FileMode) error {
 	if ce != nil {
 		return ce
 	}
-	if e = os.Rename(name, path); e != nil {
+	if e = ops.rename(name, path); e != nil {
 		return e
 	}
-	return SyncDirectory(filepath.Dir(path))
+	return ops.syncDirectory(filepath.Dir(path), durability)
 }
 func Reset() error {
 	for _, p := range []string{filepath.Join(Dir(), "config.json"), filepath.Join(Home(), ".remote-link", "config.json")} {

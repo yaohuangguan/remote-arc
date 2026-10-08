@@ -385,6 +385,7 @@ func runOwned(parent context.Context, o Options, cfg config.Config, version stri
 	a.Stop = cancel
 	a.Client = client
 	log.Log("info", "Go device runtime "+version+" · local mode "+a.Core.Mode)
+	log.Log("info", fmt.Sprintf("File writes: %s · Undo: %s · device state: durable", config.FileDurability(), config.UndoDurability()))
 	log.Log("info", fmt.Sprintf("Local tools ready: %d execution tools and 5 device tools.", len(a.Core.ListTools())))
 	if cfg.BackgroundEnabled == nil {
 		log.Log("info", "Background connection is not configured yet · finish setup in Dashboard → Devices.")

@@ -9,9 +9,14 @@ export type FileDurability = "atomic" | "durable";
 export function fileDurability(): FileDurability {
   return process.env.REMOTEARC_FILE_DURABILITY === "durable" ? "durable" : "atomic";
 }
+export function undoDurability(): FileDurability {
+  const value = process.env.REMOTEARC_UNDO_DURABILITY;
+  return value === undefined || value === "" ? fileDurability()
+    : value === "atomic" ? "atomic" : "durable";
+}
 
-export async function syncDirectory(dir: string) {
-  if (fileDurability() !== "durable" || process.platform === "win32") return;
+export async function syncDirectory(dir: string, durability = fileDurability()) {
+  if (durability !== "durable" || process.platform === "win32") return;
   const handle = await fs.open(dir, "r");
   try {
     await handle.sync();
@@ -24,6 +29,7 @@ export async function atomicWriteFile(
   target: string,
   value: string | Buffer,
   mode?: number,
+  durability = fileDurability(),
 ) {
   const dir = path.dirname(target);
   await fs.mkdir(dir, { recursive: true });
@@ -34,12 +40,12 @@ export async function atomicWriteFile(
     created = true;
     try {
       await handle.writeFile(value);
-      if (fileDurability() === "durable") await handle.sync();
+      if (durability === "durable") await handle.sync();
     } finally {
       await handle.close();
     }
     await fs.rename(tmp, target);
-    await syncDirectory(dir);
+    await syncDirectory(dir, durability);
   } finally {
     if (created) await fs.rm(tmp, { force: true }).catch(() => {});
   }

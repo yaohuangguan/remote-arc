@@ -258,7 +258,9 @@ func (c *Core) Call(ctx context.Context, name string, args map[string]any, p pro
 			data, e = editBlock(target, old, next, protocol.Number(args, "expected_replacements", 1))
 		}
 		if e != nil {
-			discardSnapshot(snap)
+			// A failed post-rename directory sync can leave the target changed.
+			// Keep the prepared snapshot for inspection instead of deleting it.
+			discardUnchangedSnapshot(snap)
 			break
 		}
 		available := finalizeSnapshot(snap)

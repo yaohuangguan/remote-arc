@@ -1,6 +1,6 @@
 # Remote Arc TS/Go parity benchmark
 
-Run from the repository root using `node benchmarks/run.mjs` after
+Run from the repository root using `pnpm benchmark:core`, or `node benchmarks/run.mjs` after
 compiling the two workers. This compares local execution-core JSONL requests
 and responses, **not** production Relay latency.
 
@@ -10,6 +10,9 @@ and responses, **not** production Relay latency.
   (best effort on Windows); the Go default in the 0.5.1 preview.
   The TypeScript compatibility runtime defaults to `atomic`, retaining its
   old no-explicit-fsync behavior. Profiles are identical when set explicitly.
+- `REMOTEARC_FILE_DURABILITY=atomic` plus `REMOTEARC_UNDO_DURABILITY=durable`:
+  opt-in layered policy. Both drivers set both settings explicitly; device
+  pairing/configuration writes in Go stay durable independently.
 - Undo safeguards are checked separately. The existing write-ahead snapshot
   protocol has a crash window before manifest finalization; such snapshots
   deliberately refuse automatic restoration.
@@ -25,10 +28,19 @@ Reproduction from this repository (Node 24, pnpm, Go):
 
 ```sh
 pnpm install --frozen-lockfile
-mkdir -p benchmarks/.bin
-(cd apps/device && go build -o ../../benchmarks/.bin/go-core ./cmd/benchcore)
-node node_modules/.pnpm/esbuild@0.28.2/node_modules/esbuild/bin/esbuild benchmarks/ts-worker.ts --bundle --platform=node --format=esm --outfile=benchmarks/.bin/ts-core.mjs
-node benchmarks/run.mjs
+node benchmarks/build.mjs
+node benchmarks/run.mjs --samples 200 --rounds 3
+pnpm build:device
+node benchmarks/agent.mjs --samples 200 --rounds 3
 ```
 
-Output is stored under ~/Work/remote-arc-abcd-benchmark.json; temporary test data and Undo stores are cleaned at exit.
+L1 output is `work/benchmarks/core.json`; full Agent L2 output is
+`work/benchmarks/agent.json`. Override with `--report PATH`. Engines run serially,
+order alternates by round, warmup is excluded and raw samples are retained.
+Temporary data and Undo stores are cleaned at exit. The historical report's
+45-second residency is not the multi-hour Agent validation implemented by
+`scripts/go-device-soak.mjs`.
+
+See [persistence and validation](../docs/go-persistence-validation.md) for
+contracts, reproducibility and production L3 limitations. Do not mix local IPC,
+loopback full Agent and production connector timings into one speed ratio.

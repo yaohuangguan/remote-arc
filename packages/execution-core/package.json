@@ -6,7 +6,7 @@
   "exports": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test:integration": "tsx scripts/integration.ts && tsx scripts/durability.ts"
+    "test:integration": "tsx scripts/integration.ts && tsx scripts/durability.ts && tsx scripts/durability-faults.ts"
   },
   "devDependencies": {
     "@types/node": "^24.13.6",

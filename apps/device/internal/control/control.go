@@ -69,7 +69,7 @@ func Start(dir, version string, status func() any, stop func()) (*Server, error)
 	})
 	s.HTTP = &http.Server{Handler: mux, ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second, MaxHeaderBytes: 8192}
 	data, _ := json.Marshal(ep)
-	if e = config.AtomicWrite(s.path, data, 0600); e != nil {
+	if e = config.DurableWrite(s.path, data, 0600); e != nil {
 		l.Close()
 		return nil, e
 	}

@@ -178,14 +178,14 @@ func (c *Controller) installBinary() (Registration, error) {
 		}
 		existing, _ := os.ReadFile(binary)
 		if string(existing) != string(b) {
-			if e = config.AtomicWrite(binary, b, 0700); e != nil {
+			if e = config.DurableWrite(binary, b, 0700); e != nil {
 				return Registration{}, e
 			}
 		}
 	}
 	reg := Registration{Engine: "go", Binary: binary, Version: c.Version}
 	b, _ := json.Marshal(reg)
-	if e = config.AtomicWrite(c.marker(), b, 0600); e != nil {
+	if e = config.DurableWrite(c.marker(), b, 0600); e != nil {
 		return reg, e
 	}
 	return reg, nil
@@ -233,7 +233,7 @@ func (c *Controller) Enable(ctx context.Context) (Status, error) {
 		if current.Active {
 			_, _ = c.Run(ctx, "launchctl", "bootout", "gui/"+c.UID+"/"+Label)
 		}
-		if e = config.AtomicWrite(c.serviceFile(), []byte(plist), 0600); e == nil {
+		if e = config.DurableWrite(c.serviceFile(), []byte(plist), 0600); e == nil {
 			e = run("launchctl", "enable", "gui/"+c.UID+"/"+Label)
 		}
 		if e == nil {
@@ -241,7 +241,7 @@ func (c *Controller) Enable(ctx context.Context) (Status, error) {
 		}
 	case "linux":
 		unit := "[Unit]\nDescription=Remote Arc Go device agent\n[Service]\nType=simple\nExecStart=" + unitQuote(reg.Binary) + " --agent\nRestart=on-failure\nRestartSec=5\nStandardOutput=append:" + unitQuote(filepath.Join(logs, "agent.log")) + "\nStandardError=append:" + unitQuote(filepath.Join(logs, "agent-error.log")) + "\n[Install]\nWantedBy=default.target\n"
-		if e = config.AtomicWrite(c.serviceFile(), []byte(unit), 0600); e == nil {
+		if e = config.DurableWrite(c.serviceFile(), []byte(unit), 0600); e == nil {
 			e = run("systemctl", "--user", "daemon-reload")
 		}
 		if e == nil {

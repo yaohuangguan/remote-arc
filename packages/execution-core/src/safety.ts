@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { atomicWriteFile, syncDirectory } from "./durability.js";
+import { atomicWriteFile, syncDirectory, undoDurability } from "./durability.js";
 
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_SNAPSHOT_BYTES = 20 * 1024 * 1024;
@@ -125,10 +125,10 @@ export async function createUndoSnapshot(
   const id = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   const directory = path.join(undoRoot(), id);
   await fs.mkdir(directory, { recursive: true, mode: 0o700 });
-  await syncDirectory(undoRoot());
+  await syncDirectory(undoRoot(), undoDurability());
 
   if (original) {
-    await atomicWriteFile(path.join(directory, "content.bin"), original, 0o600);
+    await atomicWriteFile(path.join(directory, "content.bin"), original, 0o600, undoDurability());
   }
 
   const manifest: UndoManifest = {
@@ -145,6 +145,7 @@ export async function createUndoSnapshot(
     path.join(directory, "manifest.json"),
     JSON.stringify(manifest, null, 2) + "\n",
     0o600,
+    undoDurability(),
   );
 
   await cleanupUndoStore();
@@ -165,10 +166,11 @@ export async function finalizeUndoSnapshot(snapshot: UndoSnapshot | null) {
       path.join(snapshot.directory, "manifest.json"),
       JSON.stringify(snapshot.manifest, null, 2) + "\n",
       0o600,
+      undoDurability(),
     );
     return true;
   } catch {
-    await discardUndoSnapshot(snapshot);
+    // A rename may succeed before its directory sync fails. Retain evidence.
     return false;
   }
 }
@@ -176,6 +178,18 @@ export async function finalizeUndoSnapshot(snapshot: UndoSnapshot | null) {
 export async function discardUndoSnapshot(snapshot: UndoSnapshot | null) {
   if (!snapshot) return;
   await fs.rm(snapshot.directory, { recursive: true, force: true }).catch(() => undefined);
+}
+export async function discardUnchangedUndoSnapshot(snapshot: UndoSnapshot | null) {
+  if (!snapshot) return;
+  try {
+    if (snapshot.manifest.existed) {
+      const before = await hashFile(path.join(snapshot.directory, "content.bin"));
+      if (before === await hashFile(snapshot.manifest.targetPath)) await discardUndoSnapshot(snapshot);
+    } else {
+      try { await fs.stat(snapshot.manifest.targetPath); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") await discardUndoSnapshot(snapshot); }
+    }
+  } catch { /* Uncertain file state retains recovery evidence. */ }
 }
 
 async function undoCandidates() {

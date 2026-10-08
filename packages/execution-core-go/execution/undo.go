@@ -122,17 +122,17 @@ func createSnapshot(tool, target string) (*snapshot, error) {
 	if e = os.Mkdir(snap.Dir, 0700); e != nil {
 		return nil, e
 	}
-	if e = config.SyncDirectory(undoRoot()); e != nil {
+	if e = config.SyncDirectoryWithDurability(undoRoot(), config.UndoDurability()); e != nil {
 		return nil, e
 	}
 	if original != nil {
-		if e = config.AtomicWrite(filepath.Join(snap.Dir, "content.bin"), original, 0600); e != nil {
+		if e = config.AtomicWriteWithDurability(filepath.Join(snap.Dir, "content.bin"), original, 0600, config.UndoDurability()); e != nil {
 			discardSnapshot(snap)
 			return nil, e
 		}
 	}
 	b, _ := json.MarshalIndent(m, "", "  ")
-	if e = config.AtomicWrite(filepath.Join(snap.Dir, "manifest.json"), b, 0600); e != nil {
+	if e = config.AtomicWriteWithDurability(filepath.Join(snap.Dir, "manifest.json"), b, 0600, config.UndoDurability()); e != nil {
 		discardSnapshot(snap)
 		return nil, e
 	}
@@ -143,19 +143,38 @@ func discardSnapshot(s *snapshot) {
 		_ = os.RemoveAll(s.Dir)
 	}
 }
+func discardUnchangedSnapshot(s *snapshot) {
+	if s == nil {
+		return
+	}
+	if !s.Manifest.Existed {
+		if _, err := os.Stat(s.Manifest.Target); errors.Is(err, os.ErrNotExist) {
+			discardSnapshot(s)
+		}
+		return
+	}
+	before, err := hashFile(filepath.Join(s.Dir, "content.bin"))
+	if err != nil {
+		return
+	}
+	after, err := hashFile(s.Manifest.Target)
+	if err == nil && before == after {
+		discardSnapshot(s)
+	}
+}
 func finalizeSnapshot(s *snapshot) bool {
 	if s == nil {
 		return false
 	}
 	h, e := hashFile(s.Manifest.Target)
 	if e != nil {
-		discardSnapshot(s)
 		return false
 	}
 	s.Manifest.Hash = h
 	b, _ := json.MarshalIndent(s.Manifest, "", "  ")
-	if config.AtomicWrite(filepath.Join(s.Dir, "manifest.json"), b, 0600) != nil {
-		discardSnapshot(s)
+	if config.AtomicWriteWithDurability(filepath.Join(s.Dir, "manifest.json"), b, 0600, config.UndoDurability()) != nil {
+		// Retain recovery evidence: replacement may have happened before a
+		// directory sync failed. A prepared manifest still refuses auto-Undo.
 		return false
 	}
 	return true
@@ -239,6 +258,9 @@ func restoreUndoSnapshot(s snapshot) (map[string]any, error) {
 		}
 	} else {
 		if e = os.Remove(m.Target); e != nil {
+			return nil, e
+		}
+		if e = config.SyncDirectory(filepath.Dir(m.Target)); e != nil {
 			return nil, e
 		}
 	}

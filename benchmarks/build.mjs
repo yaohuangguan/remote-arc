@@ -1,0 +1,13 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import {createRequire} from "node:module";
+import {spawnSync} from "node:child_process";
+import {root} from "./lib.mjs";
+const require = createRequire(path.join(root, "packages/cli/package.json"));
+const esbuild = createRequire(require.resolve("tsup"))("esbuild");
+await fs.mkdir(path.join(root, "benchmarks/.bin"), {recursive:true});
+await esbuild.build({entryPoints:[path.join(root, "benchmarks/ts-worker.ts")], outfile:path.join(root,"benchmarks/.bin/ts-core.mjs"), bundle:true, platform:"node", format:"esm", target:"node24"});
+const binary = path.join(root, "benchmarks/.bin/go-core" + (process.platform === "win32" ? ".exe" : ""));
+const built = spawnSync("go", ["build", "-o", binary, "./cmd/benchcore"], {cwd:path.join(root, "apps/device"), stdio:"inherit", windowsHide:true});
+if (built.error || built.status !== 0) throw built.error ?? new Error("Go benchmark build failed");
+console.log("Core benchmark workers built from current source.");
