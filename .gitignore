@@ -11,3 +11,6 @@ Thumbs.db
 apps/relay/wrangler.e2e.json
 work/
 apps/device/coverage.out
+
+# Ephemeral local TS/Go parity benchmark binaries
+/benchmarks/.bin/

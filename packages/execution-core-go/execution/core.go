@@ -133,37 +133,37 @@ func (c *Core) Call(ctx context.Context, name string, args map[string]any, p pro
 		if name == "list_undo_actions" {
 			limit = protocol.Number(args, "limit", 20)
 		}
-		actions, err := listUndo(limit)
+		items, err := undoCandidates()
 		if err != nil {
 			return protocol.Result{}, err
 		}
-		visible := []map[string]any{}
-		for _, a := range actions {
-			if _, err := policy.Enforce(a["path"].(string), p, true); err == nil {
+		visible := []snapshot{}
+		for _, a := range items {
+			if _, err := policy.Enforce(a.Manifest.Target, p, true); err == nil {
 				visible = append(visible, a)
 			}
 		}
 		if name == "list_undo_actions" {
-			result = visible
+			// List metadata and validation status only for authorized records.
+			result, e = listUndoFiltered(visible, limit)
 			break
 		}
-		id := ""
+		var selected *snapshot
 		if name == "undo_change" {
-			id, e = protocol.String(args, "action_id")
-			if e != nil {
-				return protocol.Result{}, e
+			id, err := protocol.String(args, "action_id")
+			if err != nil {
+				return protocol.Result{}, err
 			}
-		}
-		if name == "undo_last_change" && len(visible) > 0 {
-			id = visible[0]["id"].(string)
-		}
-		found := false
-		for _, a := range visible {
-			if a["id"] == id {
-				found = true
+			for i := range visible {
+				if visible[i].Manifest.ID == id {
+					selected = &visible[i]
+					break
+				}
 			}
+		} else if len(visible) > 0 {
+			selected = &visible[0]
 		}
-		if !found {
+		if selected == nil {
 			if name == "undo_last_change" {
 				e = errors.New("No reversible in-scope Remote Arc file change is available.")
 			} else {
@@ -171,7 +171,7 @@ func (c *Core) Call(ctx context.Context, name string, args map[string]any, p pro
 			}
 			break
 		}
-		result, e = restoreUndo(id)
+		result, e = restoreUndoSnapshot(*selected)
 	case "start_process":
 		command, err := protocol.String(args, "command")
 		if err != nil {

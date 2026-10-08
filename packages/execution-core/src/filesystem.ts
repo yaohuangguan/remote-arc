@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import { atomicWriteFile, appendWithDurability } from "./durability.js";
 import path from "node:path";
 
 const MAX_DIRECTORY_ENTRIES = 2000;
@@ -272,19 +273,7 @@ export async function getFileInfo(targetPath: string) {
 }
 
 async function atomicWriteText(targetPath: string, content: string) {
-  const directory = path.dirname(targetPath);
-  await fs.mkdir(directory, { recursive: true });
-  const temporary = path.join(
-    directory,
-    "." + path.basename(targetPath) + ".remotearc-" + crypto.randomUUID() + ".tmp",
-  );
-
-  try {
-    await fs.writeFile(temporary, content, "utf8");
-    await fs.rename(temporary, targetPath);
-  } finally {
-    await fs.rm(temporary, { force: true }).catch(() => undefined);
-  }
+  await atomicWriteFile(targetPath, content);
 }
 
 export async function writeTextFile(
@@ -294,7 +283,7 @@ export async function writeTextFile(
 ) {
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
   if (mode === "append") {
-    await fs.appendFile(targetPath, content, "utf8");
+    await appendWithDurability(targetPath, content);
   } else {
     await atomicWriteText(targetPath, content);
   }

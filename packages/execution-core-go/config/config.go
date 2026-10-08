@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 const DefaultOrigin = "https://mcp.remotearc.app"
@@ -73,6 +74,30 @@ func SaveAt(dir string, c Config) error {
 	}
 	return AtomicWrite(filepath.Join(dir, "config.json"), append(b, '\n'), 0600)
 }
+
+// FileDurability selects equal atomic/durable profiles in the Go and TS cores.
+// Default is durable; the atomic profile is explicit, and never fsyncs.
+func FileDurability() string {
+	if os.Getenv("REMOTEARC_FILE_DURABILITY") == "atomic" {
+		return "atomic"
+	}
+	return "durable"
+}
+func SyncDirectory(dir string) error {
+	if FileDurability() != "durable" || runtime.GOOS == "windows" {
+		return nil
+	}
+	f, e := os.Open(dir)
+	if e != nil {
+		return e
+	}
+	err := f.Sync()
+	ce := f.Close()
+	if err != nil {
+		return err
+	}
+	return ce
+}
 func AtomicWrite(path string, b []byte, mode os.FileMode) error {
 	if e := os.MkdirAll(filepath.Dir(path), 0700); e != nil {
 		return e
@@ -86,7 +111,7 @@ func AtomicWrite(path string, b []byte, mode os.FileMode) error {
 	if e = f.Chmod(mode.Perm()); e == nil {
 		_, e = f.Write(b)
 	}
-	if e == nil {
+	if e == nil && FileDurability() == "durable" {
 		e = f.Sync()
 	}
 	ce := f.Close()
@@ -96,7 +121,10 @@ func AtomicWrite(path string, b []byte, mode os.FileMode) error {
 	if ce != nil {
 		return ce
 	}
-	return os.Rename(name, path)
+	if e = os.Rename(name, path); e != nil {
+		return e
+	}
+	return SyncDirectory(filepath.Dir(path))
 }
 func Reset() error {
 	for _, p := range []string{filepath.Join(Dir(), "config.json"), filepath.Join(Home(), ".remote-link", "config.json")} {

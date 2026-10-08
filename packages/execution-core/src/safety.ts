@@ -3,6 +3,7 @@ import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { atomicWriteFile, syncDirectory } from "./durability.js";
 
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_SNAPSHOT_BYTES = 20 * 1024 * 1024;
@@ -124,9 +125,10 @@ export async function createUndoSnapshot(
   const id = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   const directory = path.join(undoRoot(), id);
   await fs.mkdir(directory, { recursive: true, mode: 0o700 });
+  await syncDirectory(undoRoot());
 
   if (original) {
-    await fs.writeFile(path.join(directory, "content.bin"), original, { mode: 0o600 });
+    await atomicWriteFile(path.join(directory, "content.bin"), original, 0o600);
   }
 
   const manifest: UndoManifest = {
@@ -139,10 +141,10 @@ export async function createUndoSnapshot(
     bytes,
   };
 
-  await fs.writeFile(
+  await atomicWriteFile(
     path.join(directory, "manifest.json"),
     JSON.stringify(manifest, null, 2) + "\n",
-    { mode: 0o600 },
+    0o600,
   );
 
   await cleanupUndoStore();
@@ -159,10 +161,10 @@ export async function finalizeUndoSnapshot(snapshot: UndoSnapshot | null) {
   if (!snapshot) return false;
   try {
     snapshot.manifest.postChangeHash = await hashFile(snapshot.manifest.targetPath);
-    await fs.writeFile(
+    await atomicWriteFile(
       path.join(snapshot.directory, "manifest.json"),
       JSON.stringify(snapshot.manifest, null, 2) + "\n",
-      { mode: 0o600 },
+      0o600,
     );
     return true;
   } catch {
@@ -250,13 +252,10 @@ async function restoreUndoCandidate(candidate: { directory: string; manifest: Un
 
   if (manifest.existed) {
     const original = await fs.readFile(path.join(directory, "content.bin"));
-    await fs.mkdir(path.dirname(manifest.targetPath), { recursive: true });
-    await fs.writeFile(manifest.targetPath, original);
-    if (manifest.mode !== undefined) {
-      await fs.chmod(manifest.targetPath, manifest.mode).catch(() => undefined);
-    }
+    await atomicWriteFile(manifest.targetPath, original, manifest.mode);
   } else {
     await fs.rm(manifest.targetPath, { force: true });
+    await syncDirectory(path.dirname(manifest.targetPath));
   }
 
   await fs.rm(directory, { recursive: true, force: true });

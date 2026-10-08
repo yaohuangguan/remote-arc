@@ -254,6 +254,9 @@ func writeText(target, content, mode string) (map[string]any, error) {
 			return nil, e
 		}
 		_, e = f.WriteString(content)
+		if e == nil && config.FileDurability() == "durable" {
+			e = f.Sync()
+		}
 		ce := f.Close()
 		if e != nil {
 			return nil, e

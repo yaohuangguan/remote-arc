@@ -122,8 +122,11 @@ func createSnapshot(tool, target string) (*snapshot, error) {
 	if e = os.Mkdir(snap.Dir, 0700); e != nil {
 		return nil, e
 	}
+	if e = config.SyncDirectory(undoRoot()); e != nil {
+		return nil, e
+	}
 	if original != nil {
-		if e = os.WriteFile(filepath.Join(snap.Dir, "content.bin"), original, 0600); e != nil {
+		if e = config.AtomicWrite(filepath.Join(snap.Dir, "content.bin"), original, 0600); e != nil {
 			discardSnapshot(snap)
 			return nil, e
 		}
@@ -180,38 +183,65 @@ func listUndo(limit int) ([]map[string]any, error) {
 	}
 	return out, nil
 }
+
+// listUndoFiltered only hashes authorized entries; the caller already
+// scanned the snapshot store and checked workspace policy once.
+func listUndoFiltered(items []snapshot, limit int) ([]map[string]any, error) {
+	out := []map[string]any{}
+	limit = max(1, min(100, limit))
+	for _, snap := range items[:min(len(items), limit)] {
+		m := snap.Manifest
+		status := "legacy"
+		if m.Hash != "" {
+			h, err := hashFile(m.Target)
+			status = "ready"
+			if err != nil {
+				status = "missing"
+			} else if h != m.Hash {
+				status = "conflict"
+			}
+		}
+		out = append(out, map[string]any{"id": m.ID, "created_at": m.Created, "tool": m.Tool, "path": m.Target, "bytes": m.Bytes, "existed_before": m.Existed, "conflict_safe": m.Hash != "", "can_undo": status == "ready", "status": status})
+	}
+	return out, nil
+}
 func restoreUndo(id string) (map[string]any, error) {
 	items, e := undoCandidates()
 	if e != nil {
 		return nil, e
 	}
 	for _, s := range items {
-		m := s.Manifest
-		if m.ID != id {
-			continue
+		if s.Manifest.ID == id {
+			return restoreUndoSnapshot(s)
 		}
-		if m.Hash == "" {
-			return nil, errors.New("This snapshot predates conflict-safe Local Undo and cannot be restored automatically.")
-		}
-		h, e := hashFile(m.Target)
-		if e != nil || h != m.Hash {
-			return nil, errors.New("The target file changed again after the Remote Arc edit. Automatic undo was refused to avoid overwriting newer work.")
-		}
-		if m.Existed {
-			b, e := os.ReadFile(filepath.Join(s.Dir, "content.bin"))
-			if e != nil {
-				return nil, e
-			}
-			if e = config.AtomicWrite(m.Target, b, os.FileMode(m.Mode)&0777); e != nil {
-				return nil, e
-			}
-		} else {
-			if e = os.Remove(m.Target); e != nil {
-				return nil, e
-			}
-		}
-		discardSnapshot(&s)
-		return map[string]any{"restored": true, "action_id": m.ID, "tool": m.Tool, "path": m.Target, "snapshot_location": "local-device-only"}, nil
 	}
 	return nil, errors.New("Undo action not found or expired on this device.")
+}
+
+// The caller has already selected a workspace-allowed snapshot. Avoid an
+// expensive second directory scan and hashing all unrelated undo actions.
+func restoreUndoSnapshot(s snapshot) (map[string]any, error) {
+	m := s.Manifest
+	if m.Hash == "" {
+		return nil, errors.New("This snapshot predates conflict-safe Local Undo and cannot be restored automatically.")
+	}
+	h, e := hashFile(m.Target)
+	if e != nil || h != m.Hash {
+		return nil, errors.New("The target file changed again after the Remote Arc edit. Automatic undo was refused to avoid overwriting newer work.")
+	}
+	if m.Existed {
+		b, e := os.ReadFile(filepath.Join(s.Dir, "content.bin"))
+		if e != nil {
+			return nil, e
+		}
+		if e = config.AtomicWrite(m.Target, b, os.FileMode(m.Mode)&0777); e != nil {
+			return nil, e
+		}
+	} else {
+		if e = os.Remove(m.Target); e != nil {
+			return nil, e
+		}
+	}
+	discardSnapshot(&s)
+	return map[string]any{"restored": true, "action_id": m.ID, "tool": m.Tool, "path": m.Target, "snapshot_location": "local-device-only"}, nil
 }

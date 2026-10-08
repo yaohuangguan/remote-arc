@@ -274,7 +274,30 @@ function optionalString(args: ToolArguments, key: string) {
 }
 
 export class RemoteArcExecutionCore {
+  private mutationQueue: Promise<void> = Promise.resolve();
+
   constructor(private readonly mode: ExecutionMode = "managed") {}
+
+  // Match Go's mutation mutex: do not allow overlapping writes, Undo
+  // restoration or Undo listing within this execution-core instance.
+  async callTool(
+    name: string,
+    args: ToolArguments = {},
+    policyInput: ExecutionPolicy = {},
+  ): Promise<ToolResult> {
+    if (!["write_file", "edit_block", "undo_change", "undo_last_change", "list_undo_actions"].includes(name)) {
+      return this.executeTool(name, args, policyInput);
+    }
+    const previous = this.mutationQueue;
+    let release!: () => void;
+    this.mutationQueue = new Promise<void>((resolve) => { release = resolve; });
+    await previous;
+    try {
+      return await this.executeTool(name, args, policyInput);
+    } finally {
+      release();
+    }
+  }
 
   private allowedTools() {
     if (this.mode === "safe") return SAFE_TOOLS;
@@ -287,7 +310,7 @@ export class RemoteArcExecutionCore {
     return DEFINITIONS.filter((tool) => allowed.has(tool.name));
   }
 
-  async callTool(
+  private async executeTool(
     name: string,
     args: ToolArguments = {},
     policyInput: ExecutionPolicy = {},
