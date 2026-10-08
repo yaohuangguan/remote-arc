@@ -34,3 +34,20 @@
 @media(max-width:950px){.useCaseGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.productDocs .articleHeader h1,.revisedUseCases .articleHeader h1,.revisedUseCases .toolPageHeader h1{font-size:34px}.productDocs .technicalArticle h2,.revisedUseCases .technicalArticle h2{font-size:24px}.useCaseGrid{grid-template-columns:1fr;gap:14px}.useCaseCard{min-height:230px;padding:24px}.docsAvailability{padding:16px}.docsTableWrap .articleTable td,.docsTableWrap .articleTable th{padding:12px 10px}.docsExample{font-size:13px;padding:16px}.casePrompt{font-size:17px;padding:18px}.productDocs .articleToc{max-height:none}.productDocs .articleHeader{margin-bottom:24px}}
 @media(prefers-reduced-motion:reduce){.useCaseCard{transition:none}.useCaseCard:hover{transform:none}}
+
+/* The Chrome Browser navigation link points directly to this download section. */
+.productDocs #chrome-browser { scroll-margin-top: 106px; }
+.productDocs .chromeCompanionDownload {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px;
+  margin: 14px 0 22px;
+}
+.productDocs .chromeCompanionDownload .primaryButton {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 13px 18px; text-decoration: none; font-size: 14px;
+}
+.productDocs .chromeCompanionDownload span {
+  color: var(--muted); font-size: 13px; line-height: 1.6;
+}
+@media(max-width: 600px) {
+  .productDocs .chromeCompanionDownload .primaryButton { width: 100%; }
+}

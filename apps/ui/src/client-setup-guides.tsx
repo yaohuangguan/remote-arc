@@ -1,6 +1,5 @@
 import React from "react";
 import { useI18n } from "./i18n.js";
-import companionManifest from "../../browser-extension/manifest.json" with { type: "json" };
 import "./client-setup-guides.css";
 
 type Client = "chatgpt" | "claude" | "cursor";
@@ -111,24 +110,4 @@ export function ClientMcpGuide({
       </nav>
     </div>
   </section>;
-}
-
-export function InstallCompanionNotice() {
-  const { tr } = useI18n();
-  return <aside className="installCompanionNotice" id="installation-browser">
-    <div className="installCompanionBody">
-      <span className="eyebrow">{tr("OPTIONAL · BROWSER TOOLS", "可选 · 浏览器工具")}</span>
-      <h2>{tr("Chrome Companion: share selected browser tabs", "Chrome Companion：受控共享浏览器标签页")}</h2>
-      <p>{tr("Want the AI to read a page, extract a table or—when separately allowed—click and fill on a specific tab? Install the scoped Chrome companion. File and terminal tools work without it.",
-        "想让 AI 读取网页、提取表格，或在单独授权后点击/填写指定标签页？安装受控 Chrome Companion。仅使用文件和终端功能则无需安装。")}</p>
-      <p className="installCompanionSteps">{tr("Download ZIP → Unzip → Open chrome://extensions → Developer mode → Load unpacked → Select extracted folder → Share tab.",
-        "下载 ZIP → 解压 → 打开 chrome://extensions → 开发者模式 → 加载已解压的扩展程序 → 选择文件夹 → 共享标签页。")}</p>
-      <p className="installCompanionVersion">{tr("This unpacked beta is not on the Chrome Web Store. The website download is rebuilt from the current repository source on each production deployment, but Chrome does NOT auto-update a locally loaded unpacked extension. Download and reload to upgrade.",
-        "此 Beta 尚未上架 Chrome Web Store。官网每次生产部署都会从当前仓库重新打包下载文件，但 Chrome 不会自动更新手动加载的解压扩展。升级请重新下载并加载。")}</p>
-    </div>
-    <div className="installCompanionActions">
-      <a className="primaryButton" href={"/downloads/remote-arc-browser.zip?v=" + encodeURIComponent(companionManifest.version)} download>{tr("Download Chrome Companion (.zip)", "下载 Chrome Companion (.zip)")} ↓</a>
-      <a href="/docs/mcp#chrome-browser">{tr("Browser permissions & setup", "浏览器权限和详细步骤")} ↗</a>
-    </div>
-  </aside>;
 }

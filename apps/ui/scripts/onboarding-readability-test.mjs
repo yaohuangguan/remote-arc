@@ -16,13 +16,17 @@ assert.match(styles, /:root\[data-theme="light"\] \.pairAgentOption \.pairChatGp
 const installGuide = readFileSync(new URL("../src/client-setup-guides.tsx", import.meta.url), "utf8");
 assert.match(source, /<ClientMcpGuide client=\{slug\}/, "each installation page needs MCP platform directions");
 assert.match(source, /className="installMustDo"/, "both setup sides should be prominent");
-assert.match(source, /<InstallCompanionNotice \/>/, "companion download must be near the top");
+assert.doesNotMatch(source, /<InstallCompanionNotice \/>/, "Companion download belongs on the Chrome Browser section, not the AI client pages");
 for (const path of [
   "https://chatgpt.com/plugins",
   "https://claude.ai/settings/connectors",
   "https://cursor.com/docs/mcp",
   "https://developers.openai.com/plugins/deploy/connect-chatgpt",
 ]) assert.ok(installGuide.includes(path), "missing official setup link: " + path);
-assert.ok(installGuide.includes("remote-arc-browser.zip?v="), "versioned companion download");
-assert.match(installGuide, /auto-update|automatically updated/i, "manual update disclosure");
+const mcpDocs = readFileSync(new URL("../src/product-docs.tsx", import.meta.url), "utf8");
+assert.ok(!installGuide.includes("remote-arc-browser.zip"), "AI client setup guides must not include Chrome download");
+const chromeSection = mcpDocs.slice(mcpDocs.indexOf('<section id="chrome-browser">'));
+assert.ok(chromeSection.indexOf("chromeCompanionDownload") > 0, "Chrome Browser section needs download at its top");
+assert.ok(chromeSection.indexOf("chromeCompanionDownload") < chromeSection.indexOf("Download and unzip"), "download must come before instructions");
+assert.ok(chromeSection.includes("remote-arc-browser.zip?v="), "keep versioned Chrome download");
 console.log("PASS: readable onboarding and required two-sided MCP setup instructions");
