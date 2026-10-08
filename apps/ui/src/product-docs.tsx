@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useI18n } from "./i18n.js";
 import companionManifest from "../../browser-extension/manifest.json" with { type: "json" };
 import "./public-docs.css";
@@ -178,6 +178,13 @@ export function Documentation() {
 
 export function McpReference() {
   const { tr } = useI18n();
+  useEffect(() => {
+    // The MCP reference is lazy-loaded; the browser may try the hash before
+    // this section exists. Honor the Chrome Browser link after it mounts.
+    if (window.location.hash === "#chrome-browser") {
+      window.requestAnimationFrame(() => document.getElementById("chrome-browser")?.scrollIntoView({ block: "start" }));
+    }
+  }, []);
   return <main className="technicalDoc productDocs">
     <header className="articleHeader"><span className="eyebrow">REMOTE MCP</span><h1>{tr("Connect an AI client. Use the same paired computers.", "连接 AI 客户端，复用已配对的电脑。")}</h1>
       <p>{tr("One Streamable HTTP endpoint, Remote Arc OAuth and explicit tools. This reference covers connection, scopes, device discovery, deterministic durable tasks and browser sharing.", "一个 Streamable HTTP 端点、Remote Arc OAuth 和明确的工具。本参考涵盖连接、Scope、设备发现、确定性持久任务与浏览器共享。")}</p>
@@ -204,8 +211,11 @@ export function McpReference() {
       </section>
       <section id="mcp-tools"><h2>{tr("Tools and required scopes", "工具与所需 Scope")}</h2><ToolReference /></section>
       <section id="chrome-browser"><h2>{tr("Install the scoped Chrome companion", "安装受控 Chrome Companion")}</h2>
+        <div className="chromeCompanionDownload">
+          <a className="primaryButton" href={"/downloads/remote-arc-browser.zip?v=" + encodeURIComponent(companionManifest.version)} download>{tr("Download Chrome Companion (.zip)", "下载 Chrome Companion (.zip)")} ↓</a>
+          <span>{tr("Beta · version ", "Beta · 版本 ")}{companionManifest.version} · {tr("Chrome extension · manual updates", "Chrome 扩展 · 需手动更新")}</span>
+        </div>
         <p>{tr("Download and unzip the companion. In chrome://extensions, enable Developer mode, choose Load unpacked and select the extracted folder. Open its popup, select Connect to Remote Arc and approve browser pairing, then explicitly Share this tab. It is an unpacked beta, not a Chrome Web Store extension; downloaded versions must be reloaded manually.", "下载并解压 Companion，在 chrome://extensions 开启开发者模式，选择「加载已解压的扩展程序」并指定解压文件夹。打开扩展，点击 Connect to Remote Arc 并批准浏览器配对，再手动 Share this tab。此 Beta 尚未上架 Chrome Web Store；以后更新仍需重新下载并加载。")}</p>
-        <p><a href={"/downloads/remote-arc-browser.zip?v=" + encodeURIComponent(companionManifest.version)} download>{tr("Download Chrome companion (.zip)", "下载 Chrome Companion (.zip)")} ↓</a></p>
         <p>{tr("Use browser_list_tabs to select tab_id when several tabs are shared. browser_read_page returns a snapshotId plus stable refs for that snapshot. browser_click and browser_fill require both that snapshot and an explicit per-tab Click & fill grant; a click invalidates the snapshot and the page must be read again.", "同时共享多个标签页时，用 browser_list_tabs 选择 tab_id。browser_read_page 会返回 snapshotId 和当前快照内的元素 ref；browser_click 与 browser_fill 只有在该标签页明确开启 Click & fill 后才能使用。每次点击都会使当前快照失效，下一次交互前必须重新读取页面。")}</p>
       </section>
       <footer className="articleEndLinks"><a href="/docs">{tr("Product documentation", "产品文档")} →</a><a href="/security-model">{tr("Security model", "安全模型")} →</a></footer>

@@ -1,5 +1,5 @@
 import { HeroHeadline, LandingContent, ConnectionFilm } from "./landing-content.js";
-import { ClientMcpGuide, InstallCompanionNotice } from "./client-setup-guides.js";
+import { ClientMcpGuide } from "./client-setup-guides.js";
 import type { UseCaseSlug } from "./use-cases.js";
 import { TaskResults, taskNeedsAgent, taskNeedsAttention, taskProgress, taskActivity } from "./dashboard-task-view.js";
 import { newPlannedDraft, buildPlannedContract } from "./planned-goal-form.js";
@@ -2184,14 +2184,12 @@ function ClientInstallPage({
             <a href="#installation">{tr("Device pairing steps", "查看电脑配对步骤")} ↗</a>
           </article>
         </div>
-        <InstallCompanionNotice />
 
         <div className="manualLayout">
           <aside className="manualToc">
             <strong>{tr("SETUP", "配置")}</strong>
             <a href="#installation-client">{tr("MCP App / Connector (required)", "MCP App / Connector（必需）")}</a>
             <a href="#installation">{tr("Computer setup (required)", "电脑端配置（必需）")}</a>
-            <a href="#installation-browser">{tr("Chrome Companion (optional)", "Chrome Companion（可选）")}</a>
             <a href="#installation-example">{tr("Example session", "示例会话")}</a>
             <a href="/connect-ai">{tr("Connect another AI", "连接其他 AI")}</a>
             <a href="/docs">{tr("Documentation", "文档")}</a>
