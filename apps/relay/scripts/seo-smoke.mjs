@@ -30,6 +30,7 @@ const known = [
   "/blogs/go-vs-typescript-agent-benchmarks",
   "/chrome-extension",
   "/security-model",
+  "/use-cases/disk-space-cleanup",
   "/use-cases/browser-research",
   "/use-cases/presentation-deck",
   "/use-cases/spreadsheet-report",

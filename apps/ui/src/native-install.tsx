@@ -21,6 +21,11 @@ export function NativeInstall() {
     <span className="eyebrow">REMOTE ARC {version}</span>
     <h1>{tr("Install the device Agent", "安装设备 Agent")}</h1>
     <p>{tr("The Agent and Execution Core run natively in Go on Windows, macOS and Linux. Choose npm, Homebrew or a standalone download. Each path uses the same paired device and Dashboard permissions.", "Agent 和 Execution Core 在 Windows、macOS 和 Linux 上原生运行。选择 npm、Homebrew 或直接下载，使用同一套设备配对与 Dashboard 权限。")}</p>
+    <div className="nativeInstallQuickStart">
+      <strong>{tr("One-line Homebrew install · macOS / Linux", "Homebrew 一行安装 · macOS / Linux")}</strong>
+      <pre className="docsExample"><code>brew install yaohuangguan/remote-arc/remotelink</code></pre>
+      <p>{tr("No Node.js required. If Homebrew asks you to trust this third-party formula, use the verified trust and tap instructions below before retrying.", "无需 Node.js。如果 Homebrew 要求信任第三方配方，先按下方 Tap / Trust 步骤操作，再重新安装。")}</p>
+    </div>
     <h2>npm / npx</h2>
     <pre className="docsExample"><code>npx remotelink@latest</code></pre>
     <p>{tr("Only npm/npx installation requires Node.js 20+. The npm launcher downloads and verifies the native Agent; Go is the default. --go remains a compatible alias. Use --ts only for the retained TypeScript fallback.", "只有 npm/npx 安装方式需要 Node.js 20+。npm 启动器下载并校验原生 Agent，默认运行 Go；--go 保留为兼容别名。--ts 用于保留的 TypeScript 回退。")}</p>
