@@ -6,6 +6,7 @@ import { newPlannedDraft, buildPlannedContract } from "./planned-goal-form.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
+import { baseMarketingPath, isWebsite, localizedWebsiteHref } from "./marketing-paths.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
@@ -442,8 +443,9 @@ function LogoMark({ className = "" }: { className?: string }) {
   );
 }
 function Brand({ compact = false }: { compact?: boolean }) {
+  const { locale } = useI18n();
   return (
-    <a href={MARKETING_ORIGIN} title="Remote Arc website" className={"brand" + (compact ? " compactBrand" : "")}>
+    <a href={MARKETING_ORIGIN + (isWebsite() && locale === "zh" ? "/zh" : "")} title="Remote Arc website" className={"brand" + (compact ? " compactBrand" : "")}>
       <LogoMark className="brandLogo" />
       <span className="brandWords">
         <b>Remote</b><b>Arc</b>
@@ -480,7 +482,8 @@ function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
   );
 }
 function PublicHeader({ user }: { user?: User | null }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
+  const navHref = (path: string) => isWebsite() ? localizedWebsiteHref(path, locale) : path;
   // From the website, sign-in visits the product preview. On that preview,
   // the header sign-in control opens authentication rather than reloading itself.
   const signInHref = location.hostname === "mcp.remotearc.app"
@@ -492,7 +495,7 @@ function PublicHeader({ user }: { user?: User | null }) {
       <header className="landingNav publicNav">
         <Brand />
         <nav className="publicNavLinks">
-          <a href="/#how-it-works">{tr("How it works", "如何使用")}</a>
+          <a href={navHref("/#how-it-works")}>{tr("How it works", "如何使用")}</a>
 
           <div className="publicNavMenu">
             <button type="button" className="publicNavMenuTrigger">
@@ -503,15 +506,15 @@ function PublicHeader({ user }: { user?: User | null }) {
                 <strong>{tr("Connect Remote Arc", "连接 Remote Arc")}</strong>
                 <small>{tr("Pair a computer and authorize your AI client", "配对电脑并授权 AI 客户端")}</small>
               </a>
-              <a href="/install/chatgpt">
+              <a href={navHref("/install/chatgpt")}>
                 <strong>ChatGPT</strong>
                 <small>{tr("Installation guide", "安装指南")}</small>
               </a>
-              <a href="/install/claude">
+              <a href={navHref("/install/claude")}>
                 <strong>Claude</strong>
                 <small>{tr("Installation guide", "安装指南")}</small>
               </a>
-              <a href="/install/cursor">
+              <a href={navHref("/install/cursor")}>
                 <strong>Cursor</strong>
                 <small>{tr("Installation guide", "安装指南")}</small>
               </a>
@@ -522,7 +525,7 @@ function PublicHeader({ user }: { user?: User | null }) {
             </div>
           </div>
 
-          <a href="/pricing">{tr("Pricing", "价格")}</a>
+          <a href={navHref("/pricing")}>{tr("Pricing", "价格")}</a>
 
           <div className="publicNavMenu">
             <button type="button" className="publicNavMenuTrigger">
@@ -537,7 +540,7 @@ function PublicHeader({ user }: { user?: User | null }) {
                 <strong>{tr("Use cases", "使用场景")}</strong>
                 <small>{tr("Real workflows with files, code and terminals", "文件、代码与终端的真实工作流")}</small>
               </a>
-              <a href="/docs">
+              <a href={navHref("/docs")}>
                 <strong>{tr("Docs", "文档")}</strong>
                 <small>{tr("Setup, tools, permissions and reference", "配置、工具、权限与参考")}</small>
               </a>
@@ -7231,6 +7234,7 @@ function LegalPage({
 
 function App() {
   const { tr } = useI18n();
+  const routePath = isWebsite() ? baseMarketingPath(location.pathname) : location.pathname;
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [devices, setDevices] = useState<Device[]>([]);
   const [status, setStatus] = useState<ProductStatus | null>(null);
@@ -7291,19 +7295,19 @@ function App() {
 
   const isAppHost = location.hostname === "mcp.remotearc.app";
   const isDashboardHost = isAppHost || UI_PREVIEW;
-  if (isAppHost && location.pathname === "/") {
+  if (isAppHost && routePath === "/") {
     history.replaceState({}, "", "/overview");
   }
 
-  if (location.pathname === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;
-  if (location.pathname === "/oauth/consent") return <OAuthConsent user={user} />;
+  if (routePath === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;
+  if (routePath === "/oauth/consent") return <OAuthConsent user={user} />;
 
-  if (location.pathname === "/install") {
+  if (routePath === "/install") {
     location.replace("/install/chatgpt");
     return <CenteredCard title={tr("Opening installation…", "正在打开安装页…")} body={tr("Redirecting to the ChatGPT installation guide.", "正在跳转到 ChatGPT 安装指南。")} />;
   }
 
-  const installMatch = location.pathname.match(/^\/install\/(chatgpt|claude|cursor)$/);
+  const installMatch = routePath.match(/^\/install\/(chatgpt|claude|cursor)$/);
   if (installMatch) {
     return (
       <ClientInstallPage
@@ -7313,48 +7317,48 @@ function App() {
     );
   }
 
-  if (location.pathname === "/demo") return <DemoPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/connect-ai") return <ConnectPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/docs/long-running-work") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><LongRunningWorkDocs /></React.Suspense></PublicLayout>;
-  if (location.pathname === "/docs") return <DocsPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
-  const useCaseMatch = location.pathname.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);
+  if (routePath === "/demo") return <DemoPage user={user === undefined ? null : user} />;
+  if (routePath === "/connect-ai") return <ConnectPage user={user === undefined ? null : user} />;
+  if (routePath === "/docs/long-running-work") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><LongRunningWorkDocs /></React.Suspense></PublicLayout>;
+  if (routePath === "/docs") return <DocsPage user={user === undefined ? null : user} />;
+  if (routePath === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
+  if (routePath === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
+  const useCaseMatch = routePath.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);
   if (useCaseMatch) {
     return <UseCaseDetailPage slug={useCaseMatch[1] as UseCaseSlug} user={user === undefined ? null : user} />;
   }
-  if (location.pathname === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<p role="status">{tr("Loading downloads…", "正在加载下载页面…")}</p>}><NativeInstall /></React.Suspense></main></PublicLayout>;
-  if (location.pathname === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/go-vs-typescript-agent-benchmarks") return <GoVsTypescriptBenchmarkArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/remote-arc-vs-openclaw") return <RemoteArcVsOpenClawArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/powerful-ai-access-without-exposing-your-computer") return <PowerfulAccessArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/how-remote-arc-works") return <ArchitectureArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/resources") return <ResourcesRedirect />;
-  if (location.pathname === "/remote-mcp") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading guide…", "正在加载指南…")}</main>}><RemoteMcpGuide /></React.Suspense></PublicLayout>;
-  if (location.pathname === "/chrome-extension") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="chromeExtensionPage" role="status">{tr("Loading Chrome extension…", "正在加载 Chrome 扩展页面…")}</main>}><ChromeExtensionPage /></React.Suspense></PublicLayout>;
-  if (location.pathname === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
-  if (location.pathname === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
-  if (location.pathname === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
+  if (routePath === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
+  if (routePath === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
+  if (routePath === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
+  if (routePath === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
+  if (routePath === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<p role="status">{tr("Loading downloads…", "正在加载下载页面…")}</p>}><NativeInstall /></React.Suspense></main></PublicLayout>;
+  if (routePath === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/go-vs-typescript-agent-benchmarks") return <GoVsTypescriptBenchmarkArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/remote-arc-vs-openclaw") return <RemoteArcVsOpenClawArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/powerful-ai-access-without-exposing-your-computer") return <PowerfulAccessArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/how-remote-arc-works") return <ArchitectureArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/resources") return <ResourcesRedirect />;
+  if (routePath === "/remote-mcp") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading guide…", "正在加载指南…")}</main>}><RemoteMcpGuide /></React.Suspense></PublicLayout>;
+  if (routePath === "/chrome-extension") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="chromeExtensionPage" role="status">{tr("Loading Chrome extension…", "正在加载 Chrome 扩展页面…")}</main>}><ChromeExtensionPage /></React.Suspense></PublicLayout>;
+  if (routePath === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
+  if (routePath === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
+  if (routePath === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
+  if (routePath === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
 
-  if (isDashboardHost && (location.pathname === "/dashboard" || Object.values(DASHBOARD_PATHS).includes(location.pathname))) {
+  if (isDashboardHost && (routePath === "/dashboard" || Object.values(DASHBOARD_PATHS).includes(routePath))) {
     if (user === undefined) {
       return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
     }
     if (!user) return <DashboardAccess />;
-    if (location.pathname === "/monitor" && !user.isAdmin) {
+    if (routePath === "/monitor" && !user.isAdmin) {
       return <CenteredCard title={tr("Admin only", "仅管理员可访问")} body={tr("Service monitoring is restricted to Remote Arc administrators.", "服务监控仅限 Remote Arc 管理员访问。")} />;
     }
     return <Dashboard user={user} devices={devices} status={status} refreshAll={loadAll} signOut={signOut} />;
   }
 
-  if (!isDashboardHost && location.pathname !== "/") return <NotFoundPage user={user === undefined ? null : user} />;
+  if (!isDashboardHost && routePath !== "/") return <NotFoundPage user={user === undefined ? null : user} />;
   return <Landing user={user === undefined ? null : user} />;
 }
 

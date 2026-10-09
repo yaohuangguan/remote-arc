@@ -1,4 +1,6 @@
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
+import { localizedPages, isChineseMarketingPath, unprefixedMarketingPath } from "./marketing-locale.js";
+import { chineseSeo } from "./zh-seo.js";
 
 const SITE = "https://remotearc.app";
 
@@ -548,6 +550,13 @@ for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
 }
 
 function pageFor(pathname: string): SeoPage | null {
+  if (isChineseMarketingPath(pathname)) {
+    const base = unprefixedMarketingPath(pathname);
+    const original = pages[base];
+    const translated = chineseSeo[base];
+    if (!original || !translated) return null;
+    return { ...original, title: translated.title, description: translated.description, canonical: SITE + pathname };
+  }
   return articles[pathname] ?? pages[pathname] ?? null;
 }
 
@@ -721,7 +730,13 @@ crawlPages["/downloads"] = {
 };
 
 function crawlablePageHtml(pathname: string, page: SeoPage) {
-  const copy = crawlPages[pathname] ?? {
+  const translated = isChineseMarketingPath(pathname) ? chineseSeo[unprefixedMarketingPath(pathname)] : null;
+  const copy = translated ? {
+    h1: translated.h1,
+    intro: translated.intro,
+    sections: translated.sections,
+    links: [["/zh/docs", "中文文档"], ["/zh/install/chatgpt", "ChatGPT 安装教程"], ["/zh/pricing", "价格方案"]] as Array<[string, string]>
+  } : crawlPages[pathname] ?? {
     h1: page.title.replace(/ — Remote Arc$/, ""),
     intro: page.description,
     sections: [],
@@ -748,7 +763,9 @@ export function renderMarketingHtml(html: string, pathname: string) {
     canonical: SITE + pathname
   };
   const indexable = Boolean(page);
-  const structured = indexable ? JSON.stringify(jsonLd(resolved, pathname)).replaceAll("<", "\\u003c") : "";
+  const chinese = isChineseMarketingPath(pathname);
+  const basePath = unprefixedMarketingPath(pathname);
+  const structured = indexable ? JSON.stringify(jsonLd(resolved, basePath)).replaceAll("<", "\\u003c") : "";
   const robots = indexable
     ? "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
     : "noindex,nofollow,noarchive";
@@ -759,7 +776,12 @@ export function renderMarketingHtml(html: string, pathname: string) {
     '<meta name="bingbot" content="' + robots + '" />' +
     '<meta name="author" content="' + esc(resolved.type === "article" ? (resolved.author || "Sam Yao") : "Remote Arc") + '" />' +
     '<meta property="og:type" content="' + (resolved.type === "article" ? "article" : "website") + '" />' +
-    '<meta property="og:locale" content="en_US" />' +
+    '<meta property="og:locale" content="' + (chinese ? "zh_CN" : "en_US") + '" />' +
+    (indexable && localizedPages.includes(basePath as typeof localizedPages[number])
+      ? '<link rel="alternate" hreflang="en" href="' + SITE + (basePath === "/" ? "/" : basePath) + '" />' +
+        '<link rel="alternate" hreflang="zh-CN" href="' + SITE + (basePath === "/" ? "/zh" : "/zh" + basePath) + '" />' +
+        (basePath === "/" ? '<link rel="alternate" hreflang="x-default" href="' + SITE + '/" />' : '')
+      : '') +
     '<meta property="og:image" content="' + image + '" />' +
     '<meta property="og:image:secure_url" content="' + image + '" />' +
     '<meta property="og:image:type" content="image/webp" />' +
@@ -776,6 +798,7 @@ export function renderMarketingHtml(html: string, pathname: string) {
     (indexable ? '<script type="application/ld+json">' + structured + '</script>' : '');
 
   html = html
+    .replace('lang="en"', 'lang="' + (chinese ? 'zh-CN' : 'en') + '"')
     .replace(/<title>[\s\S]*?<\/title>/, '<title>' + esc(resolved.title) + '</title>')
     .replace(/<meta name="description"[^>]*>/, '<meta name="description" content="' + esc(resolved.description) + '" />')
     .replace(/<link rel="canonical"[^>]*>/, indexable ? '<link rel="canonical" href="' + esc(resolved.canonical) + '" />' : "")
@@ -789,7 +812,7 @@ export function renderMarketingHtml(html: string, pathname: string) {
   // no-JavaScript fallback with the same product facts. This avoids a pre-mount
   // text flash for normal visitors while still giving non-JS clients a useful,
   // semantic document instead of an empty application root.
-  if (pathname === "/") {
+  if (pathname === "/" || pathname === "/zh") {
     return html.replace(
       '<div id="root"></div>',
       '<div id="root"><noscript>' + crawlablePageHtml(pathname, resolved) + '</noscript></div>',
@@ -840,12 +863,19 @@ const sitemapPaths = [
 ];
 
 export function sitemapXml() {
-  const paths = [...sitemapPaths, ...Object.keys(useCaseSeo).map(slug => "/use-cases/" + slug)];
-  return '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
+  const paths = [...sitemapPaths, ...Object.keys(useCaseSeo).map(slug => "/use-cases/" + slug), ...localizedPages.map(path => path === "/" ? "/zh" : "/zh" + path)];
+  return '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' +
     paths.map(function(path) {
-      const isRoot = path === "/";
+      const base = unprefixedMarketingPath(path);
+      const localized = localizedPages.includes(base as typeof localizedPages[number]);
+      const alternates = localized
+        ? '<xhtml:link rel="alternate" hreflang="en" href="' + SITE + base + '"/>' +
+          '<xhtml:link rel="alternate" hreflang="zh-CN" href="' + SITE + (base === "/" ? "/zh" : "/zh" + base) + '"/>' +
+          (base === "/" ? '<xhtml:link rel="alternate" hreflang="x-default" href="' + SITE + '/"/>' : '')
+        : '';
+      const isRoot = path === "/" || path === "/zh";
       const isPrimary = path.startsWith("/install/") || path === "/chatgpt-computer-access" || path === "/claude-computer-access" || path === "/mcp-computer-access" || path === "/remote-mcp" || path === "/docs/mcp";
-      return '<url><loc>' + SITE + path + '</loc><lastmod>' + (path === '/blogs/go-vs-typescript-agent-benchmarks' ? '2026-10-09' : path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
+      return '<url><loc>' + SITE + path + '</loc>' + alternates + '<lastmod>' + (path === '/blogs/go-vs-typescript-agent-benchmarks' ? '2026-10-09' : path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
     }).join("") + '</urlset>';
 }
 

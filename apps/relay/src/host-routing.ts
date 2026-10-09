@@ -1,3 +1,5 @@
+import { isChineseMarketingPath } from "./marketing-locale.js";
+
 /**
  * Public product pages have one canonical home: remotearc.app.
  * mcp.remotearc.app hosts authenticated dashboard and MCP/OAuth endpoints.
@@ -40,7 +42,7 @@ export function publicWebsiteRedirect(
   if (requestUrl.hostname !== "mcp.remotearc.app") return null;
   if (method !== "GET" && method !== "HEAD") return null;
   const path = requestUrl.pathname;
-  if (!publicExactPaths.has(path) && !publicPrefixes.some((prefix) => path === prefix || path.startsWith(prefix + "/"))) {
+  if (!isChineseMarketingPath(path) && !publicExactPaths.has(path) && !publicPrefixes.some((prefix) => path === prefix || path.startsWith(prefix + "/"))) {
     return null;
   }
   return new URL(path + requestUrl.search, marketingOrigin).toString();

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { legacyLanguageRedirect, localizedPages } from "../src/marketing-locale.ts";
+import { chinesePages, pageForLanguage } from "../../ui/src/marketing-paths.ts";
 import { readFileSync } from "node:fs";
 import {
   canonicalForPath,
@@ -58,6 +60,36 @@ for (const path of known) {
 }
 const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
 assert.equal(new Set(locs).size, locs.length, "sitemap URLs must be unique");
+
+// Client routes and search-indexed paths must stay in sync.
+assert.deepEqual([...chinesePages].sort(), [...localizedPages].sort());
+assert.equal(pageForLanguage("/", "zh"), "/zh");
+assert.equal(pageForLanguage("/docs/mcp", "zh"), "/zh/docs/mcp");
+assert.equal(pageForLanguage("/zh/pricing", "en"), "/pricing");
+assert.equal(pageForLanguage("/blogs/why-i-built-remote-arc", "zh"), "/blogs/why-i-built-remote-arc");
+// Each translated page must be independently indexable and paired with English.
+for (const path of ["/zh", "/zh/docs", "/zh/docs/mcp", "/zh/docs/long-running-work",
+  "/zh/install/chatgpt", "/zh/install/claude", "/zh/install/cursor", "/zh/pricing", "/zh/downloads"]) {
+  assert.equal(marketingStatusCode(path), 200, path + " should be indexable");
+  assert.equal(canonicalForPath(path), "https://remotearc.app" + path);
+  assert.ok(sitemap.includes("https://remotearc.app" + path), "sitemap missing " + path);
+}
+assert.equal(marketingStatusCode("/zh/blogs"), 404, "untranslated blogs must not have indexable Chinese URLs");
+assert.equal(legacyLanguageRedirect(new URL("https://remotearc.app/docs?lang=zh&ref=abc")), "/zh/docs?ref=abc");
+assert.equal(legacyLanguageRedirect(new URL("https://remotearc.app/zh/pricing?lang=en")), "/pricing");
+assert.equal(legacyLanguageRedirect(new URL("https://remotearc.app/blogs?lang=zh")), "/blogs");
+assert.equal(legacyLanguageRedirect(new URL("https://remotearc.app/docs?lang=fr")), null);
+const zhHome = renderMarketingHtml('<html lang="en"><head><title>Remote Arc</title></head><body><div id="root"></div></body></html>', "/zh");
+assert.ok(zhHome.includes('lang="zh-CN"'));
+assert.ok(zhHome.includes('hreflang="zh-CN"'));
+assert.ok(zhHome.includes('hreflang="en"'));
+assert.ok(zhHome.includes('href="https://remotearc.app/zh"'));
+assert.ok(zhHome.includes("别让 AI 只停留在聊天"));
+const zhDocs = renderMarketingHtml('<html lang="en"><head><title>Remote Arc</title></head><body><div id="root"></div></body></html>', "/zh/docs");
+assert.ok(zhDocs.includes("Remote Arc 中文文档"));
+assert.ok(zhDocs.includes("权限与安全边界"));
+assert.ok(sitemap.includes('xmlns:xhtml="http://www.w3.org/1999/xhtml"'));
+assert.ok(sitemap.includes('hreflang="zh-CN"'));
 
 const robots = robotsTxt();
 assert.ok(robots.includes("Sitemap: https://remotearc.app/sitemap.xml"));

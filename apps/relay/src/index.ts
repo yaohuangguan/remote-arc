@@ -4,6 +4,7 @@ import { handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
 import { runScheduledTasks } from "./task-scheduler.js";
 import { DeviceRegistry } from "./registry.js";
 import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
+import { legacyLanguageRedirect } from "./marketing-locale.js";
 import { createRemoteLinkMcp } from "./mcp.js";
 import {
   authenticateDevice,
@@ -165,6 +166,14 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     if (url.hostname === "www.remotearc.app") {
       const canonical = new URL(url.pathname + url.search, marketingOrigin);
       return Response.redirect(canonical.toString(), 301);
+    }
+
+    if ((request.method === "GET" || request.method === "HEAD") &&
+      (url.hostname === "remotearc.app" || url.hostname === "www.remotearc.app")) {
+      const canonicalLanguage = legacyLanguageRedirect(url);
+      if (canonicalLanguage) {
+        return Response.redirect(new URL(canonicalLanguage, marketingOrigin).toString(), 301);
+      }
     }
 
     if (url.hostname === "remotearc.app" && url.pathname.length > 1 && url.pathname.endsWith("/")) {

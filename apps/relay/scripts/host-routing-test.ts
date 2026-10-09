@@ -9,6 +9,7 @@ for (const path of [
   "/blogs", "/blogs/why-i-built-remote-arc", "/docs", "/docs/mcp",
   "/install/chatgpt", "/install/claude", "/use-cases/remote-development",
   "/pricing", "/downloads", "/releases", "/security-model",
+  "/zh", "/zh/docs", "/zh/pricing", "/zh/install/chatgpt",
   "/connect-ai", "/chatgpt-computer-access", "/remote-mcp",
 ]) {
   assert.equal(publicWebsiteRedirect(route(path), "GET", marketing), marketing + path, "public route " + path);
