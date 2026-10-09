@@ -2329,9 +2329,13 @@ function Landing({ user }: { user?: User | null }) {
           <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
           <HeroHeadline />
           <p>{tr(
-            "Give the AI you already use a persistent, permissioned runtime across your own computers. Start work now, save long-running goals, and return in a later chat without losing the execution state.",
-            "让你已经在用的 AI 获得跨真实电脑的持久化、可控 Runtime。现在开始工作，保存长任务与目标，换到之后的聊天仍可从已保存的执行状态继续。"
+            "Don’t let AI stop at chat. Give the AI you already use a persistent, permissioned runtime across your own computers. Let it actually work with your files, terminals and processes. Save long-running tasks and return in a later chat without losing the saved execution state.",
+            "别让 AI 只停留在聊天。让你已经在用的 AI 获得跨真实电脑的持久化、可控 Runtime，真正操作文件、终端与进程。保存长任务，之后换个聊天也能继续查看和推进已保存的执行状态。"
           )}</p>
+          <div className="heroAiPlanNote">
+            <strong>{tr("No separate model API key or pay-per-token model bill.", "无需额外模型 API Key，也无需另付按 Token 计费的模型 API 账单。")}</strong>
+            <span>{tr("Use a compatible AI chat with MCP tools. Your existing AI provider’s plan and usage limits still apply.", "直接使用支持 MCP 工具的 AI 对话。原有 AI 套餐及其使用额度仍然适用。")}</span>
+          </div>
           <div className="heroPrimaryCommand">
             <span>{tr("START HERE · RUN ON YOUR COMPUTER", "从这里开始 · 在电脑上运行")}</span>
             <div>
@@ -2346,6 +2350,8 @@ function Landing({ user }: { user?: User | null }) {
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
+            <span>{tr("Use your existing AI chat", "沿用现有 AI 对话")}</span>
+            <span>{tr("No separate AI API key", "无须额外模型 API Key")}</span>
             <span>{tr("Build & test", "开发与测试")}</span>
             <span>{tr("Overnight tasks", "过夜任务")}</span>
             <span>{tr("Scheduled tasks", "定时任务")}</span>
