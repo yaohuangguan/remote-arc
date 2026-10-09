@@ -27,11 +27,11 @@
   },
   "devDependencies": {
     "@remotearc/execution-core-ts": "workspace:*",
-    "@types/node": "^24.13.6",
+    "@types/node": "^26.6.4",
     "@types/proper-lockfile": "^4.1.4",
     "@types/ws": "^8.18.1",
     "tsup": "^8.5.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "license": "UNLICENSED",
   "homepage": "https://remotearc.app",

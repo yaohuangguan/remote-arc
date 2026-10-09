@@ -9,8 +9,8 @@
     "test:integration": "tsx scripts/integration.ts && tsx scripts/durability.ts && tsx scripts/durability-faults.ts"
   },
   "devDependencies": {
-    "@types/node": "^24.13.6",
+    "@types/node": "^26.6.4",
     "tsx": "^4.23.15",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
