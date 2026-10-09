@@ -6406,7 +6406,7 @@ function Dashboard({
               </div>
               <div className="securityTopActions">
                 <button className={securityState?.mcpPaused ? "goldButton" : "dangerButton"} disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void setMcpPaused(!securityState?.mcpPaused)}>
-                  {securityState?.mcpPaused ? tr("Resume Remote MCP", "恢复 Remote MCP") : tr("Pause Remote MCP", "暂停 Remote MCP")}
+                  {securityState?.mcpPaused ? tr("Resume AI MCP access", "恢复 AI MCP 访问") : tr("Pause AI MCP access", "暂停 AI MCP 访问")}
                 </button>
                 <button className="ghostButton" onClick={() => navigateTab("devices")}>{tr("Device permissions", "设备权限")}</button>
                 <a className="ghostButton" href="https://github.com/yaohuangguan/remote-arc/blob/master/SECURITY.md" target="_blank" rel="noreferrer">SECURITY.md</a>
@@ -6431,7 +6431,7 @@ function Dashboard({
                 <small>{tr("Scoped access to the account you approve.", "仅授予你批准账户范围内的权限。")}</small>
               </article>
               <article className="securityStatusCard">
-                <div><span>{tr("Device credentials", "设备凭证")}</span><span className="securityMiniState">{devices.length}</span></div>
+                <div><span>{tr("Device pairing credentials", "设备配对凭证")}</span><span className="securityMiniState">{devices.length}</span></div>
                 <strong>{tr("Unique per device", "每设备独立")}</strong>
                 <small>{tr("One pairing credential per device (not AI OAuth). Only hashes are stored in the cloud.", "每台设备一份配对凭证（不是 AI OAuth），云端仅保存哈希。")}</small>
               </article>
