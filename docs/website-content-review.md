@@ -57,7 +57,7 @@ PR41 已包含在当前分支祖先中；PR44 的比较基线是 PR43，不能�
 
 产品事实来自 `apps/relay/src/mcp.ts`、`automations.ts`、`source-goals.ts`、
 `automation-store.ts`、`task-events.ts`、`device-task-policy.ts`，CLI 的
-`background.ts`/`keep-awake.ts` 与 execution-core 的本地工具实现。
+`background.ts`/`keep-awake.ts` 与 execution-core-ts 的本地工具实现。
 
 外部宿主入口和机制采用当前实际打开的官方文档，不使用旧截图或营销推断：
 

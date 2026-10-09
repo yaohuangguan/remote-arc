@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { toolDefinitions } from "../packages/execution-core/src/index.js";
+import { toolDefinitions } from "../packages/execution-core-ts/src/index.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(
-  path.join(root, "packages/execution-core/src/safety.ts"),
+  path.join(root, "packages/execution-core-ts/src/safety.ts"),
   "utf8",
 );
 const rules = [
@@ -19,8 +19,8 @@ if (rules.length !== 9)
     "Safety guard contract changed; review the Go port before regenerating.",
   );
 const outputs = {
-  "apps/device/internal/execution/tools.json": toolDefinitions,
-  "apps/device/internal/execution/guards.json": rules,
+  "packages/execution-core/execution/tools.json": toolDefinitions,
+  "packages/execution-core/execution/guards.json": rules,
 };
 for (const [name, value] of Object.entries(outputs)) {
   const content = JSON.stringify(value, null, 2) + "\n";

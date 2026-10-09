@@ -26,7 +26,7 @@ const output = path.join(root, "work", "go-device");
 await fs.mkdir(output, { recursive: true });
 const checksums = {};
 for (const { os, arch } of targets) {
-  const name = `remotelink-go-v${pkg.version}-${os}-${arch}${os === "windows" ? ".exe" : ""}`;
+  const name = `remotelink-v${pkg.version}-${os}-${arch}${os === "windows" ? ".exe" : ""}`;
   const target = path.join(output, name);
   const result = spawnSync(
     "go",
@@ -41,7 +41,7 @@ for (const { os, arch } of targets) {
       "./cmd/remotelink",
     ],
     {
-      cwd: path.join(root, "apps/device"),
+      cwd: path.join(root, "apps/agent"),
       stdio: "inherit",
       windowsHide: true,
       env: { ...process.env, CGO_ENABLED: "0", GOOS: os, GOARCH: arch },
@@ -65,11 +65,13 @@ await fs.writeFile(
 );
 if (all) {
   const block = (os, arch) => {
-    const name = `remotelink-go-v${pkg.version}-${os}-${arch}`;
-    return `      url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v${pkg.version}/${name}", using: :nounzip\n      sha256 "${checksums[name]}"`;
+    const name = `remotelink-v${pkg.version}-${os}-${arch}`;
+    return `      url "https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v${pkg.version}/${name}", using: :nounzip\n      sha256 "${checksums[name]}"`;
   };
-  const formula = `class RemotelinkGo < Formula\n  desc "Controlled remote computer access for AI"\n  homepage "https://remotearc.app"\n  version "${pkg.version}"\n\n  on_macos do\n    on_arm do\n${block("darwin", "arm64")}\n    end\n    on_intel do\n${block("darwin", "amd64")}\n    end\n  end\n  on_linux do\n    on_arm do\n${block("linux", "arm64")}\n    end\n    on_intel do\n${block("linux", "amd64")}\n    end\n  end\n\n  def install\n    bin.install Dir["remotelink-go-v*"].first => "remotelink"\n    chmod 0755, bin/"remotelink"\n  end\n\n  test do\n    assert_equal "${pkg.version}", shell_output("#{bin}/remotelink --version").strip\n  end\nend\n`;
-  await fs.writeFile(path.join(output, "remotelink-go.rb"), formula);
+  for (const [className, filename, conflict] of [["Remotelink", "remotelink.rb", "remotelink-go"], ["RemotelinkGo", "remotelink-go.rb", "remotelink"]]) {
+  const formula = `class ${className} < Formula\n  desc "Controlled remote computer access for AI"\n  homepage "https://remotearc.app"\n  version "${pkg.version}"\n  conflicts_with "${conflict}", because: "both install remotelink"\n\n  on_macos do\n    on_arm do\n${block("darwin", "arm64")}\n    end\n    on_intel do\n${block("darwin", "amd64")}\n    end\n  end\n  on_linux do\n    on_arm do\n${block("linux", "arm64")}\n    end\n    on_intel do\n${block("linux", "amd64")}\n    end\n  end\n\n  def install\n    bin.install Dir["remotelink-v*"].first => "remotelink"\n    chmod 0755, bin/"remotelink"\n  end\n\n  test do\n    assert_equal "${pkg.version}", shell_output("#{bin}/remotelink --version").strip\n  end\nend\n`;
+  await fs.writeFile(path.join(output, filename), formula);
+  }
 }
 await fs.mkdir(path.join(root, "packages/cli/dist"), { recursive: true });
 await fs.writeFile(
@@ -77,7 +79,7 @@ await fs.writeFile(
   manifest,
 );
 if (!release) {
-  const name = `remotelink-go-v${pkg.version}-${hostOS}-${hostArch}${hostOS === "windows" ? ".exe" : ""}`;
+  const name = `remotelink-v${pkg.version}-${hostOS}-${hostArch}${hostOS === "windows" ? ".exe" : ""}`;
   await fs.mkdir(path.join(root, "packages/cli/dist/bin"), { recursive: true });
   await fs.copyFile(
     path.join(output, name),

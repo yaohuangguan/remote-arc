@@ -7,7 +7,8 @@ export default defineConfig({
   target: "node20",
   sourcemap: true,
   clean: true,
-  noExternal: ["@remotearc/execution-core", "ws", "proper-lockfile"],
+  splitting: false,
+  noExternal: ["@remotearc/execution-core-ts", "ws", "proper-lockfile"],
   banner: {
     js: 'import { createRequire as __remoteArcCreateRequire } from "node:module"; const require = __remoteArcCreateRequire(import.meta.url);',
   },

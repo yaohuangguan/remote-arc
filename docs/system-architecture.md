@@ -40,7 +40,7 @@ AI 不能自行扩大权限。源控制器不能续接时，任务如实显示�
 | --- | --- | --- |
 | 推理控制器 | 根据目标及观察结果选择下一步、总结事实、提出完成或阻塞 | Work/Codex/Chat 源 Agent，或显式选择的托管 Planner |
 | 任务控制面 | 持久目标、调度、状态、日志、租约、恢复、验收及事件通知 | Cloudflare Worker + D1 |
-| 设备执行面 | 在已授权设备上执行工具，管理进程、路径限制和 Undo | 本地 Agent + execution-core |
+| 设备执行面 | 在已授权设备上执行工具，管理进程、路径限制和 Undo | 本地 Agent + execution-core-ts |
 
 Plugin/MCP 提供工具连接，不单独决定 AI 宿主的推理寿命。持续推理要由宿主的
 长任务/目标模式，或经过验证的事件续接机制提供。Remote Arc 不会在源 Agent
@@ -58,8 +58,8 @@ flowchart TB
   R --> T[持久任务引擎]
   P[可选托管 Planner] -->|结构化决策| T
   T -->|设备所有权 + 工具/路径策略| DO[按用户路由的 Durable Object]
-  DO <-->|认证出站 WebSocket| A[本地 Agent]
-  A --> C[execution-core]
+  DO <-->|认证出站 WebSocket| A[Go Agent · apps/agent]
+  A --> C[Go Execution Core · packages/execution-core]
   C --> F[文件、终端、受管进程、Undo]
   B[用户明确共享的浏览器标签页] --> DO
   T --> J[有序事实日志 + 验收证据]
@@ -81,9 +81,26 @@ flowchart TB
 | `apps/relay/src/task-events.ts` | MCP Events、密钥保护、签名和有界重试 |
 | `apps/relay/src/device-task-policy.ts` | 每台设备允许的任务能力 |
 | `apps/relay/src/github-automation.ts` | 明确授权的 GitHub App 云端动作 |
-| `packages/cli` | 配对、本地执行、登录后台服务、任务唤醒租约 |
-| `packages/execution-core` | 文件、进程、路径策略及 Undo 的共同实现 |
+| `packages/cli` | npm 安装与启动入口，默认 Go；`--ts` 选择兼容运行时 |
+| `apps/agent` | Go 设备 Agent：配对、Relay 会话、日志、控制、登录恢复与任务检查点 |
+| `packages/execution-core` | 独立 Go 模块：文件、进程、路径策略与 Undo，和 Agent 编译成一个二进制 |
+| `apps/agent-ts` / `packages/execution-core-ts` | 显式 TS 回退与兼容/对照测试，默认设备链路不依赖它们 |
 | `apps/ui` | 官网知识文档、配对、Dashboard、设备权限与任务管理 |
+
+### 0.6.0 安装与执行边界
+
+`npx remotelink@latest` 默认下载并校验匹配版本的原生 Go Agent；Node 只承担
+npm 安装/启动入口。npx 路径会保留一个 Node 启动器转发标准 IO、退出码和信号；
+Agent 与 Core 本身运行在 Go 进程中。直接下载和 Homebrew 运行 Go 二进制，
+不需要 Node 或 Go 编译器。
+官网 `/downloads`、GitHub release、npm 包及 Homebrew 配方共用一个版本号和
+六平台 SHA256 清单。Go 内核和 Agent 是不同模块，但运行时没有新增 IPC。
+云端 Relay、Dashboard 与共享 TS 协议仍使用 TypeScript。
+
+升级或切换前先停止现有执行者，保持同一设备 ID、配对、权限与 Undo 格式。
+Go 保留 `--go` 别名，npm 的 `--ts` 明确选择兼容实现；不自动接管活跃 TS
+执行者，不静默退回 TS，也不重放已执行的命令。TS 背景服务和重启子进程
+始终显式传入 `--ts`，避免默认入口变化导致恢复时误切引擎。
 
 ## 3. 能力矩阵
 
@@ -304,7 +321,7 @@ Agent Goal 支持立即、未来时间和固定间隔触发；每次周期运行
 | `automation_decisions` | 幂等提交 hash 及等待消费的决策；消费后清除决策正文 |
 | `automation_events/webhooks` | 条件事件标识、匹配/消费状态、callback secret hash |
 | `task_event_subscriptions/deliveries` | callback、加密 signing secret、有效期及投递元数据 |
-| 本地 execution-core | 受管进程完整输出和文件 Undo 快照 |
+| 本地 execution-core-ts | 受管进程完整输出和文件 Undo 快照 |
 
 持久 Agent Goal 的受限观察可能包含文件内容或进程输出，并会保存在控制面供
 续接使用；不能把“未存完整原始输出”解释为“云端绝无任务内容”。这些观察也

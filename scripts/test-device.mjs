@@ -13,7 +13,7 @@ function run(command, args, options = {}) {
   if (r.error || r.status !== 0)
     throw r.error ?? new Error(command + " failed with exit " + r.status);
 }
-const directory = path.join(root, "apps/device");
+const directory = path.join(root, "apps/agent");
 const formatted = spawnSync("gofmt", ["-l", "cmd", "internal"], {
   cwd: directory,
   encoding: "utf8",
@@ -23,6 +23,20 @@ if (formatted.error || formatted.status !== 0 || formatted.stdout.trim())
   throw (
     formatted.error ?? new Error("Go files need gofmt: " + formatted.stdout)
   );
+const coreDirectory = path.join(root, "packages/execution-core");
+const coreFormat = spawnSync("gofmt", ["-l", "config", "policy", "protocol", "execution"], {
+  cwd: coreDirectory,
+  encoding: "utf8",
+  windowsHide: true,
+});
+if (coreFormat.error || coreFormat.status !== 0 || coreFormat.stdout.trim()) {
+  throw coreFormat.error ?? new Error("Go core files need gofmt: " + coreFormat.stdout);
+}
+run("go", ["vet", "./..."], { cwd: coreDirectory });
+run("go", ["test", "-race", "-count=1", "./..."], {
+  cwd: coreDirectory,
+  env: { ...process.env, CGO_ENABLED: "1" },
+});
 run("go", ["vet", "./..."], { cwd: directory });
 run("go", ["test", "-race", "-count=1", "./..."], {
   cwd: directory,
@@ -35,7 +49,7 @@ run("go", ["test", "-race", "-count=1", "./..."], {
   },
 });
 const require = createRequire(
-  path.join(root, "packages/execution-core/package.json"),
+  path.join(root, "packages/execution-core-ts/package.json"),
 );
 run(process.execPath, [
   require.resolve("tsx/cli"),

@@ -39,8 +39,38 @@ Remote Arc connects ChatGPT, Claude, Codex, Cursor, and compatible MCP clients t
 Connect a Windows, macOS, or Linux computer:
 
 ```bash
-npx remotelink
+npx remotelink@latest
 ```
+
+The default device Agent and Execution Core are native Go. npm installs and
+launches the checksum-verified binary; standalone and Homebrew installations
+need no Node.js. `--go` remains a compatible alias and `--ts` selects the retained
+TS runtime. Stop the active Agent before switching versions or runtimes.
+
+<!-- native-install:start -->
+### Native downloads and Homebrew
+
+Standalone 0.6.0 needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).
+
+| Platform | Download |
+| --- | --- |
+| macOS Apple Silicon | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.0/remotelink-v0.6.0-darwin-arm64) |
+| macOS Intel | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.0/remotelink-v0.6.0-darwin-amd64) |
+| Windows x64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.0/remotelink-v0.6.0-windows-amd64.exe) |
+| Windows ARM64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.0/remotelink-v0.6.0-windows-arm64.exe) |
+| Linux x64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.0/remotelink-v0.6.0-linux-amd64) |
+| Linux ARM64 | [remotelink](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.0/remotelink-v0.6.0-linux-arm64) |
+
+[SHA256SUMS](https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v0.6.0/SHA256SUMS) · [Release notes](https://github.com/yaohuangguan/remote-arc/releases/tag/remotelink-v0.6.0)
+
+```bash
+brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
+brew install yaohuangguan/remote-arc/remotelink
+remotelink
+```
+
+The existing `remotelink-go` formula remains available for upgrades; install one formula at a time.
+<!-- native-install:end -->
 
 Then connect your MCP client to:
 
@@ -70,8 +100,8 @@ flowchart TD
     MCP["Remote Arc MCP<br/>mcp.remotearc.app/mcp"]
     CF["Cloudflare Worker<br/>OAuth · pairing · routing · usage"]
     DO["Per-user Durable Object"]
-    AGENT["Remote Arc CLI / Agent"]
-    CORE["@remotearc/execution-core<br/>filesystem · processes · terminal · undo"]
+    AGENT["Native Go Agent · apps/agent"]
+    CORE["Go Execution Core · packages/execution-core<br/>filesystem · processes · terminal · undo"]
     DEVICE["Windows · macOS · Linux"]
 
     AI -->|"MCP + OAuth 2.1 / PKCE"| MCP
@@ -88,28 +118,28 @@ The hosted relay authenticates and routes requests. OS-level operations execute 
 
 ```text
 remote-arc/
-|
-+-- apps/
-|   +-- ui/              React dashboard and pairing UI
-|   +-- relay/           Cloudflare Worker, OAuth, D1, Durable Objects, MCP
-|   +-- agent/           Device agent runtime using the native execution core
-|   +-- mcp/             Thin local MCP adapter for development/testing
-|
-+-- packages/
-    +-- cli/             Published `remotelink` npm CLI
-    +-- execution-core/  Native Remote Arc filesystem/process/terminal core
-    +-- protocol/        Shared agent/relay message types
+├── apps/
+│   ├── agent/            Native Go device Agent: pairing, relay, recovery, journals
+│   ├── agent-ts/         Explicit TypeScript runtime fallback
+│   ├── ui/               React website, downloads and Dashboard
+│   ├── relay/            Cloudflare Worker, OAuth, D1, Durable Objects and MCP
+│   └── mcp/              TS compatibility adapter and native MCP integration tests
+└── packages/
+    ├── execution-core/   Independent Go module: files, processes, policy and Undo
+    ├── execution-core-ts/ Retained TypeScript core for --ts and parity testing
+    ├── cli/              npm installer/launcher; default Go, explicit --ts
+    └── protocol/         Shared wire types for Relay, Dashboard and TS compatibility
 ```
 
-There is only one local execution implementation:
-`@remotearc/execution-core`.
-
-`apps/mcp` is a protocol adapter, not a separate execution backend.
+The Go Agent and Execution Core compile into one executable; extracting the core
+does not introduce an IPC boundary. The core can be built/tested independently
+with Go. Both engines preserve tool contracts, pairing, file/Undo formats and a
+single execution lease. The cloud Relay and Dashboard remain TypeScript.
 
 ## Native execution core
 
-Remote Arc implements its local computer capabilities directly with Node and OS
-APIs.
+Remote Arc implements its local computer capabilities directly with Go and OS
+APIs. The retained TS implementation is used only when `--ts` is selected.
 
 Current native tools:
 
@@ -132,17 +162,16 @@ list_managed_processes
 stop_process
 ```
 
-The implementation uses standard Node primitives such as:
+The primary core uses Go's `os`, `filepath`, `os/exec`, `context` and native
+platform APIs. It owns bounded process output, cancellation, atomic replacement,
+local Undo evidence, conflict fences and path policy. The Agent adds authenticated
+outbound sessions, device configuration, checkpoints and local execution journals.
 
-```text
-node:fs
-node:path
-node:child_process
-node:os
-```
-
-This keeps Remote Arc's execution behavior, safety model, release cadence, and
-supply chain under Remote Arc's control.
+Atomic replacement and explicit durable synchronization are separate policies.
+TS retains its atomic default; Go retains its durable default. This release does
+not claim complete hardware power-loss protection. See the
+[persistence validation](./docs/go-persistence-validation.md) and
+[system architecture](./docs/system-architecture.md) for boundaries and evidence.
 
 ## Permission model
 
@@ -520,10 +549,10 @@ pnpm test:deploy-policy
 # production deploys run automatically after CI on master
 ```
 
-Run only the native execution-core integration test:
+Run only the native execution-core-ts integration test:
 
 ```bash
-pnpm --filter @remotearc/execution-core test:integration
+pnpm --filter @remotearc/execution-core-ts test:integration
 ```
 
 The GitHub CI matrix runs native-core integration and MCP adapter smoke tests
@@ -557,7 +586,7 @@ remote-link
 remote-arc
 ```
 
-The published CLI bundles `@remotearc/execution-core` into the distributable
+The published CLI bundles `@remotearc/execution-core-ts` into the distributable
 artifact. End users do not install a separate execution server.
 
 Release content has one source of truth: `CHANGELOG.md`. Each release section uses

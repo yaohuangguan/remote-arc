@@ -1,3 +1,7 @@
-apps/device/**/*.go text eol=lf
-apps/device/go.mod text eol=lf
-apps/device/go.sum text eol=lf
+apps/agent/**/*.go text eol=lf
+apps/agent/go.mod text eol=lf
+apps/agent/go.sum text eol=lf
+packages/execution-core/**/*.go text eol=lf
+packages/execution-core/go.mod text eol=lf
+packages/execution-core/go.sum text eol=lf
+packages/execution-core/execution/*.json text eol=lf

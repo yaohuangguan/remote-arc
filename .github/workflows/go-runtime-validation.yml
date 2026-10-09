@@ -1,0 +1,52 @@
+name: Go runtime reliability and benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_seconds:
+        description: Isolated Go Agent soak duration
+        type: choice
+        default: "3600"
+        options: ["3600", "14400"]
+      benchmark:
+        description: Also run serial TS/Go L1 and L2 benchmarks
+        type: boolean
+        default: false
+
+jobs:
+  runtime:
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: |
+            apps/agent/go.sum
+            packages/execution-core/go.sum
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:device
+      - run: node scripts/go-device-soak.mjs --report work/benchmarks/soak.json
+        env:
+          REMOTEARC_SOAK_SECONDS: ${{ inputs.duration_seconds }}
+      - run: node benchmarks/build.mjs && node benchmarks/run.mjs
+        if: inputs.benchmark
+      - run: node benchmarks/agent.mjs
+        if: inputs.benchmark
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: runtime-${{ matrix.os }}
+          path: work/benchmarks/*.json

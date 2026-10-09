@@ -29,7 +29,14 @@ const changelogReleases = releaseMatches.map((current, index) => {
   };
 });
 
-if (changelogReleases[0]?.version !== cliPackage.version) {
+const candidateMatch = cliPackage.version.match(/^(\d+\.\d+\.\d+)-(?:alpha|beta|rc|canary)\.[0-9A-Za-z.-]+$/);
+if (candidateMatch) {
+  // A preview build may use an RC binary, but the dashboard must continue
+  // displaying the latest *published* version until stable is released.
+  if (!changelog.includes(`## ${candidateMatch[1]} - Unreleased`)) {
+    throw new Error(`Missing unreleased CHANGELOG entry for ${cliPackage.version}`);
+  }
+} else if (changelogReleases[0]?.version !== cliPackage.version) {
   throw new Error(
     `Latest CHANGELOG version ${changelogReleases[0]?.version || "missing"} does not match CLI ${cliPackage.version}`,
   );
@@ -38,7 +45,7 @@ if (changelogReleases[0]?.version !== cliPackage.version) {
 export default defineConfig({
   plugins: [react()],
   define: {
-    __REMOTEARC_CLI_VERSION__: JSON.stringify(cliPackage.version),
+    __REMOTEARC_CLI_VERSION__: JSON.stringify(changelogReleases[0]?.version),
     __REMOTEARC_RELEASES__: JSON.stringify(changelogReleases),
   },
 });

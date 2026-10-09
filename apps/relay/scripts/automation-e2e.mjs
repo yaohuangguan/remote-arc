@@ -5,7 +5,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import WebSocket from "../../agent/node_modules/ws/wrapper.mjs";
+import WebSocket from "ws";
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const repo=path.resolve(here,"../../..");

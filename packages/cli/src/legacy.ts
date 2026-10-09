@@ -21,7 +21,7 @@ import {
 import {
   RemoteArcExecutionCore,
   type ExecutionPolicy,
-} from "@remotearc/execution-core";
+} from "@remotearc/execution-core-ts";
 
 const VERSION = packageMetadata.version;
 const DEFAULT_ORIGIN = "https://mcp.remotearc.app";
@@ -803,7 +803,7 @@ async function main() {
         "",
         "Options:",
         "  --go            Select the complete native Go device runtime",
-        "  --ts            Select the TS device runtime (transition default)",
+        "  --ts            Select the TS compatibility runtime",
         "  --safe          Hard local read-only cap; dashboard cannot enable write tools",
         "  --developer     Legacy alias for dashboard-managed capabilities",
         "  --foreground    Stay attached without installing or repairing recovery",

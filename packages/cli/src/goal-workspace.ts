@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { enforcePathPolicy, type ExecutionPolicy } from "@remotearc/execution-core";
+import { enforcePathPolicy, type ExecutionPolicy } from "@remotearc/execution-core-ts";
 
 const run = promisify(execFile);
 type Manifest = { version: 1; task_id: string; root: string; path: string; frontier: string; generation: number; operations: Record<string, { path: string; frontier: string; generation: number; root: string }> };

@@ -149,12 +149,12 @@ export async function superviseAgent(options: {
 }
 
 export function startSupervisedAgent(node: string, bundle: string, logs?: string) {
-  if (!logs) return spawn(node, [bundle, "--agent"], { stdio: "inherit", windowsHide: true });
+  if (!logs) return spawn(node, [bundle, "--ts", "--agent"], { stdio: "inherit", windowsHide: true });
   mkdirSync(logs, { recursive: true, mode: 0o700 });
   const out = openSync(path.join(logs, "agent.log"), "a", 0o600);
   let err: number | undefined;
   try {
     err = openSync(path.join(logs, "agent-error.log"), "a", 0o600);
-    return spawn(node, [bundle, "--agent"], { stdio: ["ignore", out, err], windowsHide: true });
+    return spawn(node, [bundle, "--ts", "--agent"], { stdio: ["ignore", out, err], windowsHide: true });
   } finally { closeSync(out); if (err !== undefined) closeSync(err); }
 }

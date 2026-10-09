@@ -1,0 +1,74 @@
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { RemoteArcExecutionCore } from "../src/index.js";
+import { createUndoSnapshot, undoChange } from "../src/safety.js";
+import { fileDurability, undoDurability } from "../src/durability.js";
+
+// Existing TS installations must not implicitly start paying for fsync.
+// Explicit durable mode remains available for parity testing.
+const previousDurability = process.env.REMOTEARC_FILE_DURABILITY;
+delete process.env.REMOTEARC_FILE_DURABILITY;
+assert.equal(fileDurability(), "atomic");
+process.env.REMOTEARC_FILE_DURABILITY = "durable";
+assert.equal(fileDurability(), "durable");
+if (previousDurability === undefined) delete process.env.REMOTEARC_FILE_DURABILITY;
+else process.env.REMOTEARC_FILE_DURABILITY = previousDurability;
+
+
+for (const mode of ["atomic","durable","layered"]) {
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),"ra-ts-durability-"));
+ process.env.REMOTEARC_FILE_DURABILITY=mode === "layered" ? "atomic" : mode;
+ process.env.REMOTEARC_UNDO_DURABILITY=mode === "layered" ? "durable" : mode;
+ assert.equal(undoDurability(), mode === "atomic" ? "atomic" : "durable");
+ process.env.REMOTEARC_UNDO_ROOT=path.join(root,"undo");
+ const trusted=path.join(root,"trusted"),target=path.join(trusted,"file.txt");
+ await fs.mkdir(trusted,{recursive:true});
+ await fs.writeFile(target,"alpha");
+ const policy={workspaceRoots:[trusted],undoEnabled:true};
+ const core=new RemoteArcExecutionCore("full");
+ const val=(v: {content:Array<{text:string}>})=>JSON.parse(v.content[0]!.text);
+ try {
+  assert.equal(val(await core.callTool("edit_block",{file_path:target,old_string:"alpha",new_string:"beta"},policy)).undo_available,true);
+  const restarted=new RemoteArcExecutionCore("full");
+  assert.equal(val(await restarted.callTool("undo_last_change",{},policy)).restored,true);
+  assert.equal(await fs.readFile(target,"utf8"),"alpha");
+  await restarted.callTool("write_file",{path:target,content:"updated"},policy);
+  await fs.writeFile(target,"external");
+  await assert.rejects(()=>restarted.callTool("undo_last_change",{},policy),/changed again/);
+  assert.equal(await fs.readFile(target,"utf8"),"external");
+  const staged=await createUndoSnapshot("edit_block",{file_path:target});
+  assert.ok(staged);
+  await fs.writeFile(target,"interrupted mutation");
+  await assert.rejects(()=>undoChange(staged.id),/predates conflict-safe/);
+  assert.equal(await fs.readFile(target,"utf8"),"interrupted mutation");
+  // Concurrent writers must be serialized like the Go mutation mutex.
+  process.env.REMOTEARC_UNDO_ROOT=path.join(root,"parallel-undo");
+  const concurrent=path.join(trusted,"parallel.txt");
+  await fs.writeFile(concurrent,"before");
+  const requests=Array.from({length:16},(_,i)=>
+   core.callTool("write_file",{path:concurrent,content:"value-"+i},policy));
+  await Promise.all(requests);
+  assert.equal(await fs.readFile(concurrent,"utf8"),"value-15");
+  assert.equal(val(await core.callTool("undo_last_change",{},policy)).restored,true);
+  assert.equal(await fs.readFile(concurrent,"utf8"),"value-14");
+  process.env.REMOTEARC_UNDO_ROOT=path.join(root,"clock-undo");
+  const clockTarget=path.join(trusted,"clock.txt");
+  await fs.writeFile(clockTarget,"original");
+  await core.callTool("write_file",{path:clockTarget,content:"first"},policy);
+  const [receipt]=await fs.readdir(process.env.REMOTEARC_UNDO_ROOT);
+  assert.ok(receipt);
+  const manifestPath=path.join(process.env.REMOTEARC_UNDO_ROOT,receipt,"manifest.json");
+  const manifest=JSON.parse(await fs.readFile(manifestPath,"utf8"));
+  manifest.createdAt=new Date(Date.now()+60000).toISOString();
+  await fs.writeFile(manifestPath,JSON.stringify(manifest));
+  await core.callTool("write_file",{path:clockTarget,content:"second"},policy);
+  for(const expected of ["first","original"]){
+    await core.callTool("undo_last_change",{},policy);
+    assert.equal(await fs.readFile(clockTarget,"utf8"),expected);
+  }
+  await core.close(); await restarted.close();
+  console.log(mode+": TS atomic, restart-Undo, conflict and precommit-crash guard passed");
+ } finally { await fs.rm(root,{recursive:true,force:true}); }
+}

@@ -9,7 +9,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import {
   RemoteArcExecutionCore,
   type ExecutionPolicy,
-} from "@remotearc/execution-core";
+} from "@remotearc/execution-core-ts";
 import { tryAgentLease } from "../src/agent-runtime.js";
 import { goalWorkspace } from "../src/goal-workspace.js";
 
@@ -24,7 +24,7 @@ const arch = { x64: "amd64", arm64: "arm64" }[process.arch];
 const binary = path.join(
   repository,
   "work/go-device",
-  `remotelink-go-v${version}-${platform}-${arch}${process.platform === "win32" ? ".exe" : ""}`,
+  `remotelink-v${version}-${platform}-${arch}${process.platform === "win32" ? ".exe" : ""}`,
 );
 const temp = await fs.realpath(
   await fs.mkdtemp(path.join(os.tmpdir(), "ra-go-compat-")),
@@ -386,11 +386,16 @@ try {
     "TS must not acquire a Go execution lease",
   );
   const cliEntry = path.join(repository, "packages/cli/dist/index.js");
-  let selection = await run(process.execPath, [cliEntry, "--go", "--version"], {
+  let selection = await run(process.execPath, [cliEntry, "--version"], {
     REMOTEARC_GO_BINARY: binary,
   });
   assert.equal(selection.code, 0);
   assert.equal(selection.output.trim(), version);
+  selection = await run(process.execPath, [cliEntry, "--status"], {
+    REMOTEARC_GO_BINARY: binary,
+  });
+  assert.equal(selection.code, 0, selection.output);
+  assert.equal(JSON.parse(selection.output).agent.engine, "go", "the default CLI must inspect the Go owner");
   selection = await run(process.execPath, [cliEntry, "--go", "--version"], {
     REMOTEARC_GO_BINARY: "",
   });
@@ -415,7 +420,7 @@ try {
     const preload = path.join(temp, "download-fixture.mjs");
     await fs.writeFile(
       preload,
-      `import fs from 'node:fs';const original=globalThis.fetch;globalThis.fetch=async(input,options)=>String(input).startsWith('https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v')?new Response(process.env.RA_CORRUPT_DOWNLOAD==='1'?Buffer.from('invalid-binary'):fs.readFileSync(process.env.RA_DOWNLOAD_SOURCE),{status:200}):original(input,options);`,
+      `import fs from 'node:fs';const original=globalThis.fetch;globalThis.fetch=async(input,options)=>String(input).startsWith('https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v')?new Response(process.env.RA_CORRUPT_DOWNLOAD==='1'?Buffer.from('invalid-binary'):fs.readFileSync(process.env.RA_DOWNLOAD_SOURCE),{status:200}):original(input,options);`,
     );
     const downloadEnv = {
       REMOTEARC_GO_BINARY: "",

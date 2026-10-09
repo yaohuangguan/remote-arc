@@ -34,3 +34,13 @@
 @media(max-width:950px){.useCaseGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.productDocs .articleHeader h1,.revisedUseCases .articleHeader h1,.revisedUseCases .toolPageHeader h1{font-size:34px}.productDocs .technicalArticle h2,.revisedUseCases .technicalArticle h2{font-size:24px}.useCaseGrid{grid-template-columns:1fr;gap:14px}.useCaseCard{min-height:230px;padding:24px}.docsAvailability{padding:16px}.docsTableWrap .articleTable td,.docsTableWrap .articleTable th{padding:12px 10px}.docsExample{font-size:13px;padding:16px}.casePrompt{font-size:17px;padding:18px}.productDocs .articleToc{max-height:none}.productDocs .articleHeader{margin-bottom:24px}}
 @media(prefers-reduced-motion:reduce){.useCaseCard{transition:none}.useCaseCard:hover{transform:none}}
+
+.nativeInstall{max-width:880px;margin:0 auto;padding:36px 0 72px}
+.nativeInstall h1{font-size:clamp(32px,4vw,48px);line-height:1.12;letter-spacing:-.035em;margin:20px 0}
+.nativeInstall h2{font-size:25px;line-height:1.3;margin:36px 0 14px}
+.nativeInstall p{font-size:16px;line-height:1.8;color:var(--muted);margin:16px 0}
+.nativeInstall p a{color:var(--text);text-decoration:underline;text-underline-offset:4px}
+.nativeDownloads{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:0;margin:22px 0;list-style:none}
+.nativeDownloads a{display:block;padding:18px 20px;background:var(--panel);border:1px solid var(--line);border-radius:10px;text-decoration:none;font-weight:600;color:var(--text)}
+.nativeDownloads a:hover,.nativeDownloads a:focus-visible{border-color:var(--accent)}
+@media(max-width:620px){.nativeInstall{padding:24px 0 48px}.nativeDownloads{grid-template-columns:1fr}.nativeInstall h1{font-size:32px}}

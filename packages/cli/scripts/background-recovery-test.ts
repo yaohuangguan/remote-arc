@@ -337,7 +337,7 @@ try {
   // A real child owns a lease until it is killed. Recover using the production
   // stale interval; never manually remove a live lock or adjust its timestamps.
   const tsx = createRequire(
-    new URL("../../execution-core/package.json", import.meta.url),
+    new URL("../../execution-core-ts/package.json", import.meta.url),
   ).resolve("tsx");
   const holder = path.join(temp, "holder.mts");
   const runtime = new URL("../src/agent-runtime.ts", import.meta.url).href;

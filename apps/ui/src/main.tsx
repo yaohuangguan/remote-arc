@@ -35,6 +35,7 @@ function isOlderRelease(current: string | null | undefined, latest = LATEST_AGEN
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
 const PlannedGoalEditor = React.lazy(() => import("./planned-goal-view.js").then(module => ({ default: module.PlannedGoalEditor })));
 
+const NativeInstall = React.lazy(() => import("./native-install.js").then(module => ({ default: module.NativeInstall })));
 const Documentation = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.Documentation })));
 const McpReference = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.McpReference })));
 const ChromeExtensionPage = React.lazy(() => import("./chrome-extension-page.js").then(module => ({ default: module.ChromeExtensionPage })));
@@ -2333,10 +2334,11 @@ function Landing({ user }: { user?: User | null }) {
               <code>{command}</code>
               <CopyButton value={command} />
             </div>
-            <small>{tr("Node.js 20+ · opens the browser pairing flow automatically", "Node.js 20+ · 自动打开浏览器配对流程")}</small>
+            <small>{tr("Go Agent · npm, Homebrew or standalone download", "Go Agent · npm、Homebrew 或直接下载")}</small>
           </div>
           <div className="landingActions">
             <a className="primaryButton goldButton" href="/install/chatgpt">{tr("Installation guide", "安装指南")}</a>
+            <a className="ghostLink" href="/downloads">{tr("Download Agent", "下载 Agent")}</a>
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
@@ -6187,7 +6189,7 @@ function Dashboard({
                     <div className="securityGrantDetails">
                       <span>{tr("Target", "目标")} <strong><code>{approval.target_path}</code></strong></span>
                       <span>{tr("Request", "请求")} <strong>{approval.request_id?.slice(0, 8) || "—"}</strong></span>
-                      <span>{tr("Expires", "过期")} <strong>{new Date(approval.expires_at).toLocaleTimeString(locale === "zh" ? "zh-CN" : "en-NZ", { hour: "2-digit", minute: "2-digit" })}</strong></span>
+                      <span>{tr("Request expires", "请求过期时间")} <strong>{new Date(approval.expires_at).toLocaleTimeString(locale === "zh" ? "zh-CN" : "en-NZ", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}</strong></span>
                     </div>
                     <div className="securityGrantScopes">
                       <button className="goldButton" disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void decidePendingApproval(approval, "allow_once")}>{tr("Allow once", "仅允许一次")}</button>
@@ -6564,6 +6566,7 @@ function Dashboard({
             <p>{tr("No repository clone, environment file, token copy, public IP or router configuration. New devices start with read-only skills enabled.", "无需 clone 仓库、环境文件、复制 Token、公网 IP 或路由器配置。新设备默认只开启只读技能。")}</p>
             <div className="commandLabel">{tr("Recommended · Safe by default", "推荐 · 默认 Safe")}</div>
             <div className="commandBox"><code>{command}</code><CopyButton value={command}/></div>
+            <p><a href="/downloads" target="_blank" rel="noopener noreferrer">{tr("Install without Node.js: native download or Homebrew", "无需 Node.js：直接下载或使用 Homebrew")} →</a></p>
             <div className="commandLabel secondary">{tr("Optional local hard lock · always read-only", "可选本机硬限制 · 始终只读")}</div>
             <div className="commandBox muted"><code>{safeCommand}</code><CopyButton value={safeCommand}/></div>
             <div className="onboardingSteps">
@@ -7040,6 +7043,7 @@ function App() {
   if (location.pathname === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
   if (location.pathname === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
   if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<p role="status">{tr("Loading downloads…", "正在加载下载页面…")}</p>}><NativeInstall /></React.Suspense></main></PublicLayout>;
   if (location.pathname === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
