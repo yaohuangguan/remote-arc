@@ -480,8 +480,11 @@ function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
 }
 function PublicHeader({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  // Website sign-in first shows the public dashboard preview with direct Google/email entry points.
-  const signInHref = APP_ORIGIN + "/overview";
+  // From the website, sign-in visits the product preview. On that preview,
+  // the header sign-in control opens authentication rather than reloading itself.
+  const signInHref = location.hostname === "mcp.remotearc.app"
+    ? APP_ORIGIN + "/auth/login?return_to=" + encodeURIComponent("/overview")
+    : APP_ORIGIN + "/overview";
 
   return (
     <>
