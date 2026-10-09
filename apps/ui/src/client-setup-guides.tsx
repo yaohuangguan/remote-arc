@@ -1,4 +1,5 @@
 import React from "react";
+import { ClaudeInstallWalkthrough } from "./claude-install-walkthrough.js";
 import { useI18n } from "./i18n.js";
 import "./client-setup-guides.css";
 
@@ -44,14 +45,14 @@ export function ClientMcpGuide({
       ? {
         destination: claudeConnectors,
         destinationLabel: tr("Open Claude Connectors", "打开 Claude Connectors"),
-        path: tr("Customize → Connectors → + Add → Custom → Web", "Customize → Connectors → ＋ Add → Custom → Web"),
+        path: tr("Settings → Connectors → + Add → Add custom connector", "Settings → Connectors → ＋ Add → Add custom connector"),
         steps: [
-          tr("Open Claude → Customize → Connectors; select + Add, then Custom → Web (some versions show Add custom connector).",
-            "打开 Claude → Customize → Connectors，点击 ＋ Add，选择 Custom → Web（部分界面显示 Add custom connector）。"),
-          tr("Set the name to Remote Arc and paste the HTTPS MCP endpoint below. Continue, review detected authentication and choose sign-in for OAuth.",
-            "名称填写 Remote Arc，粘贴下方 HTTPS MCP 地址。点击 Continue，检查识别到的认证方式并选择登录授权。"),
-          tr("Finish adding, select Connect, authorize your Remote Arc account, then in a new chat use + → Connectors to enable Remote Arc for that conversation.",
-            "完成添加后点击 Connect，登录并授权 Remote Arc；新建对话时从 ＋ → Connectors 启用它。"),
+          tr("Open Claude Settings → Connectors. Click + Add at the top right, then Add custom connector.",
+            "打开 Claude 的 Settings → Connectors，点击右上角 ＋ Add → Add custom connector。"),
+          tr("Set the name to Remote Arc and paste the HTTPS MCP endpoint below. Continue, select Sign in now and Use Claude’s published identity for OAuth, then Add.",
+            "名称填写 Remote Arc，粘贴下方 HTTPS MCP 地址。点击 Continue，选择 Sign in now 与 Use Claude’s published identity，再点击 Add。"),
+          tr("Click Connect and finish Remote Arc OAuth, review tool permissions, then ask Claude to use @Remote Arc in a chat.",
+            "点击 Connect 并完成 Remote Arc OAuth，检查工具权限，然后在 Claude 对话中使用 @Remote Arc。"),
         ],
         docs: claudeDocs,
         access: claudeDocs,
@@ -90,13 +91,14 @@ export function ClientMcpGuide({
       <small>{tr("Click path in the app", "在平台内的点击路径")}</small>
       <strong>{info.path}</strong>
     </div>
-    <ol className="installClientChecklist">
+    {client !== "claude" && <ol className="installClientChecklist">
       {info.steps.map((step, i) => <li key={i}><span>{String(i + 1).padStart(2, "0")}</span><p>{step}</p></li>)}
-    </ol>
+    </ol>}
     <div className="installEndpointPanel">
       <div><small>{tr("PASTE THIS REMOTE MCP URL", "在平台里粘贴这个 REMOTE MCP 地址")}</small><div className="docsCodeLine"><code>{endpoint}</code>{copyEndpoint}</div></div>
       <p>{tr("Connection name", "连接名称")}: <strong>Remote Arc</strong> · {tr("Transport", "传输方式")}: <strong>Streamable HTTP + OAuth</strong></p>
     </div>
+    {client === "claude" && <ClaudeInstallWalkthrough endpoint={endpoint} />}
     {client === "cursor" && <div className="installCursorJson">
       <strong>{tr("Manual alternative · mcp.json", "手动备选 · mcp.json")}</strong>
       <pre>{JSON.stringify({mcpServers:{"remote-arc":{url:endpoint}}},null,2)}</pre>
