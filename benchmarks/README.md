@@ -44,3 +44,17 @@ Temporary data and Undo stores are cleaned at exit. The historical report's
 See [persistence and validation](../docs/go-persistence-validation.md) for
 contracts, reproducibility and production L3 limitations. Do not mix local IPC,
 loopback full Agent and production connector timings into one speed ratio.
+
+To summarize three-round completed JSON reports, pooling each operation's raw
+samples while keeping hosts and layers separate:
+
+```sh
+node benchmarks/summarize.mjs --input core-mac.json --input agent-mac.json --input core-windows.json --input agent-windows.json --soak soak-mac.json --soak soak-windows.json --output SUMMARY.md
+```
+
+The summary verifies passed status, a single clean revision, three rounds per
+engine/profile, and zero benchmark errors. It emits Markdown and compact JSON,
+including raw artifact SHA256 hashes. Preserve the input reports beside it.
+See [the completed f68ab09 baseline](RESULTS-2026-10-09-f68ab09.md) for the Mac
+and Windows results and two-hour residency evidence. Later optimizations must
+retain this baseline and identify their own source revision and sample counts.

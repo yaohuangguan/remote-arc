@@ -109,7 +109,44 @@ arranging an isolated paired device or a controlled engine switch. Current RC2
 production checks are Go-only regression, not a TS/Go E2E speed ratio. Global
 `undo_last_change` must not accidentally undo another active session's work.
 
-Release gates still include multi-hour results, actual production reconnect,
+Release gates still include actual production reconnect,
 Windows lifecycle/persistence coverage, terminal visual acceptance and stronger
 storage fault tests. Archive the TS core only after those gates and review of
 the three-layer data. Keep both implementations in this repository meanwhile.
+
+## Completed f68ab09 follow-up
+
+Mac and Windows each completed 18 L1 and 18 L2 engine/profile/round suites with
+200 samples per file operation per round. Both native Go residency fixtures
+passed 7200 seconds: Mac 641 cycles/106 new handshakes; Windows 528 cycles/87.
+Normal stop released the fixture leases and cleaned owned temporary resources.
+See [the baseline report](../benchmarks/RESULTS-2026-10-09-f68ab09.md) for pooled
+P50/P95/P99, CPU/RSS, compiler/hardware metadata and artifact hashes. Production
+L3 comparison, physical outage, service upgrade and installed terminal visual
+acceptance remain open; fixture success does not complete those gates.
+
+The baseline exposed Windows-specific path-policy overhead, rather than a
+disk-read bottleneck. A standalone consumer module with 200 calls measured
+protected reads at about 15.6 ms while direct reads were about 0.07 ms. CPU
+profiling attributed most cost to repeated `filepath.EvalSymlinks` ancestor
+walks and Windows name normalization across protected roots.
+
+The follow-up Windows resolver uses a fresh metadata handle and
+[GetFinalPathNameByHandleW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfinalpathnamebyhandlew)
+to obtain each existing file/directory's resolved path. It follows junctions
+and symlinks, does not cache policy roots, and falls back to the old resolver
+on unsupported providers/permissions. Device namespaces and alternate streams
+retain the old resolver. Missing descendants still resolve against the nearest
+existing parent. Tests cover case/short/extended paths, long returned paths,
+junction escapes, root aliases, live retargeting and narrow exceptions. This
+changes neither permission defaults nor durability settings. Standalone timing
+improved to about 1.5 ms; full-Agent improvement needs a separate matched run.
+
+The core compiles, exposes 16 tools and executes reads in a separate consumer
+Go module with only its module replacement, without Agent, Relay, CLI or Node
+dependencies.
+It still intentionally owns the compatibility config package (pairing fields,
+RA home/environment conventions) and uses a mutex per Core instance. Multiple
+independent instances/processes sharing one Undo store are outside the current
+serialization guarantee. These are explicit SDK boundaries to address before
+general-purpose publication; the Agent uses one owner and one Core.

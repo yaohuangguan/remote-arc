@@ -40,7 +40,7 @@ func Canonical(value string) (string, error) {
 	cursor := p
 	missing := []string{}
 	for {
-		real, e := filepath.EvalSymlinks(cursor)
+		real, e := canonicalExisting(cursor)
 		if e == nil {
 			for i := len(missing) - 1; i >= 0; i-- {
 				real = filepath.Join(real, missing[i])
