@@ -15,6 +15,7 @@ import {
 } from "./auth.js";
 import { handleLoginPage, handleReviewerLogin } from "./reviewer.js";
 import { handleEmailCodeRequest, handleEmailCodeVerify } from "./email-auth.js";
+import { dashboardSignInUrl, publicWebsiteRedirect } from "./host-routing.js";
 import {
   getDevicesForUser,
   handleDeviceList,
@@ -190,8 +191,20 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return Response.redirect(new URL(nextPath + url.search, appOrigin).toString(), 302);
     }
 
-    if (url.hostname === "mcp.remotearc.app" && url.pathname === "/dashboard") {
-      return Response.redirect(new URL("/overview", appOrigin).toString(), 302);
+    if (url.hostname === "mcp.remotearc.app" && (request.method === "GET" || request.method === "HEAD") &&
+      (url.pathname === "/" || url.pathname === "/dashboard")) {
+      return Response.redirect(new URL("/overview" + url.search, appOrigin).toString(), 302);
+    }
+
+    // Only the main domain serves product pages. Leave OAuth, MCP and API routes untouched.
+    const websiteDestination = publicWebsiteRedirect(url, request.method, marketingOrigin);
+    if (websiteDestination) return Response.redirect(websiteDestination, 301);
+
+    // The logged-out control panel is a sign-in entry, not an empty dashboard preview.
+    // Preserve the requested page so authentication returns the user to the right tab.
+    const loginDestination = dashboardSignInUrl(url, request.method, appOrigin);
+    if (loginDestination && !(await getSessionUser(request, env))) {
+      return Response.redirect(loginDestination, 302);
     }
 
     if (url.hostname === "remotearc.app" && (
