@@ -2,14 +2,19 @@
 
 All notable changes to Remote Arc are documented here.
 
-## 0.5.1 - Unreleased
+## 0.5.1 - 2026-10-09
 
-### Separate the Go Execution Core without changing runtime behavior
+### Independent Go Execution Core and runtime reliability
 
 - Move the Go filesystem, process, permission policy, protocol and local Undo implementations into the independently testable `packages/execution-core-go` module within this repository.
 - Keep device configuration and Undo snapshots in the existing local `~/.remotearc` location and preserve current operation contracts, guards and runtime fallback.
-- Extend device verification to include Go Core formatting, `go vet`, race tests and the existing TS/Go compatibility and recovery checks.
-- **Release gate:** ship only after Linux, macOS and Windows CI plus real-device regression; retain both TS and Go engines through benchmark comparison.
+- Restore the Go terminal's colored status messages, readable connection and approval prompts, and approval expiry in the computer's local date and timezone. Keep journal files as plain text.
+- Preserve Undo ordering during rapid edits and clock rollback in both engines, and retain recovery evidence when an atomic replacement may have succeeded before a synchronization error.
+- Make file and Undo durability explicit, retaining the TS atomic default and Go durable default. Pairing, configuration and Go recovery checkpoints remain durable independently of workspace benchmark settings.
+- Reduce Windows path-policy overhead with fresh native metadata handles while preserving junction, protected-path and alternate-stream checks without a path cache.
+- Keep connection timestamps stable within a WebSocket session, record new session sequences, and normalize Go binary-file results in Relay file resources.
+- Add reproducible Core and full-Agent benchmarks, two-hour Mac/Windows residency results, and Linux/macOS/Windows compatibility, race, recovery, process, journal and distribution verification.
+- Keep Go opt-in through `npx remotelink@latest --go`, direct native binaries or Homebrew. Retain the TS default and explicit `--ts` fallback; both engines continue to share device identity and a single execution lease.
 
 ## 0.5.0 - 2026-10-08
 

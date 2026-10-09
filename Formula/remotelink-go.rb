@@ -1,26 +1,26 @@
 class RemotelinkGo < Formula
   desc "Controlled remote computer access for AI"
   homepage "https://remotearc.app"
-  version "0.5.0"
+  version "0.5.1"
 
   on_macos do
     on_arm do
-      url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.0/remotelink-go-v0.5.0-darwin-arm64", using: :nounzip
-      sha256 "5d5cb5c7a7ac0c96f9c05e250875fb51dfffd7bfb232a1e5e13c32e05b1e2696"
+      url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.1/remotelink-go-v0.5.1-darwin-arm64", using: :nounzip
+      sha256 "e594286f731db7ba5b1353b156292cf6bd59021997092b58e0bff44913719c09"
     end
     on_intel do
-      url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.0/remotelink-go-v0.5.0-darwin-amd64", using: :nounzip
-      sha256 "b1fbe3361b6e10773cc9196c144e1bf20ab29a640756b736fa46434b4cf94d07"
+      url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.1/remotelink-go-v0.5.1-darwin-amd64", using: :nounzip
+      sha256 "64b45a9a2c5545002a24cac763468395e6a0e13645b792fc0e53ced0da80d437"
     end
   end
   on_linux do
     on_arm do
-      url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.0/remotelink-go-v0.5.0-linux-arm64", using: :nounzip
-      sha256 "c880621940f7992529cc6cd0c2fa94bf8e240bf8c797e0d47c05881a1bbb66ab"
+      url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.1/remotelink-go-v0.5.1-linux-arm64", using: :nounzip
+      sha256 "fde85eda6dacecd281ccc180804d39a9f4de089d135008aae2c8ff346dbaf7fa"
     end
     on_intel do
-      url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.0/remotelink-go-v0.5.0-linux-amd64", using: :nounzip
-      sha256 "5ac7e2efaabeb4327e060c39bd4216a8a7777bb9ad9c42162b3352f2707d7add"
+      url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.1/remotelink-go-v0.5.1-linux-amd64", using: :nounzip
+      sha256 "2eadce2cde45593cd230c31a851e55323278060927cabaccb2a4a76d29ac0e36"
     end
   end
 
@@ -30,6 +30,6 @@ class RemotelinkGo < Formula
   end
 
   test do
-    assert_equal "0.5.0", shell_output("#{bin}/remotelink --version").strip
+    assert_equal "0.5.1", shell_output("#{bin}/remotelink --version").strip
   end
 end
