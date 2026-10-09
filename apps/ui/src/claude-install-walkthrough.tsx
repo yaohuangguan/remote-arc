@@ -125,7 +125,7 @@ export function ClaudeInstallWalkthrough() {
     </div>
     {expanded && <div className="claudeGuideOverlay" role="presentation" onClick={() => setExpanded(false)}>
       <div className="claudeGuideModal" role="dialog" aria-modal="true" aria-label={step.title} onClick={(e) => e.stopPropagation()}>
-        <div className="claudeGuideModalHeader"><strong>{String(selected + 1).padStart(2, "0")} · {step.title}</strong><button type="button" onClick={() => setExpanded(false)} aria-label={tr("Close", "关闭")}>×</button></div>
+        <div className="claudeGuideModalHeader"><strong>{String(selected + 1).padStart(2, "0")} · {step.title}</strong><div className="claudeGuideModalActions"><a href={"/claude-setup/" + screenshotByKind[step.kind]} target="_blank" rel="noopener noreferrer">{tr("Open original ↗", "查看原图 ↗")}</a><button type="button" onClick={() => setExpanded(false)} aria-label={tr("Close", "关闭")}>×</button></div></div>
         <div className="claudeGuideModalContent"><ClaudeStepScreenshot kind={step.kind} alt={step.title} /></div>
         <p>{step.note}</p>
       </div>
