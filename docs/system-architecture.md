@@ -1,8 +1,14 @@
 # Remote Arc 系统技术参考
 
-文档状态：PR43 基础能力及 PR44 的后续实现。PR44 是以 PR43 为基线的
-Draft PR；代码、官网预览与生产发布分别管理。本文不代表新版本已上线。
-实现与续接进度见 [PLAN.md](../PLAN.md) 和
+**适用版本：Remote Arc 0.6.0 系列（2026-10-09 更新）。** 本文是工程架构参考，
+不代表历史设计或实验功能均已正式上线。实际生产能力以
+[官网 Docs](https://remotearc.app/docs)、[发行记录](https://remotearc.app/releases)
+和安装的 Agent 版本为准。**[English technical reference](system-architecture.en.md)**。
+
+早期 PR43/PR44 的开发阶段和 Draft 描述属于历史背景。Source Agent 的自适应续接、
+MCP Events 唤醒、托管 Planner 和隔离执行器需明确区分设计、实验与已验收生产能力。
+持久 Task 可以继续执行已经批准的确定性步骤，但不代表聊天结束后 AI 仍会持续推理。
+实现与续接细节见 [PLAN.md](../PLAN.md) 和
 [进度记录](long-running-work-progress.md)。
 
 官网与代码一致性审查见 [官网内容审查](website-content-review.md)，当前执行边界及
@@ -111,7 +117,7 @@ Go 保留 `--go` 别名，npm 的 `--ts` 明确选择兼容实现；不自动接
 | Undo | 对受支持的文件修改创建与恢复本地快照 | 不是任意命令/第三方操作的回滚 |
 | 终端/进程 | 启动命令、查询状态/输出、停止受管进程 | 真实本地用户权限；非通用 OS 沙箱 |
 | 浏览器上下文 | 读取用户明确共享的标签页、选择文本、链接与表格 | 只读共享上下文；不声称通用 GUI 自动操作 |
-| 进程恢复与登录自启（0.4.4 候选） | launchd / Windows 用户级 supervisor / systemd-user 守护；单执行锁；终端可持续跟随日志；分别显示守护与 Relay 执行状态 | 与 Relay 网络重连独立；强杀执行者后约 15 秒接手；Windows 守护本身需持续运行；依赖用户登录和供电，旧运行实例需先停止或更新 |
+| 进程恢复与登录自启（0.6.x 原生 Go） | launchd / Windows 用户级 supervisor / systemd-user 守护；单执行锁；终端可持续跟随日志；分别显示守护与 Relay 执行状态 | 与 Relay 网络重连独立；强杀执行者后约 15 秒接手；Windows 守护本身需持续运行；依赖用户登录和供电，旧运行实例需先停止或更新 |
 | Long Task | 运行已批准命令并持续跟踪至退出 | 无独立动态推理 |
 | Condition Watch | 匹配 Webhook 后执行确定计划 | 现有回调 URL 是 bearer capability |
 | Schedule Watch | 未来时间或完成后固定间隔执行 | 非日历 cron / 时区 / DST 引擎 |
