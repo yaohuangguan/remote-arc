@@ -480,7 +480,11 @@ function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
 }
 function PublicHeader({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const signInHref = APP_ORIGIN + "/auth/login?return_to=" + encodeURIComponent("/overview");
+  // From the website, sign-in visits the product preview. On that preview,
+  // the header sign-in control opens authentication rather than reloading itself.
+  const signInHref = location.hostname === "mcp.remotearc.app"
+    ? APP_ORIGIN + "/auth/login?return_to=" + encodeURIComponent("/overview")
+    : APP_ORIGIN + "/overview";
 
   return (
     <>
@@ -2267,37 +2271,52 @@ function ClientInstallPage({
 
 function DashboardAccess() {
   const { tr } = useI18n();
-  const [showSignIn, setShowSignIn] = useState(false);
+  const target = encodeURIComponent(APP_ORIGIN + "/overview");
   useEffect(() => {
-    if (!UI_PREVIEW) {
+    // Keep the overview public as a product preview; other dashboard tabs
+    // still require login and preserve their original destination.
+    if (!UI_PREVIEW && location.pathname !== "/overview") {
       const returnTo = location.pathname + location.search;
       location.replace(APP_ORIGIN + "/auth/login?return_to=" + encodeURIComponent(returnTo));
     }
   }, []);
-  if (!UI_PREVIEW) {
+  if (!UI_PREVIEW && location.pathname !== "/overview") {
     return <CenteredCard title={tr("Opening sign in…", "正在打开登录页…")}
-      body={tr("Taking you to the secure Google or email sign-in page.", "正在跳转到安全的 Google 或邮箱登录页。")} />;
+      body={tr("Taking you to Google or email sign-in.", "正在跳转到 Google 或邮箱登录页。")} />;
   }
   return (
     <>
     <PublicLayout>
       <section className="dashboardAccess">
         <div className="dashboardAccessCopy">
-          <span className="eyebrow">{tr("REMOTE ARC DASHBOARD", "REMOTE ARC 控制台")}</span>
+          <span className="eyebrow">{tr("YOUR REMOTE ARC CONTROL CENTER", "你的 REMOTE ARC 控制中心")}</span>
           <h1>{tr(
-            "Your devices, connections and access policy in one place.",
-            "在一个页面管理设备、连接与访问策略。"
+            "Your computers. One secure control center.",
+            "你的所有电脑，一个安全控制中心。"
           )}</h1>
           <p>{tr(
-            "Sign in to pair computers, inspect online state, review usage and connect your AI clients. The public website always remains available at the root domain.",
-            "登录后可配对电脑、查看在线状态、用量与 AI 客户端连接。根域名始终保留为公开官网。"
+            "Pair Windows, macOS or Linux. Connect ChatGPT or Claude. Review AI access, running tasks and actions from one dashboard — while your files stay on your own machines.",
+            "连接 Windows、macOS 或 Linux，将 ChatGPT 或 Claude 接入自己的电脑。在一个控制台里查看设备、AI 授权、任务和操作记录，文件仍保留在你自己的电脑上。"
           )}</p>
-          <button className="primaryButton" type="button" onClick={() => setShowSignIn(true)}>
-            {tr("Sign in to Remote Arc", "登录 Remote Arc")} <span>→</span>
-          </button>
+          <div className="guestDashboardActions">
+            <a className="guestGoogleButton" href={APP_ORIGIN + "/auth/google?return_to=" + target}>
+              <img src="/google-g.svg" alt="" width={22} height={22} />
+              {tr("Continue with Google", "使用 Google 继续")}
+            </a>
+            <a className="primaryButton" href={APP_ORIGIN + "/auth/login?return_to=" + target + "#email"}>
+              {tr("Continue with email", "使用邮箱继续")} <span>→</span>
+            </a>
+          </div>
+          <a className="guestDashboardWebsiteLink" href={MARKETING_ORIGIN}>
+            {tr("Not ready yet? Explore Remote Arc", "还想了解更多？前往产品官网")} ↗
+          </a>
+          <p className="guestDashboardHint">{tr(
+            "Continue with Google or email. No separate model API key is required when using a compatible MCP-enabled AI chat; your provider's limits still apply.",
+            "支持 Google 或邮箱登录。使用兼容 MCP 的 AI 对话时，不需要额外配置模型 API Key；仍受 AI 服务商自身的套餐与额度限制。"
+          )}</p>
         </div>
         <div className="dashboardAccessPreview" aria-hidden="true">
-          <div className="previewTop"><span>Remote Arc</span><i>Dashboard</i></div>
+          <div className="previewTop"><span>Remote Arc Dashboard</span><i>{tr("Illustrative preview · not live data", "界面示例 · 非实时数据")}</i></div>
           <div className="previewMetricRow">
             <div><small>ONLINE</small><strong>2</strong><span>devices</span></div>
             <div><small>USAGE</small><strong>1.8k</strong><span>/ 10k calls</span></div>
@@ -2308,15 +2327,24 @@ function DashboardAccess() {
           <div className="previewActivity"><span>Recent activity</span><strong>read_file</strong><small>Personal Mac · 12s ago</small></div>
         </div>
       </section>
+      <section className="guestDashboardBenefits" aria-label={tr("What you can do", "你可以做什么")}>
+        <article>
+          <span className="guestBenefitSymbol" aria-hidden="true">01</span>
+          <h2>{tr("One place for every computer", "统一管理你的所有电脑")}</h2>
+          <p>{tr("See devices, connections and execution permissions without juggling terminals.", "查看设备状态、连接方式和执行权限，不必在多个终端之间来回切换。")}</p>
+        </article>
+        <article>
+          <span className="guestBenefitSymbol" aria-hidden="true">02</span>
+          <h2>{tr("You control what AI can do", "每一步操作都由你掌控")}</h2>
+          <p>{tr("Approve available tools, control access and review recent actions from your dashboard.", "配置允许使用的工具、管理授权，并查看 AI 最近在电脑上执行的操作。")}</p>
+        </article>
+        <article>
+          <span className="guestBenefitSymbol" aria-hidden="true">03</span>
+          <h2>{tr("Work that outlasts a chat", "聊天结束，工作状态仍在")}</h2>
+          <p>{tr("Save device-side tasks, track progress and resume where supported; AI decisions still require a connected model.", "保存设备端任务，追踪进度，并在支持的场景中继续；新的 AI 决策仍需要已连接的大模型。")}</p>
+        </article>
+      </section>
     </PublicLayout>
-    {showSignIn && (
-      <AuthProviderModal
-        returnTo="/overview"
-        title={tr("Choose how to sign in.", "选择登录方式。")}
-        body={tr("Sign in to manage your devices, permissions, usage and AI connections.", "登录后管理设备、权限、用量与 AI 连接。")}
-        onClose={() => setShowSignIn(false)}
-      />
-    )}
     </>
   );
 }

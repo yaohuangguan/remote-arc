@@ -6,6 +6,7 @@ import {
   sessionCookie,
 } from "./auth.js";
 import { authPage, escapeAuthHtml } from "./auth-page.js";
+import { emailFormToken, validEmailFormToken } from "./email-form-csrf.js";
 
 type EmailEnv = {
   DB: D1Database;
@@ -30,8 +31,9 @@ export function emailLoginEnabled(env: EmailEnv) {
   return Boolean(env.RESEND_API_KEY && env.EMAIL_AUTH_SECRET);
 }
 
-function formPage(email: string, returnTo: string, message = "") {
-  return authPage("Verify your email", `
+function formPage(email: string, returnTo: string, message = "", request?: Request) {
+  const { token, setCookie } = emailFormToken(request || new Request("https://mcp.remotearc.app/auth/email/request"));
+  const page = authPage("Verify your email", `
     <a class="back" href="/auth/login?return_to=${encodeURIComponent(returnTo)}">← Back to sign in</a>
     <div class="badge">Secure, passwordless sign-in</div>
     <h1>Check your inbox</h1>
@@ -39,6 +41,7 @@ function formPage(email: string, returnTo: string, message = "") {
       The code expires in 10 minutes.</p>
     ${message ? `<p class="error" role="alert">${escapeAuthHtml(message)}</p>` : ""}
     <form action="/auth/email/verify" method="post">
+      <input type="hidden" name="email_csrf" value="${token}">
       <input type="hidden" name="email" value="${escapeAuthHtml(email)}">
       <input type="hidden" name="return_to" value="${escapeAuthHtml(returnTo)}">
       <label for="code">Verification code</label>
@@ -50,12 +53,34 @@ function formPage(email: string, returnTo: string, message = "") {
     <p class="note">Didn't get the email? Check spam, or <a class="link" href="/auth/login?return_to=${encodeURIComponent(returnTo)}">try again in a minute</a>.
     You can also choose Google sign-in.</p>
   `);
+  if (setCookie) page.headers.append("set-cookie", setCookie);
+  return page;
 }
 
-function sameOriginForm(request: Request) {
+/**
+ * Forms can legitimately originate on the marketing host and reach the MCP host
+ * via the existing 307 auth route. Both are trusted first-party origins.
+ * No wildcard, null origin, or unrelated domain is accepted.
+ */
+function trustedAuthForm(request: Request, env: EmailEnv) {
+  if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("application/x-www-form-urlencoded")) return false;
+  if (request.headers.get("sec-fetch-site") === "cross-site") return false;
+  const allowed = new Set([
+    new URL(request.url).origin,
+    new URL(env.MARKETING_ORIGIN || "https://remotearc.app").origin,
+  ]);
   const origin = request.headers.get("origin");
-  return origin === new URL(request.url).origin &&
-    (request.headers.get("content-type") || "").toLowerCase().startsWith("application/x-www-form-urlencoded");
+  if (origin) return allowed.has(origin);
+  // Privacy-sensitive browsers/proxies may omit Origin. Referer must still
+  // prove the form came from a first-party HTTPS page; never allow both absent.
+  const referer = request.headers.get("referer");
+  if (!referer) return false;
+  try {
+    const ref = new URL(referer);
+    return ref.protocol === "https:" && allowed.has(ref.origin);
+  } catch {
+    return false;
+  }
 }
 
 function normalizeEmail(value: unknown) {
@@ -96,12 +121,14 @@ async function eligibleForEmailAuth(env: EmailEnv, email: string) {
 
 export async function handleEmailCodeRequest(request: Request, env: EmailEnv) {
   if (!emailLoginEnabled(env)) return Response.json({ error: "email_login_unavailable" }, { status: 503 });
-  if (!sameOriginForm(request)) return new Response("Invalid form origin", { status: 403 });
   const form = await request.formData();
+  if (!trustedAuthForm(request, env) && !validEmailFormToken(request, form)) {
+    return new Response("Invalid form origin", { status: 403 });
+  }
   const email = normalizeEmail(form.get("email"));
   if (!email) return new Response("Invalid email address", { status: 400 });
   const returnTo = safeReturnTo(String(form.get("return_to") || ""), request, env);
-  if (!(await eligibleForEmailAuth(env, email))) return formPage(email, returnTo);
+  if (!(await eligibleForEmailAuth(env, email))) return formPage(email, returnTo, "", request);
 
   const code = numericCode();
   const hash = await codeHash(email, code, env.EMAIL_AUTH_SECRET!);
@@ -126,7 +153,7 @@ export async function handleEmailCodeRequest(request: Request, env: EmailEnv) {
      WHERE requested_at < ?7 AND (window_start < ?6 OR daily_count < ?8)`,
   ).bind(email, hash, returnTo, now, addSecondsIso(CODE_TTL_SECONDS), windowBefore, sendBefore, DAILY_SEND_LIMIT).run();
 
-  if ((result.meta?.changes || 0) !== 1) return formPage(email, returnTo);
+  if ((result.meta?.changes || 0) !== 1) return formPage(email, returnTo, "", request);
 
   let sent = false;
   try {
@@ -154,13 +181,15 @@ export async function handleEmailCodeRequest(request: Request, env: EmailEnv) {
       .bind(email, hash).run();
     return new Response("Email service temporarily unavailable. Try again later.", { status: 503 });
   }
-  return formPage(email, returnTo);
+  return formPage(email, returnTo, "", request);
 }
 
 export async function handleEmailCodeVerify(request: Request, env: EmailEnv) {
   if (!emailLoginEnabled(env)) return Response.json({ error: "email_login_unavailable" }, { status: 503 });
-  if (!sameOriginForm(request)) return new Response("Invalid form origin", { status: 403 });
   const form = await request.formData();
+  if (!trustedAuthForm(request, env) && !validEmailFormToken(request, form)) {
+    return new Response("Invalid form origin", { status: 403 });
+  }
   const email = normalizeEmail(form.get("email"));
   const code = String(form.get("code") || "").trim();
   if (!email || !/^[0-9]{6}$/.test(code)) return new Response("Invalid verification code", { status: 400 });
@@ -177,7 +206,7 @@ export async function handleEmailCodeVerify(request: Request, env: EmailEnv) {
     await env.DB.prepare(
       "UPDATE email_login_challenges SET attempts = attempts + 1 WHERE email = ?1 AND verified_at IS NULL AND expires_at > ?2 AND attempts < ?3",
     ).bind(email, now, MAX_ATTEMPTS).run();
-    return formPage(email, returnTo, "Incorrect, expired, or already used code. Please try again or request a new one.");
+    return formPage(email, returnTo, "Incorrect, expired, or already used code. Please try again or request a new one.", request);
   }
 
   if (!(await eligibleForEmailAuth(env, email))) {
