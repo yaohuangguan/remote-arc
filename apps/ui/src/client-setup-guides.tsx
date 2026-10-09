@@ -98,7 +98,7 @@ export function ClientMcpGuide({
       <div><small>{tr("PASTE THIS REMOTE MCP URL", "在平台里粘贴这个 REMOTE MCP 地址")}</small><div className="docsCodeLine"><code>{endpoint}</code>{copyEndpoint}</div></div>
       <p>{tr("Connection name", "连接名称")}: <strong>Remote Arc</strong> · {tr("Transport", "传输方式")}: <strong>Streamable HTTP + OAuth</strong></p>
     </div>
-    {client === "claude" && <ClaudeInstallWalkthrough endpoint={endpoint} />}
+    {client === "claude" && <ClaudeInstallWalkthrough />}
     {client === "cursor" && <div className="installCursorJson">
       <strong>{tr("Manual alternative · mcp.json", "手动备选 · mcp.json")}</strong>
       <pre>{JSON.stringify({mcpServers:{"remote-arc":{url:endpoint}}},null,2)}</pre>

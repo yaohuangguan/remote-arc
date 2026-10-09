@@ -21,9 +21,6 @@
 .claudeGuideText p { font-size:14px;line-height:1.75;color:var(--muted);margin:0; }
 .claudeGuidePreview { padding:0; display:block; width:calc(100% - 34px); margin:0 17px; text-align:left; cursor:zoom-in; border:1px solid #323232; background:#171717; border-radius:11px; color:#f4f4f4; overflow:hidden; font:inherit; }
 .claudeGuidePreview:hover { border-color:#666; }
-.claudeGuideBrowserBar { padding:8px 12px; display:flex;align-items:center;justify-content:space-between;gap:10px;background:#202020;border-bottom:1px solid #303030;color:#9c9c9c;font-size:11px;font-family:ui-monospace,Consolas,monospace; }
-.claudeGuideBrowserDots { display:flex;gap:5px; }
-.claudeGuideBrowserDots i { display:block;width:7px;height:7px;border-radius:50%;background:#686868; }
 .claudeGuideHint { margin:0; padding:12px 20px 0; display:flex; gap:9px; align-items:start; color:var(--muted); font-size:12px; line-height:1.65; }
 .claudeGuideHint span { color:var(--sky-light);font-size:14px; }
 .claudeGuideControls { padding:17px 20px 18px; display:flex;gap:15px;align-items:center;justify-content:space-between; }
@@ -33,69 +30,27 @@
 .claudeGuideProgress { display:block; flex:1;max-width:145px;height:4px;border-radius:999px;background:var(--line);overflow:hidden; }
 .claudeGuideProgress i { display:block;height:100%;border-radius:inherit;background:var(--sky);transition:width .15s ease; }
 
-.claudeMockDialog,.claudeMockConnected,.claudeMockTools,.claudeMockChat { min-height:325px; box-sizing:border-box; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:1.45; color:#e5e5e5;background:#1b1b1b; }
-.claudeMockDialog { margin:17px auto 18px; max-width:340px;min-height:0;padding:18px 20px;background:#292929;border:1px solid #414141;border-radius:12px;box-shadow:0 6px 18px #0005; }
-.claudeMockHeading { display:flex;justify-content:space-between;align-items:center;gap:12px; margin:0 0 11px; }
-.claudeMockHeading strong { font-size:18px;letter-spacing:-.02em; }
-.claudeMockHeading span {font-size:21px;color:#bbb;}
-.claudeMockDialog p { margin:0 0 13px;color:#c2c2c2;font-size:11px; }
-.claudeMockDialog label { display:block; font-size:11px;color:#c9c9c9;font-weight:600;margin:12px 0 5px; }
-.claudeMockField { overflow-wrap:anywhere; padding:10px;background:#323232;border:1px solid #505050;border-radius:6px;font-size:12px;color:#ddd; }
-.claudeMockFocus { border-color:#5da4ff; box-shadow:0 0 0 1px #417fd1; }
-.claudeMockFooter {display:flex;justify-content:flex-end;gap:8px;align-items:center;margin-top:18px;}
-.claudeMockFooter span {background:#3d3d3d;padding:8px 12px;border-radius:7px;}
-.claudeMockFooter b {background:#f4f4f4;color:#111;padding:8px 12px;border-radius:7px;}
-.claudeMockDivider { height:1px;background:#404040;margin:13px 0; }
-.claudeMockSubhead { display:block;font-size:12px;margin:12px 0 8px;}
-.claudeMockRadio {display:flex;gap:8px; padding:5px 0; color:#adadad;}
-.claudeMockRadio.active {color:#6bacff;}
-.claudeMockRadio>div {color:#eee;}
-.claudeMockRadio small {display:block;color:#aaa;font-size:10px;margin-top:2px;}
-.claudeMockConnected {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:28px;position:relative; }
-.claudeMockNav {position:absolute;left:18px;top:15px;font-size:11px;color:#d5d5d5;}
-.claudeMockAppIcon { display:inline-grid;place-items:center;background:#10242f;color:#39b8eb;border:1px solid #385261;border-radius:9px;width:43px;height:43px;font-size:31px;transform:none; }
-.claudeMockAppIcon.mini {width:23px;height:23px;font-size:17px;vertical-align:middle;border-radius:5px;margin-right:5px;}
-.claudeMockConnected small {font-size:10px;color:#9c9c9c;overflow-wrap:anywhere;text-align:center;}
-.claudeMockConnected p {font-size:12px;color:#acacac;margin:5px 0;}
-.claudeMockConnected>strong {display:inline-block;padding:9px 16px;border-radius:8px;background:#f4f4f4;color:#111;font-size:12px;}
-.claudeMockTools {padding:20px;min-height:325px;}
-.claudeMockToolsTop {display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:13px;}
-.claudeMockToolsTop>strong {font-size:13px;}
-.claudeMockToolsTop>span,.claudeMockToolHeader>span {font-size:11px;padding:7px 10px;background:#323232;border-radius:7px;}
-.claudeMockTools>small {color:#8e8e8e;font-size:10px;overflow-wrap:anywhere;}
-.claudeMockTools h4 {font-size:13px;margin:21px 0 5px;}
-.claudeMockTools p {color:#9b9b9b;margin:0 0 12px;}
-.claudeMockToolHeader {display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:3px;}
-.claudeMockToolHeader strong {font-size:11px;}
-.claudeMockToolHeader small {color:#aaa;}
-.claudeMockToolRow {display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #353535;padding:11px 0;color:#d3d3d3;font-size:11px;}
-.claudeMockToolRow span:last-child {white-space:nowrap;color:#aaa;}
-.claudeMockChat {display:flex;flex-direction:column;align-items:center;gap:15px;padding:26px 17px;}
-.claudeMockPrompt {align-self:flex-end;background:#303030;padding:10px 12px;border-radius:13px;max-width:90%;font-size:12px;overflow-wrap:anywhere;}
-.claudeMockConsent {width:min(290px,100%);padding:18px;background:#262626;border:1px solid #454545;border-radius:12px;box-shadow:0 6px 18px #0005;display:flex;flex-direction:column;align-items:stretch;gap:8px;margin:8px auto;}
-.claudeMockConsent>.claudeMockAppIcon {align-self:center;}
-.claudeMockConsent strong {max-width:215px;text-align:center;margin:0 auto 10px;line-height:1.6;font-size:12px;}
-.claudeMockConsent>div:not(.claudeMockAppIcon) {padding:8px 11px;border-radius:8px;background:#383838;text-align:center;font-size:11px;}
-.claudeMockConsent>div.claudeMockConsentPrimary {background:#f7f7f7;color:#171717;}
-.claudeMockChat.claudeMockAnswer {align-items:stretch;min-height:325px;justify-content:flex-start;}
-.claudeMockAnswer>p {font-size:12px;line-height:1.65;max-width:90%;margin:5px 0;}
-.claudeMockProgress {display:flex;align-items:center;gap:9px;color:#bdbdbd;font-size:11px;}
-.claudeMockProgress small {color:#777;}
-.claudeMockSpinner {border:2px dotted #ca8158;width:15px;height:15px;display:inline-block;border-radius:50%;animation:claudeGuideSpin 2s linear infinite; }
-@keyframes claudeGuideSpin {to {transform:rotate(360deg)}}
-.claudeMockResult {border:1px solid #424242;border-radius:8px;overflow:hidden;font-size:11px;}
-.claudeMockResult>div {display:grid;grid-template-columns:minmax(0,1fr) 65px;gap:10px;padding:9px 12px;border-bottom:1px solid #424242;}
-.claudeMockResult>div:first-child {background:#303030;}
-.claudeMockResult>div:last-child {border:0;}
-.claudeMockResult>div span {overflow-wrap:anywhere;}
-.claudeMockAnswer>small {font-size:10px;color:#aaa;}
+/* Real, unaltered user-provided screenshots: maintain native aspect ratio. */
+.claudeGuideImageArea {
+  background:#111; display:flex; align-items:center; justify-content:center;
+  min-height:250px; padding:12px; box-sizing:border-box;
+}
+.claudeGuideImageArea img {
+  display:block; width:auto; max-width:100%; height:auto;
+  max-height:470px; object-fit:contain; border-radius:5px;
+}
 .claudeGuideOverlay {z-index:10050;position:fixed;inset:0;background:rgba(0,0,0,.79);display:grid;place-items:center;padding:22px;overflow-y:auto;}
 .claudeGuideModal {width:min(690px,100%);max-height:calc(100dvh - 40px);overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:15px;box-shadow:0 16px 60px #0007;}
 .claudeGuideModalHeader {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 19px;color:var(--text);}
 .claudeGuideModalHeader strong {font-size:16px;}
+.claudeGuideModalActions {display:flex;align-items:center;gap:12px;}
+.claudeGuideModalActions a {font-size:12px;color:var(--sky-light);font-weight:700;text-decoration:none;white-space:nowrap;}
+.claudeGuideModalActions a:hover {text-decoration:underline;}
 .claudeGuideModalHeader button {background:transparent;border:1px solid var(--line);border-radius:7px;color:var(--text);font-size:23px;cursor:pointer;width:34px;height:34px;}
 .claudeGuideModalContent {background:#1b1b1b;padding:16px;}
-.claudeGuideModalContent>.claudeMockDialog {max-width:485px;}
+/* Lightbox displays the real screenshot in its full dimensions when space permits. */
+.claudeGuideModalContent .claudeGuideImageArea {min-height:0;padding:0;background:transparent;}
+.claudeGuideModalContent .claudeGuideImageArea img {max-height:calc(100dvh - 180px);max-width:100%;}
 .claudeGuideModal>p {font-size:13px;line-height:1.6;color:var(--muted);margin:14px 18px 18px;}
 @media (max-width:790px) {
  .claudeGuideLayout {grid-template-columns:1fr;}
@@ -109,13 +64,12 @@
  .claudeGuideCount {font-size:19px;}
  .claudeGuideText {padding:17px;}
  .claudeGuidePreview {width:calc(100% - 22px);margin:0 11px;}
- .claudeGuideBrowserBar {padding:7px 10px;}
- .claudeMockDialog {margin:10px;padding:13px;}
- .claudeMockTools {padding:13px;}
+
+
  .claudeGuideControls {padding:14px 12px;gap:8px;}
  .claudeGuideControls button {padding:9px 8px;font-size:12px;}
  .claudeGuideHint {padding:11px 13px 0;}
  .claudeGuideOverlay {padding:10px;}
  .claudeGuideModal {max-height:calc(100dvh - 20px);}
 }
-@media (prefers-reduced-motion:reduce) {.claudeMockSpinner {animation:none;} .claudeGuideProgress i {transition:none;}}
+@media (prefers-reduced-motion:reduce) { .claudeGuideProgress i {transition:none;} }
