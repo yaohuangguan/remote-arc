@@ -10,7 +10,7 @@ import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
 import { parsePendingApprovals, parseSecurityState, type PendingApproval } from "./security-state.js";
-import { waitForRecoveryState } from "./background-recovery.js";
+import { waitForAgentOffline, waitForRecoveryState } from "./background-recovery.js";
 import "./styles.css";
 import "./dashboard.css";
 
@@ -80,6 +80,7 @@ type Device = {
   undo_history_available?: boolean;
   background_agent_available?: boolean;
   background_recovery_available?: boolean;
+  stop_agent_available?: boolean;
   background_guard_active?: boolean;
   background_guard_pid?: number | null;
   execution_mode?: string | null;
@@ -3527,7 +3528,7 @@ function Dashboard({
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
   const [backgroundUpdatingId, setBackgroundUpdatingId] = useState<string | null>(null);
   const [backgroundTargetEnabled, setBackgroundTargetEnabled] = useState<boolean | null>(null);
-  const [backgroundPhase, setBackgroundPhase] = useState<"applying" | "verifying">("applying");
+  const [backgroundPhase, setBackgroundPhase] = useState<"applying" | "verifying" | "stopping">("applying");
   const backgroundMutationInFlight = useRef(false);
   const [managedDeviceId, setManagedDeviceId] = useState<string | null>(null);
   const [devicePanel, setDevicePanel] = useState<"access" | "tasks" | "activity">("access");
@@ -4244,6 +4245,30 @@ function Dashboard({
               "Remote Arc could not update the background connection on this computer.",
               "Remote Arc 无法更新这台电脑的后台连接设置。",
             ),
+        );
+        return;
+      }
+      if (stopCurrent) {
+        // Stop is different from disabling recovery: confirm the *executor*
+        // leaves the Relay, not merely that a boolean was saved in D1.
+        setBackgroundPhase("stopping");
+        const offline = await waitForAgentOffline(device.id, {
+          read: async () => {
+            const statusResponse = await fetch("/api/devices", {
+              cache: "no-store",
+              signal: AbortSignal.timeout(4_000),
+            });
+            if (!statusResponse.ok) throw new Error("Device status unavailable");
+            return await statusResponse.json() as Device[];
+          },
+          pause: (ms) => new Promise((resolve) => window.setTimeout(resolve, ms)),
+        });
+        await refreshAll();
+        await showNotice(
+          offline ? tr("Agent stopped", "Agent 已停止") : tr("Stop still unconfirmed", "停止操作尚未确认"),
+          offline
+            ? tr("The Agent is offline and automatic recovery has been disabled. Restart it locally when you need access.", "Agent 已离线，自动恢复已关闭。需要重新使用时请在该电脑上启动。")
+            : tr("The stop request was accepted, but the Agent has not gone offline yet. Check the device status before retrying.", "停止请求已被接受，但设备尚未确认离线。请先检查设备状态，再决定是否重试。"),
         );
         return;
       }
@@ -5376,7 +5401,7 @@ function Dashboard({
                             text={tr("The switch enables a local supervisor and login startup. It keeps your terminal and operation log open, and takes over if the executing Agent ends. Relay reconnect handles network interruptions separately. Turning recovery off preserves current execution; Stop background Agent also ends its work. Sleep, shutdown and logout can still make the device unavailable.", "此开关启用本机守护和登录自启，保留终端及操作日志，执行 Agent 结束后由守护接手。网络中断由独立的 Relay 重连处理。关闭恢复会保留当前执行；“停止后台 Agent”还会结束它的工作。睡眠、关机或退出登录仍可能让电脑不可用。")}/>
                         </div>
                         <span>{backgroundUpdatingId === device.id
-                          ? backgroundPhase === "applying" ? tr("Sending device command…", "正在发送设备指令…") : tr("Waiting for supervisor confirmation…", "正在确认后台守护进程…")
+                          ? backgroundPhase === "applying" ? tr("Sending device command…", "正在发送设备指令…") : backgroundPhase === "stopping" ? tr("Waiting for Agent to disconnect…", "正在等待 Agent 离线…") : tr("Waiting for supervisor confirmation…", "正在确认后台守护进程…")
                           : device.status !== "online" ? tr("Reconnect to verify the local recovery setting", "重新连接后可确认本机恢复设置") : device.background_recovery_available
                           ? device.background_enabled ? tr("Enabled · login startup and process recovery", "已启用 · 登录自启与进程恢复") : tr("Off · current execution continues", "已关闭 · 当前执行继续")
                           : tr("Older client · login startup only. Update to keep the terminal attached and recover processes.", "旧版客户端仅提供登录自启。更新客户端后支持保留终端与进程恢复。")}</span>
@@ -5395,10 +5420,18 @@ function Dashboard({
                         {device.background_enabled === true && device.background_guard_active !== true && device.status === "online" && device.background_recovery_available && (
                           <button className="ghostButton small" disabled={UI_PREVIEW || backgroundUpdatingId === device.id} onClick={() => void updateDeviceBackground(device, true, false)}>{tr("Repair recovery", "修复恢复")}</button>
                         )}
-                        {device.background_active === true && (
-                          <button className="dangerButton small" disabled={UI_PREVIEW || backgroundUpdatingId === device.id} onClick={async () => {
-                            if (await askConfirm(tr("Stop the background Agent?", "停止后台 Agent？"), tr("This disables recovery and stops the background Agent and its managed work. An attached log viewer may then become the executing foreground Agent.", "这会关闭恢复并停止后台 Agent 及其管理的工作。已打开的日志终端随后可能接手为前台 Agent。"))) await updateDeviceBackground(device, false, true);
-                          }}>{tr("Stop background Agent", "停止后台 Agent")}</button>
+                        {device.status === "online" && (
+                          <button
+                            className="dangerButton small"
+                            disabled={UI_PREVIEW || backgroundUpdatingId === device.id || device.stop_agent_available !== true}
+                            title={device.stop_agent_available ? tr("Disable auto-recovery and stop this computer's Agent.", "关闭自动恢复并停止此电脑的 Agent。") : tr("Update this computer's Agent to use remote Stop Agent.", "请先升级此电脑 Agent，才能远程停止。")}
+                            onClick={async () => {
+                              if (await askConfirm(
+                                tr("Stop this device Agent?", "停止这台设备的 Agent？"),
+                                tr("This disables auto-recovery, stops the current foreground or background Agent and disconnects this computer. Managed work may be interrupted. You must start Remote Arc locally to reconnect.", "此操作会关闭自动恢复，停止当前前台或后台 Agent，使电脑离线。受管任务可能中断；之后需要在本机重新启动 Remote Arc 才能连接。"),
+                              )) await updateDeviceBackground(device, false, true);
+                            }}
+                          >{device.stop_agent_available ? tr("Stop Agent", "停止 Agent") : tr("Stop Agent · update needed", "停止 Agent · 需升级")}</button>
                         )}
                         <label className="compactSwitch">
                           <input type="checkbox" aria-label={tr("Automatic recovery", "自动恢复")}
