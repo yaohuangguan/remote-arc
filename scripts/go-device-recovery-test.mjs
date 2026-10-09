@@ -20,7 +20,7 @@ const platform = { win32: "windows", darwin: "darwin", linux: "linux" }[
 const binary = path.join(
   root,
   "work/go-device",
-  `remotelink-go-v${version}-${platform}-${arch}${process.platform === "win32" ? ".exe" : ""}`,
+  `remotelink-v${version}-${platform}-${arch}${process.platform === "win32" ? ".exe" : ""}`,
 );
 const home = await fs.realpath(
   await fs.mkdtemp(path.join(os.tmpdir(), "ra-go-recovery-")),

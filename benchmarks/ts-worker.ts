@@ -1,5 +1,5 @@
 import readline from "node:readline";
-import { RemoteArcExecutionCore } from "../packages/execution-core/src/index.ts";
+import { RemoteArcExecutionCore } from "../packages/execution-core-ts/src/index.ts";
 
 const core = new RemoteArcExecutionCore("full");
 const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });

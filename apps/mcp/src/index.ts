@@ -2,7 +2,7 @@ import process from "node:process";
 import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
-import { RemoteArcExecutionCore } from "@remotearc/execution-core";
+import { RemoteArcExecutionCore } from "@remotearc/execution-core-ts";
 import { config } from "./config.js";
 
 const core = new RemoteArcExecutionCore(config.mode);

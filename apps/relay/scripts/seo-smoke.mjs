@@ -16,6 +16,7 @@ assert.ok(wranglerConfig.includes('"!/demos/*"'), "large demo media should bypas
 
 const known = [
   "/",
+  "/downloads",
   "/install/chatgpt",
   "/install/claude",
   "/install/cursor",
@@ -118,3 +119,11 @@ assert.ok(missing.includes('name="robots" content="noindex,nofollow,noarchive"')
 assert.ok(!missing.includes('rel="canonical"'));
 
 console.log("SEO smoke test passed");
+
+const downloads = renderMarketingHtml(shell, "/downloads");
+const nativeVersion = JSON.parse(readFileSync(new URL("../../../packages/cli/package.json", import.meta.url), "utf8")).version;
+for (const os of ["windows", "darwin", "linux"]) for (const arch of ["amd64", "arm64"]) {
+  assert.ok(downloads.includes("/releases/download/remotelink-v" + nativeVersion + "/remotelink-v" + nativeVersion + "-" + os + "-" + arch + (os === "windows" ? ".exe" : "")), "missing native download for " + os + "/" + arch);
+}
+assert.ok(downloads.includes("SHA256SUMS"));
+assert.ok(sitemapXml().includes("https://remotearc.app/downloads"));

@@ -1,7 +1,7 @@
 # Remote Arc TS/Go parity benchmark
 
 Run from the repository root using `pnpm benchmark:core`, or `node benchmarks/run.mjs` after
-compiling the two workers. This compares local execution-core JSONL requests
+compiling the two workers. This compares local execution-core-ts JSONL requests
 and responses, **not** production Relay latency.
 
 - `REMOTEARC_FILE_DURABILITY=atomic`: atomic replacement without explicit
@@ -61,3 +61,7 @@ retain this baseline and identify their own source revision and sample counts.
 The [Windows native-path follow-up](RESULTS-2026-10-09-71cde96.md) contains
 matched three-round atomic/durable L1/L2 runs and a supplementary 120-second
 check. It must not be presented as another two-hour residency run.
+
+L2 Go RSS measures the native Agent child. It excludes the Node/npm launcher
+retained by the npx installation path. Standalone and Homebrew use the native
+Agent without that launcher.

@@ -29,7 +29,7 @@ export function windowsSupervisorLaunchScript(node: string, bundle: string) {
   // exits. The Agent persists its own event journal; do not make enabling
   // recovery wait for (or depend on) that temporary PowerShell process.
   return "Start-Process -FilePath " + quote(node) +
-    " -ArgumentList " + quote('"' + bundle + '" --supervise') +
+    " -ArgumentList " + quote('"' + bundle + '" --ts --supervise') +
     " -WindowStyle Hidden | Out-Null";
 }
 
@@ -193,6 +193,7 @@ export function createBackgroundController(
   <array>
     <string>${xmlEscape(nodePath)}</string>
     <string>${xmlEscape(AGENT_BUNDLE)}</string>
+    <string>--ts</string>
     <string>--agent</string>
   </array>
   <key>RunAtLoad</key><true/>
@@ -325,7 +326,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=:${unitQuote(nodePath)} ${unitQuote(AGENT_BUNDLE)} --agent
+ExecStart=:${unitQuote(nodePath)} ${unitQuote(AGENT_BUNDLE)} --ts --agent
 Restart=on-failure
 RestartSec=3
 Environment=NODE_ENV=production
@@ -420,7 +421,7 @@ WantedBy=default.target
       psQuote(nodePath) +
       ") + '\"?\\s+\"?' + [regex]::Escape(" +
       psQuote(AGENT_BUNDLE) +
-      ") + '\"?\\s+" +
+      ") + '\"?\\s+(?:--ts\\s+)?" +
       role +
       "(?:\\s|$)')" +
       " } | Select-Object -First 1 -ExpandProperty ProcessId; " +

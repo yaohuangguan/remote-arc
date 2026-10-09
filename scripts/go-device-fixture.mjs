@@ -13,7 +13,7 @@ const { WebSocketServer } = require("ws");
 export const version = JSON.parse(await fs.readFile(path.join(root, "packages/cli/package.json"), "utf8")).version;
 const platform = { win32: "windows", darwin: "darwin", linux: "linux" }[process.platform];
 const arch = { x64: "amd64", arm64: "arm64" }[process.arch];
-export const binary = path.join(root, "work/go-device", `remotelink-go-v${version}-${platform}-${arch}${process.platform === "win32" ? ".exe" : ""}`);
+export const binary = path.join(root, "work/go-device", `remotelink-v${version}-${platform}-${arch}${process.platform === "win32" ? ".exe" : ""}`);
 export const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function waitFor(predicate, label, timeout = 30000) {
   const end = Date.now() + timeout;

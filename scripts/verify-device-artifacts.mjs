@@ -17,7 +17,7 @@ assert.equal(manifest.version, version);
 const checksums = [];
 for (const platform of ["windows", "darwin", "linux"]) {
   for (const arch of ["amd64", "arm64"]) {
-    const name = `remotelink-go-v${version}-${platform}-${arch}${platform === "windows" ? ".exe" : ""}`;
+    const name = `remotelink-v${version}-${platform}-${arch}${platform === "windows" ? ".exe" : ""}`;
     const checksum = createHash("sha256")
       .update(await fs.readFile(path.join(output, name)))
       .digest("hex");
@@ -31,7 +31,7 @@ const hostPlatform = { win32: "windows", darwin: "darwin", linux: "linux" }[proc
 const hostArch = { x64: "amd64", arm64: "arm64" }[process.arch];
 if (hostPlatform && hostArch) {
   const executable = path.join(output,
-    `remotelink-go-v${version}-${hostPlatform}-${hostArch}${hostPlatform === "windows" ? ".exe" : ""}`);
+    `remotelink-v${version}-${hostPlatform}-${hostArch}${hostPlatform === "windows" ? ".exe" : ""}`);
   const result = spawnSync(executable, ["--version"], {
     encoding: "utf8", timeout: 15_000, windowsHide: true,
   });
@@ -51,29 +51,18 @@ assert.deepEqual(
   ),
   manifest,
 );
-const formula = await fs.readFile(
-  path.join(output, "remotelink-go.rb"),
-  "utf8",
-);
 const candidate = process.argv.includes("--candidate");
-if (candidate) {
-  // Do not overwrite the published Formula for an unreleased source change.
+for (const filename of ["remotelink.rb", "remotelink-go.rb"]) {
+  const formula = await fs.readFile(path.join(output, filename), "utf8");
   for (const platform of ["darwin", "linux"]) {
     for (const arch of ["amd64", "arm64"]) {
-      const name = `remotelink-go-v${version}-${platform}-${arch}`;
-      assert.ok(
-        formula.includes(`sha256 "${manifest.checksums[name]}"`),
-        `Candidate Homebrew formula checksum missing: ${name}`,
-      );
+      const name = `remotelink-v${version}-${platform}-${arch}`;
+      assert.ok(formula.includes(`sha256 "${manifest.checksums[name]}"`), `${filename} checksum missing: ${name}`);
     }
   }
-} else {
-  assert.equal(
-    (
-      await fs.readFile(path.join(root, "Formula/remotelink-go.rb"), "utf8")
-    ).replaceAll("\r\n", "\n"),
-    formula,
-  );
+  if (!candidate) {
+    assert.equal((await fs.readFile(path.join(root, "Formula", filename), "utf8")).replaceAll("\r\n", "\n"), formula);
+  }
 }
 console.log(
   candidate

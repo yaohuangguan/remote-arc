@@ -20,7 +20,7 @@ export function goAsset(platform = process.platform, arch = process.arch) {
     throw new Error(
       `Go agent binaries are unavailable for ${platform}/${arch}.`,
     );
-  return `remotelink-go-v${GO_VERSION}-${target}-${cpu}${platform === "win32" ? ".exe" : ""}`;
+  return `remotelink-v${GO_VERSION}-${target}-${cpu}${platform === "win32" ? ".exe" : ""}`;
 }
 function digest(b: Buffer) {
   return createHash("sha256").update(b).digest("hex");
@@ -86,7 +86,7 @@ export async function resolveGoBinary() {
       return candidate;
     }
   }
-  const releaseURL = `https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v${GO_VERSION}/${asset}`;
+  const releaseURL = `https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v${GO_VERSION}/${asset}`;
   const response = await fetch(releaseURL, {
     signal: AbortSignal.timeout(120_000),
   });

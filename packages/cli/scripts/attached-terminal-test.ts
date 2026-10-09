@@ -64,7 +64,7 @@ const config = {
 const configPath = path.join(temp, ".remotearc", "config.json");
 await fs.writeFile(configPath, JSON.stringify(config));
 const start = (...args: string[]) => {
-  const child = spawn(process.execPath, [entry, ...args], {
+  const child = spawn(process.execPath, [entry, "--ts", ...args], {
     env,
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,

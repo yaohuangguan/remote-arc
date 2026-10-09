@@ -1,9 +1,11 @@
 # Go persistence and release validation
 
-PR #116 prepares `0.5.1` for the existing opt-in Go rollout. Release metadata,
+PR #116 prepares `0.6.0` with Go as the default device runtime. Release metadata,
 six native targets and the Homebrew formula use the same version. Installed
 `0.5.1-rc.2` Agents are not automatically replaced by publishing this release.
-The default npm CLI remains TS, with explicit `--go` and `--ts` selection.
+The default npm CLI launches Go; `--go` is a compatibility alias and `--ts`
+selects `apps/agent-ts` / `packages/execution-core-ts`. The primary Go modules
+are `apps/agent` and `packages/execution-core`.
 Keep both implementations while completing production comparison and broader
 rollout acceptance; this release does not retire TS or publish a general SDK.
 
@@ -113,7 +115,7 @@ production checks are Go-only regression, not a TS/Go E2E speed ratio. Global
 
 Follow-up acceptance for broader Go rollout and TS retirement includes actual
 production reconnect, Windows service lifecycle, terminal visual acceptance
-and stronger storage fault tests. The opt-in release relies on the existing
+and stronger storage fault tests. This release relies on the existing
 cross-platform regression, compatibility, recovery and distribution checks;
 it does not claim that those follow-ups or physical power-loss guarantees
 have been completed. Archive the TS core only after that acceptance and review

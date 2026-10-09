@@ -11,6 +11,32 @@ the computers you explicitly pair through a secure outbound connection.
 npx remotelink
 ```
 
+From 0.6.0, this npm command starts the complete **native Go Agent** by default.
+The Node launcher verifies the matching platform binary against the SHA256
+manifest pinned to this npm release. `--go` remains an alias; `--ts` selects the
+retained TypeScript implementation.
+
+Without Node, use [standalone downloads](https://remotearc.app/downloads) or:
+
+```bash
+brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
+brew install yaohuangguan/remote-arc/remotelink
+remotelink
+```
+
+Stop the current Go Agent before upgrading: `npx remotelink@latest --stop`, then
+`npx remotelink@latest --foreground`. Existing TS owners require
+`npx remotelink@latest --ts --no-background` and stopping their original terminal
+before Go starts. Go refuses to take execution from an active TS owner.
+Pairing, permissions and Undo records are preserved; commands are not replayed.
+For TS fallback, stop Go first, then run `npx remotelink@latest --ts`.
+
+The primary runtime is `apps/agent` and its independent Go module is
+`packages/execution-core`. `apps/agent-ts` and `packages/execution-core-ts` support
+explicit fallback and compatibility checks. The Cloudflare Relay and React
+Dashboard remain TypeScript; native device execution requires neither Node nor
+a local Go compiler.
+
 On first run, `remotelink`:
 
 1. creates a short-lived pairing request;
@@ -26,11 +52,11 @@ copy is required.
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.5.1 — Independent Go Execution Core and runtime reliability**
+**remotelink 0.6.0 — Native Go Agent and Execution Core by default**
 
 Published 2026-10-09
 
-- Move the Go filesystem, process, permission policy, protocol and local Undo implementations into the independently testable `packages/execution-core-go` module within this repository.
+- Make the complete Go Agent the default for `npx remotelink`. Put the Go runtime in `apps/agent` and its independent filesystem/process/policy/Undo module in `packages/execution-core`; keep `apps/agent-ts` and `packages/execution-core-ts` as explicit `--ts` compatibility implementations.
 - Keep device configuration and Undo snapshots in the existing local `~/.remotearc` location and preserve current operation contracts, guards and runtime fallback.
 - Restore the Go terminal's colored status messages, readable connection and approval prompts, and approval expiry in the computer's local date and timezone. Keep journal files as plain text.
 - Preserve Undo ordering during rapid edits and clock rollback in both engines, and retain recovery evidence when an atomic replacement may have succeeded before a synchronization error.
@@ -38,7 +64,9 @@ Published 2026-10-09
 - Reduce Windows path-policy overhead with fresh native metadata handles while preserving junction, protected-path and alternate-stream checks without a path cache.
 - Keep connection timestamps stable within a WebSocket session, record new session sequences, and normalize Go binary-file results in Relay file resources.
 - Add reproducible Core and full-Agent benchmarks, two-hour Mac/Windows residency results, and Linux/macOS/Windows compatibility, race, recovery, process, journal and distribution verification.
-- Keep Go opt-in through `npx remotelink@latest --go`, direct native binaries or Homebrew. Retain the TS default and explicit `--ts` fallback; both engines continue to share device identity and a single execution lease.
+- Publish six standalone `remotelink` binaries in one GitHub release, a primary Homebrew `remotelink` formula and the existing `remotelink-go` compatibility formula. Native installations need no Node.js. Keep `--go` as a compatibility alias and preserve one execution owner across both runtimes.
+- Update the website download page, installation guide, GitHub/npm documentation and system architecture together. Pin embedded contract line endings and verify stable Homebrew checksums before merging.
+- Keep TS recovery explicitly on `--ts`, including launchd, systemd, Windows supervision and child restart, so recovery cannot accidentally switch runtimes.
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/yaohuangguan/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->
@@ -195,10 +223,10 @@ you control.
 - Node.js 20 or later
 - Windows, macOS, or Linux
 
-### Go runtime transition
+### Runtime selection
 
-The CLI supports `--go` for the complete native Go device runtime and `--ts` for
-the existing TS runtime. TS remains the transition default. Native Go executables
+The CLI defaults to the complete native Go device runtime. `--go` remains a
+compatible alias; `--ts` selects the retained TS runtime. Native Go executables
 run without Node; npx requires Node for the installation and launch entry.
 The Go runtime uses the same paired device identity, permissions and execution
 lease. Stop the executing agent before switching runtimes.
@@ -211,13 +239,13 @@ For native installation on macOS/Linux without Node:
 
 ```sh
 brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
-brew install yaohuangguan/remote-arc/remotelink-go
+brew install yaohuangguan/remote-arc/remotelink
 remotelink --foreground
 ```
 
 Go binaries accompany the matching npm release. For development builds,
 installation, compatibility coverage and recovery behavior, see the
-[Go device runtime guide](https://github.com/yaohuangguan/remote-arc/blob/master/apps/device/README.md).
+[Go device runtime guide](https://github.com/yaohuangguan/remote-arc/blob/master/apps/agent/README.md).
 
 ## Product vs package name
 

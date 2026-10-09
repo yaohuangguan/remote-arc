@@ -35,6 +35,7 @@ function isOlderRelease(current: string | null | undefined, latest = LATEST_AGEN
 const PricingContent = React.lazy(() => import("./pricing.js").then(module => ({ default: module.PricingContent })));
 const PlannedGoalEditor = React.lazy(() => import("./planned-goal-view.js").then(module => ({ default: module.PlannedGoalEditor })));
 
+const NativeInstall = React.lazy(() => import("./native-install.js").then(module => ({ default: module.NativeInstall })));
 const Documentation = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.Documentation })));
 const McpReference = React.lazy(() => import("./product-docs.js").then(module => ({ default: module.McpReference })));
 const ChromeExtensionPage = React.lazy(() => import("./chrome-extension-page.js").then(module => ({ default: module.ChromeExtensionPage })));
@@ -2333,10 +2334,11 @@ function Landing({ user }: { user?: User | null }) {
               <code>{command}</code>
               <CopyButton value={command} />
             </div>
-            <small>{tr("Node.js 20+ · opens the browser pairing flow automatically", "Node.js 20+ · 自动打开浏览器配对流程")}</small>
+            <small>{tr("Go Agent · npm, Homebrew or standalone download", "Go Agent · npm、Homebrew 或直接下载")}</small>
           </div>
           <div className="landingActions">
             <a className="primaryButton goldButton" href="/install/chatgpt">{tr("Installation guide", "安装指南")}</a>
+            <a className="ghostLink" href="/downloads">{tr("Download Agent", "下载 Agent")}</a>
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
@@ -7040,6 +7042,7 @@ function App() {
   if (location.pathname === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
   if (location.pathname === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
   if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<p role="status">{tr("Loading downloads…", "正在加载下载页面…")}</p>}><NativeInstall /></React.Suspense></main></PublicLayout>;
   if (location.pathname === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;

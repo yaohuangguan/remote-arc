@@ -1,3 +1,4 @@
+import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { handleDeviceTaskSettings } from "./device-task-settings.js";
 import { handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
 import { runScheduledTasks } from "./task-scheduler.js";
@@ -229,7 +230,7 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return Response.json({
         ok: true,
         service: "remotearc-relay",
-        version: "0.4.4",
+        version: cliPackage.version,
         auth: "oauth2-pkce",
       });
     }

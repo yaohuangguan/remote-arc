@@ -36,9 +36,10 @@ AI 宿主自己的沙箱不自动覆盖远端 MCP 动作。宿主通过 Remote A
 | Task contract / policy snapshot | 冻结目标、工具和限制，策略变化停止旧任务 | OS 内部所有副作用或回滚 |
 | Local Undo | 受支持文件工具编辑的冲突安全恢复 | Shell、数据库、部署、发布等回滚 |
 
-实现证据：`packages/execution-core/src/core.ts`、`policy.ts`、`process.ts`，
+0.6.0 主实现证据：`packages/execution-core/execution`、`packages/execution-core/policy`
+和 `apps/agent`；TS 兼容实现保留在 `packages/execution-core-ts/src`。另见
 `apps/relay/src/device-call.ts`、`device-task-policy.ts` 和 `automations.ts`。
-进程执行使用 `spawn(..., { shell: true, cwd, ... })`，继承当前本机用户权限。
+Go 进程执行使用 `os/exec` 启动本机 Shell；TS 回退使用 `spawn`。两者均继承本机用户权限。
 未发现 namespace/container/VM/AppContainer 等 OS 沙箱执行路径。
 
 ## 现阶段怎么用

@@ -8,11 +8,11 @@ importers:
 
   .: {}
 
-  apps/agent:
+  apps/agent-ts:
     dependencies:
-      '@remotearc/execution-core':
+      '@remotearc/execution-core-ts':
         specifier: workspace:*
-        version: link:../../packages/execution-core
+        version: link:../../packages/execution-core-ts
       '@remotearc/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
@@ -41,9 +41,9 @@ importers:
       '@modelcontextprotocol/server':
         specifier: ^2.1.0
         version: 2.1.0
-      '@remotearc/execution-core':
+      '@remotearc/execution-core-ts':
         specifier: workspace:*
-        version: link:../../packages/execution-core
+        version: link:../../packages/execution-core-ts
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -85,6 +85,9 @@ importers:
       wrangler:
         specifier: ^4.38.0
         version: 4.137.0(@cloudflare/workers-types@5.20260924.1)
+      ws:
+        specifier: ^8.18.3
+        version: 8.21.3
 
   apps/ui:
     dependencies:
@@ -123,9 +126,9 @@ importers:
         specifier: ^8.18.3
         version: 8.21.3
     devDependencies:
-      '@remotearc/execution-core':
+      '@remotearc/execution-core-ts':
         specifier: workspace:*
-        version: link:../execution-core
+        version: link:../execution-core-ts
       '@types/node':
         specifier: ^24.13.6
         version: 24.13.6
@@ -142,7 +145,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/execution-core:
+  packages/execution-core-ts:
     devDependencies:
       '@types/node':
         specifier: ^24.13.6

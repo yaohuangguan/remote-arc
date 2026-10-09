@@ -41,10 +41,10 @@ jobs:
           package-manager-cache: false
       - uses: actions/setup-go@v6
         with:
-          go-version-file: apps/device/go.mod
+          go-version-file: apps/agent/go.mod
           cache-dependency-path: |
-            apps/device/go.sum
-            packages/execution-core-go/go.sum
+            apps/agent/go.sum
+            packages/execution-core/go.sum
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:device --release
       - run: node scripts/verify-device-artifacts.mjs --candidate
@@ -81,10 +81,10 @@ jobs:
           package-manager-cache: false
       - uses: actions/setup-go@v6
         with:
-          go-version-file: apps/device/go.mod
+          go-version-file: apps/agent/go.mod
           cache-dependency-path: |
-            apps/device/go.sum
-            packages/execution-core-go/go.sum
+            apps/agent/go.sum
+            packages/execution-core/go.sum
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:device
       - run: node scripts/go-device-soak.mjs --duration-seconds 60 --report work/benchmarks/soak.json
@@ -115,7 +115,7 @@ jobs:
           package-manager-cache: false
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @remotearc/execution-core test:integration
+      - run: pnpm --filter @remotearc/execution-core-ts test:integration
       - run: pnpm --filter @remotearc/mcp test:smoke
-      - run: pnpm --filter @remotearc/execution-core exec tsx ../cli/scripts/goal-workspace-test.ts
+      - run: pnpm --filter @remotearc/execution-core-ts exec tsx ../cli/scripts/goal-workspace-test.ts
       - run: pnpm test:recovery

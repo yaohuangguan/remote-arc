@@ -79,6 +79,7 @@ try {
     }
   }
   if (error) throw error;
+  assert.match(await run(["--help"]), /Go device agent/);
   assert.equal(await run(["--go", "--version"]), version);
   assert.match(await run(["--go", "--help"]), /Go device agent/);
   assert.equal(await run(["--ts", "--version"]), version);

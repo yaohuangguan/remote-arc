@@ -32,10 +32,10 @@ jobs:
           package-manager-cache: false
       - uses: actions/setup-go@v6
         with:
-          go-version-file: apps/device/go.mod
+          go-version-file: apps/agent/go.mod
           cache-dependency-path: |
-            apps/device/go.sum
-            packages/execution-core-go/go.sum
+            apps/agent/go.sum
+            packages/execution-core/go.sum
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:device
       - run: node scripts/go-device-soak.mjs --report work/benchmarks/soak.json

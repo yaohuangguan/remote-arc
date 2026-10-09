@@ -1,3 +1,4 @@
+import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 
 const SITE = "https://remotearc.app";
 
@@ -93,6 +94,7 @@ const pages: Record<string, SeoPage> = {
   "/install/claude": { title: "Install Remote Arc for Claude", description: "Connect Claude to paired computers through Remote Arc using a secure Remote MCP connector and explicit device permissions.", canonical: SITE + "/install/claude" },
   "/install/cursor": { title: "Install Remote Arc for Cursor", description: "Use Remote Arc to give Cursor controlled access to paired Windows, macOS and Linux computers through MCP.", canonical: SITE + "/install/cursor" },
   "/pricing": { title: "Remote Arc Pricing — Hosted remote MCP for AI", description: "Start free with 10,000 monthly hosted MCP tool calls. Understand account usage, separate AI subscriptions and current capacity availability.", canonical: SITE + "/pricing" },
+  "/downloads": { title: "Remote Arc Downloads — Native Go Agent for Windows, macOS and Linux", description: "Download the native Remote Arc Agent or install with npm and Homebrew. Go Agent and Execution Core by default; standalone installs need no Node.js.", canonical: SITE + "/downloads" },
   "/releases": { title: "Remote Arc Releases — Product version history", description: "Remote Arc release history for remote MCP access, device controls, durable deterministic tasks, browser sharing and local execution safety.", canonical: SITE + "/releases" },
   "/demo": { title: "Remote Arc Plugin Demo — ChatGPT to a real computer", description: "Watch a real Remote Arc demo showing ChatGPT connecting to a paired Mac, inspecting a Node.js project and running its tests.", canonical: SITE + "/demo" },
   "/docs": { title: "Remote Arc Docs — Remote MCP & Computer Access", description: "Set up Remote Arc, connect AI clients, understand device permissions, MCP tools, long-running work, restart recovery, scheduling, isolation and task data.", canonical: SITE + "/docs" },
@@ -665,6 +667,21 @@ function jsonLd(page: SeoPage, pathname: string) {
   return { "@context": "https://schema.org", "@graph": graph };
 }
 
+crawlPages["/downloads"] = {
+  h1: "Download Remote Arc " + cliPackage.version,
+  intro: "The Agent and independent Execution Core are native Go. npm installs and verifies the same binary; standalone downloads and Homebrew need no Node.js. TypeScript is available only with the explicit --ts fallback.",
+  sections: [
+    { heading: "npm / npx", text: "Run npx remotelink@latest with Node.js 20+. Go is the default; --go remains a compatible alias." },
+    { heading: "Homebrew", text: "brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc, then brew install yaohuangguan/remote-arc/remotelink. Existing remotelink-go users can upgrade that formula." },
+    { heading: "Upgrade safely", text: "Stop the current Agent before changing versions or runtimes. Ctrl+C stops foreground execution; remotelink --stop disables Go recovery and drains execution. Pairing and Undo formats are preserved." },
+  ],
+  links: [
+    ...["darwin", "windows", "linux"].flatMap(platform => ["amd64", "arm64"].map<[string, string]>(arch => ["https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v" + cliPackage.version + "/remotelink-v" + cliPackage.version + "-" + platform + "-" + arch + (platform === "windows" ? ".exe" : ""), platform + " / " + arch])),
+    ["https://github.com/yaohuangguan/remote-arc/releases/download/remotelink-v" + cliPackage.version + "/SHA256SUMS", "SHA256 checksums"],
+    ["/docs#docs-routing", "System architecture"],
+  ],
+};
+
 function crawlablePageHtml(pathname: string, page: SeoPage) {
   const copy = crawlPages[pathname] ?? {
     h1: page.title.replace(/ — Remote Arc$/, ""),
@@ -755,6 +772,7 @@ export function renderMarketingHtml(html: string, pathname: string) {
 
 const sitemapPaths = [
   "/",
+  "/downloads",
   "/install/chatgpt",
   "/install/claude",
   "/install/cursor",

@@ -5,7 +5,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { goalWorkspace } from "../src/goal-workspace.js";
-import { assertCommandAllowed, RemoteArcExecutionCore } from "@remotearc/execution-core";
+import { assertCommandAllowed, RemoteArcExecutionCore } from "@remotearc/execution-core-ts";
 const exec = promisify(execFile);
 const root = await fs.mkdtemp(path.join(os.tmpdir(), "remote-arc-worktree-test-"));
 const git = async (...args: string[]) => (await exec("git", ["-C", root, ...args], { windowsHide: true, env: { ...process.env, GIT_CONFIG_NOSYSTEM: "1" } })).stdout.trim();

@@ -1,4 +1,4 @@
-import type { ExecutionMode } from "@remotearc/execution-core";
+import type { ExecutionMode } from "@remotearc/execution-core-ts";
 
 const parseMode = (value: string | undefined): ExecutionMode => {
   if (value === "developer" || value === "full" || value === "managed") {
