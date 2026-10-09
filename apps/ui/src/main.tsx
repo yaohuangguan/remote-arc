@@ -6,7 +6,7 @@ import { newPlannedDraft, buildPlannedContract } from "./planned-goal-form.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
-import { baseMarketingPath, isWebsite, localizedWebsiteHref } from "./marketing-paths.js";
+import { baseMarketingPath, chinesePages, isWebsite, localizedWebsiteHref } from "./marketing-paths.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
@@ -7234,7 +7234,7 @@ function LegalPage({
 
 function App() {
   const { tr } = useI18n();
-  const routePath = isWebsite() ? baseMarketingPath(location.pathname) : location.pathname;
+  const routePath = isWebsite() && chinesePages.has(baseMarketingPath(location.pathname)) ? baseMarketingPath(location.pathname) : location.pathname;
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [devices, setDevices] = useState<Device[]>([]);
   const [status, setStatus] = useState<ProductStatus | null>(null);
