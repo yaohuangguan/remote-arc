@@ -2,6 +2,13 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.6.1 - Unreleased
+
+### RC.1: macOS background recovery migration
+
+- Replace an idle stale loaded launchd Node/TS job with the Go service before bootstrapping the same label. Fail closed when a foreign loaded job is executing, preserving pairing and current foreground work.
+- Follow-up device-side patch to 0.6.0; published 0.6.0 binary hashes remain immutable.
+
 ## 0.6.0 - 2026-10-09
 
 ### Native Go Agent and Execution Core by default

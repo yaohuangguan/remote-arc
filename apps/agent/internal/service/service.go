@@ -190,10 +190,37 @@ func (c *Controller) installBinary() (Registration, error) {
 	}
 	return reg, nil
 }
+
+// launchd keeps the loaded job definition in memory. Updating a plist alone
+// does not replace an existing label, even when launchctl reports no live PID.
+func (c *Controller) loadedMacJob(ctx context.Context) (loaded bool, active bool, program string) {
+	if c.Platform != "darwin" {
+		return false, false, ""
+	}
+	out, err := c.Run(ctx, "launchctl", "print", "gui/"+c.UID+"/"+Label)
+	if err != nil {
+		return false, false, ""
+	}
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "program = ") {
+			program = strings.TrimSpace(strings.TrimPrefix(line, "program = "))
+		}
+	}
+	return true, regexp.MustCompile(`(?m)^\s*pid\s*=\s*[1-9]\d*`).MatchString(out), program
+}
+
 func (c *Controller) Enable(ctx context.Context) (Status, error) {
 	current := c.Status(ctx)
 	if c.Foreign(ctx) {
 		return current, errors.New("A TS background service is registered. Disable TS recovery and stop its agent locally before selecting Go recovery.")
+	}
+	if c.Platform == "darwin" {
+		loaded, running, program := c.loadedMacJob(ctx)
+		reg, _ := c.read()
+		if loaded && running && (program == "" || reg.Binary == "" || program != reg.Binary) {
+			return current, errors.New("An existing launchd Agent is running from a different runtime or binary. Stop that Agent explicitly before switching background recovery.")
+		}
 	}
 	if current.Enabled && current.Active && current.Version == c.Version {
 		return current, nil
@@ -229,6 +256,14 @@ func (c *Controller) Enable(ctx context.Context) (Status, error) {
 	run := func(name string, args ...string) error { _, e := c.Run(ctx, name, args...); return e }
 	switch c.Platform {
 	case "darwin":
+		// An idle job with the same label may still contain an old Node/TS
+		// definition. Boot it out before rewriting and bootstrapping Go.
+		loaded, running, _ := c.loadedMacJob(ctx)
+		if loaded && !running {
+			if _, e = c.Run(ctx, "launchctl", "bootout", "gui/"+c.UID+"/"+Label); e != nil {
+				return current, fmt.Errorf("Could not unload stale launchd job before updating: %w", e)
+			}
+		}
 		plist := `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Label</key><string>` + Label + `</string><key>ProgramArguments</key><array><string>` + xml(reg.Binary) + `</string><string>--agent</string></array><key>RunAtLoad</key><true/><key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict><key>ThrottleInterval</key><integer>5</integer><key>StandardOutPath</key><string>` + xml(filepath.Join(logs, "agent.log")) + `</string><key>StandardErrorPath</key><string>` + xml(filepath.Join(logs, "agent-error.log")) + `</string></dict></plist>`
 		if current.Active {
 			_, _ = c.Run(ctx, "launchctl", "bootout", "gui/"+c.UID+"/"+Label)

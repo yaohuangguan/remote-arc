@@ -48,7 +48,11 @@ func TestNativeServiceInstallationIdempotencyAndDisablePreservesWorker(t *testin
 					}
 					return "", nil
 				case strings.Contains(line, "launchctl print "):
-					return "pid = 101", nil
+					r, err := c.read()
+					if err != nil {
+						return "", errors.New("not loaded")
+					}
+					return "program = " + r.Binary + "\npid = 101", nil
 				}
 				return "", nil
 			}
