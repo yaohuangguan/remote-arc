@@ -27,6 +27,7 @@ import {
   handleDeviceUndoAction,
   handleDeviceDirectoryBrowse,
   handleDeviceBackgroundUpdate,
+  handleDeviceRuntimeUpdate,
   handleDeviceExecutionLog,
   handleDeviceManagedProcesses,
   handleDeviceManagedProcessOutput,
@@ -506,6 +507,13 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       request.method === "GET"
     ) {
       return handleDeviceDirectoryBrowse(request, env);
+    }
+
+    if (
+      /^\/api\/devices\/[^/]+\/runtime$/.test(url.pathname) &&
+      request.method === "POST"
+    ) {
+      return handleDeviceRuntimeUpdate(request, env);
     }
 
     if (

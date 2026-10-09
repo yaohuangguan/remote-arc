@@ -129,6 +129,7 @@ export class DeviceRegistry {
         tools: attachment?.tools || [],
         capabilities: attachment?.capabilities || [],
         status: "online",
+        execution_paused: attachment?.device?.executionPaused === true,
         recovery_enabled: attachment?.device?.recoveryEnabled,
         background_guard_active: attachment?.device?.supervisorActive === true,
         background_guard_pid: attachment?.device?.supervisorPid ?? null,
@@ -207,6 +208,10 @@ export class DeviceRegistry {
     }
 
     const tools = attachment.tools || [];
+    if (attachment.device?.executionPaused === true &&
+        !["set_device_runtime", "set_background_agent", "background_agent_status"].includes(body.tool)) {
+      return Response.json({ error: "Device is paused. Resume it from Dashboard to use tools." }, { status: 409 });
+    }
     if (!tools.includes(body.tool)) {
       return Response.json(
         { error: `tool not available on device: ${body.tool}` },

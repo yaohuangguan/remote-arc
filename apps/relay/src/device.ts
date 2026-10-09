@@ -387,6 +387,7 @@ export async function getDevicesForUser(
     connectedAt?: string;
     recovery_enabled?: boolean;
     background_guard_active?: boolean;
+    execution_paused?: boolean;
     background_guard_pid?: number | null;
     background_guard_service?: string | null;
     recovery_bundle_version?: string | null;
@@ -447,6 +448,7 @@ export async function getDevicesForUser(
       "background_agent_status",
       "set_background_agent",
       "agent_execution_log",
+      "set_device_runtime",
     ]);
     const availableTools = rawAvailableTools.filter((tool) => !internalTools.has(tool));
     let allowedTools: string[] | null = reviewerFixture
@@ -499,6 +501,8 @@ export async function getDevicesForUser(
           : null,
       background_recovery_available: capabilities.includes("background_recovery_v2"),
       stop_agent_available: capabilities.includes("device_stop_v1"),
+      pause_agent_available: capabilities.includes("device_pause_v1"),
+      execution_paused: live?.execution_paused === true,
       background_guard_active: live?.background_guard_active === true,
       background_guard_pid: live?.background_guard_pid ?? null,
       execution_mode: live?.execution_mode ?? null,
@@ -982,6 +986,46 @@ export async function handleDeviceUndoAction(
   return Response.json({ ok: true, result: call.result });
 }
 
+
+/**
+ * Owner-authenticated runtime state transition. The private device control
+ * tool is never exposed through ordinary MCP or accepted from unauthenticated
+ * requests. A paused Go worker is wake-only: the Relay routes no execution
+ * tools, and the local worker also denies them.
+ */
+export async function handleDeviceRuntimeUpdate(
+  request: Request,
+  env: DeviceEnv & { REGISTRY: DurableObjectNamespace },
+) {
+  const user = await getSessionUser(request, env);
+  if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const deviceId = new URL(request.url).pathname.match(/^\/api\/devices\/([^/]+)\/runtime$/)?.[1];
+  if (!deviceId) return new Response("Not found", { status: 404 });
+  const body = (await request.json().catch(() => ({}))) as { paused?: unknown };
+  if (typeof body.paused !== "boolean") {
+    return Response.json({ error: "paused must be a boolean" }, { status: 400 });
+  }
+  const live = (await getDevicesForUser(env, user.id)).find((item) => item.id === deviceId);
+  if (!live) return Response.json({ error: "device not found" }, { status: 404 });
+  if (live.status !== "online") return Response.json({ error: "device offline" }, { status: 409 });
+  if (!live.pause_agent_available) return Response.json({ error: "Upgrade the native Agent before using Pause / Resume." }, { status: 409 });
+  if (body.paused && (!live.background_enabled || !live.background_guard_active)) {
+    return Response.json({ error: "Enable active background recovery before pausing." }, { status: 409 });
+  }
+  if (live.execution_paused === body.paused) {
+    return Response.json({ ok: true, paused: body.paused, confirmed: true });
+  }
+  const device = await loadOwnedDevicePolicy(env, user.id, deviceId);
+  if (!device) return Response.json({ error: "device not found" }, { status: 404 });
+  const result = await callInternalDeviceTool(env, user.id, device, "set_device_runtime", { paused: body.paused });
+  if (!result.ok) {
+    return Response.json({ error: result.error, confirmed: false }, { status: result.status === 403 || result.status === 404 ? 409 : result.status });
+  }
+  await writeAudit(env, { userId: user.id, deviceId, eventType: body.paused ? "device.agent_pause_requested" : "device.agent_resume_requested" });
+  // "accepted" only means durable local transition requested. Dashboard
+  // must observe the newly connected wake-only or execution-only session.
+  return Response.json({ ok: true, paused: body.paused, confirmed: false });
+}
 
 export async function handleDeviceBackgroundUpdate(
   request: Request,
