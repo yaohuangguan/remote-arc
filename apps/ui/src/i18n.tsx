@@ -39,8 +39,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       document.querySelector('meta[name="description"]')?.setAttribute(
         "content",
         locale === "zh"
-          ? "通过 Remote Arc，让 ChatGPT、Claude 和其他 AI 客户端安全访问你授权的 Windows、macOS 与 Linux 电脑。"
-          : "Remote Arc — controlled remote computer access for AI across your own Windows, macOS and Linux devices.",
+          ? "让 AI 聊天真正操作你的电脑：通过 Remote MCP 连接已授权的 Windows、macOS 与 Linux。无需单独购买模型 API 或充值 API Token；免费聊天套餐的工具支持因客户端而异。"
+          : "Let compatible AI chats work on your computer through Remote MCP. No separate model API key or pay-per-token API bill; free-chat support and limits depend on the AI provider.",
       );
     }
   }, [locale]);
