@@ -219,7 +219,11 @@ starts new devices read-only; enable additional skills only when you want the
 connected AI to use them. Full terminal access should be used only on computers
 you control.
 
-## Requirements
+## Requirements for npm / npx
+
+Node.js is required only for this npm package and the TS fallback. Standalone
+Agent binaries and Homebrew installations need no Node.js; see the
+[installation guide](https://remotearc.app/downloads).
 
 - Node.js 20 or later
 - Windows, macOS, or Linux

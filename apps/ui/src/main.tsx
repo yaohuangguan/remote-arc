@@ -6570,7 +6570,7 @@ function Dashboard({
             <div className="commandLabel secondary">{tr("Optional local hard lock · always read-only", "可选本机硬限制 · 始终只读")}</div>
             <div className="commandBox muted"><code>{safeCommand}</code><CopyButton value={safeCommand}/></div>
             <div className="onboardingSteps">
-              <div><b>1</b><span><strong>{tr("Run the command", "运行命令")}</strong><small>Terminal / PowerShell · Node.js 20+</small></span></div>
+              <div><b>1</b><span><strong>{tr("Run the command", "运行命令")}</strong><small>npm / npx · Node.js 20+</small></span></div>
               <div><b>2</b><span><strong>{tr("Match the pairing code", "确认配对码")}</strong><small>{tr("The browser opens automatically", "浏览器会自动打开")}</small></span></div>
               <div><b>3</b><span><strong>{tr("Authorize the computer", "授权电脑")}</strong><small>{tr("It appears here after connecting", "连接后会自动出现在这里")}</small></span></div>
             </div>
