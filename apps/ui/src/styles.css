@@ -12527,3 +12527,19 @@ body{font-size:18px;line-height:1.6}
   .productDocs .technicalArticle .tableScroll th,
   .productDocs .technicalArticle .tableScroll td { padding: 12px 14px; }
 }
+
+/* Matched performance results: readable on desktop; no viewport overflow on mobile. */
+.benchmarkTableScroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;margin:24px 0 12px;border:1px solid var(--border);border-radius:12px}
+.benchmarkTable{width:100%;min-width:650px;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.benchmarkTable caption{text-align:left;padding:14px 18px;color:var(--muted);font-size:12px;line-height:1.5}
+.benchmarkTable th,.benchmarkTable td{padding:11px 13px;border-top:1px solid var(--border);text-align:right;white-space:nowrap}
+.benchmarkTable th:first-child,.benchmarkTable td:first-child{text-align:left}
+.benchmarkTable thead th{color:var(--muted);font-size:11px;letter-spacing:.02em}
+.benchmarkTable tbody th,.benchmarkTable td:nth-child(4){color:var(--text)}
+.benchmarkTable tbody tr:nth-child(2n){background:rgba(125,174,201,.045)}
+.benchmarkMethodNote{font-size:13px!important;line-height:1.7!important;color:var(--muted)}
+.benchmarkSources{border-top:1px solid var(--border);margin:36px 0 0;padding:10px 0 14px}
+.benchmarkSources h2{font-size:22px}
+.benchmarkSources p{font-size:14px;line-height:1.65;margin:10px 0;overflow-wrap:anywhere}
+.benchmarkSources a{color:var(--accent)}
+@media(max-width:620px){.benchmarkTableScroll{margin-left:0;margin-right:0}.benchmarkTable{min-width:640px}.blogArticleBody{min-width:0;max-width:100%}.benchmarkSources h2{font-size:19px}}

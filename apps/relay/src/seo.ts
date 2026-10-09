@@ -10,6 +10,8 @@ type SeoPage = {
   type?: "website" | "article";
   author?: string;
   blocks?: ArticleBlock[];
+  publishedAt?: string;
+  sources?: Array<[string, string]>;
 };
 
 function esc(value: string) {
@@ -17,6 +19,28 @@ function esc(value: string) {
 }
 
 const articles: Record<string, SeoPage> = {
+  "/blogs/go-vs-typescript-agent-benchmarks": {
+    title: "Why Remote Arc chose Go: measured against TypeScript on Mac and Windows",
+    description: "Native Go versus TypeScript Agent benchmarks on Intel Mac and Windows: the Windows regression and fix, atomic/durable write trade-offs, memory residency and unanswered L3 questions.",
+    canonical: SITE + "/blogs/go-vs-typescript-agent-benchmarks",
+    type: "article",
+    author: "Sam Yao",
+    publishedAt: "2026-10-09",
+    blocks: [
+      { text: "Go did not win every run. Remote Arc 0.6.0 uses a native Go Agent because of its long-running device-runtime model and low measured resident memory, not because Go is always faster than TypeScript." },
+      { heading: "A reproducible comparison, not a universal language contest", text: "L1 runs local Core JSONL IPC; L2 runs a complete foreground Agent against an authenticated loopback WebSocket relay. Three alternating rounds on the same host yielded 600 observations per file operation. Values below are L2 P50 milliseconds, with post-batch RSS in MiB, rather than production Cloudflare or ChatGPT timings." },
+      { heading: "Mac: compare atomic and durable separately", text: "At source f68ab09 on an Intel Mac, L2 atomic writes were 5.327 ms for TS and 2.713 ms for Go; memory was 100.69 MiB TS versus 16.35 MiB Go. In durable mode, write latency grew to 203.618 ms TS and 195.803 ms Go. Waiting for file and metadata synchronization dominates that difference. Mac fsync is not a full hardware power-loss guarantee." },
+      { heading: "Windows: the regression and its correction", text: "At f68ab09 on an Intel Windows PC, Go writes were slower: 29.152 ms against TS 20.977 ms, and Undo took 51.719 ms against TS 16.091 ms. The native Windows path-handling implementation was corrected and measured again at 71cde96. In that follow-up, L2 atomic writes took 9.687 ms for Go versus 21.294 ms for TS; Undo took 12.942 ms versus 16.189 ms. Keeping both reports is important because these are distinct source revisions." },
+      { heading: "Two-hour isolated native Agent residency", text: "In the older f68ab09 soak, the Mac completed 7,200 seconds with sampled native Go RSS growing from 14.11 to 17.33 MiB; Windows completed 7,200 seconds from 17.80 to 24.79 MiB, peak sampled 25.11 MiB. Tests covered Undo, file conflicts, managed processes and fixture reconnects. They are not a physical power-loss trial or production-service upgrade test." },
+      { heading: "What production benchmarking still needs", text: "L3 remains a future measured comparison: AI client to Cloudflare Relay to device, broken down by routing, network and execution time. Hardware durability, real outages and installed-service upgrade behavior remain distinct release checks. TS remains a compatibility fallback; the hosted Worker and Dashboard still use TypeScript." }
+    ],
+    sources: [
+      ["Mac + Windows baseline (f68ab09)", "https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-f68ab09.md"],
+      ["Windows fix and follow-up (71cde96)", "https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-71cde96.md"],
+      ["Reproduction protocol and raw artifact hashes", "https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/README.md"]
+    ]
+  },
+
   "/blogs/why-i-built-remote-arc": {
     title: "Why I built Remote Arc: AI should reach your computer without owning it",
     description: "Why Remote Arc exists: controlled access from AI clients to real computers without surrendering the security boundary.",
@@ -153,7 +177,13 @@ function articleHtml(page: SeoPage) {
   const blocks = (page.blocks || []).map(function(block) {
     return (block.heading ? '<h2>' + esc(block.heading) + '</h2>' : '') + '<p>' + esc(block.text) + '</p>';
   }).join("");
-  return '<main class="seo-blog-shell"><article><p class="seo-eyebrow">REMOTE ARC BLOG</p><h1>' + esc(page.title) + '</h1><p class="seo-byline">Sam Yao · Creator of Remote Arc · 27 Sep 2026</p>' + blocks + '</article></main>';
+  const date = page.publishedAt || "2026-09-27";
+  const references = (page.sources || []).map(([name, href]) =>
+    '<li><a href="' + esc(href) + '">' + esc(name) + '</a></li>'
+  ).join("");
+  return '<main class="seo-blog-shell"><article><p class="seo-eyebrow">REMOTE ARC BLOG</p><h1>' + esc(page.title) + '</h1><p class="seo-byline">Sam Yao · Creator of Remote Arc · ' + esc(date) + '</p>' + blocks +
+    (references ? '<nav aria-label="Benchmark source reports"><h2>Sources and reproduction</h2><ul>' + references + '</ul></nav>' : '') +
+    '</article></main>';
 }
 
 type CrawlSection = { heading: string; text: string };
@@ -587,8 +617,8 @@ function jsonLd(page: SeoPage, pathname: string) {
       "@id": page.canonical + "#article",
       headline: page.title,
       description: page.description,
-      datePublished: "2026-09-27",
-      dateModified: "2026-09-27",
+      datePublished: page.publishedAt || "2026-09-27",
+      dateModified: page.publishedAt || "2026-09-27",
       author: { "@type": "Person", name: page.author || "Sam Yao" },
       publisher: { "@id": SITE + "/#organization" },
       mainEntityOfPage: page.canonical,
@@ -734,7 +764,7 @@ export function renderMarketingHtml(html: string, pathname: string) {
     '<meta name="twitter:image" content="' + image + '" />' +
     '<meta name="twitter:image:alt" content="Remote Arc connecting an AI client to a paired computer" />' +
     '<link rel="alternate" type="application/rss+xml" title="Remote Arc Blog" href="' + SITE + '/feed.xml" />' +
-    (resolved.type === "article" ? '<meta property="article:published_time" content="2026-09-27T00:00:00Z" /><meta property="article:modified_time" content="2026-09-27T00:00:00Z" />' : '') +
+    (resolved.type === "article" ? '<meta property="article:published_time" content="' + esc(resolved.publishedAt || "2026-09-27") + 'T00:00:00Z" /><meta property="article:modified_time" content="' + esc(resolved.publishedAt || "2026-09-27") + 'T00:00:00Z" />' : '') +
     (indexable ? '<script type="application/ld+json">' + structured + '</script>' : '');
 
   html = html
@@ -791,6 +821,7 @@ const sitemapPaths = [
   "/releases",
   "/demo",
   "/blogs",
+  "/blogs/go-vs-typescript-agent-benchmarks",
   "/blogs/why-i-built-remote-arc",
   "/blogs/remote-arc-vs-openclaw",
   "/blogs/powerful-ai-access-without-exposing-your-computer",
@@ -806,15 +837,15 @@ export function sitemapXml() {
     paths.map(function(path) {
       const isRoot = path === "/";
       const isPrimary = path.startsWith("/install/") || path === "/chatgpt-computer-access" || path === "/claude-computer-access" || path === "/mcp-computer-access" || path === "/remote-mcp" || path === "/docs/mcp";
-      return '<url><loc>' + SITE + path + '</loc><lastmod>' + (path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
+      return '<url><loc>' + SITE + path + '</loc><lastmod>' + (path === '/blogs/go-vs-typescript-agent-benchmarks' ? '2026-10-09' : path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
     }).join("") + '</urlset>';
 }
 
 export function feedXml() {
   const items = Object.entries(articles).map(([path, article]) =>
-    '<item><title>' + esc(article.title) + '</title><link>' + article.canonical + '</link><guid isPermaLink="true">' + article.canonical + '</guid><description>' + esc(article.description) + '</description><pubDate>Sun, 27 Sep 2026 00:00:00 GMT</pubDate></item>'
+    '<item><title>' + esc(article.title) + '</title><link>' + article.canonical + '</link><guid isPermaLink="true">' + article.canonical + '</guid><description>' + esc(article.description) + '</description><pubDate>' + new Date((article.publishedAt || '2026-09-27') + 'T00:00:00Z').toUTCString() + '</pubDate></item>'
   ).join("");
-  return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Remote Arc Blog</title><link>' + SITE + '/blogs</link><description>Engineering notes, architecture decisions and security trade-offs from Remote Arc.</description><language>en</language><lastBuildDate>Sun, 04 Oct 2026 00:00:00 GMT</lastBuildDate>' + items + '</channel></rss>';
+  return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Remote Arc Blog</title><link>' + SITE + '/blogs</link><description>Engineering notes, architecture decisions and security trade-offs from Remote Arc.</description><language>en</language><lastBuildDate>Fri, 09 Oct 2026 00:00:00 GMT</lastBuildDate>' + items + '</channel></rss>';
 }
 
 export function llmsTxt() {

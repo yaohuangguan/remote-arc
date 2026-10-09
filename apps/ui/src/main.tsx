@@ -2880,11 +2880,29 @@ const blogPosts = [
     readTime: "9 min read",
     author: "Sam Yao",
   },
+  {
+    slug: "go-vs-typescript-agent-benchmarks",
+    date: "9 Oct 2026",
+    readTime: "9 min read",
+    author: "Sam Yao",
+  },
 ] as const;
 
 function BlogsPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const posts = [
+    {
+      ...blogPosts[4],
+      title: tr(
+        "Why Remote Arc chose Go: measured against TypeScript on Mac and Windows",
+        "为什么 Remote Arc 选择 Go：在 Mac 和 Windows 上实测对比 TypeScript",
+      ),
+      summary: tr(
+        "An honest account of a Windows performance regression, its fix, matching atomic/durable workloads, two-hour Agent residency and what we still have not measured.",
+        "真实记录 Windows 上 Go 性能回退的发现与修复、相同持久化策略下的比较、两小时 Agent 驻留，以及尚未完成的实测范围。",
+      ),
+      tag: tr("ENGINEERING · BENCHMARK", "工程 · 基准测试"),
+    },
     {
       ...blogPosts[0],
       title: tr(
@@ -2969,6 +2987,117 @@ function BlogsPage({ user }: { user?: User | null }) {
       </section>
     </PublicLayout>
   );
+}
+
+
+function GoVsTypescriptBenchmarkArticlePage({ user }: { user?: User | null }) {
+  const { tr } = useI18n();
+  const rows = [
+    { host: "Mac", source: "f68ab09", profile: "atomic", engine: "TS", read: "2.284", write: "5.327", undo: "5.345", rss: "100.69" },
+    { host: "Mac", source: "f68ab09", profile: "atomic", engine: "Go", read: "0.964", write: "2.713", undo: "2.519", rss: "16.35" },
+    { host: "Mac", source: "f68ab09", profile: "durable", engine: "TS", read: "2.149", write: "203.618", undo: "53.092", rss: "101.36" },
+    { host: "Mac", source: "f68ab09", profile: "durable", engine: "Go", read: "0.972", write: "195.803", undo: "47.742", rss: "16.68" },
+    { host: "Windows", source: "f68ab09", profile: "atomic", engine: "TS", read: "5.337", write: "20.977", undo: "16.091", rss: "95.79" },
+    { host: "Windows", source: "f68ab09", profile: "atomic", engine: "Go", read: "22.660", write: "29.152", undo: "51.719", rss: "19.57" },
+    { host: "Windows", source: "71cde96", profile: "atomic", engine: "TS", read: "5.422", write: "21.294", undo: "16.189", rss: "98.99" },
+    { host: "Windows", source: "71cde96", profile: "atomic", engine: "Go", read: "4.168", write: "9.687", undo: "12.942", rss: "19.33" },
+  ];
+  return <PublicLayout user={user}>
+    <article className="blogArticle">
+      <header className="blogArticleHeader">
+        <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+        <span className="eyebrow">{tr("ENGINEERING NOTES · 9 OCT 2026", "工程笔记 · 2026 年 10 月 9 日")}</span>
+        <h1>{tr(
+          "Why Remote Arc chose Go: measured against TypeScript on Mac and Windows",
+          "为什么 Remote Arc 选择 Go：在 Mac 和 Windows 上实测对比 TypeScript",
+        )}</h1>
+        <p className="blogDeck">{tr(
+          "Go did not win every test. Our first Windows build was slower. Here is what we measured, what we fixed, and why the native Agent still made sense.",
+          "Go 并不是一开始就全面胜出。早期 Windows 版本反而更慢。这篇文章记录我们测到了什么、修复了什么，以及为什么最终仍选择原生 Go Agent。",
+        )}</p>
+        <div className="blogByline"><span className="blogAuthorMark">SY</span><div>
+          <strong>Sam Yao</strong>
+          <span>{tr("Creator of Remote Arc", "Remote Arc 创建者")} · 9 Oct 2026 · 9 min</span>
+        </div></div>
+      </header>
+      <div className="blogArticleBody">
+        <p>{tr(
+          "Remote Arc is not a benchmark project. Its Agent needs to stay on the computer for hours, preserve one execution owner, reconnect safely and honor file permissions and Undo. Choosing Go was about the shape of that product, not a claim that Go is universally faster than Node.js.",
+          "Remote Arc 不是跑分项目。设备 Agent 需要长期驻留、确保只有一个执行者、可靠重连，并始终遵守文件权限和 Undo 语义。选择 Go 是基于这种产品形态，而不是宣称 Go 在所有场景中都比 Node.js 快。",
+        )}</p>
+        <h2>{tr("What exactly did we benchmark?", "我们到底测了什么？")}</h2>
+        <p>{tr(
+          "L1 measures each execution core through local JSONL IPC. L2 measures the complete foreground Agent through an authenticated loopback WebSocket relay. Both use matched operations, three alternating rounds, warmup outside the measured set and 600 samples per routine file operation. RSS is sampled after a batch, not peak RAM.",
+          "L1 通过本地 JSONL IPC 测量执行内核。L2 通过已认证的本机回环 WebSocket Relay 测试完整前台 Agent。两边执行相同操作，交替运行三轮，预热不计入测量，每项常规文件操作合计 600 次样本。RSS 是批次结束后的采样值，并非峰值内存。",
+        )}</p>
+        <p>{tr(
+          "The table below is L2 only: median (P50) latency in milliseconds and post-batch RSS in MiB. Source hashes matter: the Windows follow-up is a different, newer commit than the original baseline. These are not production Cloudflare or ChatGPT end-to-end timings.",
+          "下表只展示 L2：延迟为中位数 P50（毫秒），RSS 为批次结束后内存（MiB）。源码版本很重要：Windows 修复后测试使用的是不同于旧基线的新提交。这些不是生产 Cloudflare 或 ChatGPT 端到端延迟。",
+        )}</p>
+        <div className="benchmarkTableScroll" role="region" aria-label={tr("Agent benchmark results, scroll horizontally to see more columns", "Agent 基准结果表，可横向滚动查看更多列")} tabIndex={0}>
+          <table className="benchmarkTable">
+            <caption>{tr("Full Agent (L2): median time in ms, memory in MiB", "完整 Agent（L2）：延迟单位 ms，内存单位 MiB")}</caption>
+            <thead><tr>
+              <th scope="col">{tr("Host", "系统")}</th>
+              <th scope="col">{tr("Source", "版本")}</th>
+              <th scope="col">{tr("Mode", "模式")}</th>
+              <th scope="col">{tr("Engine", "引擎")}</th>
+              <th scope="col">{tr("Read", "读取")}</th>
+              <th scope="col">{tr("Write", "写入")}</th>
+              <th scope="col">Undo</th>
+              <th scope="col">RSS</th>
+            </tr></thead>
+            <tbody>{rows.map((item) => <tr key={item.host + item.source + item.profile + item.engine}>
+              <th scope="row">{item.host}</th><td><code>{item.source}</code></td><td>{item.profile}</td>
+              <td><strong>{item.engine}</strong></td><td>{item.read}</td><td>{item.write}</td><td>{item.undo}</td><td>{item.rss}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        <p className="benchmarkMethodNote">{tr(
+          "Read/write/Undo values come from distinct three-round matched runs. Do not compare different hosts as if they had identical hardware. The Windows follow-up verified revised native-path handling, not a universal Go advantage.",
+          "读取、写入与 Undo 数据来自三轮同条件测试。Mac 和 Windows 硬件不同，不能把跨机器数字直接相除。Windows 后续测试验证的是原生路径处理修复后的实现，而不是 Go 的普遍速度优势。",
+        )}</p>
+        <h2>{tr("The Windows regression we nearly missed", "差点被忽略的 Windows 性能回退")}</h2>
+        <p>{tr(
+          "At source f68ab09, Go on Windows took 29.15 ms to write versus 20.98 ms for TS, and 51.72 ms to Undo versus 16.09 ms. The issue was not evidence that native Go was the wrong runtime: the native Windows path-handling implementation needed correction. After that change, source 71cde96 measured 9.69 ms Go versus 21.29 ms TS for writes, and 12.94 ms versus 16.19 ms for Undo. Both measurements remain published.",
+          "在 f68ab09 版本中，Windows 的 Go 写入需要 29.15 ms，TS 仅为 20.98 ms；Go Undo 需要 51.72 ms，TS 为 16.09 ms。但问题不代表 Go 运行时本身不合适，而是 Windows 原生路径处理需要修复。修复后，71cde96 测到 Go 写入 9.69 ms、TS 21.29 ms，Undo 则是 Go 12.94 ms、TS 16.19 ms。新旧两份结果都保留，不能只展示有利数字。",
+        )}</p>
+        <h2>{tr("Why durable writes look slow on the Mac", "为什么 Mac 上 durable 写入会变慢？")}</h2>
+        <p>{tr(
+          "In atomic mode the agent writes a temporary file and renames it, without explicitly waiting for storage flushes. Durable mode additionally synchronizes file data, Undo records and directory metadata. On this Intel Mac, L2 Go writes rose from 2.71 ms in atomic mode to 195.80 ms in durable mode. TS showed a similar jump (5.33 to 203.62 ms). Most of that difference is a stronger synchronization policy, not a proof that either language became slower.",
+          "atomic 模式通过临时文件加重命名进行原子替换，但不显式等待数据落盘。durable 模式还会同步文件数据、Undo 记录与目录元数据。在这台 Intel Mac 上，L2 Go 写入由 atomic 的 2.71 ms 上升至 durable 的 195.80 ms，TS 则由 5.33 ms 上升至 203.62 ms。主要差别是同步策略，而非语言性能突然下降。",
+        )}</p>
+        <p>{tr(
+          "The layered experiment keeps workspace writes atomic while persisting Undo state more strictly. It lowers some latency, but does not guarantee that the latest workspace edit survives sudden power loss. macOS fsync is not F_FULLFSYNC, and Windows directory synchronization has limits. We will not relabel this as full power-loss protection.",
+          "layered 实验让工作区写入保持 atomic，而对 Undo 状态采用更严格的同步。它能降低部分延迟，但不保证最近一次工作区修改在突然断电后仍然存在。macOS 的 fsync 不等于 F_FULLFSYNC；Windows 的目录同步也有限制。我们不会把它包装成完整断电安全。",
+        )}</p>
+        <h2>{tr("Long-running resources and the decision", "长期驻留与最终选择")}</h2>
+        <p>{tr(
+          "Under the earlier f68ab09 native-Go soak, the Mac ran for 7,200 seconds with sampled RSS growing from 14.11 to 17.33 MiB; Windows ran for 7,200 seconds from 17.80 to 24.79 MiB, with a sampled peak of 25.11 MiB. The runs included execution, Undo, conflict checks, managed processes and repeated WebSocket reconnects in an isolated fixture, not a real production outage.",
+          "在较早的 f68ab09 原生 Go 驻留实验中，Mac 运行 7,200 秒，采样 RSS 从 14.11 增至 17.33 MiB；Windows 同样运行 7,200 秒，从 17.80 增至 24.79 MiB，采样峰值为 25.11 MiB。测试覆盖文件操作、Undo、冲突检查、受管进程及隔离环境下的 WebSocket 重连，并不等于真实生产断网测试。",
+        )}</p>
+        <p>{tr(
+          "Remote Arc 0.6.0 therefore ships Go as the default native computer Agent: low measured resident memory, native distribution without a Node prerequisite, and one executable that owns the local execution boundary. TypeScript remains an explicit compatibility fallback. Cloudflare Worker and Dashboard still use TypeScript.",
+          "因此，Remote Arc 0.6.0 选择 Go 作为默认原生设备 Agent：实测较低的常驻内存、无需 Node 的原生分发，以及由同一个可执行文件负责本地执行边界。TypeScript 仍作为明确的兼容回退；Cloudflare Worker 和 Dashboard 依然使用 TypeScript。",
+        )}</p>
+        <h2>{tr("What we have not proved yet", "哪些事情仍没有证明？")}</h2>
+        <p>{tr(
+          "L3 is still outstanding: a formal paired TS/Go measurement of ChatGPT/client → production Cloudflare Relay → real device, separating network, routing and execution time. We also need installed-service upgrades, real power/network outages and hardware-specific crash-durability experiments. Benchmark samples are useful engineering evidence, not a blanket performance claim or production SLO.",
+          "L3 仍未完成：需要把 ChatGPT/客户端 → 生产 Cloudflare Relay → 真机的 TS/Go 对照拆成网络、路由和执行耗时。另外，安装后的后台服务升级、真实断网/断电，以及硬件层面的崩溃持久化测试仍需独立验收。基准样本是工程证据，不是普适性能承诺或生产 SLO。",
+        )}</p>
+        <div className="benchmarkSources">
+          <h2>{tr("Methods and source data", "方法与原始来源")}</h2>
+          <p><a href="https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-f68ab09.md">{tr("Mac + Windows baseline (f68ab09)", "Mac + Windows 旧基线（f68ab09）")} ↗</a></p>
+          <p><a href="https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/RESULTS-2026-10-09-71cde96.md">{tr("Windows path-handling follow-up (71cde96)", "Windows 路径处理修复后测试（71cde96）")} ↗</a></p>
+          <p><a href="https://github.com/yaohuangguan/remote-arc/blob/master/benchmarks/README.md">{tr("Reproduction steps, profiles and raw-artifact hashes", "复现步骤、同步模式和原始报告哈希")} ↗</a></p>
+        </div>
+        <footer className="blogArticleFooter">
+          <div><span className="blogAuthorMark">SY</span><div><strong>Sam Yao</strong><span>{tr("Creator of Remote Arc", "Remote Arc 创建者")}</span></div></div>
+          <a href="/downloads">{tr("Download the native Go Agent", "下载原生 Go Agent")} →</a>
+        </footer>
+      </div>
+    </article>
+  </PublicLayout>;
 }
 
 function BlogArticlePage({ user }: { user?: User | null }) {
@@ -7046,6 +7175,7 @@ function App() {
   if (location.pathname === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<p role="status">{tr("Loading downloads…", "正在加载下载页面…")}</p>}><NativeInstall /></React.Suspense></main></PublicLayout>;
   if (location.pathname === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
+  if (location.pathname === "/blogs/go-vs-typescript-agent-benchmarks") return <GoVsTypescriptBenchmarkArticlePage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/remote-arc-vs-openclaw") return <RemoteArcVsOpenClawArticlePage user={user === undefined ? null : user} />;
   if (location.pathname === "/blogs/powerful-ai-access-without-exposing-your-computer") return <PowerfulAccessArticlePage user={user === undefined ? null : user} />;

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   canonicalForPath,
+  feedXml,
   llmsTxt,
   marketingStatusCode,
   renderMarketingHtml,
@@ -26,6 +27,7 @@ const known = [
   "/remote-mcp",
   "/docs",
   "/docs/mcp",
+  "/blogs/go-vs-typescript-agent-benchmarks",
   "/chrome-extension",
   "/security-model",
   "/use-cases/browser-research",
@@ -42,6 +44,13 @@ for (const path of known) {
 assert.equal(marketingStatusCode("/definitely-not-a-real-page"), 404);
 assert.equal(canonicalForPath("/definitely-not-a-real-page"), null);
 
+const blogPath = "/blogs/go-vs-typescript-agent-benchmarks";
+const blogHtml = renderMarketingHtml('<html><head><title>Remote Arc</title></head><body><div id="root"></div></body></html>', blogPath);
+assert.ok(blogHtml.includes("Windows: the regression and its correction"), "SSR article must contain test caveats");
+assert.ok(blogHtml.includes("2026-10-09T00:00:00Z"), "article publication date must match the new post");
+assert.ok(blogHtml.includes("RESULTS-2026-10-09-71cde96.md"), "SSR article must link newer source");
+assert.ok(feedXml().includes(blogPath), "RSS must contain benchmark article");
+assert.ok(feedXml().includes("Fri, 09 Oct 2026 00:00:00 GMT"), "RSS date must be truthful");
 const sitemap = sitemapXml();
 for (const path of known) {
   assert.ok(sitemap.includes("https://remotearc.app" + path), "sitemap missing " + path);
