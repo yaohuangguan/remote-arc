@@ -442,7 +442,7 @@ function LogoMark({ className = "" }: { className?: string }) {
 }
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <a href="/" className={"brand" + (compact ? " compactBrand" : "")}>
+    <a href={MARKETING_ORIGIN} title="Remote Arc website" className={"brand" + (compact ? " compactBrand" : "")}>
       <LogoMark className="brandLogo" />
       <span className="brandWords">
         <b>Remote</b><b>Arc</b>
@@ -480,8 +480,7 @@ function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
 }
 function PublicHeader({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const [showSignIn, setShowSignIn] = useState(false);
-  const returnTo = APP_ORIGIN + "/overview";
+  const signInHref = APP_ORIGIN + "/auth/login?return_to=" + encodeURIComponent("/overview");
 
   return (
     <>
@@ -554,23 +553,12 @@ function PublicHeader({ user }: { user?: User | null }) {
           {user ? (
             <a className="navDashboard" href={dashboardHref("/overview")}>{tr("Dashboard", "控制台")} <span>↗</span></a>
           ) : (
-            <button className="navLogin installNavCta" type="button" onClick={() => setShowSignIn(true)}>
+            <a className="navLogin installNavCta" href={signInHref} title={tr("Sign in with Google or email", "使用 Google 或邮箱登录")}>
               {tr("Sign in", "登录")} <span>→</span>
-            </button>
+            </a>
           )}
         </div>
       </header>
-      {showSignIn && (
-        <AuthProviderModal
-          returnTo={returnTo}
-          title={tr("Choose how to sign in.", "选择登录方式。")}
-          body={tr(
-            "Sign in to manage your Remote Arc account, paired computers and AI connections.",
-            "登录后管理你的 Remote Arc 账户、已配对电脑和 AI 连接。",
-          )}
-          onClose={() => setShowSignIn(false)}
-        />
-      )}
     </>
   );
 }
@@ -2280,6 +2268,16 @@ function ClientInstallPage({
 function DashboardAccess() {
   const { tr } = useI18n();
   const [showSignIn, setShowSignIn] = useState(false);
+  useEffect(() => {
+    if (!UI_PREVIEW) {
+      const returnTo = location.pathname + location.search;
+      location.replace(APP_ORIGIN + "/auth/login?return_to=" + encodeURIComponent(returnTo));
+    }
+  }, []);
+  if (!UI_PREVIEW) {
+    return <CenteredCard title={tr("Opening sign in…", "正在打开登录页…")}
+      body={tr("Taking you to the secure Google or email sign-in page.", "正在跳转到安全的 Google 或邮箱登录页。")} />;
+  }
   return (
     <>
     <PublicLayout>
@@ -4912,6 +4910,9 @@ function Dashboard({
     <div className="appFrame">
       <aside className="sidebar">
         <Brand />
+        <a className="dashboardWebsiteLink" href={MARKETING_ORIGIN}>
+          <span aria-hidden="true">↗</span> {tr("Back to website", "返回官网")}
+        </a>
         <nav className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
           {navItems.map(([id, label]) => (
             <button key={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>

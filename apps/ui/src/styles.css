@@ -454,6 +454,20 @@ button:disabled { opacity: .48; cursor: not-allowed; }
   background:rgba(8,10,13,.9); backdrop-filter:blur(18px); display:flex; flex-direction:column;
 }
 .sidebarBrand { padding:0 9px 18px; }
+.dashboardWebsiteLink {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:12px 10px 3px;
+  color:#91b5c1;
+  font-size:13px;
+  font-weight:650;
+  text-decoration:none;
+}
+.dashboardWebsiteLink:hover { color:#e5faff; text-decoration:underline; text-underline-offset:4px; }
+.dashboardWebsiteLink:focus-visible { outline:2px solid #38bdf8; outline-offset:3px; border-radius:6px; }
+:root[data-theme="light"] .dashboardWebsiteLink { color:#326b7a; }
+:root[data-theme="light"] .dashboardWebsiteLink:hover { color:#123947; }
 .sideNav { display:grid; gap:4px; margin-top:18px; }
 .sideNav button {
   display:flex; align-items:center; gap:11px; width:100%; border:0; border-radius:9px; background:transparent;
