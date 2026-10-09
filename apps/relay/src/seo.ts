@@ -112,7 +112,7 @@ const articles: Record<string, SeoPage> = {
 };
 
 const pages: Record<string, SeoPage> = {
-  "/": { title: "Remote Arc — Controlled Computer Access for AI", description: "Connect ChatGPT, Claude, Codex and compatible MCP clients to paired Windows, macOS and Linux computers with explicit permissions and local safety controls.", canonical: SITE + "/" },
+  "/": { title: "Remote Arc — Let AI Do More Than Chat, No Separate Model API Key", description: "Turn your existing AI chat into real computer work through MCP. Connect supported clients to paired Windows, macOS and Linux computers without buying separate model API tokens. Your AI provider plan and usage limits still apply.", canonical: SITE + "/" },
   "/install": { title: "Install Remote Arc for ChatGPT, Claude and Cursor", description: "Install Remote Arc, pair your computer and connect your AI client through Remote MCP.", canonical: SITE + "/install/chatgpt" },
   "/install/chatgpt": { title: "Install Remote Arc for ChatGPT", description: "Connect ChatGPT to Windows, macOS or Linux through Remote Arc and a secure OAuth-protected Remote MCP endpoint.", canonical: SITE + "/install/chatgpt" },
   "/install/claude": { title: "Install Remote Arc for Claude", description: "Connect Claude to paired computers through Remote Arc using a secure Remote MCP connector and explicit device permissions.", canonical: SITE + "/install/claude" },
@@ -198,7 +198,7 @@ type CrawlPage = {
 const crawlPages: Record<string, CrawlPage> = {
   "/": {
     h1: "Remote computer access for AI through MCP",
-    intro: "Remote Arc connects ChatGPT, Claude, Cursor and other compatible AI clients to Windows, macOS and Linux computers that you explicitly pair. It is a remote execution layer for work that already lives on your devices, not a replacement assistant, hosted desktop or general remote-control product.",
+    intro: "Don’t let AI stop at chat. Remote Arc connects compatible ChatGPT, Claude, Cursor and other AI clients through MCP to computers you explicitly pair. Let your existing chat work on files, terminals and processes without needing a separate model API key or token purchase. Existing AI plan limits still apply; your paired devices enforce their own permissions.",
     sections: [
       { heading: "Use the computer where the work already lives", text: "Your repositories, files, runtimes, credentials and command-line tools can stay on your own machine. Remote Arc exposes named MCP capabilities for inspecting directories, reading files, making supported edits, checking processes and running approved commands. The AI asks for a specific tool operation and the paired device executes it locally, so you do not need to move an entire development environment into a hosted VM just to let an AI help with real work." },
       { heading: "Separate AI authorization from device permission", text: "OAuth authorizes the AI client to your Remote Arc account, while each paired computer keeps its own policy. A development workstation can allow file edits and managed terminal commands while another machine remains read-only. Trusted Write Locations, protected paths, per-tool permissions and explicit approvals let you narrow ordinary file workflows without pretending that powerful terminal access is risk free." },
