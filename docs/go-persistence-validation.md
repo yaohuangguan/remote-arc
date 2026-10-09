@@ -140,7 +140,15 @@ retain the old resolver. Missing descendants still resolve against the nearest
 existing parent. Tests cover case/short/extended paths, long returned paths,
 junction escapes, root aliases, live retargeting and narrow exceptions. This
 changes neither permission defaults nor durability settings. Standalone timing
-improved to about 1.5 ms; full-Agent improvement needs a separate matched run.
+improved to about 1.5 ms. A matched Windows rerun at `71cde96` completed 12 L1
+and 12 L2 suites (atomic/durable, 200 samples per operation, three rounds).
+L2 atomic pooled P50: Go read 4.168 ms, write 9.687 ms, Undo 12.942 ms; matched
+TS 5.422/21.294/16.189 ms. Sampled RSS median was 19.33 MiB versus 98.99 MiB;
+32-concurrent-read throughput was 586 versus 259 requests/sec. Read P50 in the
+old Go baseline was 22.660 ms. Both profiles completed all correctness checks.
+The new 120-second residency check passed 27 cycles/four handshakes and cleanup;
+this is supplementary to the earlier two-hour baseline, not a new two-hour run.
+See [the Windows follow-up](../benchmarks/RESULTS-2026-10-09-71cde96.md).
 
 The core compiles, exposes 16 tools and executes reads in a separate consumer
 Go module with only its module replacement, without Agent, Relay, CLI or Node

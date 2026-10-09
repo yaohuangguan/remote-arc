@@ -58,3 +58,6 @@ including raw artifact SHA256 hashes. Preserve the input reports beside it.
 See [the completed f68ab09 baseline](RESULTS-2026-10-09-f68ab09.md) for the Mac
 and Windows results and two-hour residency evidence. Later optimizations must
 retain this baseline and identify their own source revision and sample counts.
+The [Windows native-path follow-up](RESULTS-2026-10-09-71cde96.md) contains
+matched three-round atomic/durable L1/L2 runs and a supplementary 120-second
+check. It must not be presented as another two-hour residency run.
