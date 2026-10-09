@@ -38,7 +38,16 @@ func TestOptionsVersionAndForeignLeasePreservesPairing(t *testing.T) {
 	}
 	defer owned.Release()
 	for _, args := range [][]string{{"--foreground"}, {"--reset"}, {"--background"}, {"--safe"}} {
-		if e := Main(context.Background(), args, "test", os.Stdin, &output, &output); e == nil {
+		ctx := context.Background()
+		cancel := func() {}
+		if args[0] == "--background" {
+			// Recovery may safely wait for a stale owner, but must never
+			// steal a continuously refreshed lease. Bound this unit check.
+			ctx, cancel = context.WithTimeout(ctx, 400*time.Millisecond)
+		}
+		e := Main(ctx, args, "test", os.Stdin, &output, &output)
+		cancel()
+		if e == nil {
 			t.Fatal("foreign owner not refused")
 		}
 		current, _ := config.Load()

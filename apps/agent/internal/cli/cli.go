@@ -204,24 +204,33 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 	if !o.Agent && !o.Supervise && lease.Active(dir, "execution") {
 		status, err := control.Request(ctx, dir, "GET", "/status")
 		if err != nil || status["engine"] != "go" {
-			return errors.New("A TS agent owns execution. Use --ts --no-background, stop that agent locally, then launch --go. No commands were replayed.")
-		}
-		if o.NoBackground {
-			cfg, err := config.Load()
-			if err != nil {
-				return err
+			if !o.Background {
+				return errors.New("Another Agent owns execution. Stop it locally before changing runtimes; no commands were replayed.")
 			}
-			no := false
-			cfg.BackgroundEnabled = &no
-			if err = config.Save(cfg); err != nil {
-				return err
+			// Background startup after a forced TS/Go exit must wait until
+			// the previous execution lease expires. Never take a live lease.
+			log.Log("warn", "Waiting for previous Agent execution lease to release before restoring Go background recovery.")
+			if e := waitForPriorOwnerRelease(ctx, dir); e != nil {
+				return e
 			}
-			if err = bg.Disable(ctx); err != nil {
-				return err
+		} else {
+			if o.NoBackground {
+				cfg, err := config.Load()
+				if err != nil {
+					return err
+				}
+				no := false
+				cfg.BackgroundEnabled = &no
+				if err = config.Save(cfg); err != nil {
+					return err
+				}
+				if err = bg.Disable(ctx); err != nil {
+					return err
+				}
 			}
-		}
-		if o.Safe || o.Developer || o.Background {
-			return errors.New("A Go agent already owns execution. Change recovery in Dashboard, or use --go --stop before changing its local profile.")
+			if o.Safe || o.Developer || o.Background {
+				return errors.New("A Go agent already owns execution. Change recovery in Dashboard, or use --go --stop before changing its local profile.")
+			}
 		}
 	}
 	if o.Supervise {
