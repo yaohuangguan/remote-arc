@@ -4,6 +4,12 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.6.1 - Unreleased
 
+### RC.4: silent Windows login recovery and runtime fixes
+
+- Start the native Windows Go supervisor invisibly at user login instead of showing a console window. Closing an incidental CMD window no longer stops the real supervisor.
+- Migrate legacy direct-console HKCU Run entries to a validated Windows Script Host launcher while preserving existing device pairing and execution lease ownership.
+- Keep the desktop's Stop Agent and explicit recovery-disabled semantics intact; this is user-login recovery, not an elevated Windows service.
+
 ### RC.3: macOS background recovery migration and remote Stop Agent
 
 - Restore a version-gated Stop Agent button for any online foreground or background executor, disable automatic recovery first, and confirm the device has actually disconnected.
