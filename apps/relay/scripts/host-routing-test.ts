@@ -25,7 +25,9 @@ for (const path of [
 ]) {
   assert.equal(publicWebsiteRedirect(route(path), "GET", marketing), null, "system route must stay on app: " + path);
 }
-for (const path of ["/overview", "/devices", "/automations", "/connect", "/security", "/settings", "/monitor"]) {
+// Overview is intentionally public for signed-out visitors: it serves as a product preview.
+assert.equal(dashboardSignInUrl(route("/overview"), "GET", app), null);
+for (const path of ["/devices", "/automations", "/connect", "/security", "/settings", "/monitor"]) {
   assert.equal(dashboardSignInUrl(route(path), "GET", app), app + "/auth/login?return_to=" + encodeURIComponent(path));
 }
 assert.equal(dashboardSignInUrl(route("/automations?task=abc%2F123"), "GET", app), app + "/auth/login?return_to=" + encodeURIComponent("/automations?task=abc%2F123"));

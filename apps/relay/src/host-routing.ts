@@ -53,7 +53,7 @@ export function dashboardSignInUrl(
 ): string | null {
   if (requestUrl.hostname !== "mcp.remotearc.app") return null;
   if (method !== "GET" && method !== "HEAD") return null;
-  if (!dashboardPaths.has(requestUrl.pathname)) return null;
+  if (!dashboardPaths.has(requestUrl.pathname) || requestUrl.pathname === "/overview") return null;
   const signIn = new URL("/auth/login", appOrigin);
   signIn.searchParams.set("return_to", requestUrl.pathname + requestUrl.search);
   return signIn.toString();

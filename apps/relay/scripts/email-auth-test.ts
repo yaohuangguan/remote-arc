@@ -77,7 +77,12 @@ globalThis.fetch = async (_input, init) => {
 };
 try {
   // Login page still provides Google and reviewer options, but email is feature-gated.
-  const html = await (await handleLoginPage(new Request(ORIGIN + "/auth/login"), env)).text();
+  const login = handleLoginPage(new Request(ORIGIN + "/auth/login"), env);
+  const html = await login.text();
+  const csrfCookie = login.headers.get("set-cookie") || "";
+  const csrfToken = html.match(/name="email_csrf" value="([a-f0-9]{64})"/)?.[1] || "";
+  assert.match(csrfCookie, /__Host-ra_email_form=/);
+  assert.equal(csrfToken.length, 64);
   assert.match(html, /Continue with Google/);
   assert.match(html, /auth\/email\/request/);
   assert.doesNotMatch(await (await handleLoginPage(new Request(ORIGIN + "/auth/login"), {
@@ -132,6 +137,45 @@ try {
   assert.equal(Number(sqlite.prepare("SELECT COUNT(*) AS n FROM users WHERE email = ?").get("linked@example.com")?.n), 1);
   assert.equal(String(sqlite.prepare("SELECT user_id FROM sessions ORDER BY created_at DESC LIMIT 1").get()?.user_id) === "existing-google-user" ||
     Number(sqlite.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?").get("existing-google-user")?.n) === 1, true);
+
+  // The marketing domain can legitimately be the form's Origin after a 307 to mcp.
+  const marketing = await handleEmailCodeRequest(formRequest("/auth/email/request", {
+    email: "marketing@example.com", return_to: "/overview",
+  }, "https://remotearc.app"), env);
+  assert.equal(marketing.status, 200);
+  assert.match(await marketing.text(), /Check your inbox/);
+  const marketingLogin = await handleEmailCodeVerify(formRequest("/auth/email/verify", {
+    email: "marketing@example.com", code, return_to: "/overview",
+  }, "https://remotearc.app"), env);
+  assert.equal(marketingLogin.status, 303);
+
+  // A privacy browser can omit Origin and Referer, but the host-only
+  // double-submit cookie + hidden form token still authorizes the form.
+  const protectedForm = (path: string, email: string, token: string, cookie: string) =>
+    new Request(ORIGIN + path, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", cookie },
+      body: new URLSearchParams({
+        email, email_csrf: token, return_to: "/overview", ...(path.endsWith("/verify") ? { code } : {}),
+      }),
+    });
+  const cookieHeader = "__Host-ra_email_form=" + csrfToken;
+  const cookieRequest = await handleEmailCodeRequest(protectedForm(
+    "/auth/email/request", "privacy@example.com", csrfToken, cookieHeader,
+  ), env);
+  assert.equal(cookieRequest.status, 200);
+  assert.match(await cookieRequest.text(), /Check your inbox/);
+  assert.equal((await handleEmailCodeVerify(protectedForm(
+    "/auth/email/verify", "privacy@example.com", csrfToken, cookieHeader,
+  ), env)).status, 303);
+  assert.equal((await handleEmailCodeRequest(protectedForm(
+    "/auth/email/request", "bad-csrf@example.com", "0".repeat(64), cookieHeader,
+  ), env)).status, 403);
+  assert.equal((await handleEmailCodeRequest(new Request(ORIGIN + "/auth/email/request", {
+    method: "POST",
+    headers: { "origin": "null", "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ email: "null-origin@example.com" }),
+  }), env)).status, 403);
 
   // Expired codes never create sessions even when the value is correct.
   await handleEmailCodeRequest(formRequest("/auth/email/request", { email: "expired@example.com" }), env);

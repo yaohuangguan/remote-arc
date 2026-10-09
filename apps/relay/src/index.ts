@@ -200,8 +200,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     const websiteDestination = publicWebsiteRedirect(url, request.method, marketingOrigin);
     if (websiteDestination) return Response.redirect(websiteDestination, 301);
 
-    // The logged-out control panel is a sign-in entry, not an empty dashboard preview.
-    // Preserve the requested page so authentication returns the user to the right tab.
+    // Keep /overview public as a real product preview, but sign in before
+    // opening private dashboard tabs. Preserve the requested destination.
     const loginDestination = dashboardSignInUrl(url, request.method, appOrigin);
     if (loginDestination && !(await getSessionUser(request, env))) {
       return Response.redirect(loginDestination, 302);

@@ -8,6 +8,7 @@ import {
 import { REVIEWER_DEMO_TOOLS, resetReviewerDemoState } from "./reviewer-fixture.js";
 import { emailLoginEnabled } from "./email-auth.js";
 import { authPage, escapeAuthHtml } from "./auth-page.js";
+import { emailFormToken } from "./email-form-csrf.js";
 
 type ReviewerEnv = {
   DB: D1Database;
@@ -33,6 +34,7 @@ export function handleLoginPage(request: Request, env: ReviewerEnv) {
   const googleHref = "/auth/google?return_to=" + encodeURIComponent(returnTo);
   const reviewerEnabled = Boolean(env.REVIEWER_EMAIL && env.REVIEWER_PASSWORD_SHA256);
   const emailEnabled = emailLoginEnabled(env);
+  const { token: emailCsrf, setCookie: emailCsrfCookie } = emailFormToken(request);
 
   const reviewerForm = reviewerEnabled ? `
     <details>
@@ -48,7 +50,7 @@ export function handleLoginPage(request: Request, env: ReviewerEnv) {
     </details>
   ` : "";
 
-  return authPage("Sign in", `
+  const page = authPage("Sign in", `
     <p class="eyebrow">Your computer, your control</p>
     <h1>Welcome to Remote Arc</h1>
     <p class="lead">Sign in or create an account to connect your AI to your own computers. No password needed.</p>
@@ -59,6 +61,7 @@ export function handleLoginPage(request: Request, env: ReviewerEnv) {
     ${emailEnabled ? `
       <div class="divider"><span>or continue with email</span></div>
       <form action="/auth/email/request" method="post">
+        <input type="hidden" name="email_csrf" value="${emailCsrf}">
         <input type="hidden" name="return_to" value="${escapeAuthHtml(returnTo)}">
         <label for="email">Email address</label>
         <input class="field" id="email" type="email" name="email" maxlength="254" autocomplete="email" placeholder="you@example.com" spellcheck="false" autocapitalize="off" required>
@@ -68,6 +71,8 @@ export function handleLoginPage(request: Request, env: ReviewerEnv) {
     ` : `<p class="note">Email sign-in is temporarily unavailable. Continue securely with Google.</p>`}
     ${reviewerForm}
   `);
+  if (emailCsrfCookie) page.headers.append("set-cookie", emailCsrfCookie);
+  return page;
 }
 
 export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
