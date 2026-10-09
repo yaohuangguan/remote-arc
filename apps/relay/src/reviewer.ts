@@ -3,23 +3,27 @@ import {
   nowIso,
   sessionCookie,
   sha256Hex,
+  safeReturnTo as allowlistedReturnTo,
 } from "./auth.js";
 import { REVIEWER_DEMO_TOOLS, resetReviewerDemoState } from "./reviewer-fixture.js";
+import { emailLoginEnabled } from "./email-auth.js";
 
 type ReviewerEnv = {
   DB: D1Database;
   PUBLIC_ORIGIN: string;
   APP_ORIGIN?: string;
+  MARKETING_ORIGIN?: string;
   REVIEWER_EMAIL?: string;
   REVIEWER_PASSWORD_SHA256?: string;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  RESEND_API_KEY?: string;
+  EMAIL_AUTH_SECRET?: string;
 };
 
 const appOrigin = (env: ReviewerEnv) => env.APP_ORIGIN || env.PUBLIC_ORIGIN;
 
-function safeReturnTo(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/overview";
-  return value;
+function safeReturnTo(value: string | null, request: Request, env: ReviewerEnv) {
+  return allowlistedReturnTo(value || "/overview", request, env);
 }
 
 function escapeHtml(value: string) {
@@ -34,9 +38,10 @@ function escapeHtml(value: string) {
 
 export function handleLoginPage(request: Request, env: ReviewerEnv) {
   const url = new URL(request.url);
-  const returnTo = safeReturnTo(url.searchParams.get("return_to"));
+  const returnTo = safeReturnTo(url.searchParams.get("return_to"), request, env);
   const googleHref = "/auth/google?return_to=" + encodeURIComponent(returnTo);
   const reviewerEnabled = Boolean(env.REVIEWER_EMAIL && env.REVIEWER_PASSWORD_SHA256);
+  const emailEnabled = emailLoginEnabled(env);
 
   const reviewerForm = reviewerEnabled
     ? `
@@ -71,6 +76,15 @@ form{display:grid;gap:12px}label{display:grid;gap:6px;color:#a8bac1;font-size:13
     <div class="brand"><span class="mark">R</span><strong>Remote Arc</strong></div>
     <p>Authorize your AI client to access the Remote Arc account you choose.</p>
     <a class="google" href="${googleHref}">Continue with Google</a>
+    ${emailEnabled ? `
+    <div class="divider"><span>or continue with email</span></div>
+    <form method="post" action="/auth/email/request">
+      <input type="hidden" name="return_to" value="${escapeHtml(returnTo)}" />
+      <label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@example.com" maxlength="254" required /></label>
+      <button type="submit" class="reviewer">Send sign-in code</button>
+    </form>
+    <p class="note">No password needed. New emails can register automatically.</p>
+    ` : ""}
     ${reviewerForm}
     <div class="note">Reviewer credentials are isolated from normal user accounts and are used only for OpenAI plugin review.</div>
   </main>
@@ -88,7 +102,7 @@ export async function handleReviewerLogin(request: Request, env: ReviewerEnv) {
   const form = await request.formData();
   const email = String(form.get("email") || "").trim().toLowerCase();
   const password = String(form.get("password") || "");
-  const returnTo = safeReturnTo(String(form.get("return_to") || "/overview"));
+  const returnTo = safeReturnTo(String(form.get("return_to") || "/overview"), request, env);
 
   if (
     email !== env.REVIEWER_EMAIL.trim().toLowerCase() ||

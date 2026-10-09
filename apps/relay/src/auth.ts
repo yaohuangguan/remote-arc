@@ -74,7 +74,7 @@ function cookieValue(request: Request, name: string) {
   return null;
 }
 
-function safeReturnTo(value: string | null, request: Request, env: AuthEnv) {
+export function safeReturnTo(value: string | null, request: Request, env: AuthEnv) {
   const requestOrigin = new URL(request.url).origin;
   const allowedOrigins = new Set(
     [env.MARKETING_ORIGIN, env.APP_ORIGIN, env.PUBLIC_ORIGIN, requestOrigin]

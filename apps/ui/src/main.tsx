@@ -1930,6 +1930,12 @@ function AuthProviderModal({
 
   const providers = [
     {
+      id: "email",
+      label: tr("Continue with Email", "使用邮箱继续"),
+      href: MARKETING_ORIGIN + "/auth/login?return_to=" + encodeURIComponent(absoluteReturnTo),
+      mark: "@",
+    },
+    {
       id: "google",
       label: tr("Continue with Google", "使用 Google 继续"),
       href:
@@ -2854,8 +2860,8 @@ function NotFoundPage({ user }: { user?: User | null }) {
 
 function PricingPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const startHref = user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/google?return_to=/overview";
-  const usageHref = user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/google?return_to=/settings";
+  const startHref = user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/login?return_to=/overview";
+  const usageHref = user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/login?return_to=/settings";
   return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><PricingContent startHref={startHref} usageHref={usageHref} signedIn={Boolean(user)} currentPlan={user?.plan || null} /></React.Suspense></PublicLayout>;
 }
 

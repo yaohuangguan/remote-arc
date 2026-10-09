@@ -7398,6 +7398,7 @@ body{font-size:18px;line-height:1.6}
   color:#4285f4;
   font:800 16px/1 system-ui,sans-serif;
 }
+.authProviderButton.email span{background:#c7f4ff;color:#07394b}
 .authProviderButton strong{font-size:14px}
 .authProviderButton b{color:#7dd3fc;font-size:16px}
 .installAuthModal>small{
