@@ -103,6 +103,14 @@
         "limit": 30,
         "period": 60
       }
+    },
+    {
+      "name": "EMAIL_RATE_LIMITER",
+      "namespace_id": "41003",
+      "simple": {
+        "limit": 3,
+        "period": 60
+      }
     }
   ]
 }

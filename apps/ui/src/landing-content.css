@@ -169,3 +169,10 @@
 .unexpectedLink { color: var(--accent); font-size: 14px; font-weight: 700; }
 .unexpectedDisclosure { margin-top: 14px; color: var(--muted); font-size: 13px; line-height: 1.65; }
 @media(max-width: 680px) { .unexpectedGrid { grid-template-columns: 1fr; } .unexpectedCard { padding: 22px; } }
+
+
+/* Keep the subscription/API-key distinction visible without a bulky callout. */
+.heroAiPlanNote{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-top:13px;margin-bottom:19px;font-size:13px;line-height:1.5}
+.heroAiPlanNote strong{font-weight:650;color:var(--text)}
+.heroAiPlanNote span{color:var(--muted);max-width:630px}
+@media(max-width:620px){.heroAiPlanNote{font-size:12px;gap:5px;margin-bottom:16px}}

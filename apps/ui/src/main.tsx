@@ -1936,7 +1936,11 @@ function AuthProviderModal({
         MARKETING_ORIGIN +
         "/auth/google?return_to=" +
         encodeURIComponent(absoluteReturnTo),
-      mark: "G",
+    },
+    {
+      id: "email",
+      label: tr("Continue with Email", "使用邮箱继续"),
+      href: MARKETING_ORIGIN + "/auth/login?return_to=" + encodeURIComponent(absoluteReturnTo) + "#email",
     },
   ];
 
@@ -1959,15 +1963,15 @@ function AuthProviderModal({
         <div className="installAuthProviders">
           {providers.map((provider) => (
             <a className={"authProviderButton " + provider.id} href={provider.href} key={provider.id}>
-              <span aria-hidden="true">{provider.mark}</span>
+              <span aria-hidden="true">{provider.id === "google" ? <img src="/google-g.svg" alt="" width={25} height={25} /> : "✉"}</span>
               <strong>{provider.label}</strong>
               <b>→</b>
             </a>
           ))}
         </div>
         <small>{note || tr(
-          "More sign-in methods can be added here later without changing your paired computers or AI connections.",
-          "以后可以在这里增加更多登录方式，而不会影响已经配对的电脑或 AI 连接。",
+          "Google and email sign-in use the same Remote Arc account. Your paired computers and AI connections stay attached.",
+          "Google 和邮箱登录使用同一个 Remote Arc 账户，已配对设备和 AI 连接会保留。",
         )}</small>
       </section>
     </div>
@@ -2329,9 +2333,13 @@ function Landing({ user }: { user?: User | null }) {
           <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
           <HeroHeadline />
           <p>{tr(
-            "Give the AI you already use a persistent, permissioned runtime across your own computers. Start work now, save long-running goals, and return in a later chat without losing the execution state.",
-            "让你已经在用的 AI 获得跨真实电脑的持久化、可控 Runtime。现在开始工作，保存长任务与目标，换到之后的聊天仍可从已保存的执行状态继续。"
+            "Don’t let AI stop at chat. Give the AI you already use a persistent, permissioned runtime across your own computers. Let it actually work with your files, terminals and processes. Save long-running tasks and return in a later chat without losing the saved execution state.",
+            "别让 AI 只停留在聊天。让你已经在用的 AI 获得跨真实电脑的持久化、可控 Runtime，真正操作文件、终端与进程。保存长任务，之后换个聊天也能继续查看和推进已保存的执行状态。"
           )}</p>
+          <div className="heroAiPlanNote">
+            <strong>{tr("No separate model API key or pay-per-token model bill.", "无需额外模型 API Key，也无需另付按 Token 计费的模型 API 账单。")}</strong>
+            <span>{tr("Use a compatible AI chat with MCP tools. Your existing AI provider’s plan and usage limits still apply.", "直接使用支持 MCP 工具的 AI 对话。原有 AI 套餐及其使用额度仍然适用。")}</span>
+          </div>
           <div className="heroPrimaryCommand">
             <span>{tr("START HERE · RUN ON YOUR COMPUTER", "从这里开始 · 在电脑上运行")}</span>
             <div>
@@ -2346,6 +2354,8 @@ function Landing({ user }: { user?: User | null }) {
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
+            <span>{tr("Use your existing AI chat", "沿用现有 AI 对话")}</span>
+            <span>{tr("No separate AI API key", "无须额外模型 API Key")}</span>
             <span>{tr("Build & test", "开发与测试")}</span>
             <span>{tr("Overnight tasks", "过夜任务")}</span>
             <span>{tr("Scheduled tasks", "定时任务")}</span>
@@ -2854,8 +2864,8 @@ function NotFoundPage({ user }: { user?: User | null }) {
 
 function PricingPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const startHref = user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/google?return_to=/overview";
-  const usageHref = user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/google?return_to=/settings";
+  const startHref = user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/login?return_to=/overview";
+  const usageHref = user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/login?return_to=/settings";
   return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><PricingContent startHref={startHref} usageHref={usageHref} signedIn={Boolean(user)} currentPlan={user?.plan || null} /></React.Suspense></PublicLayout>;
 }
 
