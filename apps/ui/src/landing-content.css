@@ -176,3 +176,8 @@
 .heroAiPlanNote strong{font-weight:650;color:var(--text)}
 .heroAiPlanNote span{color:var(--muted);max-width:630px}
 @media(max-width:620px){.heroAiPlanNote{font-size:12px;gap:5px;margin-bottom:16px}}
+
+/* Short value points near the real-chat demo; compact, never overlaid on headings. */
+.chatSellingPoints{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:16px}
+.chatSellingPoints span{display:inline-flex;align-items:center;min-height:30px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--landing-muted);font-weight:650;font-size:12px;line-height:1.4}
+@media(max-width:600px){.chatSellingPoints{gap:7px;margin-top:14px}.chatSellingPoints span{font-size:11px;padding:5px 9px}}

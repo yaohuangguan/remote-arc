@@ -2331,12 +2331,12 @@ function Landing({ user }: { user?: User | null }) {
           <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
           <HeroHeadline />
           <p>{tr(
-            "Don’t let AI stop at chat. Give the AI you already use a persistent, permissioned runtime across your own computers. Let it actually work with your files, terminals and processes. Save long-running tasks and return in a later chat without losing the saved execution state.",
-            "别让 AI 只停留在聊天。让你已经在用的 AI 获得跨真实电脑的持久化、可控 Runtime，真正操作文件、终端与进程。保存长任务，之后换个聊天也能继续查看和推进已保存的执行状态。"
+            "Don't just chat with AI. In a compatible AI chat, ask it to inspect files, fix code and run approved tools on your own computers. Remote Arc connects the tools, your AI does the thinking, and your machines do the work. Save a task and pick up its state in a later chat.",
+            "别让 AI 只停留在聊天。就在你熟悉的 AI 对话里，让它检查文件、修复代码、执行电脑上已授权的工具。Remote Arc 负责安全连接，你的模型负责思考，自己的电脑负责执行。已保存的任务状态还能跨聊天保留。"
           )}</p>
           <div className="heroAiPlanNote">
-            <strong>{tr("No separate model API key or pay-per-token model bill.", "无需额外模型 API Key，也无需另付按 Token 计费的模型 API 账单。")}</strong>
-            <span>{tr("Use a compatible AI chat with MCP tools. Your existing AI provider’s plan and usage limits still apply.", "直接使用支持 MCP 工具的 AI 对话。原有 AI 套餐及其使用额度仍然适用。")}</span>
+            <strong>{tr("No model API key to configure. No pay-per-token API bill to top up.", "不用配置模型 API Key，也不用额外充值按量计费的 API Token。")}</strong>
+            <span>{tr("Some free AI chat plans support custom MCP connectors too. Your provider's tool availability and normal chat limits still apply.", "部分免费 AI 聊天套餐也支持自定义 MCP 连接器；具体工具权限与聊天额度仍由 AI 服务商决定。")}</span>
           </div>
           <div className="heroPrimaryCommand">
             <span>{tr("START HERE · RUN ON YOUR COMPUTER", "从这里开始 · 在电脑上运行")}</span>
@@ -2352,11 +2352,9 @@ function Landing({ user }: { user?: User | null }) {
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
-            <span>{tr("Use your existing AI chat", "沿用现有 AI 对话")}</span>
-            <span>{tr("No separate AI API key", "无须额外模型 API Key")}</span>
-            <span>{tr("Build & test", "开发与测试")}</span>
-            <span>{tr("Overnight tasks", "过夜任务")}</span>
-            <span>{tr("Scheduled tasks", "定时任务")}</span>
+            <span>{tr("Chat → real actions", "聊天 → 真实执行")}</span>
+            <span>{tr("Free MCP chat options", "支持部分免费 AI 聊天")}</span>
+            <span>{tr("Your device. Your permissions.", "自己的电脑，权限自己定")}</span>
           </div>
           <a className="heroTaskAvailability" href="/docs/long-running-work">{tr("Long-running Tasks · staged preview · see requirements", "长任务准备发布中 · 查看运行条件")} →</a>
         </div>

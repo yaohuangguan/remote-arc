@@ -112,7 +112,7 @@ const articles: Record<string, SeoPage> = {
 };
 
 const pages: Record<string, SeoPage> = {
-  "/": { title: "Remote Arc — Let AI Do More Than Chat, No Separate Model API Key", description: "Turn your existing AI chat into real computer work through MCP. Connect supported clients to paired Windows, macOS and Linux computers without buying separate model API tokens. Your AI provider plan and usage limits still apply.", canonical: SITE + "/" },
+  "/": { title: "Remote Arc — Let AI Chat Work on Your Computer, No API Key", description: "Turn compatible AI chats into real computer actions through secure Remote MCP. No separate model API key or pay-per-token API bill. Supported free chat plans can connect; provider tool limits apply.", canonical: SITE + "/" },
   "/install": { title: "Install Remote Arc for ChatGPT, Claude and Cursor", description: "Install Remote Arc, pair your computer and connect your AI client through Remote MCP.", canonical: SITE + "/install/chatgpt" },
   "/install/chatgpt": { title: "Install Remote Arc for ChatGPT", description: "Connect ChatGPT to Windows, macOS or Linux through Remote Arc and a secure OAuth-protected Remote MCP endpoint.", canonical: SITE + "/install/chatgpt" },
   "/install/claude": { title: "Install Remote Arc for Claude", description: "Connect Claude to paired computers through Remote Arc using a secure Remote MCP connector and explicit device permissions.", canonical: SITE + "/install/claude" },
