@@ -25,6 +25,7 @@ export type DeviceMetadata = {
   agentVersion: string;
   pid?: number;
   backgroundProcess?: boolean;
+  executionPaused?: boolean;
   recoveryEnabled?: boolean;
   supervisorActive?: boolean;
   supervisorPid?: number | null;
