@@ -6566,6 +6566,7 @@ function Dashboard({
             <p>{tr("No repository clone, environment file, token copy, public IP or router configuration. New devices start with read-only skills enabled.", "无需 clone 仓库、环境文件、复制 Token、公网 IP 或路由器配置。新设备默认只开启只读技能。")}</p>
             <div className="commandLabel">{tr("Recommended · Safe by default", "推荐 · 默认 Safe")}</div>
             <div className="commandBox"><code>{command}</code><CopyButton value={command}/></div>
+            <p><a href="/downloads" target="_blank" rel="noopener noreferrer">{tr("Install without Node.js: native download or Homebrew", "无需 Node.js：直接下载或使用 Homebrew")} →</a></p>
             <div className="commandLabel secondary">{tr("Optional local hard lock · always read-only", "可选本机硬限制 · 始终只读")}</div>
             <div className="commandBox muted"><code>{safeCommand}</code><CopyButton value={safeCommand}/></div>
             <div className="onboardingSteps">
