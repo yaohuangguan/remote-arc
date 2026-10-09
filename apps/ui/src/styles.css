@@ -7398,7 +7398,11 @@ body{font-size:18px;line-height:1.6}
   color:#4285f4;
   font:800 16px/1 system-ui,sans-serif;
 }
-.authProviderButton.email span{background:#c7f4ff;color:#07394b}
+.authProviderButton.google{border-color:#97b3c3;background:#ffffff;color:#203b47}
+.authProviderButton.google:hover{border-color:#4b96b3;background:#f7fcfe}
+.authProviderButton.google span{background:#fff}
+.authProviderButton.google span img{display:block;width:25px!important;height:25px!important;object-fit:contain}
+.authProviderButton.email span{background:#c7f4ff;color:#07394b;font-size:19px}
 .authProviderButton strong{font-size:14px}
 .authProviderButton b{color:#7dd3fc;font-size:16px}
 .installAuthModal>small{
@@ -7440,6 +7444,8 @@ body{font-size:18px;line-height:1.6}
   color:#123642;
 }
 :root[data-theme="light"] .authProviderButton:hover{background:#eef8fb}
+:root[data-theme="light"] .authProviderButton.google{background:#fff;border-color:#b0cbd7;color:#1b3f4a}
+:root[data-theme="light"] .authProviderButton.google:hover{background:#f6fbfd;border-color:#66a4b6}
 
 :root[data-theme="light"] .clientInstallCopy h1{color:#102f39}
 :root[data-theme="light"] .clientInstallCopy>p{color:#4f6e78}

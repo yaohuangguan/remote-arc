@@ -94,7 +94,7 @@ try {
   }), env);
   assert.equal(first.status, 200);
   assert.equal(sent, 1);
-  assert.match(await first.text(), /Check your email/);
+  assert.match(await first.text(), /Check your inbox/);
   assert.equal(code.length, 6);
   assert.equal(sqlite.prepare("SELECT return_to FROM email_login_challenges WHERE email = ?").get("new@example.com")?.return_to, ORIGIN + "/");
 

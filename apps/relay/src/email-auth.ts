@@ -5,6 +5,7 @@ import {
   safeReturnTo,
   sessionCookie,
 } from "./auth.js";
+import { authPage, escapeAuthHtml } from "./auth-page.js";
 
 type EmailEnv = {
   DB: D1Database;
@@ -29,37 +30,26 @@ export function emailLoginEnabled(env: EmailEnv) {
   return Boolean(env.RESEND_API_KEY && env.EMAIL_AUTH_SECRET);
 }
 
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  })[char] || char);
-}
-
 function formPage(email: string, returnTo: string, message = "") {
-  return new Response(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>Verify email · Remote Arc</title>
-<style>
-*{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,sans-serif;min-height:100vh;display:grid;place-items:center;padding:24px;margin:0;background:#06111b;color:#f0f9fc}
-main{width:min(100%,430px);padding:28px;border:1px solid #2a4356;border-radius:20px;background:#0b1a26}
-h1{font-size:26px;margin:0 0 10px}p{color:#adc5ce}label{display:block;margin-top:20px;font-size:14px}
-input{width:100%;height:48px;background:#09121d;border:1px solid #416079;border-radius:10px;color:white;margin:8px 0 14px;padding:0 13px;font:inherit}
-button{height:48px;width:100%;border:0;background:#d9f5ff;border-radius:10px;color:#062436;font-weight:750;cursor:pointer}
-small{color:#96b2bf}a{color:#8ee5fa}.error{color:#ffb3b3}
-</style></head><body><main>
-<h1>Check your email</h1>
-<p>If this address is eligible, we've sent a six-digit sign-in code to <strong>${escapeHtml(email)}</strong>. It expires in 10 minutes.</p>
-${message ? `<p class="error" role="alert">${escapeHtml(message)}</p>` : ""}
-<form action="/auth/email/verify" method="post">
-<input type="hidden" name="email" value="${escapeHtml(email)}">
-<input type="hidden" name="return_to" value="${escapeHtml(returnTo)}">
-<label for="code">Verification code</label>
-<input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required autofocus>
-<button type="submit">Continue securely</button></form>
-<p><small>Didn't receive a code? Wait a minute and <a href="/auth/login?return_to=${encodeURIComponent(returnTo)}">request another</a>.</small></p>
-</main></body></html>`, {
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" },
-  });
+  return authPage("Verify your email", `
+    <a class="back" href="/auth/login?return_to=${encodeURIComponent(returnTo)}">← Back to sign in</a>
+    <div class="badge">Secure, passwordless sign-in</div>
+    <h1>Check your inbox</h1>
+    <p class="lead">Enter the 6-digit code sent to <span class="email-highlight">${escapeAuthHtml(email)}</span>.
+      The code expires in 10 minutes.</p>
+    ${message ? `<p class="error" role="alert">${escapeAuthHtml(message)}</p>` : ""}
+    <form action="/auth/email/verify" method="post">
+      <input type="hidden" name="email" value="${escapeAuthHtml(email)}">
+      <input type="hidden" name="return_to" value="${escapeAuthHtml(returnTo)}">
+      <label for="code">Verification code</label>
+      <input class="field code" id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}"
+        minlength="6" maxlength="6" autocomplete="one-time-code" aria-label="Six-digit verification code"
+        placeholder="000000" required autofocus>
+      <button class="primary" type="submit">Verify &amp; continue →</button>
+    </form>
+    <p class="note">Didn't get the email? Check spam, or <a class="link" href="/auth/login?return_to=${encodeURIComponent(returnTo)}">try again in a minute</a>.
+    You can also choose Google sign-in.</p>
+  `);
 }
 
 function sameOriginForm(request: Request) {
