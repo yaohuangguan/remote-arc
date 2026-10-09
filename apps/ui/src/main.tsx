@@ -10,6 +10,7 @@ import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
 import { parsePendingApprovals, parseSecurityState, type PendingApproval } from "./security-state.js";
+import { waitForRecoveryState } from "./background-recovery.js";
 import "./styles.css";
 import "./dashboard.css";
 
@@ -3525,6 +3526,9 @@ function Dashboard({
   const [deviceQuery, setDeviceQuery] = useState("");
   const [deviceFilter, setDeviceFilter] = useState<"all" | "online" | "offline">("all");
   const [backgroundUpdatingId, setBackgroundUpdatingId] = useState<string | null>(null);
+  const [backgroundTargetEnabled, setBackgroundTargetEnabled] = useState<boolean | null>(null);
+  const [backgroundPhase, setBackgroundPhase] = useState<"applying" | "verifying">("applying");
+  const backgroundMutationInFlight = useRef(false);
   const [managedDeviceId, setManagedDeviceId] = useState<string | null>(null);
   const [devicePanel, setDevicePanel] = useState<"access" | "tasks" | "activity">("access");
   const [securityState, setSecurityState] = useState<SecurityState | null>(null);
@@ -4191,7 +4195,7 @@ function Dashboard({
     enabled: boolean,
     stopCurrent = false,
   ) {
-    if (UI_PREVIEW) return;
+    if (UI_PREVIEW || backgroundMutationInFlight.current) return;
     if (device.status !== "online") {
       await showNotice(
         tr("Computer is offline", "电脑当前离线"),
@@ -4213,7 +4217,11 @@ function Dashboard({
       return;
     }
 
+    // Disable duplicate clicks synchronously, not after the next React render.
+    backgroundMutationInFlight.current = true;
     setBackgroundUpdatingId(device.id);
+    setBackgroundTargetEnabled(enabled);
+    setBackgroundPhase("applying");
     try {
       const response = await fetch(
         "/api/devices/" + encodeURIComponent(device.id) + "/background",
@@ -4239,10 +4247,36 @@ function Dashboard({
         );
         return;
       }
+      // The POST acknowledges the command, but the operating-system supervisor
+      // can take several seconds to start (or may still fail). Confirm a live
+      // guard from a fresh device snapshot before dismissing the spinner.
+      setBackgroundPhase("verifying");
+      const confirmed = await waitForRecoveryState(device.id, enabled, {
+        read: async () => {
+          const response = await fetch("/api/devices", {
+            cache: "no-store",
+            signal: AbortSignal.timeout(4_000),
+          });
+          if (!response.ok) throw new Error("Device status unavailable");
+          return await response.json() as Device[];
+        },
+        pause: (ms) => new Promise((resolve) => window.setTimeout(resolve, ms)),
+      });
       await refreshAll();
+      if (!confirmed) {
+        await showNotice(
+          tr("Still awaiting device confirmation", "仍在等待设备确认"),
+          tr("The command was accepted, but the device has not confirmed the requested supervisor state. Check its displayed status or refresh before retrying.", "操作请求已接受，但设备尚未确认守护进程的目标状态。请先检查当前状态或刷新设备列表，再决定是否重试。"),
+        );
+      }
     } catch {
+      await refreshAll().catch(() => undefined);
       await showNotice(tr("Background setting is unconfirmed", "后台设置尚未确认"), tr("The response was interrupted. Refresh the device state before trying again; the local setting may already have changed.", "响应已中断，请先刷新设备状态再尝试；本机设置可能已经发生变化。"));
-    } finally { setBackgroundUpdatingId(null); }
+    } finally {
+      backgroundMutationInFlight.current = false;
+      setBackgroundUpdatingId(null);
+      setBackgroundTargetEnabled(null);
+    }
 
   }
 
@@ -5341,7 +5375,9 @@ function Dashboard({
                           <HelpTip label={tr("About automatic recovery", "了解自动恢复")}
                             text={tr("The switch enables a local supervisor and login startup. It keeps your terminal and operation log open, and takes over if the executing Agent ends. Relay reconnect handles network interruptions separately. Turning recovery off preserves current execution; Stop background Agent also ends its work. Sleep, shutdown and logout can still make the device unavailable.", "此开关启用本机守护和登录自启，保留终端及操作日志，执行 Agent 结束后由守护接手。网络中断由独立的 Relay 重连处理。关闭恢复会保留当前执行；“停止后台 Agent”还会结束它的工作。睡眠、关机或退出登录仍可能让电脑不可用。")}/>
                         </div>
-                        <span>{device.status !== "online" ? tr("Reconnect to verify the local recovery setting", "重新连接后可确认本机恢复设置") : device.background_recovery_available
+                        <span>{backgroundUpdatingId === device.id
+                          ? backgroundPhase === "applying" ? tr("Sending device command…", "正在发送设备指令…") : tr("Waiting for supervisor confirmation…", "正在确认后台守护进程…")
+                          : device.status !== "online" ? tr("Reconnect to verify the local recovery setting", "重新连接后可确认本机恢复设置") : device.background_recovery_available
                           ? device.background_enabled ? tr("Enabled · login startup and process recovery", "已启用 · 登录自启与进程恢复") : tr("Off · current execution continues", "已关闭 · 当前执行继续")
                           : tr("Older client · login startup only. Update to keep the terminal attached and recover processes.", "旧版客户端仅提供登录自启。更新客户端后支持保留终端与进程恢复。")}</span>
                         <span>{tr("Supervisor: ", "守护：")}{device.background_guard_active
@@ -5352,13 +5388,10 @@ function Dashboard({
                           : device.background_active ? tr("Background Agent connected", "后台 Agent 已连接") : tr("Agent connected", "Agent 已连接")}
                           {device.agent_pid ? " · PID " + device.agent_pid : ""}{device.agent_version ? " · v" + device.agent_version : ""}</span>
                       </div>
-                      <div className="managedProcessActions">
-                        {backgroundUpdatingId === device.id && (
-                          <span className="backgroundToggleProgress" id={"background-toggle-progress-" + device.id} role="status" aria-live="polite">
-                            <span className="backgroundToggleSpinner" aria-hidden="true" />
-                            {tr("Applying on device…", "正在设备上应用…")}
-                          </span>
-                        )}
+                      <div className="managedProcessActions backgroundRecoveryControls">
+                        <span className="backgroundToggleProgress" data-pending={backgroundUpdatingId === device.id} id={"background-toggle-progress-" + device.id} role="status" aria-live="polite" aria-label={backgroundUpdatingId === device.id ? tr("Verifying background recovery on device", "正在设备上确认后台恢复") : undefined}>
+                          <span className="backgroundToggleSpinner" aria-hidden="true" />
+                        </span>
                         {device.background_enabled === true && device.background_guard_active !== true && device.status === "online" && device.background_recovery_available && (
                           <button className="ghostButton small" disabled={UI_PREVIEW || backgroundUpdatingId === device.id} onClick={() => void updateDeviceBackground(device, true, false)}>{tr("Repair recovery", "修复恢复")}</button>
                         )}
@@ -5369,7 +5402,7 @@ function Dashboard({
                         )}
                         <label className="compactSwitch">
                           <input type="checkbox" aria-label={tr("Automatic recovery", "自动恢复")}
-                            checked={device.background_enabled === true}
+                            checked={backgroundUpdatingId === device.id && backgroundTargetEnabled !== null ? backgroundTargetEnabled : device.background_enabled === true}
                             disabled={UI_PREVIEW || backgroundUpdatingId === device.id || device.status !== "online" || !device.background_agent_available}
                             aria-describedby={backgroundUpdatingId === device.id ? "background-toggle-progress-" + device.id : undefined}
                             onChange={async (event) => {

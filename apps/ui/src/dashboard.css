@@ -377,3 +377,49 @@
 @media (prefers-reduced-motion:reduce){
   :root[data-theme] .appFrame .backgroundToggleSpinner{animation:none;border-color:var(--dash-accent);}
 }
+
+/* Persistent status slot: a spinner never gets inserted into flex layout. */
+:root[data-theme] .appFrame .backgroundRecoveryControls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 9px;
+}
+:root[data-theme] .appFrame .backgroundToggleProgress {
+  display: inline-flex;
+  position: relative;
+  width: 18px;
+  min-width: 18px;
+  height: 20px;
+  max-width: 18px;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  pointer-events: none;
+}
+:root[data-theme] .appFrame .backgroundToggleProgress .backgroundToggleSpinner {
+  visibility: hidden;
+}
+:root[data-theme] .appFrame .backgroundToggleProgress[data-pending="true"] .backgroundToggleSpinner {
+  visibility: visible;
+}
+:root[data-theme] .appFrame .deviceBackgroundRow {
+  min-height: 126px;
+}
+:root[data-theme] .appFrame .deviceBackgroundRow > div:first-child > span:first-of-type {
+  min-height: 18px;
+}
+@media(max-width: 680px) {
+  :root[data-theme] .appFrame .deviceBackgroundRow { min-height: 160px; align-items: flex-start; }
+  :root[data-theme] .appFrame .backgroundRecoveryControls { align-self: center; }
+}
+:root[data-theme] .appFrame .backgroundRecoveryControls {
+  min-width: 244px;
+  min-height: 40px;
+}
+@media(max-width:680px){
+  :root[data-theme] .appFrame .deviceBackgroundRow { display:grid; grid-template-columns:minmax(0,1fr); min-height:172px; }
+  :root[data-theme] .appFrame .backgroundRecoveryControls { min-width:0; width:100%; }
+}

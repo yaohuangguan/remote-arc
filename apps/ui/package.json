@@ -11,7 +11,8 @@
     "test:onboarding-readability": "node scripts/onboarding-readability-test.mjs",
     "test:device-removal": "node scripts/device-removal-test.mjs",
     "test:device-execution-log": "node scripts/device-execution-log-test.mjs",
-    "test:security": "node scripts/security-response-test.mjs"
+    "test:security": "node scripts/security-response-test.mjs",
+    "test:background-recovery": "node --experimental-strip-types scripts/background-recovery-test.mjs"
   },
   "dependencies": {
     "@remotearc/protocol": "workspace:*",
