@@ -10,6 +10,7 @@ import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
 import { parsePendingApprovals, parseSecurityState, type PendingApproval } from "./security-state.js";
+import { SecurityAuthorizations } from "./security-authorizations.js";
 import { waitForAgentOffline, waitForRecoveryState } from "./background-recovery.js";
 import "./styles.css";
 import "./dashboard.css";
@@ -6548,52 +6549,12 @@ function Dashboard({
                 </div>
                 <button className="ghostButton" disabled={securityBusy} onClick={() => void refreshSecurity()}>{tr("Refresh", "刷新")}</button>
               </div>
-              <div className="securityGrantList">
-                {(securityState?.grants || []).map((grant) => {
-                  const statusLabel =
-                    grant.status === "active"
-                      ? tr("Active now", "当前有效")
-                      : grant.status === "refreshable"
-                        ? tr("Refreshable", "可刷新")
-                        : tr("Expired", "已过期");
-                  const statusHelp =
-                    grant.status === "active"
-                      ? tr("Its current access token is still valid.", "当前 Access Token 仍有效。")
-                      : grant.status === "refreshable"
-                        ? tr("The short-lived access token expired, but the refresh authorization can still obtain a new one without asking you again.", "短期 Access Token 已过期，但 Refresh 授权仍可在无需再次询问你的情况下换取新 Token。")
-                        : tr("Both access and refresh authorization have expired. This grant can no longer access Remote Arc.", "Access 与 Refresh 授权均已过期，这条 Grant 已无法继续访问 Remote Arc。");
-                  return (
-                    <div className={"securityGrantRow " + grant.status} key={grant.grantId}>
-                      <div className="securityGrantIdentity">
-                        <span className="securityGrantIcon">AI</span>
-                        <div>
-                          <strong>{grant.clientName}</strong>
-                          <small>{tr("Authorization", "授权")} {grant.grantId.slice(0,12)}… · {tr("Client", "客户端")} {grant.clientId.slice(0,8)}…</small>
-                        </div>
-                      </div>
-                      <div className="securityGrantState">
-                        <span className={"grantState " + grant.status}>{statusLabel}</span>
-                        <HelpTip
-                          label={tr("About this authorization status", "了解此授权状态")}
-                          text={statusHelp}
-                        />
-                      </div>
-                      <div className="securityGrantDetails">
-                        <span>{tr("First authorized", "首次授权")} <strong>{timeAgo(grant.authorizedAt)}</strong></span>
-                        <span>{tr("Last token issued", "最近签发 Token")} <strong>{timeAgo(grant.lastTokenIssuedAt)}</strong></span>
-                        <span>{tr("Access token expires", "Access Token 到期")} <strong>{new Date(grant.accessExpiresAt).toLocaleString(locale === "zh" ? "zh-CN" : "en-NZ", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</strong></span>
-                        <span>{tr("Refresh authorization", "Refresh 授权")} <strong>{grant.refreshExpiresAt ? new Date(grant.refreshExpiresAt).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-NZ", { year: "numeric", month: "short", day: "numeric" }) : tr("None", "无")}</strong></span>
-                      </div>
-                      <div className="securityGrantScopes">{grant.scopes.map((scope) => <code key={scope}>{scope}</code>)}</div>
-                      <button className={grant.status === "expired" ? "ghostButton" : "dangerButton"} disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void revokeGrant(grant)}>
-                        {grant.status === "expired" ? tr("Remove expired", "移除过期授权") : tr("Disconnect access", "断开此授权")}
-                      </button>
-                    </div>
-                  );
-                })}
-                {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No AI authorizations", "暂无 AI 授权")}</strong><span>{tr("Connect ChatGPT, Claude or another MCP client to see each OAuth authorization here.", "连接 ChatGPT、Claude 或其他 MCP 客户端后，每一份 OAuth 授权都会显示在这里。")}</span><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
-                {!securityState && <div className="securityEmptyState compact"><strong>{securityError ? tr("Authorizations unavailable", "暂无法获取授权") : tr("Loading access grants…", "正在加载访问授权…")}</strong></div>}
-              </div>
+              {securityState && securityState.grants.length > 0 && (
+                <SecurityAuthorizations grants={securityState.grants} busy={securityBusy}
+                  preview={UI_PREVIEW} timeAgo={timeAgo} revoke={revokeGrant} />
+              )}
+              {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No AI authorizations", "暂无 AI 授权")}</strong><span>{tr("Connect ChatGPT, Claude or another MCP client to see each OAuth authorization here.", "连接 ChatGPT、Claude 或其他 MCP 客户端后，每一份 OAuth 授权都会显示在这里。")}</span><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
+              {!securityState && <div className="securityEmptyState compact"><strong>{securityError ? tr("Authorizations unavailable", "暂无法获取授权") : tr("Loading access grants…", "正在加载访问授权…")}</strong></div>}
             </section>
 
             <section className="securityMainGrid">
