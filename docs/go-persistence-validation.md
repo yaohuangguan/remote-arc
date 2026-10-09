@@ -1,9 +1,11 @@
-# Go candidate persistence and release validation
+# Go persistence and release validation
 
-This is follow-up work on draft PR #116. The installed native RC is
-`0.5.1-rc.2`; the feature branch itself still carries `0.5.1-rc.1` package
-metadata. Do not mistake a locally built validation binary for a published RC.
-Stable `latest` remains `0.5.0`. No stable promotion or TS retirement is included.
+PR #116 prepares `0.5.1` for the existing opt-in Go rollout. Release metadata,
+six native targets and the Homebrew formula use the same version. Installed
+`0.5.1-rc.2` Agents are not automatically replaced by publishing this release.
+The default npm CLI remains TS, with explicit `--go` and `--ts` selection.
+Keep both implementations while completing production comparison and broader
+rollout acceptance; this release does not retire TS or publish a general SDK.
 
 ## Policy follows the operation, not the filename
 
@@ -109,10 +111,13 @@ arranging an isolated paired device or a controlled engine switch. Current RC2
 production checks are Go-only regression, not a TS/Go E2E speed ratio. Global
 `undo_last_change` must not accidentally undo another active session's work.
 
-Release gates still include actual production reconnect,
-Windows lifecycle/persistence coverage, terminal visual acceptance and stronger
-storage fault tests. Archive the TS core only after those gates and review of
-the three-layer data. Keep both implementations in this repository meanwhile.
+Follow-up acceptance for broader Go rollout and TS retirement includes actual
+production reconnect, Windows service lifecycle, terminal visual acceptance
+and stronger storage fault tests. The opt-in release relies on the existing
+cross-platform regression, compatibility, recovery and distribution checks;
+it does not claim that those follow-ups or physical power-loss guarantees
+have been completed. Archive the TS core only after that acceptance and review
+of the three-layer data. Keep both implementations in this repository meanwhile.
 
 ## Completed f68ab09 follow-up
 
