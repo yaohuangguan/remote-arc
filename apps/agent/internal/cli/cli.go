@@ -205,7 +205,7 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 		status, err := control.Request(ctx, dir, "GET", "/status")
 		if err != nil || status["engine"] != "go" {
 			if !o.Background {
-				return errors.New("Another Agent owns execution. Stop it locally before changing runtimes; no commands were replayed.")
+				return errors.New("A TS agent owns execution. Use --ts --no-background, stop that agent locally, then launch --go. No commands were replayed.")
 			}
 			// Background startup after a forced TS/Go exit must wait until
 			// the previous execution lease expires. Never take a live lease.
