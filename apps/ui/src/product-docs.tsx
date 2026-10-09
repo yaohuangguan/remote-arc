@@ -64,7 +64,7 @@ export function Documentation() {
       <article className="technicalArticle">
         <section id="docs-start">
           <h2>{tr("Set up the computer and the AI client once", "电脑和 AI 客户端各配置一次")}</h2>
-          <p>{tr("On the Windows, macOS or Linux computer that owns the project, run the command below with Node.js 20 or newer. The CLI opens a short-lived browser pairing flow. Sign in, compare the code and approve the correct machine.", "在保存项目的 Windows、macOS 或 Linux 电脑上，使用 Node.js 20 或更高版本运行以下命令。CLI 会打开短期浏览器配对流程；登录、核对配对码并确认正确的电脑。")}</p>
+          <p>{tr("On the Windows, macOS or Linux computer that owns the project, install the native Agent using a download, Homebrew or npm/npx. Only the npm/npx command below requires Node.js 20 or newer. The Agent opens a short-lived browser pairing flow. Sign in, compare the code and approve the correct machine.", "在保存项目的 Windows、macOS 或 Linux 电脑上，通过直接下载、Homebrew 或 npm/npx 安装原生 Agent。只有下面的 npm/npx 命令需要 Node.js 20 或更高版本。Agent 会打开短期浏览器配对流程；登录、核对配对码并确认正确的电脑。")}</p>
           <Code>npx remotelink@latest</Code>
           <p>{tr("Remote Arc 0.6 uses the native Go Agent and Execution Core by default. npm downloads a verified binary; Homebrew and standalone downloads run without Node.js. The TS compatibility runtime remains available with --ts.", "Remote Arc 0.6 默认使用原生 Go Agent 和 Execution Core。npm 下载经过校验的二进制；Homebrew 和直接下载不需要 Node.js。--ts 保留 TS 兼容运行时。")}</p>
           <p><a href="/downloads">{tr("Native downloads, Homebrew, upgrades and stopping the Agent", "原生下载、Homebrew、升级与停止 Agent")} →</a></p>

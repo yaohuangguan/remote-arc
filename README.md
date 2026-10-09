@@ -523,7 +523,8 @@ Before a device call is forwarded, the relay verifies:
 
 Requirements:
 
-- Node.js 24+ for development and the SQLite test suite (device CLI: Node.js 20+)
+- Node.js 24+ for the TypeScript development tools and SQLite test suite (npm/npx installation: Node.js 20+; native downloads and Homebrew need no Node.js)
+- Go 1.25.5 for native Agent and Execution Core development
 - pnpm 10
 - Cloudflare Wrangler for relay work
 
