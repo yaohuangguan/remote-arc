@@ -164,7 +164,9 @@ try {
   await waitFor(() => Boolean(hello), "Go connection");
   assert.equal(hello.device.id, "compat-device");
   assert.deepEqual(
-    new Set(hello.tools),
+    // The native Go-only device wake control is intentionally not exposed by
+    // the TS compatibility runtime; ordinary execution tools must still match.
+    new Set(hello.tools.filter((tool: string) => tool !== "set_device_runtime")),
     new Set([
       ...ts.listTools().map((t) => t.name),
       "background_agent_status",
@@ -175,6 +177,8 @@ try {
     ]),
   );
   assert(hello.capabilities.includes("go_agent_v1"));
+  assert(hello.capabilities.includes("device_pause_v1"));
+  assert(hello.tools.includes("set_device_runtime"));
   const tsRoot = path.join(temp, "ts-fixtures"),
     goRoot = path.join(temp, "go-fixtures");
   const normalize = (value: any, root: string): any => {
