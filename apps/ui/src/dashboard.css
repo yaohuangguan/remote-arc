@@ -423,3 +423,11 @@
   :root[data-theme] .appFrame .deviceBackgroundRow { display:grid; grid-template-columns:minmax(0,1fr); min-height:172px; }
   :root[data-theme] .appFrame .backgroundRecoveryControls { min-width:0; width:100%; }
 }
+
+/* Reserve stable space for the three-state execution control. */
+:root[data-theme] .appFrame .deviceRuntimePauseRow { min-height:128px; }
+:root[data-theme] .appFrame .deviceRuntimePauseRow .backgroundRecoveryControls { min-width:244px; }
+@media(max-width:680px) {
+  :root[data-theme] .appFrame .deviceRuntimePauseRow { min-height:180px; }
+  :root[data-theme] .appFrame .deviceRuntimePauseRow .backgroundRecoveryControls { min-width:0; }
+}

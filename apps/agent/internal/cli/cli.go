@@ -175,6 +175,7 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 		if c, err := config.Load(); err == nil {
 			off := false
 			c.BackgroundEnabled = &off
+			c.ExecutionPaused = false
 			if err = config.Save(c); err != nil {
 				return err
 			}
@@ -363,6 +364,13 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 }
 func runOwned(parent context.Context, o Options, cfg config.Config, version string, owned *lease.Lease, bg *service.Controller, log *journal.Journal, client *agent.Client, out io.Writer, ask agent.Ask, input *os.File) error {
 	defer owned.Release()
+	// A supervisor may have spawned this worker while the old foreground
+	// owner held the lease. Re-read the durable pause state *after* takeover.
+	latest, err := config.Load()
+	if err != nil {
+		return err
+	}
+	cfg = latest
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 	go func() {
@@ -390,18 +398,29 @@ func runOwned(parent context.Context, o Options, cfg config.Config, version stri
 	if e := config.Save(cfg); e != nil {
 		return e
 	}
-	a := agent.New(cfg, version, o.Agent, log)
+	var a *agent.Agent
+	if cfg.ExecutionPaused {
+		if !o.Agent {
+			log.Log("info", "Device is paused; joining the wake-only channel.")
+		}
+		a = agent.NewWake(cfg, version, log)
+		log.Log("info", "Paused device wake channel ready. Execution tools are not loaded.")
+	} else {
+		a = agent.New(cfg, version, o.Agent, log)
+		log.Log("info", "Go device runtime "+version+" · local mode "+a.Core.Mode)
+		log.Log("info", fmt.Sprintf("File writes: %s · Undo: %s · device state: durable", config.FileDurability(), config.UndoDurability()))
+		log.Log("info", fmt.Sprintf("Local tools ready: %d execution tools and 5 device tools.", len(a.Core.ListTools())))
+	}
 	a.Stop = cancel
 	a.Client = client
-	log.Log("info", "Go device runtime "+version+" · local mode "+a.Core.Mode)
-	log.Log("info", fmt.Sprintf("File writes: %s · Undo: %s · device state: durable", config.FileDurability(), config.UndoDurability()))
-	log.Log("info", fmt.Sprintf("Local tools ready: %d execution tools and 5 device tools.", len(a.Core.ListTools())))
 	if cfg.BackgroundEnabled == nil {
 		log.Log("info", "Background connection is not configured yet · finish setup in Dashboard → Devices.")
 	}
 	local, e := control.Start(filepath.Join(config.Dir(), "agent"), version, func() any { return a.Status() }, cancel)
 	if e != nil {
-		a.Core.Close()
+		if a.Core != nil {
+			a.Core.Close()
+		}
 		return e
 	}
 	defer local.Close()

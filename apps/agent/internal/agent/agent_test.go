@@ -187,7 +187,7 @@ func TestAuthenticatedWebsocketToolCallsReconnectAndPrivateJournal(t *testing.T)
 				if reply["device"].(map[string]any)["id"] != cfg.DeviceID {
 					t.Fatal("device identity changed")
 				}
-				if len(reply["tools"].([]any)) != 21 {
+				if len(reply["tools"].([]any)) != 22 {
 					t.Fatal("tool surface incomplete")
 				}
 			} else if reply["error"] != nil {

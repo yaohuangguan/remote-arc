@@ -4,6 +4,12 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.6.1 - Unreleased
 
+### RC.5: native pause, resume and complete disconnect
+
+- Running: Go execution core and tools available. Paused: supervised, authenticated wake-only outbound connection with **no execution core** and no ordinary computer tools; Dashboard resumes via an explicit owner-authorized control request.
+- Disconnect: disable supervision, drop both execution and wake connections, and require local restart. A paused device can be fully disconnected.
+- Persist executionPaused and re-read it after the execution lease transfers between foreground and background processes, so a paused device survives worker restarts without restoring terminal/file permissions.
+
 ### RC.4: silent Windows login recovery and runtime fixes
 
 - Start the native Windows Go supervisor invisibly at user login instead of showing a console window. Closing an incidental CMD window no longer stops the real supervisor.

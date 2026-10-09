@@ -17,6 +17,7 @@ type Config struct {
 	Origin            string                     `json:"origin"`
 	Mode              string                     `json:"mode"`
 	BackgroundEnabled *bool                      `json:"backgroundEnabled,omitempty"`
+	ExecutionPaused   bool                       `json:"executionPaused,omitempty"`
 	Extra             map[string]json.RawMessage `json:"-"`
 }
 
@@ -67,6 +68,12 @@ func SaveAt(dir string, c Config) error {
 	}
 	if c.BackgroundEnabled == nil {
 		delete(m, "backgroundEnabled")
+	}
+	// Extra preserves unknown JSON keys, including keys that may later
+	// become known fields. An omitted false value must not resurrect the
+	// previous true value from the unknown-field snapshot.
+	if !c.ExecutionPaused {
+		delete(m, "executionPaused")
 	}
 	b, e = json.MarshalIndent(m, "", "  ")
 	if e != nil {

@@ -81,6 +81,8 @@ type Device = {
   background_agent_available?: boolean;
   background_recovery_available?: boolean;
   stop_agent_available?: boolean;
+  pause_agent_available?: boolean;
+  execution_paused?: boolean;
   background_guard_active?: boolean;
   background_guard_pid?: number | null;
   execution_mode?: string | null;
@@ -3530,6 +3532,9 @@ function Dashboard({
   const [backgroundTargetEnabled, setBackgroundTargetEnabled] = useState<boolean | null>(null);
   const [backgroundPhase, setBackgroundPhase] = useState<"applying" | "verifying" | "stopping">("applying");
   const backgroundMutationInFlight = useRef(false);
+  const runtimeMutationInFlight = useRef(false);
+  const [runtimeUpdatingId, setRuntimeUpdatingId] = useState<string | null>(null);
+  const [runtimeTargetPaused, setRuntimeTargetPaused] = useState<boolean | null>(null);
   const [managedDeviceId, setManagedDeviceId] = useState<string | null>(null);
   const [devicePanel, setDevicePanel] = useState<"access" | "tasks" | "activity">("access");
   const [securityState, setSecurityState] = useState<SecurityState | null>(null);
@@ -4196,7 +4201,7 @@ function Dashboard({
     enabled: boolean,
     stopCurrent = false,
   ) {
-    if (UI_PREVIEW || backgroundMutationInFlight.current) return;
+    if (UI_PREVIEW || backgroundMutationInFlight.current || runtimeMutationInFlight.current) return;
     if (device.status !== "online") {
       await showNotice(
         tr("Computer is offline", "电脑当前离线"),
@@ -4303,6 +4308,55 @@ function Dashboard({
       setBackgroundTargetEnabled(null);
     }
 
+  }
+
+  async function updateDeviceRuntime(device: Device, paused: boolean) {
+    if (UI_PREVIEW || runtimeMutationInFlight.current || backgroundMutationInFlight.current) return;
+    if (device.status !== "online" || device.pause_agent_available !== true) return;
+    runtimeMutationInFlight.current = true;
+    setRuntimeUpdatingId(device.id);
+    setRuntimeTargetPaused(paused);
+    try {
+      const response = await fetch("/api/devices/" + encodeURIComponent(device.id) + "/runtime", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ paused }),
+      });
+      const payload = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) {
+        await refreshAll().catch(() => undefined);
+        await showNotice(tr("Runtime change not accepted", "切换执行状态失败"),
+          payload.error || tr("The current device cannot change runtime state.", "当前设备无法切换运行状态。"));
+        return;
+      }
+      let confirmed = false;
+      for (let attempt = 0; attempt < 18; attempt++) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1100));
+        try {
+          const result = await fetch("/api/devices", { cache: "no-store", signal: AbortSignal.timeout(4000) });
+          if (!result.ok) continue;
+          const list = await result.json() as Device[];
+          const current = list.find((item) => item.id === device.id);
+          if (current?.status === "online" && current.execution_paused === paused &&
+            (paused ? current.tools.length === 0 : (current.available_tools?.length ?? 0) > 0)) {
+            confirmed = true;
+            break;
+          }
+        } catch { /* Transport failure does not prove a state transition. */ }
+      }
+      await refreshAll().catch(() => undefined);
+      if (!confirmed) {
+        await showNotice(tr("Runtime state unconfirmed", "执行状态尚未确认"),
+          tr("The handoff may still be taking place. Refresh the device state before retrying; no second request was sent.", "执行实例可能仍在交接，请刷新设备状态确认后再重试；系统没有重复发送指令。"));
+      }
+    } catch {
+      await refreshAll().catch(() => undefined);
+      await showNotice(tr("Runtime state unconfirmed", "执行状态尚未确认"),
+        tr("The response was interrupted. Check whether the device is paused before retrying.", "请求中断，请检查设备是否已经暂停，再决定是否重试。"));
+    } finally {
+      runtimeMutationInFlight.current = false;
+      setRuntimeUpdatingId(null);
+      setRuntimeTargetPaused(null);
+    }
   }
 
   async function updateDeviceTools(device: Device, tool: string, enabled: boolean) {
@@ -5409,6 +5463,7 @@ function Dashboard({
                           ? tr("Running", "运行中") + (device.background_guard_pid ? " · PID " + device.background_guard_pid : "")
                           : device.status !== "online" ? tr("Unconfirmed while offline", "离线，无法确认") : tr("Not confirmed", "尚未确认")}</span>
                         <span>{tr("Execution: ", "执行：")}{device.status !== "online" ? tr("Disconnected from Relay", "Relay 已断开")
+                          : device.execution_paused === true ? tr("Paused · wake-only control connected", "已暂停 · 仅唤醒控制通道在线")
                           : device.execution_mode === "foreground" ? tr("Foreground Agent connected", "前台 Agent 已连接")
                           : device.background_active ? tr("Background Agent connected", "后台 Agent 已连接") : tr("Agent connected", "Agent 已连接")}
                           {device.agent_pid ? " · PID " + device.agent_pid : ""}{device.agent_version ? " · v" + device.agent_version : ""}</span>
@@ -5423,20 +5478,20 @@ function Dashboard({
                         {device.status === "online" && (
                           <button
                             className="dangerButton small"
-                            disabled={UI_PREVIEW || backgroundUpdatingId === device.id || device.stop_agent_available !== true}
+                            disabled={UI_PREVIEW || backgroundUpdatingId === device.id || !!runtimeUpdatingId || device.stop_agent_available !== true}
                             title={device.stop_agent_available ? tr("Disable auto-recovery and stop this computer's Agent.", "关闭自动恢复并停止此电脑的 Agent。") : tr("Update this computer's Agent to use remote Stop Agent.", "请先升级此电脑 Agent，才能远程停止。")}
                             onClick={async () => {
                               if (await askConfirm(
-                                tr("Stop this device Agent?", "停止这台设备的 Agent？"),
-                                tr("This disables auto-recovery, stops the current foreground or background Agent and disconnects this computer. Managed work may be interrupted. You must start Remote Arc locally to reconnect.", "此操作会关闭自动恢复，停止当前前台或后台 Agent，使电脑离线。受管任务可能中断；之后需要在本机重新启动 Remote Arc 才能连接。"),
+                                tr("Disconnect this computer completely?", "完全断开这台电脑？"),
+                                tr("This disables BOTH the execution Agent and the wake-only connection, and turns off future automatic recovery. Remote Arc cannot remotely start a fully disconnected computer. You must restart it locally.", "这会同时停止执行 Agent 和仅唤醒连接，并关闭之后的自动恢复。完全断开后 Remote Arc 无法再远程启动这台电脑，必须从本机重新启动。"),
                               )) await updateDeviceBackground(device, false, true);
                             }}
-                          >{device.stop_agent_available ? tr("Stop Agent", "停止 Agent") : tr("Stop Agent · update needed", "停止 Agent · 需升级")}</button>
+                          >{device.stop_agent_available ? tr("Disconnect completely", "完全断开") : tr("Disconnect · update needed", "断开 · 需升级")}</button>
                         )}
                         <label className="compactSwitch">
                           <input type="checkbox" aria-label={tr("Automatic recovery", "自动恢复")}
                             checked={backgroundUpdatingId === device.id && backgroundTargetEnabled !== null ? backgroundTargetEnabled : device.background_enabled === true}
-                            disabled={UI_PREVIEW || backgroundUpdatingId === device.id || device.status !== "online" || !device.background_agent_available}
+                            disabled={UI_PREVIEW || backgroundUpdatingId === device.id || !!runtimeUpdatingId || device.execution_paused === true || device.status !== "online" || !device.background_agent_available}
                             aria-describedby={backgroundUpdatingId === device.id ? "background-toggle-progress-" + device.id : undefined}
                             onChange={async (event) => {
                               const enabled = event.target.checked;
@@ -5446,6 +5501,35 @@ function Dashboard({
                               await updateDeviceBackground(device, enabled, false);
                             }}/><span/>
                         </label>
+                      </div>
+                    </div>
+
+                    <div className="deviceBackgroundRow deviceRuntimePauseRow" aria-busy={runtimeUpdatingId === device.id}>
+                      <div>
+                        <strong>{tr("Execution control", "执行控制")}</strong>
+                        <span>{runtimeUpdatingId === device.id
+                          ? runtimeTargetPaused ? tr("Pausing execution and connecting the wake-only channel…", "正在停止执行并切换至仅唤醒通道…") : tr("Restoring the execution Agent…", "正在恢复执行 Agent…")
+                          : device.status !== "online" ? tr("Fully disconnected · restart Remote Arc locally", "已完全断开 · 请在电脑本机启动 Remote Arc")
+                          : device.execution_paused ? tr("Paused · computer tools are blocked; dashboard wake control stays connected", "已暂停 · 电脑操作已封锁，Dashboard 唤醒控制仍在线")
+                          : tr("Running · AI computer tools can execute according to device permissions", "运行中 · AI 可按设备权限执行电脑操作")}</span>
+                        <span>{tr("Pause keeps a minimal authenticated wake channel. Disconnect completely closes it as well.", "暂停时保留最小授权唤醒通道；完全断开则连该通道一起关闭。")}</span>
+                      </div>
+                      <div className="managedProcessActions backgroundRecoveryControls">
+                        <span className="backgroundToggleProgress" data-pending={runtimeUpdatingId === device.id} role="status" aria-live="polite">
+                          <span className="backgroundToggleSpinner" aria-hidden="true" />
+                        </span>
+                        <button className="ghostButton small"
+                          disabled={UI_PREVIEW || !!backgroundUpdatingId || !!runtimeUpdatingId || device.status !== "online" || device.pause_agent_available !== true || (!device.execution_paused && (!device.background_enabled || !device.background_guard_active))}
+                          title={device.pause_agent_available ? tr("Switch between full execution and wake-only control.", "切换完整执行和仅唤醒控制。") : tr("Upgrade remotelink for remote Pause / Resume.", "请升级 remotelink 后使用远程暂停与恢复。")}
+                          onClick={async () => {
+                            const resume = device.execution_paused === true;
+                            if (!resume && !await askConfirm(
+                              tr("Pause computer execution?", "暂停这台电脑的执行？"),
+                              tr("Remote file/terminal tools will stop working and running managed operations may be interrupted. Only a minimal authenticated wake connection stays online so you can resume from Dashboard.", "远程文件与终端工具将不可用，正在执行的受管操作可能中断。设备仅保留最小授权唤醒连接，之后可通过 Dashboard 恢复。"),
+                            )) return;
+                            await updateDeviceRuntime(device, !device.execution_paused);
+                          }}
+                        >{device.pause_agent_available ? device.execution_paused ? tr("Resume Agent", "恢复 Agent") : tr("Pause Agent", "暂停 Agent") : tr("Pause / Resume · update needed", "暂停 / 恢复 · 需升级")}</button>
                       </div>
                     </div>
 
@@ -6339,7 +6423,7 @@ function Dashboard({
               <article className={"securityStatusCard primary" + (securityState?.mcpPaused ? " paused" : "")}>
                 <div><span>{tr("Remote MCP", "Remote MCP")}</span><i className={"healthDot " + (!securityState || securityState.mcpPaused ? "idle" : "good")} /></div>
                 <strong>{!securityState ? (securityError ? tr("Unavailable", "暂无法确认") : tr("Checking…", "正在检查…")) : securityState.mcpPaused ? tr("Paused", "已暂停") : tr("Protected", "已保护")}</strong>
-                <small>{!securityState ? tr("Waiting for the current access state from Remote Arc.", "等待 Remote Arc 返回当前访问状态。") : securityState.mcpPaused ? tr("All authenticated MCP calls are blocked until you resume access.", "所有已认证 MCP 调用都会被拦截，直到你恢复访问。") : tr("OAuth, per-device credentials and relay enforcement are active.", "OAuth、每设备凭证与 Relay 权限拦截均已启用。")}</small>
+                <small>{!securityState ? tr("Waiting for the current access state from Remote Arc.", "等待 Remote Arc 返回当前访问状态。") : securityState.mcpPaused ? tr("Authenticated AI MCP calls are blocked until resumed. This does not stop paired Agents or already-running tasks.", "已认证 AI MCP 请求会被拦截，直到恢复。此操作不会停止已配对的 Agent 或正在执行的独立任务。") : tr("OAuth, per-device credentials and relay enforcement are active.", "OAuth、每设备凭证与 Relay 权限拦截均已启用。")}</small>
               </article>
               <article className="securityStatusCard">
                 <div><span>{tr("Authentication", "身份验证")}</span><span className="securityMiniState">OAuth</span></div>
@@ -6349,7 +6433,7 @@ function Dashboard({
               <article className="securityStatusCard">
                 <div><span>{tr("Device credentials", "设备凭证")}</span><span className="securityMiniState">{devices.length}</span></div>
                 <strong>{tr("Unique per device", "每设备独立")}</strong>
-                <small>{tr("Credentials are independently revocable; only hashes are stored.", "凭证可单独撤销，服务端仅保存哈希。")}</small>
+                <small>{tr("One pairing credential per device (not AI OAuth). Only hashes are stored in the cloud.", "每台设备一份配对凭证（不是 AI OAuth），云端仅保存哈希。")}</small>
               </article>
               <article className="securityStatusCard">
                 <div><span>{tr("Edge protection", "边缘保护")}</span><span className="securityMiniState">Cloudflare</span></div>

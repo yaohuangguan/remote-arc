@@ -102,7 +102,7 @@ func TestNativeForegroundCLIHardCapAndLocalControl(t *testing.T) {
 	go func() { done <- Main(ctx, []string{"--foreground", "--safe"}, "test", os.Stdin, &output, &output) }()
 	select {
 	case hello := <-hellos:
-		if len(hello["tools"].([]any)) != 12 {
+		if len(hello["tools"].([]any)) != 13 {
 			t.Fatal("native CLI did not apply the safe cap")
 		}
 	case <-time.After(15 * time.Second):

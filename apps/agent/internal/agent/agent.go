@@ -33,6 +33,7 @@ type Agent struct {
 	Config             config.Config
 	Version            string
 	BackgroundProcess  bool
+	WakeOnly           bool
 	Client             *Client
 	Core               *execution.Core
 	Journal            *journal.Journal
@@ -55,6 +56,14 @@ func New(cfg config.Config, version string, background bool, log *journal.Journa
 	}
 	return &Agent{Config: cfg, Version: version, BackgroundProcess: background, Client: NewClient(), Core: execution.New(mode), Journal: log, Background: service.New(version), Save: config.Save, Load: config.Load}
 }
+
+// NewWake connects to the same authenticated Relay using a minimal control
+// channel. It creates NO filesystem/process execution core while paused.
+func NewWake(cfg config.Config, version string, log *journal.Journal) *Agent {
+	return &Agent{Config: cfg, Version: version, BackgroundProcess: true,
+		WakeOnly: true, Client: NewClient(), Journal: log,
+		Background: service.New(version), Save: config.Save, Load: config.Load}
+}
 func (a *Agent) log(level, message string) {
 	if a.Journal != nil {
 		a.Journal.Log(level, CleanMessage(message))
@@ -64,7 +73,7 @@ func (a *Agent) cfg() config.Config { a.mu.Lock(); defer a.mu.Unlock(); return a
 func (a *Agent) Status() map[string]any {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	return map[string]any{"engine": "go", "version": a.Version, "pid": os.Getpid(), "deviceId": a.Config.DeviceID, "mode": a.Config.Mode, "connected": a.connected, "connectedAt": a.connectedAt, "connectionSequence": a.connectionSequence, "fileDurability": config.FileDurability(), "undoDurability": config.UndoDurability(), "backgroundProcess": a.BackgroundProcess}
+	return map[string]any{"executionPaused": a.WakeOnly || a.Config.ExecutionPaused, "engine": "go", "version": a.Version, "pid": os.Getpid(), "deviceId": a.Config.DeviceID, "mode": a.Config.Mode, "connected": a.connected, "connectedAt": a.connectedAt, "connectionSequence": a.connectionSequence, "fileDurability": config.FileDurability(), "undoDurability": config.UndoDurability(), "backgroundProcess": a.BackgroundProcess}
 }
 func (a *Agent) identityValid() bool {
 	saved, e := a.Load()
@@ -86,11 +95,20 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 	status := a.Background.Status(ctx)
 	hostname, _ := os.Hostname()
 	names := []string{}
-	for _, t := range a.Core.ListTools() {
-		names = append(names, t.Name)
+	if !a.WakeOnly {
+		for _, t := range a.Core.ListTools() {
+			names = append(names, t.Name)
+		}
+		names = append(names, "background_agent_status", "set_background_agent", "set_task_keep_awake", "goal_workspace", "agent_execution_log")
+	} else {
+		names = append(names, "background_agent_status", "set_background_agent")
 	}
-	names = append(names, "background_agent_status", "set_background_agent", "set_task_keep_awake", "goal_workspace", "agent_execution_log")
-	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version}, "tools": names, "capabilities": []string{"native_core_v1", "device_policy_v1", "undo_history_v1", "background_agent_v1", "background_recovery_v2", "device_stop_v1", "go_agent_v1"}}
+	names = append(names, "set_device_runtime")
+	capabilities := []string{"device_policy_v1", "background_agent_v1", "background_recovery_v2", "device_stop_v1", "device_pause_v1", "go_agent_v1"}
+	if !a.WakeOnly {
+		capabilities = append(capabilities, "native_core_v1", "undo_history_v1")
+	}
+	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version}, "tools": names, "capabilities": capabilities}
 }
 func (a *Agent) heartbeat(ctx context.Context) error {
 	cfg := a.cfg()
@@ -106,7 +124,50 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 	if args == nil {
 		args = map[string]any{}
 	}
+	// The native wake channel never exposes an execution core. A pause arriving
+	// mid-flight immediately closes the gate for new tool dispatch.
+	if (a.WakeOnly || a.cfg().ExecutionPaused) &&
+		call.Tool != "set_device_runtime" && call.Tool != "set_background_agent" && call.Tool != "background_agent_status" {
+		return nil, errors.New("Device is paused. Resume it from Dashboard before using computer tools.")
+	}
 	switch call.Tool {
+	case "set_device_runtime":
+		a.settings.Lock()
+		defer a.settings.Unlock()
+		paused, ok := args["paused"].(bool)
+		if !ok {
+			return nil, errors.New("paused must be a boolean.")
+		}
+		cfg := a.cfg()
+		if a.Stop == nil {
+			return nil, errors.New("No supervised runtime handoff is available.")
+		}
+		if paused {
+			status := a.Background.Status(ctx)
+			if cfg.BackgroundEnabled == nil || !*cfg.BackgroundEnabled || !status.Enabled || !status.Active {
+				return nil, errors.New("Pause requires an active background wake supervisor; enable recovery first.")
+			}
+			if a.WakeOnly {
+				return map[string]any{"accepted": true, "paused": true}, nil
+			}
+		} else {
+			if !a.WakeOnly {
+				return nil, errors.New("Resume requires a paused wake-only Agent.")
+			}
+		}
+		cfg.ExecutionPaused = paused
+		if err := a.Save(cfg); err != nil {
+			return nil, err
+		}
+		a.mu.Lock()
+		a.Config = cfg
+		a.mu.Unlock()
+		// Acknowledge before the old owner yields its execution lease. The
+		// supervisor will start a new wake-only or execution worker using the
+		// durable paused flag. No new source AI or operating-system tool access.
+		go func() { time.Sleep(750 * time.Millisecond); a.Stop() }()
+		return map[string]any{"accepted": true, "paused": paused}, nil
+
 	case "background_agent_status":
 		s := a.Background.Status(ctx)
 		b, _ := json.Marshal(s)
@@ -147,6 +208,9 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 		}
 		cfg := a.cfg()
 		cfg.BackgroundEnabled = &enabled
+		if stopCurrent {
+			cfg.ExecutionPaused = false
+		}
 		if e := a.Save(cfg); e != nil {
 			return nil, e
 		}
@@ -176,11 +240,16 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 		m["desired_enabled"] = enabled
 		return m, nil
 	default:
+		if a.Core == nil {
+			return nil, errors.New("Execution core unavailable while paused.")
+		}
 		return a.Core.Call(ctx, call.Tool, args, call.Policy)
 	}
 }
 func (a *Agent) Run(ctx context.Context) error {
-	defer a.Core.Close()
+	if a.Core != nil {
+		defer a.Core.Close()
+	}
 	delay := time.Second
 	for ctx.Err() == nil {
 		if !a.identityValid() {
@@ -340,7 +409,7 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 			if send(response) != nil {
 				cancel()
 			}
-			if call.Tool == "set_background_agent" && err == nil {
+			if (call.Tool == "set_background_agent" || call.Tool == "set_device_runtime") && err == nil {
 				_ = send(a.hello(ctx))
 				if errors.Is(a.heartbeat(ctx), ErrRevoked) {
 					select {
