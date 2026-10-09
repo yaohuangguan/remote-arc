@@ -4,3 +4,4 @@ apps/device/go.sum text eol=lf
 packages/execution-core-go/**/*.go text eol=lf
 packages/execution-core-go/go.mod text eol=lf
 packages/execution-core-go/go.sum text eol=lf
+packages/execution-core-go/execution/*.json text eol=lf

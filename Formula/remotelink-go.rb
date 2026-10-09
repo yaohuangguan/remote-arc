@@ -6,21 +6,21 @@ class RemotelinkGo < Formula
   on_macos do
     on_arm do
       url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.1/remotelink-go-v0.5.1-darwin-arm64", using: :nounzip
-      sha256 "e594286f731db7ba5b1353b156292cf6bd59021997092b58e0bff44913719c09"
+      sha256 "857582b665fbca7b2a04886f74cca30a1f73a1915fd71714f966a651d1e6498b"
     end
     on_intel do
       url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.1/remotelink-go-v0.5.1-darwin-amd64", using: :nounzip
-      sha256 "64b45a9a2c5545002a24cac763468395e6a0e13645b792fc0e53ced0da80d437"
+      sha256 "894c91b5194d952def1db932abb12f231d42ee8224bdb2e87f981bb0f353607b"
     end
   end
   on_linux do
     on_arm do
       url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.1/remotelink-go-v0.5.1-linux-arm64", using: :nounzip
-      sha256 "fde85eda6dacecd281ccc180804d39a9f4de089d135008aae2c8ff346dbaf7fa"
+      sha256 "a56f90715be3f3edce719395d7ce83e4e409bdaab4c70e4c3bedd645cdb591d9"
     end
     on_intel do
       url "https://github.com/yaohuangguan/remote-arc/releases/download/go-agent-v0.5.1/remotelink-go-v0.5.1-linux-amd64", using: :nounzip
-      sha256 "2eadce2cde45593cd230c31a851e55323278060927cabaccb2a4a76d29ac0e36"
+      sha256 "5a901534526d6c33e1e07dc765fb6dd2a4ad5e1114239921550715a1ed44f785"
     end
   end
 

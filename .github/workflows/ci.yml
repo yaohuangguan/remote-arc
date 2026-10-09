@@ -51,6 +51,13 @@ jobs:
         if: github.ref != 'refs/heads/master'
       - run: node scripts/verify-device-artifacts.mjs
         if: github.ref == 'refs/heads/master'
+      - name: Verify committed stable Homebrew formula before merge
+        if: github.ref != 'refs/heads/master'
+        run: |
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          if [[ "$CLI_VERSION" != *-* ]]; then
+            node scripts/verify-device-artifacts.mjs
+          fi
       - uses: actions/upload-artifact@v6
         with:
           name: go-device-binaries
