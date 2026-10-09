@@ -1,5 +1,6 @@
 import React from "react";
 import { useI18n } from "./i18n.js";
+import { ArchitectureDeepDive } from "./architecture-deep-dive.js";
 import "./public-docs.css";
 
 const endpoint = "https://mcp.remotearc.app/mcp";
@@ -44,7 +45,14 @@ export function Documentation() {
   const { tr } = useI18n();
   const contents = [
     ["start", tr("Set up once", "一次配置")], ["model", tr("Chat, tools and Tasks", "聊天、工具与 Task")],
-    ["routing", tr("System architecture", "系统架构")], ["policy", tr("Device permissions", "设备权限")],
+    ["routing", tr("System architecture", "系统架构")],
+    ["architecture-deep", tr("Architecture deep dive", "架构技术详解")],
+    ["architecture-trust", tr("Trust boundaries", "信任边界")],
+    ["architecture-task", tr("Task lifecycle", "任务状态机")],
+    ["architecture-persistence", tr("Persistence and recovery", "持久化与恢复")],
+    ["architecture-data", tr("Storage and privacy", "存储与隐私")],
+    ["architecture-limits", tr("Experimental boundaries", "实验能力边界")],
+    ["policy", tr("Device permissions", "设备权限")],
     ["files", tr("Files and Undo", "文件与 Undo")], ["processes", tr("Processes and recovery", "进程与恢复")],
     ["automations", tr("Durable task modes", "持久任务模式")], ["continuation", tr("AI reasoning boundary", "AI 推理边界")],
     ["schedule", tr("Scheduling and sleep", "调度与休眠")], ["browser", tr("Browser context", "浏览器上下文")],
@@ -84,8 +92,9 @@ export function Documentation() {
           <div className="articleFlow"><code>AI / Plugin</code><span>→</span><code>OAuth · MCP</code><span>→</span><code>Cloudflare Worker</code><span>→</span><code>Durable Object</code><span>→</span><code>outbound WSS</code><span>→</span><code>{tr("Local agent", "本地 Agent")}</code></div>
           <p>{tr("The Worker authenticates the account and client, checks policy and selects the device. Per-user Durable Objects route live requests over the device's outbound WebSocket. D1 stores accounts, authorization, policies and durable task progress. Commands and file operations execute on the paired computer using its installed software.", "Worker 认证账户与客户端、检查策略并选择设备。每用户 Durable Object 通过设备主动建立的出站 WebSocket 路由实时请求；D1 保存账户、授权、策略和持久任务进度。命令和文件操作在已配对电脑上执行，使用本机已经安装的软件。")}</p>
           <p>{tr("No public inbound port, router forwarding or VPN is required. Persistence is handled by the task scheduler and database; the device connection provides execution when the computer is available.", "无需公网入站端口、路由器映射或 VPN。任务调度器和数据库负责持久化，设备连接在电脑可用时提供真实执行。")}</p>
-          <a href={engineering + "system-architecture.md"}>{tr("Full engineering architecture", "完整系统技术文档")} ↗</a>
+          <div className="articleMetaLinks"><a href={engineering + "system-architecture.en.md"}>{tr("Engineering reference (English)", "英文工程参考")} ↗</a><a href={engineering + "system-architecture.md"}>{tr("Chinese reference", "中文工程参考")} ↗</a></div>
         </section>
+        <ArchitectureDeepDive />
         <section id="docs-policy">
           <h2>{tr("Choose permissions for each computer", "分别选择每台电脑的权限")}</h2>
           <div className="docsTableWrap"><table className="articleTable"><thead><tr><th>{tr("Control", "控制项")}</th><th>{tr("What it governs", "控制什么")}</th></tr></thead><tbody>
