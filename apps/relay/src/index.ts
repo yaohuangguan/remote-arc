@@ -14,6 +14,7 @@ import {
   handleLogout,
 } from "./auth.js";
 import { handleLoginPage, handleReviewerLogin } from "./reviewer.js";
+import { handleEmailCodeRequest, handleEmailCodeVerify } from "./email-auth.js";
 import {
   getDevicesForUser,
   handleDeviceList,
@@ -88,6 +89,9 @@ type Env = TaskEventEnv & {
   GOOGLE_CLIENT_SECRET?: string;
   ALLOWED_EMAILS?: string;
   ALLOW_SIGNUPS?: string;
+  RESEND_API_KEY?: string;
+  EMAIL_AUTH_SECRET?: string;
+  EMAIL_FROM?: string;
   MONTHLY_TOOL_CALL_LIMIT?: string;
   OPENAI_APPS_CHALLENGE?: string;
   REVIEWER_EMAIL?: string;
@@ -106,6 +110,7 @@ type Env = TaskEventEnv & {
   ALERT_FROM_EMAIL?: string;
   MCP_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
   AUTH_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
+  EMAIL_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
 };
 
 function withTrustedDeviceHeaders(
@@ -133,6 +138,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       url.pathname === "/oauth/decision" ||
       url.pathname === "/oauth/token" ||
       url.pathname === "/auth/reviewer" ||
+      url.pathname === "/auth/email/request" ||
+      url.pathname === "/auth/email/verify" ||
       url.pathname === "/api/device/start" ||
       url.pathname === "/api/device/token" ||
       url.pathname === "/api/pairing/approve";
@@ -272,6 +279,17 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
     if (url.pathname === "/auth/reviewer" && request.method === "POST") {
       return handleReviewerLogin(request, env);
+    }
+
+    if (url.pathname === "/auth/email/request" && request.method === "POST") {
+      const ip = request.headers.get("cf-connecting-ip") || "anonymous";
+      const { success } = await env.EMAIL_RATE_LIMITER.limit({ key: "email-request:" + ip });
+      if (!success) return new Response("Too many requests. Try again shortly.", { status: 429, headers: { "retry-after": "60" } });
+      return handleEmailCodeRequest(request, env);
+    }
+
+    if (url.pathname === "/auth/email/verify" && request.method === "POST") {
+      return handleEmailCodeVerify(request, env);
     }
 
     if (url.pathname === "/auth/google" && request.method === "GET") {

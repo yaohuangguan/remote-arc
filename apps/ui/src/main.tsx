@@ -1936,7 +1936,11 @@ function AuthProviderModal({
         MARKETING_ORIGIN +
         "/auth/google?return_to=" +
         encodeURIComponent(absoluteReturnTo),
-      mark: "G",
+    },
+    {
+      id: "email",
+      label: tr("Continue with Email", "使用邮箱继续"),
+      href: MARKETING_ORIGIN + "/auth/login?return_to=" + encodeURIComponent(absoluteReturnTo) + "#email",
     },
   ];
 
@@ -1959,15 +1963,15 @@ function AuthProviderModal({
         <div className="installAuthProviders">
           {providers.map((provider) => (
             <a className={"authProviderButton " + provider.id} href={provider.href} key={provider.id}>
-              <span aria-hidden="true">{provider.mark}</span>
+              <span aria-hidden="true">{provider.id === "google" ? <img src="/google-g.svg" alt="" width={25} height={25} /> : "✉"}</span>
               <strong>{provider.label}</strong>
               <b>→</b>
             </a>
           ))}
         </div>
         <small>{note || tr(
-          "More sign-in methods can be added here later without changing your paired computers or AI connections.",
-          "以后可以在这里增加更多登录方式，而不会影响已经配对的电脑或 AI 连接。",
+          "Google and email sign-in use the same Remote Arc account. Your paired computers and AI connections stay attached.",
+          "Google 和邮箱登录使用同一个 Remote Arc 账户，已配对设备和 AI 连接会保留。",
         )}</small>
       </section>
     </div>
@@ -2860,8 +2864,8 @@ function NotFoundPage({ user }: { user?: User | null }) {
 
 function PricingPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
-  const startHref = user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/google?return_to=/overview";
-  const usageHref = user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/google?return_to=/settings";
+  const startHref = user ? dashboardHref("/overview") : APP_ORIGIN + "/auth/login?return_to=/overview";
+  const usageHref = user ? dashboardHref("/settings") : APP_ORIGIN + "/auth/login?return_to=/settings";
   return <PublicLayout user={user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading…", "加载中…")}</main>}><PricingContent startHref={startHref} usageHref={usageHref} signedIn={Boolean(user)} currentPlan={user?.plan || null} /></React.Suspense></PublicLayout>;
 }
 
