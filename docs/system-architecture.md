@@ -40,7 +40,7 @@ AI 不能自行扩大权限。源控制器不能续接时，任务如实显示�
 | --- | --- | --- |
 | 推理控制器 | 根据目标及观察结果选择下一步、总结事实、提出完成或阻塞 | Work/Codex/Chat 源 Agent，或显式选择的托管 Planner |
 | 任务控制面 | 持久目标、调度、状态、日志、租约、恢复、验收及事件通知 | Cloudflare Worker + D1 |
-| 设备执行面 | 在已授权设备上执行工具，管理进程、路径限制和 Undo | 本地 Agent + execution-core-ts |
+| 设备执行面 | 在已授权设备上执行工具，管理进程、路径限制和 Undo | Go Agent + Execution Core |
 
 Plugin/MCP 提供工具连接，不单独决定 AI 宿主的推理寿命。持续推理要由宿主的
 长任务/目标模式，或经过验证的事件续接机制提供。Remote Arc 不会在源 Agent
@@ -321,7 +321,7 @@ Agent Goal 支持立即、未来时间和固定间隔触发；每次周期运行
 | `automation_decisions` | 幂等提交 hash 及等待消费的决策；消费后清除决策正文 |
 | `automation_events/webhooks` | 条件事件标识、匹配/消费状态、callback secret hash |
 | `task_event_subscriptions/deliveries` | callback、加密 signing secret、有效期及投递元数据 |
-| 本地 execution-core-ts | 受管进程完整输出和文件 Undo 快照 |
+| 本地 Go Execution Core | 受管进程完整输出和文件 Undo 快照 |
 
 持久 Agent Goal 的受限观察可能包含文件内容或进程输出，并会保存在控制面供
 续接使用；不能把“未存完整原始输出”解释为“云端绝无任务内容”。这些观察也

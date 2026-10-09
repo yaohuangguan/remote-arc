@@ -20,6 +20,7 @@ Without Node, use [standalone downloads](https://remotearc.app/downloads) or:
 
 ```bash
 brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
+if brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi
 brew install yaohuangguan/remote-arc/remotelink
 remotelink
 ```
@@ -239,6 +240,7 @@ For native installation on macOS/Linux without Node:
 
 ```sh
 brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
+if brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi
 brew install yaohuangguan/remote-arc/remotelink
 remotelink --foreground
 ```

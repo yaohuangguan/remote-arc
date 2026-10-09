@@ -175,24 +175,6 @@ jobs:
 
   public-install:
     needs: publish
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-          package-manager-cache: false
-      - name: Verify public npm and native Go installation
-        run: node scripts/public-device-smoke.mjs
-      - name: Verify Homebrew installation without Node
-        if: runner.os == 'macOS'
-        run: |
-          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
-          brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
-          brew install yaohuangguan/remote-arc/remotelink
-          test "$(remotelink --version)" = "$CLI_VERSION"
-          brew test yaohuangguan/remote-arc/remotelink
+    uses: ./.github/workflows/verify-public-install.yml
+    permissions:
+      contents: read

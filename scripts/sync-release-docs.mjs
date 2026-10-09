@@ -75,7 +75,7 @@ const nativeBlock = [installStart, "### Native downloads and Homebrew", "",
   "| Platform | Download |", "| --- | --- |",
   ...nativeTargets.map(([label, os, arch]) => "| " + label + " | [remotelink](" + nativeRelease + "remotelink-v" + nativeVersion + "-" + os + "-" + arch + (os === "windows" ? ".exe" : "") + ") |"),
   "", "[SHA256SUMS](" + nativeRelease + "SHA256SUMS) · [Release notes](https://github.com/yaohuangguan/remote-arc/releases/tag/remotelink-v" + nativeVersion + ")", "",
-  "```bash", "brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc", "brew install yaohuangguan/remote-arc/remotelink", "remotelink", "```", "",
+  "```bash", "brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc", "if brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi", "brew install yaohuangguan/remote-arc/remotelink", "remotelink", "```", "",
   "The existing `remotelink-go` formula remains available for upgrades; install one formula at a time.", installEnd,
 ].join("\n");
 if (!rootReadme.includes(installStart) || !rootReadme.includes(installEnd)) throw new Error("Root README native install markers are missing");

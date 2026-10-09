@@ -65,6 +65,7 @@ Standalone 0.6.0 needs no Node.js or Go compiler. [Installation and upgrade guid
 
 ```bash
 brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
+if brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi
 brew install yaohuangguan/remote-arc/remotelink
 remotelink
 ```

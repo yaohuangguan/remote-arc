@@ -25,7 +25,7 @@ export function NativeInstall() {
     <pre className="docsExample"><code>npx remotelink@latest</code></pre>
     <p>{tr("Requires Node.js 20+. The npm launcher downloads and verifies the native Agent; Go is the default. --go remains a compatible alias. Use --ts only for the retained TypeScript fallback.", "需要 Node.js 20+。npm 启动器下载并校验原生 Agent，默认运行 Go；--go 保留为兼容别名。--ts 用于保留的 TypeScript 回退。")}</p>
     <h2>Homebrew</h2>
-    <pre className="docsExample"><code>{"brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc\nbrew install yaohuangguan/remote-arc/remotelink\nremotelink"}</code></pre>
+    <pre className="docsExample"><code>{"brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc\nif brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi\nbrew install yaohuangguan/remote-arc/remotelink\nremotelink"}</code></pre>
     <p>{tr("Available on macOS and Linux; Node.js is not required. Existing remotelink-go installations can use brew upgrade remotelink-go. Install one formula at a time because both provide the remotelink command.", "适用于 macOS 和 Linux，不需要 Node.js。已安装 remotelink-go 的用户可以执行 brew upgrade remotelink-go；两个配方都提供 remotelink 命令，请只安装其中一个。")}</p>
     <h2>{tr("Standalone downloads", "直接下载")}</h2>
     <p>{tr("No Node.js or Go toolchain is needed. Choose your operating system and processor.", "不需要 Node.js 或 Go 编译环境，请按操作系统和处理器选择。")}</p>
