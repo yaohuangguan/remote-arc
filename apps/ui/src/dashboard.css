@@ -362,3 +362,18 @@
   :root[data-theme] .appFrame .automationActions { grid-row:4; }
   :root[data-theme] .appFrame .taskResultsBody { padding:14px; }
 }
+
+/* Feedback for a slow device-side background recovery transition. */
+:root[data-theme] .appFrame .backgroundToggleProgress{
+  display:inline-flex;align-items:center;gap:9px;max-width:245px;
+  color:var(--dash-muted);font-size:12px;line-height:1.4;white-space:normal;
+}
+:root[data-theme] .appFrame .backgroundToggleSpinner{
+  flex:none;width:15px;height:15px;border:2px solid var(--dash-line);
+  border-top-color:var(--dash-accent);border-radius:50%;
+  animation:background-toggle-spin .8s linear infinite;
+}
+@keyframes background-toggle-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce){
+  :root[data-theme] .appFrame .backgroundToggleSpinner{animation:none;border-color:var(--dash-accent);}
+}

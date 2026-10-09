@@ -143,6 +143,7 @@ const pages: Record<string, SeoPage> = {
 };
 
 const useCaseSeo: Record<string, [string, string]> = {
+  "disk-space-cleanup": ["Clean up Windows C: or Mac disk space safely", "Read-only disk usage audit, reviewed large-file candidates and explicit path-by-path confirmation before destructive cleanup."],
   "file-organization": ["Organize files with a reviewed move plan", "Inspect a folder, review destinations and collisions, then execute an authorized move plan with a before/after manifest."],
   "remote-development": ["Fix a project on your own computer", "Inspect, edit and test the existing checkout using Remote Arc device tools and explicit permissions."],
   "overnight-goals": ["Run durable work without pretending the AI stays awake", "Save deterministic commands and checks for later execution; fresh AI judgment still requires a live supported reasoning host."],
@@ -428,6 +429,13 @@ const useCaseCrawlDetails: Record<string, { prompt: string; flow: string; tools:
     tools: "Typical capabilities are device discovery, read_file, edit_block and start_process. The device needs file-read and edit permission plus terminal access for tests.",
     proof: "A useful result includes the concrete diff, focused test output and a clear statement of any remaining failure instead of only saying that the task is done.",
     boundary: "Terminal commands run as the local operating-system user. Trusted Write Locations do not sandbox shell commands, and Local Undo covers supported file-tool edits rather than arbitrary shell edits or Git history."
+  },
+  "disk-space-cleanup": {
+    prompt: "On my authorized Windows PC, run read-only disk-usage checks for C:, list the largest candidates and estimated reclaimable bytes, and wait for explicit path-by-path approval before deleting anything.",
+    flow: "Measure free space and inspect accessible directories, group build outputs and package caches as candidates, present exact paths and risks, then perform only individually approved operations and remeasure.",
+    tools: "Read-only file metadata and authorized start_process checks can profile disk usage. Actual deletion is a separate terminal operation requiring explicit authorization and appropriate workspace access.",
+    proof: "Record initial and final free space, exact approved deleted paths, measured reclaimed capacity and skipped risky candidates.",
+    boundary: "Never blindly purge WinSxS, System32, ProgramData, user profiles, backups or macOS snapshots. Prefer operating-system cleanup tools for managed system files. Shell deletion is outside Local Undo."
   },
   "file-organization": {
     prompt: "Ask the AI to inspect a selected folder, propose an exact move plan, wait for approval, avoid deletion or overwrite, then save a before-and-after manifest.",

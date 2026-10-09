@@ -3,7 +3,7 @@ import { useI18n } from "./i18n.js";
 import { TaskAvailability } from "./product-docs.js";
 import "./public-docs.css";
 
-export const useCaseSlugs = ["remote-development", "file-organization", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support", "presentation-deck", "spreadsheet-report", "desktop-automation", "cross-device-handoff"] as const;
+export const useCaseSlugs = ["remote-development", "file-organization", "disk-space-cleanup", "overnight-goals", "long-running-jobs", "scheduled-checks", "ci-follow-up", "data-work", "home-lab", "browser-research", "remote-support", "presentation-deck", "spreadsheet-report", "desktop-automation", "cross-device-handoff"] as const;
 export type UseCaseSlug = typeof useCaseSlugs[number];
 type Tr = (en: string, zh: string) => string;
 
@@ -26,6 +26,25 @@ function cases(tr: Tr) {
       steps: [tr("Inspect names and metadata; avoid reading unnecessary file contents.", "检查名称和元数据，避免读取不必要文件内容。"), tr("Review destinations, collisions and the exact move list.", "确认目标位置、重名冲突和具体移动清单。"), tr("Execute the approved plan and verify the before/after manifest.", "执行已批准计划并核对整理前后清单。")],
       proof: tr("The approved move list, collision handling and verified destination files.", "已批准移动清单、冲突处理与已核对的目标文件。"),
       limit: tr("No dedicated move-file MCP tool is currently exposed. Moves use terminal access with real local-user permissions. Shell moves are outside Local Undo; a manifest helps review but is not transactional rollback.", "当前没有专门的移动文件 MCP 工具，移动通过具有真实本机用户权限的终端执行。Shell 移动不属于 Local Undo，清单帮助检查但不是事务回滚。"), durable: false,
+    },
+    {
+      slug: "disk-space-cleanup", category: tr("DISK SPACE", "磁盘空间"),
+      title: tr("Find what is filling your Windows C: drive or Mac", "找出 Windows C 盘或 Mac 空间不足的原因"),
+      intro: tr("Inspect large folders, caches and duplicated build artifacts; preview reclaimable space before authorizing any deletion.", "分析大目录、缓存和重复构建文件；先预估可回收空间，确认后才执行任何删除。"),
+      prompt: tr(
+        "On my Windows PC, investigate why C: is filling up. Start with read-only disk and folder size checks, list the 20 largest safe-to-review candidates and estimate recoverable space. Do not delete, uninstall, change services or clear system caches until I approve each exact path and action. After approval, verify free space and report what changed.",
+        "在我的 Windows 电脑上排查 C 盘空间不足。先只读检查磁盘和目录占用，列出 20 个值得复核的大文件/缓存候选及预计可回收空间。未经我逐项确认具体路径与操作，不删除、不卸载、不改服务、不清系统缓存；获批执行后复测剩余空间并报告变化。",
+      ),
+      tools: "list_directory · get_file_info · start_process · process_output",
+      permission: tr("Read-only inspection first; separately approved terminal access and explicit deletion confirmation", "先只读检查；执行清理需单独授权终端权限，并逐项确认删除"),
+      steps: [
+        tr("Measure total free space and inspect only accessible paths. Use bounded PowerShell on Windows or du on macOS; do not scan protected system folders by force.", "先测量总剩余空间，只检查允许访问的目录；Windows 用有界 PowerShell、macOS 用 du，不强行扫描系统保护目录。"),
+        tr("Group candidates: temporary build outputs, installer leftovers, package caches and confirmed duplicate copies. List exact paths, sizes, ownership and risk.", "按临时构建产物、安装残留、包缓存、确认的重复副本等分类，列出具体路径、大小、归属和风险。"),
+        tr("Present a dry-run plan. Delete only individually approved, verified-safe paths, then remeasure disk space and preserve an audit list.", "给出只读预览计划；只删除逐项批准、验证安全的路径，之后重新测量剩余空间并保留操作清单。"),
+      ],
+      proof: tr("Before/after free space, exact approved paths, measured reclaimed bytes and skipped risky items.", "清理前后剩余空间、逐项获批路径、实际回收字节数以及跳过的高风险项目。"),
+      limit: tr("Never blindly purge Windows, WinSxS, System32, ProgramData, user profiles, Time Machine snapshots, backups or unknown application data. Native OS cleanup tools are preferable for system-managed files. Terminal operations are not protected by Remote Arc file-tool Undo, and folder access remains limited by the device's configured Workspace and approvals.", "严禁盲目删除 Windows、WinSxS、System32、ProgramData、用户资料、Time Machine 快照、备份或不明应用数据。系统管理文件优先用操作系统自带清理工具。终端清理不受 Remote Arc 文件工具 Undo 保护，访问范围仍取决于设备 Workspace 和审批。"),
+      durable: false,
     },
     {
       slug: "overnight-goals", category: tr("DURABLE LOOP", "持久循环"), title: tr("Leave a bounded fixed plan running", "离开前运行一个有界固定计划"),

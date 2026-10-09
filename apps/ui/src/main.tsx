@@ -5334,7 +5334,7 @@ function Dashboard({
                         }}>{tr("Copy update command", "复制更新命令")}</button>
                       </div>
                     )}
-                    <div className="deviceBackgroundRow">
+                    <div className="deviceBackgroundRow" aria-busy={backgroundUpdatingId === device.id}>
                       <div>
                         <div className="labelWithHelp">
                           <strong>{tr("Automatic recovery", "自动恢复")}</strong>
@@ -5353,6 +5353,12 @@ function Dashboard({
                           {device.agent_pid ? " · PID " + device.agent_pid : ""}{device.agent_version ? " · v" + device.agent_version : ""}</span>
                       </div>
                       <div className="managedProcessActions">
+                        {backgroundUpdatingId === device.id && (
+                          <span className="backgroundToggleProgress" id={"background-toggle-progress-" + device.id} role="status" aria-live="polite">
+                            <span className="backgroundToggleSpinner" aria-hidden="true" />
+                            {tr("Applying on device…", "正在设备上应用…")}
+                          </span>
+                        )}
                         {device.background_enabled === true && device.background_guard_active !== true && device.status === "online" && device.background_recovery_available && (
                           <button className="ghostButton small" disabled={UI_PREVIEW || backgroundUpdatingId === device.id} onClick={() => void updateDeviceBackground(device, true, false)}>{tr("Repair recovery", "修复恢复")}</button>
                         )}
@@ -5365,6 +5371,7 @@ function Dashboard({
                           <input type="checkbox" aria-label={tr("Automatic recovery", "自动恢复")}
                             checked={device.background_enabled === true}
                             disabled={UI_PREVIEW || backgroundUpdatingId === device.id || device.status !== "online" || !device.background_agent_available}
+                            aria-describedby={backgroundUpdatingId === device.id ? "background-toggle-progress-" + device.id : undefined}
                             onChange={async (event) => {
                               const enabled = event.target.checked;
                               if (enabled && !device.background_recovery_available) {
@@ -7164,7 +7171,7 @@ function App() {
   if (location.pathname === "/docs") return <DocsPage user={user === undefined ? null : user} />;
   if (location.pathname === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
   if (location.pathname === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
-  const useCaseMatch = location.pathname.match(/^\/use-cases\/(remote-development|file-organization|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);
+  const useCaseMatch = location.pathname.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);
   if (useCaseMatch) {
     return <UseCaseDetailPage slug={useCaseMatch[1] as UseCaseSlug} user={user === undefined ? null : user} />;
   }
