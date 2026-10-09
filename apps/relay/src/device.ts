@@ -498,6 +498,7 @@ export async function getDevicesForUser(
           ? live.recovery_bundle_version
           : null,
       background_recovery_available: capabilities.includes("background_recovery_v2"),
+      stop_agent_available: capabilities.includes("device_stop_v1"),
       background_guard_active: live?.background_guard_active === true,
       background_guard_pid: live?.background_guard_pid ?? null,
       execution_mode: live?.execution_mode ?? null,
@@ -1001,6 +1002,12 @@ export async function handleDeviceBackgroundUpdate(
   if (typeof body.enabled !== "boolean") {
     return Response.json({ error: "enabled must be a boolean" }, { status: 400 });
   }
+  if (body.stop_current === true) {
+    if (body.enabled !== false) return Response.json({ error: "Cannot stop an Agent while enabling recovery." }, { status: 400 });
+    const online = (await getDevicesForUser(env, user.id)).find((row) => row.id === deviceId);
+    if (!online || online.status !== "online") return Response.json({ error: "device offline" }, { status: 409 });
+    if (!online.stop_agent_available) return Response.json({ error: "Agent upgrade required before remote Stop Agent is available." }, { status: 409 });
+  }
 
   const device = await loadOwnedDevicePolicy(env, user.id, deviceId);
   if (!device) return Response.json({ error: "device not found" }, { status: 404 });
@@ -1058,9 +1065,11 @@ export async function handleDeviceBackgroundUpdate(
     userId: user.id,
     deviceId,
     eventType: applied
-      ? actualEnabled
-        ? "device.background_enabled"
-        : "device.background_disabled"
+      ? body.stop_current === true
+        ? "device.agent_stop_requested"
+        : actualEnabled
+          ? "device.background_enabled"
+          : "device.background_disabled"
       : "device.background_update_failed",
   });
 

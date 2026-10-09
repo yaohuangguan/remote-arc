@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { recoveryConfirmed, waitForRecoveryState } from "../src/background-recovery.ts";
+import { recoveryConfirmed, waitForAgentOffline, waitForRecoveryState } from "../src/background-recovery.ts";
 
 const device = (enabled, active, status = "online") => ({
   id: "mac-1", status, background_enabled: enabled, background_guard_active: active,
@@ -47,3 +47,24 @@ assert.equal(failed, false, "must never assert success solely from POST or initi
 assert.equal(calls, 3);
 
 console.log("BACKGROUND_RECOVERY_CONFIRMATION_TEST_PASS");
+
+
+let stopAttempts=0;
+const confirmedStop=await waitForAgentOffline("mac-1", {
+  read: async () => {
+    stopAttempts++;
+    if(stopAttempts===1)throw Error("transient");
+    return [stopAttempts<4 ? device(false,false) : device(false,false,"offline")];
+  },
+  pause:async()=>{},
+  attempts:5,
+});
+assert.equal(confirmedStop,true);
+assert.equal(stopAttempts,4,"must wait for Relay offline presence, not disabled recovery");
+const notStopped=await waitForAgentOffline("mac-1", {
+  read:async()=>[device(false,false)],
+  pause:async()=>{},
+  attempts:3,
+});
+assert.equal(notStopped,false,"off supervisor alone is NOT a stopped device");
+console.log("REMOTE_STOP_OFFLINE_CONFIRMATION_TEST_PASS");

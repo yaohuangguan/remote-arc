@@ -4,7 +4,10 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.6.1 - Unreleased
 
-### RC.2: macOS background recovery migration
+### RC.3: macOS background recovery migration and remote Stop Agent
+
+- Restore a version-gated Stop Agent button for any online foreground or background executor, disable automatic recovery first, and confirm the device has actually disconnected.
+- Prevent older device runtimes from reporting a successful remote stop they do not implement; preserve their pairing and original owner.
 
 - Replace an idle stale loaded launchd Node/TS job with the Go service before bootstrapping the same label. Fail closed when a foreign loaded job is executing, preserving pairing and current foreground work.
 - Follow-up device-side patch to 0.6.0; published 0.6.0 binary hashes remain immutable.

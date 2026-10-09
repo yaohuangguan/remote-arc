@@ -90,7 +90,7 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 		names = append(names, t.Name)
 	}
 	names = append(names, "background_agent_status", "set_background_agent", "set_task_keep_awake", "goal_workspace", "agent_execution_log")
-	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version}, "tools": names, "capabilities": []string{"native_core_v1", "device_policy_v1", "undo_history_v1", "background_agent_v1", "background_recovery_v2", "go_agent_v1"}}
+	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version}, "tools": names, "capabilities": []string{"native_core_v1", "device_policy_v1", "undo_history_v1", "background_agent_v1", "background_recovery_v2", "device_stop_v1", "go_agent_v1"}}
 }
 func (a *Agent) heartbeat(ctx context.Context) error {
 	cfg := a.cfg()
@@ -141,6 +141,10 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 		if !ok {
 			return nil, errors.New("enabled must be a boolean.")
 		}
+		stopCurrent := !enabled && protocol.Bool(args, "stop_current")
+		if stopCurrent && a.Stop == nil {
+			return nil, errors.New("Current Agent cannot be stopped from this session.")
+		}
 		cfg := a.cfg()
 		cfg.BackgroundEnabled = &enabled
 		if e := a.Save(cfg); e != nil {
@@ -160,8 +164,11 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 		if e != nil {
 			return nil, e
 		}
-		if !enabled && protocol.Bool(args, "stop_current") && a.BackgroundProcess && a.Stop != nil {
-			go func() { _ = pause(ctx, 500*time.Millisecond); a.Stop() }()
+		if stopCurrent {
+			// Acknowledge over the existing WebSocket before closing the
+			// foreground OR background executor. Supervisor checks the persisted
+			// disabled setting and will not resurrect the stopped worker.
+			go func() { time.Sleep(750 * time.Millisecond); a.Stop() }()
 		}
 		b, _ := json.Marshal(status)
 		m := map[string]any{}

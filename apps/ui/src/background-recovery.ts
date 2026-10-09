@@ -37,3 +37,29 @@ export async function waitForRecoveryState(
   }
   return false;
 }
+
+/**
+ * A stop acknowledgment is not a stopped Agent. Observe a fresh Relay
+ * presence snapshot: missing, stale, or fetch errors do not prove shutdown.
+ */
+export async function waitForAgentOffline(
+  deviceId: string,
+  options: {
+    read: () => Promise<RecoveryDeviceSnapshot[]>;
+    pause: (milliseconds: number) => Promise<void>;
+    attempts?: number;
+    intervalMs?: number;
+  },
+): Promise<boolean> {
+  const attempts = options.attempts ?? 12;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const devices = await options.read();
+      if (devices.find((device) => device.id === deviceId)?.status === "offline") return true;
+    } catch {
+      // A transient error or lost response is never a success signal.
+    }
+    if (i + 1 < attempts) await options.pause(options.intervalMs ?? 1200);
+  }
+  return false;
+}
