@@ -1,0 +1,52 @@
+name: Verify public installation
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/verify-public-install.yml
+      - .github/workflows/publish-remotelink.yml
+      - scripts/public-device-smoke.mjs
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published version to verify (empty uses the checkout version)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  public-install:
+    timeout-minutes: 15
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      REMOTEARC_PUBLIC_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Resolve published version for pull request checks
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: echo "REMOTEARC_PUBLIC_VERSION=$(npm view remotelink dist-tags.latest --registry=https://registry.npmjs.org/)" >> "$GITHUB_ENV"
+      - name: Verify public npm and native Go installation
+        run: node scripts/public-device-smoke.mjs
+      - name: Verify Homebrew installation without Node
+        if: runner.os == 'macOS'
+        run: |
+          CLI_VERSION="${REMOTEARC_PUBLIC_VERSION:-$(node -p "require('./packages/cli/package.json').version")}"
+          brew tap yaohuangguan/remote-arc https://github.com/yaohuangguan/remote-arc
+          if brew command trust >/dev/null 2>&1; then brew trust --formula yaohuangguan/remote-arc/remotelink yaohuangguan/remote-arc/remotelink-go; fi
+          brew install yaohuangguan/remote-arc/remotelink
+          test "$(remotelink --version)" = "$CLI_VERSION"
+          brew test yaohuangguan/remote-arc/remotelink
+          NATIVE="$(brew --prefix remotelink)/bin/remotelink"
+          test "$(env PATH=/usr/bin:/bin "$NATIVE" --version)" = "$CLI_VERSION"
