@@ -1,6 +1,7 @@
 type UsageEnv = {
   DB: D1Database;
   MONTHLY_TOOL_CALL_LIMIT?: string;
+  FREE_MONTHLY_TOOL_CALL_LIMIT?: string;
   OPERATOR_EMAIL?: string;
 };
 
@@ -23,10 +24,15 @@ function configuredMonthlyLimit(env: UsageEnv) {
 
 async function monthlyLimitForUser(env: UsageEnv, userId: string) {
   const user = await env.DB.prepare(
-    "SELECT role, email FROM users WHERE id = ?1 LIMIT 1",
+    `SELECT u.role, u.email, u.plan,
+      EXISTS(
+        SELECT 1 FROM plan_grants g WHERE g.user_id = u.id AND g.plan = 'plus'
+        AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at > ?2)
+      ) AS has_plus_grant
+     FROM users u WHERE u.id = ?1 LIMIT 1`,
   )
-    .bind(userId)
-    .first<{ role: string | null; email: string | null }>();
+    .bind(userId, new Date().toISOString())
+    .first<{ role: string | null; email: string | null; plan: string | null; has_plus_grant: number }>();
 
   const operatorEmail = env.OPERATOR_EMAIL?.trim().toLowerCase();
   if (
@@ -34,6 +40,16 @@ async function monthlyLimitForUser(env: UsageEnv, userId: string) {
     (operatorEmail && user?.email?.trim().toLowerCase() === operatorEmail)
   ) {
     return null;
+  }
+  // Keep existing Plus entitlements. A separate Free budget is explicitly
+  // opt-in: absent FREE_MONTHLY_TOOL_CALL_LIMIT means no policy change.
+  if (user?.plan !== "plus" && !user?.has_plus_grant &&
+      env.FREE_MONTHLY_TOOL_CALL_LIMIT !== undefined) {
+    const freeLimit = Number(env.FREE_MONTHLY_TOOL_CALL_LIMIT);
+    if (!Number.isSafeInteger(freeLimit) || freeLimit < 1) {
+      throw new Error("FREE_MONTHLY_TOOL_CALL_LIMIT must be a positive integer");
+    }
+    return freeLimit;
   }
   return configuredMonthlyLimit(env);
 }

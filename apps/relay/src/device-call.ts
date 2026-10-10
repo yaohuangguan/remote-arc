@@ -1,5 +1,6 @@
 import type { OAuthIdentity } from "./auth.js";
 import { writeAudit } from "./audit.js";
+import { recordMcpTelemetry } from "./relay-telemetry.js";
 import {
   approvalTargetPath,
   consumeWriteApproval,
@@ -25,6 +26,8 @@ export type DeviceCallEnv = {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
   REVIEWER_DEMO_DEVICE_ID?: string;
+  MCP_ANALYTICS?: AnalyticsEngineDataset;
+  MCP_METRICS_SAMPLE_RATE?: string;
 };
 
 const parseStoredStringArray = (value: string | null) => {
@@ -50,6 +53,7 @@ export async function callDevice(
   args: Record<string, unknown>,
   taskWorkspaceRoot?: string,
 ) {
+  const started = Date.now();
   const ownedDevice = await env.DB.prepare(
     `SELECT id, allowed_tools, workspace_roots, sensitive_paths, sensitive_allow_paths,
             protect_sensitive_paths, undo_enabled
@@ -272,6 +276,14 @@ export async function callDevice(
     grantId: identity.grantId,
     outcome,
   }).catch(() => undefined);
+
+  recordMcpTelemetry(env, {
+    kind: "device_tool",
+    status: success ? 200 : 502,
+    method: "TOOL",
+    outcome,
+    durationMs: Date.now() - started,
+  });
 
   if (!success) {
     throw new Error(payload.error || `device call failed: ${response.status}`);

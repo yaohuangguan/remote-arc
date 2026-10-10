@@ -73,7 +73,7 @@ registerMcpTool(fakeServer, "internal_probe", {}, async () => {
 });
 await assert.rejects(() => registeredHandler!({}), /D1_ERROR/);
 
-type UserRow = { role: string; email: string };
+type UserRow = { role: string; email: string; plan?: string; has_plus_grant?: number };
 function usageDb(user: UserRow, toolCalls: number) {
   return {
     prepare(sql: string) {
@@ -81,7 +81,7 @@ function usageDb(user: UserRow, toolCalls: number) {
         bind(..._args: unknown[]) {
           return {
             async first() {
-              if (sql.includes("SELECT role, email FROM users")) return user;
+              if (sql.includes("FROM users u WHERE u.id") || sql.includes("SELECT role, email FROM users")) return user;
               if (sql.includes("SELECT tool_calls FROM user_monthly_usage")) {
                 return { tool_calls: toolCalls };
               }
@@ -126,6 +126,27 @@ const normalUsage = await getMonthlyUsage(normalEnv, "normal-user");
 assert.equal(normalUsage.unlimited, false);
 assert.equal(normalUsage.limit, 10000);
 assert.equal(normalUsage.remaining, 9877);
+
+const freeLimitedEnv = {
+  DB: usageDb({ role: "user", email: "free@example.com", plan: "free", has_plus_grant: 0 }, 123),
+  MONTHLY_TOOL_CALL_LIMIT: "10000",
+  FREE_MONTHLY_TOOL_CALL_LIMIT: "1000",
+};
+assert.equal((await getMonthlyUsage(freeLimitedEnv, "free-user")).limit, 1000);
+
+const paidEnv = {
+  DB: usageDb({ role: "user", email: "plus@example.com", plan: "plus", has_plus_grant: 0 }, 123),
+  MONTHLY_TOOL_CALL_LIMIT: "10000",
+  FREE_MONTHLY_TOOL_CALL_LIMIT: "1000",
+};
+assert.equal((await getMonthlyUsage(paidEnv, "plus-user")).limit, 10000);
+
+const grantEnv = {
+  DB: usageDb({ role: "user", email: "grant@example.com", plan: "free", has_plus_grant: 1 }, 123),
+  MONTHLY_TOOL_CALL_LIMIT: "10000",
+  FREE_MONTHLY_TOOL_CALL_LIMIT: "1000",
+};
+assert.equal((await getMonthlyUsage(grantEnv, "grant-user")).limit, 10000);
 
 const authEnv = {
   PUBLIC_ORIGIN: "https://mcp.remotearc.app",
