@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { isWebsite, localizedWebsiteHref, pageForLanguage } from "./marketing-paths.js";
 
 export type Locale = "en" | "zh";
 
@@ -12,6 +13,7 @@ const I18nContext = createContext<I18n | null>(null);
 const LOCALE_KEY = "remotearc-locale-v2";
 
 function urlLocale(): Locale | null {
+  if (isWebsite()) return location.pathname === "/zh" || location.pathname.startsWith("/zh/") ? "zh" : "en";
   const requested = new URLSearchParams(window.location.search).get("lang")?.toLowerCase();
   if (requested === "zh" || requested === "zh-cn" || requested === "zh-hans") return "zh";
   if (requested === "en") return "en";
@@ -39,10 +41,28 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       document.querySelector('meta[name="description"]')?.setAttribute(
         "content",
         locale === "zh"
-          ? "通过 Remote Arc，让 ChatGPT、Claude 和其他 AI 客户端安全访问你授权的 Windows、macOS 与 Linux 电脑。"
-          : "Remote Arc — controlled remote computer access for AI across your own Windows, macOS and Linux devices.",
+          ? "让 AI 聊天真正操作你的电脑：通过 Remote MCP 连接已授权的 Windows、macOS 与 Linux。无需单独购买模型 API 或充值 API Token；免费聊天套餐的工具支持因客户端而异。"
+          : "Let compatible AI chats work on your computer through Remote MCP. No separate model API key or pay-per-token API bill; free-chat support and limits depend on the AI provider.",
       );
     }
+  }, [locale]);
+
+  useEffect(() => {
+    if (!isWebsite() || locale !== "zh") return;
+    const onLinkClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = event.target;
+      const anchor = target instanceof Element ? target.closest("a[href]") : null;
+      if (!(anchor instanceof HTMLAnchorElement) || (anchor.target && anchor.target !== "_self") || anchor.hasAttribute("download")) return;
+      const raw = anchor.getAttribute("href") || "";
+      if (!raw.startsWith("/") || raw.startsWith("//")) return;
+      const translated = localizedWebsiteHref(raw, "zh");
+      if (translated === raw) return;
+      event.preventDefault();
+      window.location.assign(translated);
+    };
+    document.addEventListener("click", onLinkClick, true);
+    return () => document.removeEventListener("click", onLinkClick, true);
   }, [locale]);
 
   const value = useMemo<I18n>(() => ({
@@ -79,6 +99,13 @@ export function LanguageSwitcher({ compact = false, syncUrl = false, dropdown = 
     return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape); };
   }, [open]);
   const choose = (next: Locale) => {
+    if (syncUrl && isWebsite()) {
+      const url = new URL(window.location.href);
+      url.pathname = pageForLanguage(url.pathname, next);
+      url.searchParams.delete("lang");
+      window.location.assign(url.pathname + url.search + url.hash);
+      return;
+    }
     if (syncUrl) {
       const url = new URL(window.location.href);
       url.searchParams.set("lang", next);

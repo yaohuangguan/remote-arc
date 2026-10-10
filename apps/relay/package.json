@@ -7,8 +7,8 @@
     "dev": "wrangler dev",
     "deploy": "node ../../scripts/deploy-relay.mjs --skip-build",
     "typecheck": "tsc --noEmit",
-    "test:seo": "node scripts/seo-smoke.mjs",
-    "test:security": "tsx scripts/oauth-security-test.ts && tsx scripts/email-auth-test.ts && tsx scripts/security-controls-test.ts && tsx scripts/approval-broker-test.ts && tsx scripts/mcp-error-contract-test.ts && tsx scripts/file-resource-chunk-test.ts && tsx scripts/device-revocation-test.ts && tsx scripts/device-pause-test.ts"
+    "test:seo": "tsx scripts/seo-smoke.mjs",
+    "test:security": "tsx scripts/host-routing-test.ts && tsx scripts/oauth-security-test.ts && tsx scripts/email-auth-test.ts && tsx scripts/security-controls-test.ts && tsx scripts/approval-broker-test.ts && tsx scripts/mcp-error-contract-test.ts && tsx scripts/file-resource-chunk-test.ts && tsx scripts/device-revocation-test.ts && tsx scripts/device-pause-test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.1.0",

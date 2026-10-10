@@ -1,4 +1,7 @@
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
+import { localizedPages, isChineseMarketingPath, unprefixedMarketingPath } from "./marketing-locale.js";
+import { chineseSeo } from "./zh-seo.js";
+import { chineseResourceSeo } from "./zh-resources.js";
 
 const SITE = "https://remotearc.app";
 
@@ -112,7 +115,7 @@ const articles: Record<string, SeoPage> = {
 };
 
 const pages: Record<string, SeoPage> = {
-  "/": { title: "Remote Arc — Let AI Do More Than Chat, No Separate Model API Key", description: "Turn your existing AI chat into real computer work through MCP. Connect supported clients to paired Windows, macOS and Linux computers without buying separate model API tokens. Your AI provider plan and usage limits still apply.", canonical: SITE + "/" },
+  "/": { title: "Remote Arc — Let AI Chat Work on Your Computer, No API Key", description: "Turn compatible AI chats into real computer actions through secure Remote MCP. No separate model API key or pay-per-token API bill. Supported free chat plans can connect; provider tool limits apply.", canonical: SITE + "/" },
   "/install": { title: "Install Remote Arc for ChatGPT, Claude and Cursor", description: "Install Remote Arc, pair your computer and connect your AI client through Remote MCP.", canonical: SITE + "/install/chatgpt" },
   "/install/chatgpt": { title: "Install Remote Arc for ChatGPT", description: "Connect ChatGPT to Windows, macOS or Linux through Remote Arc and a secure OAuth-protected Remote MCP endpoint.", canonical: SITE + "/install/chatgpt" },
   "/install/claude": { title: "Install Remote Arc for Claude", description: "Connect Claude to paired computers through Remote Arc using a secure Remote MCP connector and explicit device permissions.", canonical: SITE + "/install/claude" },
@@ -164,10 +167,19 @@ for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
   pages[path] = { title: title + " — Remote Arc", description, canonical: SITE + path };
 }
 
-function blogIndexHtml() {
-  const items = Object.entries(articles).map(function(entry) {
-    return '<li><a href="' + entry[0] + '">' + esc(entry[1].title) + '</a><p>' + esc(entry[1].description) + '</p></li>';
+function blogIndexHtml(chinese = false) {
+  const items = Object.entries(articles).map(([path, english]) => {
+    const translated = chinese ? chineseResourceSeo[path] : null;
+    const href = chinese ? "/zh" + path : path;
+    return '<li><a href="' + href + '">' + esc(translated?.title ?? english.title) + '</a><p>' +
+      esc(translated?.description ?? english.description) + '</p></li>';
   }).join("");
+  if (chinese) {
+    return '<main class="seo-blog-shell"><section><p class="seo-eyebrow">博客</p><h1>Remote Arc 博客</h1>' +
+      '<p>记录 Remote Arc 的真实工程实践、MCP 架构、安全设计和性能实测，解释产品做出这些技术取舍的原因。</p>' +
+      '<p>阅读每一篇完整中文文章，了解设备权限、OAuth、原生 Go Agent 与持久任务的真实能力和边界。</p><ol>' +
+      items + '</ol></section></main>';
+  }
   return '<main class="seo-blog-shell"><section><p class="seo-eyebrow">BLOG</p><h1>Remote Arc blog</h1>' +
     '<p>Engineering notes, architecture decisions, security trade-offs and product reasoning from building a controlled Remote MCP bridge between AI clients and real computers.</p>' +
     '<p>The articles explain why Remote Arc separates the hosted control plane from local operating-system execution, how OAuth and paired-device identities fit together, why terminal access is treated differently from narrower file tools, and where durable task execution stops being the same thing as fresh AI reasoning.</p>' +
@@ -548,6 +560,21 @@ for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
 }
 
 function pageFor(pathname: string): SeoPage | null {
+  if (isChineseMarketingPath(pathname)) {
+    const base = unprefixedMarketingPath(pathname);
+    const original = pages[base] ?? articles[base];
+    const translated = chineseSeo[base] ?? chineseResourceSeo[base];
+    if (!original || !translated) return null;
+    return {
+      ...original,
+      title: translated.title,
+      description: translated.description,
+      canonical: SITE + pathname,
+      blocks: original.type === "article"
+        ? [{ text: translated.intro }, ...translated.sections.map(section => ({ heading: section.heading, text: section.text }))]
+        : original.blocks,
+    };
+  }
   return articles[pathname] ?? pages[pathname] ?? null;
 }
 
@@ -600,6 +627,7 @@ function howToSchema(pathname: string, page: SeoPage) {
 }
 
 function jsonLd(page: SeoPage, pathname: string) {
+  const schemaLanguage = page.canonical === SITE + "/zh" || page.canonical.startsWith(SITE + "/zh/") ? "zh-CN" : "en";
   const graph: unknown[] = [
     {
       "@type": "Organization",
@@ -615,7 +643,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       name: "Remote Arc",
       url: SITE,
       publisher: { "@id": SITE + "/#organization" },
-      inLanguage: "en"
+      inLanguage: schemaLanguage
     }
   ];
 
@@ -631,7 +659,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       publisher: { "@id": SITE + "/#organization" },
       mainEntityOfPage: page.canonical,
       image: SITE + "/demos/connect-workflow-poster.webp",
-      inLanguage: "en"
+      inLanguage: schemaLanguage
     });
   } else if (pathname === "/") {
     graph.push({
@@ -668,7 +696,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       url: page.canonical,
       author: { "@id": SITE + "/#organization" },
       publisher: { "@id": SITE + "/#organization" },
-      inLanguage: "en"
+      inLanguage: schemaLanguage
     });
   } else {
     graph.push({
@@ -721,7 +749,13 @@ crawlPages["/downloads"] = {
 };
 
 function crawlablePageHtml(pathname: string, page: SeoPage) {
-  const copy = crawlPages[pathname] ?? {
+  const translated = isChineseMarketingPath(pathname) ? (chineseSeo[unprefixedMarketingPath(pathname)] ?? chineseResourceSeo[unprefixedMarketingPath(pathname)]) : null;
+  const copy = translated ? {
+    h1: translated.h1,
+    intro: translated.intro,
+    sections: translated.sections,
+    links: [["/zh/docs", "中文文档"], ["/zh/install/chatgpt", "ChatGPT 安装教程"], ["/zh/pricing", "价格方案"]] as Array<[string, string]>
+  } : crawlPages[pathname] ?? {
     h1: page.title.replace(/ — Remote Arc$/, ""),
     intro: page.description,
     sections: [],
@@ -748,7 +782,9 @@ export function renderMarketingHtml(html: string, pathname: string) {
     canonical: SITE + pathname
   };
   const indexable = Boolean(page);
-  const structured = indexable ? JSON.stringify(jsonLd(resolved, pathname)).replaceAll("<", "\\u003c") : "";
+  const chinese = isChineseMarketingPath(pathname);
+  const basePath = unprefixedMarketingPath(pathname);
+  const structured = indexable ? JSON.stringify(jsonLd(resolved, basePath)).replaceAll("<", "\\u003c") : "";
   const robots = indexable
     ? "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
     : "noindex,nofollow,noarchive";
@@ -759,7 +795,12 @@ export function renderMarketingHtml(html: string, pathname: string) {
     '<meta name="bingbot" content="' + robots + '" />' +
     '<meta name="author" content="' + esc(resolved.type === "article" ? (resolved.author || "Sam Yao") : "Remote Arc") + '" />' +
     '<meta property="og:type" content="' + (resolved.type === "article" ? "article" : "website") + '" />' +
-    '<meta property="og:locale" content="en_US" />' +
+    '<meta property="og:locale" content="' + (chinese ? "zh_CN" : "en_US") + '" />' +
+    (indexable && localizedPages.includes(basePath as typeof localizedPages[number])
+      ? '<link rel="alternate" hreflang="en" href="' + SITE + (basePath === "/" ? "/" : basePath) + '" />' +
+        '<link rel="alternate" hreflang="zh-CN" href="' + SITE + (basePath === "/" ? "/zh" : "/zh" + basePath) + '" />' +
+        (basePath === "/" ? '<link rel="alternate" hreflang="x-default" href="' + SITE + '/" />' : '')
+      : '') +
     '<meta property="og:image" content="' + image + '" />' +
     '<meta property="og:image:secure_url" content="' + image + '" />' +
     '<meta property="og:image:type" content="image/webp" />' +
@@ -776,6 +817,7 @@ export function renderMarketingHtml(html: string, pathname: string) {
     (indexable ? '<script type="application/ld+json">' + structured + '</script>' : '');
 
   html = html
+    .replace('lang="en"', 'lang="' + (chinese ? 'zh-CN' : 'en') + '"')
     .replace(/<title>[\s\S]*?<\/title>/, '<title>' + esc(resolved.title) + '</title>')
     .replace(/<meta name="description"[^>]*>/, '<meta name="description" content="' + esc(resolved.description) + '" />')
     .replace(/<link rel="canonical"[^>]*>/, indexable ? '<link rel="canonical" href="' + esc(resolved.canonical) + '" />' : "")
@@ -789,7 +831,7 @@ export function renderMarketingHtml(html: string, pathname: string) {
   // no-JavaScript fallback with the same product facts. This avoids a pre-mount
   // text flash for normal visitors while still giving non-JS clients a useful,
   // semantic document instead of an empty application root.
-  if (pathname === "/") {
+  if (pathname === "/" || pathname === "/zh") {
     return html.replace(
       '<div id="root"></div>',
       '<div id="root"><noscript>' + crawlablePageHtml(pathname, resolved) + '</noscript></div>',
@@ -799,10 +841,10 @@ export function renderMarketingHtml(html: string, pathname: string) {
   if (!page) {
     return html.replace('<div id="root"></div>', '<div id="root">' + notFoundHtml(pathname) + '</div>');
   }
-  if (pathname === "/blogs") {
-    return html.replace('<div id="root"></div>', '<div id="root">' + blogIndexHtml() + '</div>');
+  if (basePath === "/blogs") {
+    return html.replace('<div id="root"></div>', '<div id="root">' + blogIndexHtml(chinese) + '</div>');
   }
-  if (articles[pathname]) {
+  if (articles[basePath]) {
     return html.replace('<div id="root"></div>', '<div id="root">' + articleHtml(page) + '</div>');
   }
   return html.replace('<div id="root"></div>', '<div id="root">' + crawlablePageHtml(pathname, page) + '</div>');
@@ -840,12 +882,19 @@ const sitemapPaths = [
 ];
 
 export function sitemapXml() {
-  const paths = [...sitemapPaths, ...Object.keys(useCaseSeo).map(slug => "/use-cases/" + slug)];
-  return '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
+  const paths = [...sitemapPaths, ...Object.keys(useCaseSeo).map(slug => "/use-cases/" + slug), ...localizedPages.map(path => path === "/" ? "/zh" : "/zh" + path)];
+  return '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' +
     paths.map(function(path) {
-      const isRoot = path === "/";
+      const base = unprefixedMarketingPath(path);
+      const localized = localizedPages.includes(base as typeof localizedPages[number]);
+      const alternates = localized
+        ? '<xhtml:link rel="alternate" hreflang="en" href="' + SITE + base + '"/>' +
+          '<xhtml:link rel="alternate" hreflang="zh-CN" href="' + SITE + (base === "/" ? "/zh" : "/zh" + base) + '"/>' +
+          (base === "/" ? '<xhtml:link rel="alternate" hreflang="x-default" href="' + SITE + '/"/>' : '')
+        : '';
+      const isRoot = path === "/" || path === "/zh";
       const isPrimary = path.startsWith("/install/") || path === "/chatgpt-computer-access" || path === "/claude-computer-access" || path === "/mcp-computer-access" || path === "/remote-mcp" || path === "/docs/mcp";
-      return '<url><loc>' + SITE + path + '</loc><lastmod>' + (path === '/blogs/go-vs-typescript-agent-benchmarks' ? '2026-10-09' : path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
+      return '<url><loc>' + SITE + path + '</loc>' + alternates + '<lastmod>' + (path === '/blogs/go-vs-typescript-agent-benchmarks' ? '2026-10-09' : path === '/remote-mcp' ? '2026-10-08' : '2026-10-07') + '</lastmod><changefreq>' + (isRoot ? "weekly" : "monthly") + '</changefreq><priority>' + (isRoot ? "1.0" : isPrimary ? "0.9" : "0.8") + '</priority></url>';
     }).join("") + '</urlset>';
 }
 

@@ -4,6 +4,7 @@ import { handleTaskEventRpc, type TaskEventEnv } from "./task-events.js";
 import { runScheduledTasks } from "./task-scheduler.js";
 import { DeviceRegistry } from "./registry.js";
 import { canonicalForPath, feedXml, llmsFullTxt, llmsTxt, marketingStatusCode, renderMarketingHtml, robotsTxt, sitemapXml } from "./seo.js";
+import { legacyLanguageRedirect } from "./marketing-locale.js";
 import { createRemoteLinkMcp } from "./mcp.js";
 import {
   authenticateDevice,
@@ -15,6 +16,7 @@ import {
 } from "./auth.js";
 import { handleLoginPage, handleReviewerLogin } from "./reviewer.js";
 import { handleEmailCodeRequest, handleEmailCodeVerify } from "./email-auth.js";
+import { dashboardSignInUrl, publicWebsiteRedirect } from "./host-routing.js";
 import {
   getDevicesForUser,
   handleDeviceList,
@@ -166,6 +168,14 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return Response.redirect(canonical.toString(), 301);
     }
 
+    if ((request.method === "GET" || request.method === "HEAD") &&
+      (url.hostname === "remotearc.app" || url.hostname === "www.remotearc.app")) {
+      const canonicalLanguage = legacyLanguageRedirect(url);
+      if (canonicalLanguage) {
+        return Response.redirect(new URL(canonicalLanguage, marketingOrigin).toString(), 301);
+      }
+    }
+
     if (url.hostname === "remotearc.app" && url.pathname.length > 1 && url.pathname.endsWith("/")) {
       const canonical = new URL(url.pathname.replace(/\/+$/, "") + url.search, marketingOrigin);
       return Response.redirect(canonical.toString(), 301);
@@ -190,8 +200,20 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       return Response.redirect(new URL(nextPath + url.search, appOrigin).toString(), 302);
     }
 
-    if (url.hostname === "mcp.remotearc.app" && url.pathname === "/dashboard") {
-      return Response.redirect(new URL("/overview", appOrigin).toString(), 302);
+    if (url.hostname === "mcp.remotearc.app" && (request.method === "GET" || request.method === "HEAD") &&
+      (url.pathname === "/" || url.pathname === "/dashboard")) {
+      return Response.redirect(new URL("/overview" + url.search, appOrigin).toString(), 302);
+    }
+
+    // Only the main domain serves product pages. Leave OAuth, MCP and API routes untouched.
+    const websiteDestination = publicWebsiteRedirect(url, request.method, marketingOrigin);
+    if (websiteDestination) return Response.redirect(websiteDestination, 301);
+
+    // Keep /overview public as a real product preview, but sign in before
+    // opening private dashboard tabs. Preserve the requested destination.
+    const loginDestination = dashboardSignInUrl(url, request.method, appOrigin);
+    if (loginDestination && !(await getSessionUser(request, env))) {
+      return Response.redirect(loginDestination, 302);
     }
 
     if (url.hostname === "remotearc.app" && (

@@ -50,3 +50,5 @@
  .installClientDetailsHeading>a { margin:0 0 15px; }
  .installMustDoCard { padding:18px; }
 }
+
+.installFullWidthGuide {width:100%;margin:28px 0 12px;min-width:0;}

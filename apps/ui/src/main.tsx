@@ -6,10 +6,13 @@ import { newPlannedDraft, buildPlannedContract } from "./planned-goal-form.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
+import { baseMarketingPath, chinesePages, isWebsite, localizedWebsiteHref } from "./marketing-paths.js";
+import { releaseChinese } from "./release-locales.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
 import { parsePendingApprovals, parseSecurityState, type PendingApproval } from "./security-state.js";
+import { SecurityAuthorizations } from "./security-authorizations.js";
 import { waitForAgentOffline, waitForRecoveryState } from "./background-recovery.js";
 import "./styles.css";
 import "./dashboard.css";
@@ -441,8 +444,9 @@ function LogoMark({ className = "" }: { className?: string }) {
   );
 }
 function Brand({ compact = false }: { compact?: boolean }) {
+  const { locale } = useI18n();
   return (
-    <a href="/" className={"brand" + (compact ? " compactBrand" : "")}>
+    <a href={MARKETING_ORIGIN + (isWebsite() && locale === "zh" ? "/zh" : "")} title="Remote Arc website" className={"brand" + (compact ? " compactBrand" : "")}>
       <LogoMark className="brandLogo" />
       <span className="brandWords">
         <b>Remote</b><b>Arc</b>
@@ -479,16 +483,20 @@ function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
   );
 }
 function PublicHeader({ user }: { user?: User | null }) {
-  const { tr } = useI18n();
-  const [showSignIn, setShowSignIn] = useState(false);
-  const returnTo = APP_ORIGIN + "/overview";
+  const { tr, locale } = useI18n();
+  const navHref = (path: string) => isWebsite() ? localizedWebsiteHref(path, locale) : path;
+  // From the website, sign-in visits the product preview. On that preview,
+  // the header sign-in control opens authentication rather than reloading itself.
+  const signInHref = location.hostname === "mcp.remotearc.app"
+    ? APP_ORIGIN + "/auth/login?return_to=" + encodeURIComponent("/overview")
+    : APP_ORIGIN + "/overview";
 
   return (
     <>
       <header className="landingNav publicNav">
         <Brand />
         <nav className="publicNavLinks">
-          <a href="/#how-it-works">{tr("How it works", "如何使用")}</a>
+          <a href={navHref("/#how-it-works")}>{tr("How it works", "如何使用")}</a>
 
           <div className="publicNavMenu">
             <button type="button" className="publicNavMenuTrigger">
@@ -499,15 +507,15 @@ function PublicHeader({ user }: { user?: User | null }) {
                 <strong>{tr("Connect Remote Arc", "连接 Remote Arc")}</strong>
                 <small>{tr("Pair a computer and authorize your AI client", "配对电脑并授权 AI 客户端")}</small>
               </a>
-              <a href="/install/chatgpt">
+              <a href={navHref("/install/chatgpt")}>
                 <strong>ChatGPT</strong>
                 <small>{tr("Installation guide", "安装指南")}</small>
               </a>
-              <a href="/install/claude">
+              <a href={navHref("/install/claude")}>
                 <strong>Claude</strong>
                 <small>{tr("Installation guide", "安装指南")}</small>
               </a>
-              <a href="/install/cursor">
+              <a href={navHref("/install/cursor")}>
                 <strong>Cursor</strong>
                 <small>{tr("Installation guide", "安装指南")}</small>
               </a>
@@ -518,30 +526,30 @@ function PublicHeader({ user }: { user?: User | null }) {
             </div>
           </div>
 
-          <a href="/pricing">{tr("Pricing", "价格")}</a>
+          <a href={navHref("/pricing")}>{tr("Pricing", "价格")}</a>
 
           <div className="publicNavMenu">
             <button type="button" className="publicNavMenuTrigger">
               {tr("Resources", "资源")} <span aria-hidden="true">⌄</span>
             </button>
             <div className="publicNavDropdown resourceDropdown">
-              <a href="/blogs">
+              <a href={navHref("/blogs")}>
                 <strong>{tr("Blog", "博客")}</strong>
                 <small>{tr("Ideas, product notes and what we're building", "产品思考、开发记录与我们正在做的事")}</small>
               </a>
-              <a href="/use-cases">
+              <a href={navHref("/use-cases")}>
                 <strong>{tr("Use cases", "使用场景")}</strong>
                 <small>{tr("Real workflows with files, code and terminals", "文件、代码与终端的真实工作流")}</small>
               </a>
-              <a href="/docs">
+              <a href={navHref("/docs")}>
                 <strong>{tr("Docs", "文档")}</strong>
                 <small>{tr("Setup, tools, permissions and reference", "配置、工具、权限与参考")}</small>
               </a>
-              <a href="/security-model">
+              <a href={navHref("/security-model")}>
                 <strong>{tr("Security", "安全")}</strong>
                 <small>{tr("Trust boundaries, permissions and limits", "信任边界、权限与真实限制")}</small>
               </a>
-              <a href="/releases">
+              <a href={navHref("/releases")}>
                 <strong>{tr("Releases", "版本发布")}</strong>
                 <small>{tr("What's new in Remote Arc", "查看 Remote Arc 的版本更新")}</small>
               </a>
@@ -554,23 +562,12 @@ function PublicHeader({ user }: { user?: User | null }) {
           {user ? (
             <a className="navDashboard" href={dashboardHref("/overview")}>{tr("Dashboard", "控制台")} <span>↗</span></a>
           ) : (
-            <button className="navLogin installNavCta" type="button" onClick={() => setShowSignIn(true)}>
+            <a className="navLogin installNavCta" href={signInHref} title={tr("Sign in with Google or email", "使用 Google 或邮箱登录")}>
               {tr("Sign in", "登录")} <span>→</span>
-            </button>
+            </a>
           )}
         </div>
       </header>
-      {showSignIn && (
-        <AuthProviderModal
-          returnTo={returnTo}
-          title={tr("Choose how to sign in.", "选择登录方式。")}
-          body={tr(
-            "Sign in to manage your Remote Arc account, paired computers and AI connections.",
-            "登录后管理你的 Remote Arc 账户、已配对电脑和 AI 连接。",
-          )}
-          onClose={() => setShowSignIn(false)}
-        />
-      )}
     </>
   );
 }
@@ -2195,6 +2192,11 @@ function ClientInstallPage({
           </article>
         </div>
 
+        {slug !== "cursor" && <div className="installFullWidthGuide">
+          <ClientMcpGuide client={slug} endpoint={MCP_ENDPOINT}
+            cursorInstallUrl={cursorMcpInstallUrl()} copyEndpoint={<CopyButton value={MCP_ENDPOINT} />} />
+        </div>}
+
         <div className="manualLayout">
           <aside className="manualToc">
             <strong>{tr("SETUP", "配置")}</strong>
@@ -2206,8 +2208,8 @@ function ClientInstallPage({
           </aside>
 
           <article className="manualArticle">
-            <ClientMcpGuide client={slug} endpoint={MCP_ENDPOINT}
-              cursorInstallUrl={cursorMcpInstallUrl()} copyEndpoint={<CopyButton value={MCP_ENDPOINT} />} />
+            {slug === "cursor" && <ClientMcpGuide client={slug} endpoint={MCP_ENDPOINT}
+              cursorInstallUrl={cursorMcpInstallUrl()} copyEndpoint={<CopyButton value={MCP_ENDPOINT} />} />}
             <section id="installation">
               <h2>{tr("Setup", "配置")}</h2>
               <p>{tr(
@@ -2279,27 +2281,52 @@ function ClientInstallPage({
 
 function DashboardAccess() {
   const { tr } = useI18n();
-  const [showSignIn, setShowSignIn] = useState(false);
+  const target = encodeURIComponent(APP_ORIGIN + "/overview");
+  useEffect(() => {
+    // Keep the overview public as a product preview; other dashboard tabs
+    // still require login and preserve their original destination.
+    if (!UI_PREVIEW && location.pathname !== "/overview") {
+      const returnTo = location.pathname + location.search;
+      location.replace(APP_ORIGIN + "/auth/login?return_to=" + encodeURIComponent(returnTo));
+    }
+  }, []);
+  if (!UI_PREVIEW && location.pathname !== "/overview") {
+    return <CenteredCard title={tr("Opening sign in…", "正在打开登录页…")}
+      body={tr("Taking you to Google or email sign-in.", "正在跳转到 Google 或邮箱登录页。")} />;
+  }
   return (
     <>
     <PublicLayout>
       <section className="dashboardAccess">
         <div className="dashboardAccessCopy">
-          <span className="eyebrow">{tr("REMOTE ARC DASHBOARD", "REMOTE ARC 控制台")}</span>
+          <span className="eyebrow">{tr("YOUR REMOTE ARC CONTROL CENTER", "你的 REMOTE ARC 控制中心")}</span>
           <h1>{tr(
-            "Your devices, connections and access policy in one place.",
-            "在一个页面管理设备、连接与访问策略。"
+            "Your computers. One secure control center.",
+            "你的所有电脑，一个安全控制中心。"
           )}</h1>
           <p>{tr(
-            "Sign in to pair computers, inspect online state, review usage and connect your AI clients. The public website always remains available at the root domain.",
-            "登录后可配对电脑、查看在线状态、用量与 AI 客户端连接。根域名始终保留为公开官网。"
+            "Pair Windows, macOS or Linux. Connect ChatGPT or Claude. Review AI access, running tasks and actions from one dashboard — while your files stay on your own machines.",
+            "连接 Windows、macOS 或 Linux，将 ChatGPT 或 Claude 接入自己的电脑。在一个控制台里查看设备、AI 授权、任务和操作记录，文件仍保留在你自己的电脑上。"
           )}</p>
-          <button className="primaryButton" type="button" onClick={() => setShowSignIn(true)}>
-            {tr("Sign in to Remote Arc", "登录 Remote Arc")} <span>→</span>
-          </button>
+          <div className="guestDashboardActions">
+            <a className="guestGoogleButton" href={APP_ORIGIN + "/auth/google?return_to=" + target}>
+              <img src="/google-g.svg" alt="" width={22} height={22} />
+              {tr("Continue with Google", "使用 Google 继续")}
+            </a>
+            <a className="primaryButton" href={APP_ORIGIN + "/auth/login?return_to=" + target + "#email"}>
+              {tr("Continue with email", "使用邮箱继续")} <span>→</span>
+            </a>
+          </div>
+          <a className="guestDashboardWebsiteLink" href={MARKETING_ORIGIN}>
+            {tr("Not ready yet? Explore Remote Arc", "还想了解更多？前往产品官网")} ↗
+          </a>
+          <p className="guestDashboardHint">{tr(
+            "Continue with Google or email. No separate model API key is required when using a compatible MCP-enabled AI chat; your provider's limits still apply.",
+            "支持 Google 或邮箱登录。使用兼容 MCP 的 AI 对话时，不需要额外配置模型 API Key；仍受 AI 服务商自身的套餐与额度限制。"
+          )}</p>
         </div>
         <div className="dashboardAccessPreview" aria-hidden="true">
-          <div className="previewTop"><span>Remote Arc</span><i>Dashboard</i></div>
+          <div className="previewTop"><span>Remote Arc Dashboard</span><i>{tr("Illustrative preview · not live data", "界面示例 · 非实时数据")}</i></div>
           <div className="previewMetricRow">
             <div><small>ONLINE</small><strong>2</strong><span>devices</span></div>
             <div><small>USAGE</small><strong>1.8k</strong><span>/ 10k calls</span></div>
@@ -2310,15 +2337,24 @@ function DashboardAccess() {
           <div className="previewActivity"><span>Recent activity</span><strong>read_file</strong><small>Personal Mac · 12s ago</small></div>
         </div>
       </section>
+      <section className="guestDashboardBenefits" aria-label={tr("What you can do", "你可以做什么")}>
+        <article>
+          <span className="guestBenefitSymbol" aria-hidden="true">01</span>
+          <h2>{tr("One place for every computer", "统一管理你的所有电脑")}</h2>
+          <p>{tr("See devices, connections and execution permissions without juggling terminals.", "查看设备状态、连接方式和执行权限，不必在多个终端之间来回切换。")}</p>
+        </article>
+        <article>
+          <span className="guestBenefitSymbol" aria-hidden="true">02</span>
+          <h2>{tr("You control what AI can do", "每一步操作都由你掌控")}</h2>
+          <p>{tr("Approve available tools, control access and review recent actions from your dashboard.", "配置允许使用的工具、管理授权，并查看 AI 最近在电脑上执行的操作。")}</p>
+        </article>
+        <article>
+          <span className="guestBenefitSymbol" aria-hidden="true">03</span>
+          <h2>{tr("Work that outlasts a chat", "聊天结束，工作状态仍在")}</h2>
+          <p>{tr("Save device-side tasks, track progress and resume where supported; AI decisions still require a connected model.", "保存设备端任务，追踪进度，并在支持的场景中继续；新的 AI 决策仍需要已连接的大模型。")}</p>
+        </article>
+      </section>
     </PublicLayout>
-    {showSignIn && (
-      <AuthProviderModal
-        returnTo="/overview"
-        title={tr("Choose how to sign in.", "选择登录方式。")}
-        body={tr("Sign in to manage your devices, permissions, usage and AI connections.", "登录后管理设备、权限、用量与 AI 连接。")}
-        onClose={() => setShowSignIn(false)}
-      />
-    )}
     </>
   );
 }
@@ -2333,12 +2369,12 @@ function Landing({ user }: { user?: User | null }) {
           <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
           <HeroHeadline />
           <p>{tr(
-            "Don’t let AI stop at chat. Give the AI you already use a persistent, permissioned runtime across your own computers. Let it actually work with your files, terminals and processes. Save long-running tasks and return in a later chat without losing the saved execution state.",
-            "别让 AI 只停留在聊天。让你已经在用的 AI 获得跨真实电脑的持久化、可控 Runtime，真正操作文件、终端与进程。保存长任务，之后换个聊天也能继续查看和推进已保存的执行状态。"
+            "Don't just chat with AI. In a compatible AI chat, ask it to inspect files, fix code and run approved tools on your own computers. Remote Arc connects the tools, your AI does the thinking, and your machines do the work. Save a task and pick up its state in a later chat.",
+            "别让 AI 只停留在聊天。就在你熟悉的 AI 对话里，让它检查文件、修复代码、执行电脑上已授权的工具。Remote Arc 负责安全连接，你的模型负责思考，自己的电脑负责执行。已保存的任务状态还能跨聊天保留。"
           )}</p>
           <div className="heroAiPlanNote">
-            <strong>{tr("No separate model API key or pay-per-token model bill.", "无需额外模型 API Key，也无需另付按 Token 计费的模型 API 账单。")}</strong>
-            <span>{tr("Use a compatible AI chat with MCP tools. Your existing AI provider’s plan and usage limits still apply.", "直接使用支持 MCP 工具的 AI 对话。原有 AI 套餐及其使用额度仍然适用。")}</span>
+            <strong>{tr("No model API key to configure. No pay-per-token API bill to top up.", "不用配置模型 API Key，也不用额外充值按量计费的 API Token。")}</strong>
+            <span>{tr("A compatible free chat can be enough—for example, Claude Free currently supports one custom MCP connector. Your AI provider’s tool permissions, chat limits and Remote Arc tool-call limits still apply.", "如果免费聊天套餐支持自定义 MCP，也可以直接使用，例如 Claude Free 目前支持一个自定义连接器。AI 服务商的工具权限、聊天额度和 Remote Arc 工具调用额度仍然适用。")}</span>
           </div>
           <div className="heroPrimaryCommand">
             <span>{tr("START HERE · RUN ON YOUR COMPUTER", "从这里开始 · 在电脑上运行")}</span>
@@ -2354,11 +2390,9 @@ function Landing({ user }: { user?: User | null }) {
             <a className="ghostLink" href="#how-it-works">{tr("See how it works →", "看看如何使用 →")}</a>
           </div>
           <div className="heroBadges">
-            <span>{tr("Use your existing AI chat", "沿用现有 AI 对话")}</span>
-            <span>{tr("No separate AI API key", "无须额外模型 API Key")}</span>
-            <span>{tr("Build & test", "开发与测试")}</span>
-            <span>{tr("Overnight tasks", "过夜任务")}</span>
-            <span>{tr("Scheduled tasks", "定时任务")}</span>
+            <span>{tr("Chat → real actions", "聊天 → 真实执行")}</span>
+            <span>{tr("Free MCP chat options", "支持部分免费 AI 聊天")}</span>
+            <span>{tr("Your device. Your permissions.", "自己的电脑，权限自己定")}</span>
           </div>
           <a className="heroTaskAvailability" href="/docs/long-running-work">{tr("Long-running Tasks · staged preview · see requirements", "长任务准备发布中 · 查看运行条件")} →</a>
         </div>
@@ -2903,7 +2937,7 @@ const blogPosts = [
 ] as const;
 
 function BlogsPage({ user }: { user?: User | null }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const posts = [
     {
       ...blogPosts[4],
@@ -2978,16 +3012,16 @@ function BlogsPage({ user }: { user?: User | null }) {
           "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.",
           "记录 Remote Arc 的工程实现、架构决策、安全取舍和产品思考。",
         )}</p>
-        <nav className="readingPageLinks">
-          <a href="/docs">{tr("Docs", "文档")} →</a>
-          <a href="/security-model">{tr("Security", "安全")} →</a>
-          <a href="/docs#docs-routing">{tr("Architecture notes", "架构说明")} →</a>
+        <nav className="readingPageLinks" aria-label={tr("Explore related resources", "相关资源")}>
+          <a href={localizedWebsiteHref("/docs", locale)}>{tr("Docs", "文档")} →</a>
+          <a href={localizedWebsiteHref("/security-model", locale)}>{tr("Security", "安全")} →</a>
+          <a href={localizedWebsiteHref("/docs#docs-routing", locale)}>{tr("Architecture notes", "架构说明")} →</a>
         </nav>
       </section>
 
       <section className="blogIndex blogListPlain">
         {posts.map((post) => (
-          <a className="blogPostRow" href={"/blogs/" + post.slug} key={post.slug}>
+          <a className="blogPostRow" href={localizedWebsiteHref("/blogs/" + post.slug, locale)} key={post.slug}>
             <div className="blogLeadMeta">
               <span>{post.tag}</span>
               <span>{post.date}</span>
@@ -3004,6 +3038,11 @@ function BlogsPage({ user }: { user?: User | null }) {
 }
 
 
+function BlogBackLink() {
+  const { tr, locale } = useI18n();
+  return <a className="blogBack" href={localizedWebsiteHref("/blogs", locale)}>← {tr("All posts", "全部文章")}</a>;
+}
+
 function GoVsTypescriptBenchmarkArticlePage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const rows = [
@@ -3019,7 +3058,7 @@ function GoVsTypescriptBenchmarkArticlePage({ user }: { user?: User | null }) {
   return <PublicLayout user={user}>
     <article className="blogArticle">
       <header className="blogArticleHeader">
-        <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+        <BlogBackLink />
         <span className="eyebrow">{tr("ENGINEERING NOTES · 9 OCT 2026", "工程笔记 · 2026 年 10 月 9 日")}</span>
         <h1>{tr(
           "Why Remote Arc chose Go: measured against TypeScript on Mac and Windows",
@@ -3122,7 +3161,7 @@ function BlogArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("BUILDING REMOTE ARC", "构建 REMOTE ARC")}</span>
           <h1>{tr(
             "Why I built Remote Arc: AI should reach your computer without owning it",
@@ -3228,7 +3267,7 @@ function RemoteArcVsOpenClawArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("COMPARISON", "产品对比")}</span>
           <h1>{tr(
             "Remote Arc vs OpenClaw: two different layers of the AI stack",
@@ -3323,7 +3362,7 @@ function PowerfulAccessArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("SECURITY", "安全")}</span>
           <h1>{tr(
             "How Remote Arc keeps AI access powerful without exposing your computer",
@@ -3416,7 +3455,7 @@ function ArchitectureArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("ARCHITECTURE", "架构")}</span>
           <h1>{tr(
             "How Remote Arc works: Worker, Durable Objects, OAuth and the local agent",
@@ -4912,6 +4951,9 @@ function Dashboard({
     <div className="appFrame">
       <aside className="sidebar">
         <Brand />
+        <a className="dashboardWebsiteLink" href={MARKETING_ORIGIN}>
+          <span aria-hidden="true">↗</span> {tr("Back to website", "返回官网")}
+        </a>
         <nav className="sideNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
           {navItems.map(([id, label]) => (
             <button key={id} aria-current={active === id ? "page" : undefined} className={active === id ? "active" : ""} onClick={() => navigateTab(id)}>
@@ -6521,52 +6563,12 @@ function Dashboard({
                 </div>
                 <button className="ghostButton" disabled={securityBusy} onClick={() => void refreshSecurity()}>{tr("Refresh", "刷新")}</button>
               </div>
-              <div className="securityGrantList">
-                {(securityState?.grants || []).map((grant) => {
-                  const statusLabel =
-                    grant.status === "active"
-                      ? tr("Active now", "当前有效")
-                      : grant.status === "refreshable"
-                        ? tr("Refreshable", "可刷新")
-                        : tr("Expired", "已过期");
-                  const statusHelp =
-                    grant.status === "active"
-                      ? tr("Its current access token is still valid.", "当前 Access Token 仍有效。")
-                      : grant.status === "refreshable"
-                        ? tr("The short-lived access token expired, but the refresh authorization can still obtain a new one without asking you again.", "短期 Access Token 已过期，但 Refresh 授权仍可在无需再次询问你的情况下换取新 Token。")
-                        : tr("Both access and refresh authorization have expired. This grant can no longer access Remote Arc.", "Access 与 Refresh 授权均已过期，这条 Grant 已无法继续访问 Remote Arc。");
-                  return (
-                    <div className={"securityGrantRow " + grant.status} key={grant.grantId}>
-                      <div className="securityGrantIdentity">
-                        <span className="securityGrantIcon">AI</span>
-                        <div>
-                          <strong>{grant.clientName}</strong>
-                          <small>{tr("Authorization", "授权")} {grant.grantId.slice(0,12)}… · {tr("Client", "客户端")} {grant.clientId.slice(0,8)}…</small>
-                        </div>
-                      </div>
-                      <div className="securityGrantState">
-                        <span className={"grantState " + grant.status}>{statusLabel}</span>
-                        <HelpTip
-                          label={tr("About this authorization status", "了解此授权状态")}
-                          text={statusHelp}
-                        />
-                      </div>
-                      <div className="securityGrantDetails">
-                        <span>{tr("First authorized", "首次授权")} <strong>{timeAgo(grant.authorizedAt)}</strong></span>
-                        <span>{tr("Last token issued", "最近签发 Token")} <strong>{timeAgo(grant.lastTokenIssuedAt)}</strong></span>
-                        <span>{tr("Access token expires", "Access Token 到期")} <strong>{new Date(grant.accessExpiresAt).toLocaleString(locale === "zh" ? "zh-CN" : "en-NZ", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</strong></span>
-                        <span>{tr("Refresh authorization", "Refresh 授权")} <strong>{grant.refreshExpiresAt ? new Date(grant.refreshExpiresAt).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-NZ", { year: "numeric", month: "short", day: "numeric" }) : tr("None", "无")}</strong></span>
-                      </div>
-                      <div className="securityGrantScopes">{grant.scopes.map((scope) => <code key={scope}>{scope}</code>)}</div>
-                      <button className={grant.status === "expired" ? "ghostButton" : "dangerButton"} disabled={UI_PREVIEW || securityBusy || !securityState} onClick={() => void revokeGrant(grant)}>
-                        {grant.status === "expired" ? tr("Remove expired", "移除过期授权") : tr("Disconnect access", "断开此授权")}
-                      </button>
-                    </div>
-                  );
-                })}
-                {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No AI authorizations", "暂无 AI 授权")}</strong><span>{tr("Connect ChatGPT, Claude or another MCP client to see each OAuth authorization here.", "连接 ChatGPT、Claude 或其他 MCP 客户端后，每一份 OAuth 授权都会显示在这里。")}</span><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
-                {!securityState && <div className="securityEmptyState compact"><strong>{securityError ? tr("Authorizations unavailable", "暂无法获取授权") : tr("Loading access grants…", "正在加载访问授权…")}</strong></div>}
-              </div>
+              {securityState && securityState.grants.length > 0 && (
+                <SecurityAuthorizations grants={securityState.grants} busy={securityBusy}
+                  preview={UI_PREVIEW} timeAgo={timeAgo} revoke={revokeGrant} />
+              )}
+              {securityState && !securityState.grants.length && <div className="securityEmptyState compact"><strong>{tr("No AI authorizations", "暂无 AI 授权")}</strong><span>{tr("Connect ChatGPT, Claude or another MCP client to see each OAuth authorization here.", "连接 ChatGPT、Claude 或其他 MCP 客户端后，每一份 OAuth 授权都会显示在这里。")}</span><button className="ghostButton" onClick={() => navigateTab("connect")}>{tr("Connect AI", "连接 AI")}</button></div>}
+              {!securityState && <div className="securityEmptyState compact"><strong>{securityError ? tr("Authorizations unavailable", "暂无法获取授权") : tr("Loading access grants…", "正在加载访问授权…")}</strong></div>}
             </section>
 
             <section className="securityMainGrid">
@@ -7091,7 +7093,7 @@ const PRODUCT_RELEASES: ProductRelease[] = [
 ];
 
 function ReleasesPage({ user }: { user?: User | null }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const latest = PRODUCT_RELEASES[0]!;
 
   return (
@@ -7143,11 +7145,16 @@ function ReleasesPage({ user }: { user?: User | null }) {
                 </span>
               </aside>
               <div className="releaseBody">
-                <h2>{release.title}</h2>
-                <p className="releaseSummary">{release.summary}</p>
-                <ul>
-                  {release.changes.map((change) => <li key={change}>{change}</li>)}
-                </ul>
+                <h2>{locale === "zh" ? (releaseChinese[release.version]?.title ?? release.title) : release.title}</h2>
+                <p className="releaseSummary">{locale === "zh" ? (releaseChinese[release.version]?.summary ?? release.summary) : release.summary}</p>
+                {locale === "zh" ? (
+                  <details className="releaseOriginalNotes">
+                    <summary>{tr("Original technical change notes", "展开英文原始技术变更明细")}</summary>
+                    <ul>{release.changes.map((change) => <li key={change}>{change}</li>)}</ul>
+                  </details>
+                ) : (
+                  <ul>{release.changes.map((change) => <li key={change}>{change}</li>)}</ul>
+                )}
               </div>
             </article>
           ))}
@@ -7243,6 +7250,7 @@ function LegalPage({
 
 function App() {
   const { tr } = useI18n();
+  const routePath = isWebsite() && chinesePages.has(baseMarketingPath(location.pathname)) ? baseMarketingPath(location.pathname) : location.pathname;
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [devices, setDevices] = useState<Device[]>([]);
   const [status, setStatus] = useState<ProductStatus | null>(null);
@@ -7303,19 +7311,19 @@ function App() {
 
   const isAppHost = location.hostname === "mcp.remotearc.app";
   const isDashboardHost = isAppHost || UI_PREVIEW;
-  if (isAppHost && location.pathname === "/") {
+  if (isAppHost && routePath === "/") {
     history.replaceState({}, "", "/overview");
   }
 
-  if (location.pathname === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;
-  if (location.pathname === "/oauth/consent") return <OAuthConsent user={user} />;
+  if (routePath === "/device") return <PairDevice user={user} onSignedIn={loadMe} />;
+  if (routePath === "/oauth/consent") return <OAuthConsent user={user} />;
 
-  if (location.pathname === "/install") {
+  if (routePath === "/install") {
     location.replace("/install/chatgpt");
     return <CenteredCard title={tr("Opening installation…", "正在打开安装页…")} body={tr("Redirecting to the ChatGPT installation guide.", "正在跳转到 ChatGPT 安装指南。")} />;
   }
 
-  const installMatch = location.pathname.match(/^\/install\/(chatgpt|claude|cursor)$/);
+  const installMatch = routePath.match(/^\/install\/(chatgpt|claude|cursor)$/);
   if (installMatch) {
     return (
       <ClientInstallPage
@@ -7325,48 +7333,48 @@ function App() {
     );
   }
 
-  if (location.pathname === "/demo") return <DemoPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/connect-ai") return <ConnectPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/docs/long-running-work") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><LongRunningWorkDocs /></React.Suspense></PublicLayout>;
-  if (location.pathname === "/docs") return <DocsPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
-  const useCaseMatch = location.pathname.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);
+  if (routePath === "/demo") return <DemoPage user={user === undefined ? null : user} />;
+  if (routePath === "/connect-ai") return <ConnectPage user={user === undefined ? null : user} />;
+  if (routePath === "/docs/long-running-work") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading documentation…", "正在加载文档…")}</main>}><LongRunningWorkDocs /></React.Suspense></PublicLayout>;
+  if (routePath === "/docs") return <DocsPage user={user === undefined ? null : user} />;
+  if (routePath === "/security-model") return <SecurityModelPage user={user === undefined ? null : user} />;
+  if (routePath === "/use-cases") return <UseCasesPage user={user === undefined ? null : user} />;
+  const useCaseMatch = routePath.match(/^\/use-cases\/(remote-development|file-organization|disk-space-cleanup|overnight-goals|long-running-jobs|scheduled-checks|ci-follow-up|data-work|home-lab|browser-research|remote-support|presentation-deck|spreadsheet-report|desktop-automation|cross-device-handoff)$/);
   if (useCaseMatch) {
     return <UseCaseDetailPage slug={useCaseMatch[1] as UseCaseSlug} user={user === undefined ? null : user} />;
   }
-  if (location.pathname === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<p role="status">{tr("Loading downloads…", "正在加载下载页面…")}</p>}><NativeInstall /></React.Suspense></main></PublicLayout>;
-  if (location.pathname === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/go-vs-typescript-agent-benchmarks") return <GoVsTypescriptBenchmarkArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/remote-arc-vs-openclaw") return <RemoteArcVsOpenClawArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/powerful-ai-access-without-exposing-your-computer") return <PowerfulAccessArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/blogs/how-remote-arc-works") return <ArchitectureArticlePage user={user === undefined ? null : user} />;
-  if (location.pathname === "/resources") return <ResourcesRedirect />;
-  if (location.pathname === "/remote-mcp") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading guide…", "正在加载指南…")}</main>}><RemoteMcpGuide /></React.Suspense></PublicLayout>;
-  if (location.pathname === "/chrome-extension") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="chromeExtensionPage" role="status">{tr("Loading Chrome extension…", "正在加载 Chrome 扩展页面…")}</main>}><ChromeExtensionPage /></React.Suspense></PublicLayout>;
-  if (location.pathname === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
-  if (location.pathname === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
-  if (location.pathname === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
-  if (location.pathname === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
+  if (routePath === "/chatgpt-computer-access") return <ChatGptComputerAccessPage user={user === undefined ? null : user} />;
+  if (routePath === "/claude-computer-access") return <ClaudeComputerAccessPage user={user === undefined ? null : user} />;
+  if (routePath === "/mcp-computer-access") return <McpComputerAccessPage user={user === undefined ? null : user} />;
+  if (routePath === "/pricing") return <PricingPage user={user === undefined ? null : user} />;
+  if (routePath === "/downloads") return <PublicLayout user={user === undefined ? null : user}><main className="technicalDoc"><React.Suspense fallback={<p role="status">{tr("Loading downloads…", "正在加载下载页面…")}</p>}><NativeInstall /></React.Suspense></main></PublicLayout>;
+  if (routePath === "/releases") return <ReleasesPage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs") return <BlogsPage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/go-vs-typescript-agent-benchmarks") return <GoVsTypescriptBenchmarkArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/why-i-built-remote-arc") return <BlogArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/remote-arc-vs-openclaw") return <RemoteArcVsOpenClawArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/powerful-ai-access-without-exposing-your-computer") return <PowerfulAccessArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/blogs/how-remote-arc-works") return <ArchitectureArticlePage user={user === undefined ? null : user} />;
+  if (routePath === "/resources") return <ResourcesRedirect />;
+  if (routePath === "/remote-mcp") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="technicalDoc" role="status">{tr("Loading guide…", "正在加载指南…")}</main>}><RemoteMcpGuide /></React.Suspense></PublicLayout>;
+  if (routePath === "/chrome-extension") return <PublicLayout user={user === undefined ? null : user}><React.Suspense fallback={<main className="chromeExtensionPage" role="status">{tr("Loading Chrome extension…", "正在加载 Chrome 扩展页面…")}</main>}><ChromeExtensionPage /></React.Suspense></PublicLayout>;
+  if (routePath === "/docs/mcp") return <McpPage user={user === undefined ? null : user} />;
+  if (routePath === "/privacy") return <LegalPage kind="privacy" user={user === undefined ? null : user} />;
+  if (routePath === "/terms") return <LegalPage kind="terms" user={user === undefined ? null : user} />;
+  if (routePath === "/support") return <LegalPage kind="support" user={user === undefined ? null : user} />;
 
-  if (isDashboardHost && (location.pathname === "/dashboard" || Object.values(DASHBOARD_PATHS).includes(location.pathname))) {
+  if (isDashboardHost && (routePath === "/dashboard" || Object.values(DASHBOARD_PATHS).includes(routePath))) {
     if (user === undefined) {
       return <CenteredCard title={tr("Loading…", "加载中…")} body={tr("Connecting to Remote Arc.", "正在连接 Remote Arc。")} />;
     }
     if (!user) return <DashboardAccess />;
-    if (location.pathname === "/monitor" && !user.isAdmin) {
+    if (routePath === "/monitor" && !user.isAdmin) {
       return <CenteredCard title={tr("Admin only", "仅管理员可访问")} body={tr("Service monitoring is restricted to Remote Arc administrators.", "服务监控仅限 Remote Arc 管理员访问。")} />;
     }
     return <Dashboard user={user} devices={devices} status={status} refreshAll={loadAll} signOut={signOut} />;
   }
 
-  if (!isDashboardHost && location.pathname !== "/") return <NotFoundPage user={user === undefined ? null : user} />;
+  if (!isDashboardHost && routePath !== "/") return <NotFoundPage user={user === undefined ? null : user} />;
   return <Landing user={user === undefined ? null : user} />;
 }
 

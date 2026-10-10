@@ -1,0 +1,133 @@
+/* Security → Connected AI access. Summary-first client and grant disclosures. */
+.aiAuthCompact { display:grid;gap:13px;min-width:0; }
+.aiAuthStats { display:flex;align-items:center;flex-wrap:wrap;gap:8px; }
+.aiAuthStats>span {
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 10px;border:1px solid rgba(148,163,184,.14);
+  border-radius:999px;background:rgba(4,16,24,.38);
+  color:#9ab6bf;font-size:12px;line-height:1.35;
+}
+.aiAuthStats strong { color:#ebf6f8;font-size:13px;font-variant-numeric:tabular-nums; }
+.aiAuthDot {width:7px;height:7px;border-radius:50%;background:#94a3b8;flex:none}
+.aiAuthDot.active {background:#4ade80}
+.aiAuthDot.refreshable {background:#38bdf8}
+.aiAuthExplain {
+  margin:0!important;color:#88a6af;font-size:12px;
+  line-height:1.55;max-width:850px;
+}
+.aiAuthClients {display:grid;gap:8px;min-width:0}
+.aiAuthClient {
+  min-width:0;border:1px solid rgba(122,160,178,.2);
+  border-radius:12px;background:#07141d;
+  overflow:hidden;
+}
+.aiAuthClient[open] {border-color:rgba(56,189,248,.28)}
+.aiAuthClientSummary,.aiAuthGrantSummary {
+  display:grid;align-items:center;min-width:0;cursor:pointer;
+  list-style:none;transition:background .15s ease;
+}
+.aiAuthClientSummary::-webkit-details-marker,.aiAuthGrantSummary::-webkit-details-marker {display:none}
+.aiAuthClientSummary {
+  grid-template-columns:minmax(180px,1fr) auto minmax(145px,auto) 18px;
+  gap:16px;min-height:72px;padding:12px 16px;
+}
+.aiAuthClientSummary:hover,.aiAuthGrantSummary:hover {background:rgba(35,79,99,.16)}
+.aiAuthClientSummary:focus-visible,.aiAuthGrantSummary:focus-visible {
+  outline:2px solid #38bdf8;outline-offset:-3px;border-radius:10px;
+}
+.aiAuthIdentity {display:flex;align-items:center;gap:11px;min-width:0}
+.aiAuthIdentity .securityGrantIcon {
+  width:38px;height:38px;border-radius:10px;flex:none;
+  background:#0c293a;border:1px solid rgba(56,189,248,.17);
+}
+.aiAuthNameBlock,.aiAuthGrantId {display:grid;gap:3px;min-width:0}
+.aiAuthNameBlock strong {font-size:15px;font-weight:750;color:#e6f4f7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aiAuthNameBlock small,.aiAuthGrantId small {font-size:11px;color:#83a0aa}
+.aiAuthClientSummary .grantState,.aiAuthGrantSummary .grantState {justify-self:start;white-space:nowrap}
+.aiAuthActivity {color:#789aa5;font-size:12px;text-align:right;white-space:nowrap}
+.aiAuthExpand {
+  display:grid;place-items:center;color:#85aab7;font-size:22px;
+  line-height:1;transition:transform .18s ease;
+}
+.aiAuthClient[open]>.aiAuthClientSummary .aiAuthExpand,
+.aiAuthGrant[open]>.aiAuthGrantSummary .aiAuthExpand {transform:rotate(180deg)}
+.aiAuthClientBody {
+  padding:8px 12px 12px;border-top:1px solid rgba(128,160,180,.13);
+  display:grid;gap:7px;background:rgba(0,0,0,.12)
+}
+.aiAuthGrant {
+  border:1px solid rgba(122,160,178,.16);
+  border-radius:9px;min-width:0;background:#091923;overflow:hidden;
+}
+.aiAuthGrant[open] {border-color:rgba(122,160,178,.32)}
+.aiAuthGrantSummary {
+  grid-template-columns:minmax(175px,1fr) auto auto 18px;
+  min-height:55px;gap:14px;padding:10px 13px;
+}
+.aiAuthGrantId strong {
+  color:#cfe5e9;font-size:12px;font-weight:650;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.aiAuthScopeCount {font-size:12px;color:#87a5af;white-space:nowrap}
+.aiAuthGrantBody {border-top:1px solid rgba(122,160,178,.13);padding:14px 16px 16px;display:grid;gap:15px}
+.aiAuthGrantMeta {
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px;margin:0;
+}
+.aiAuthGrantMeta>div{display:grid;gap:3px;min-width:0}
+.aiAuthGrantMeta dt{font-size:11px;color:#7f9eaa}
+.aiAuthGrantMeta dd{
+  margin:0;font-size:12px;color:#d7edf1;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+.aiAuthPermissions{display:grid;gap:8px}
+.aiAuthPermissions>strong {font-size:11px;letter-spacing:.02em;color:#a6c5cd}
+.aiAuthPermissions .securityGrantScopes code {font-size:11px}
+.aiAuthRevokeActions {
+  border-top:1px solid rgba(128,160,180,.14);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:13px;
+}
+.aiAuthRevokeActions small {font-size:11px;color:#7b99a4;line-height:1.5;max-width:620px}
+.aiAuthRevokeActions button {flex:none;white-space:nowrap}
+:root[data-theme="light"] .aiAuthStats>span {
+  background:#f1f7f9;border-color:#d4e6ec;color:#567581
+}
+:root[data-theme="light"] .aiAuthStats strong {color:#173b47}
+:root[data-theme="light"] .aiAuthExplain {color:#526d77}
+:root[data-theme="light"] .aiAuthClient {
+  background:#fff;border-color:#d8e7ec
+}
+:root[data-theme="light"] .aiAuthClient[open] {border-color:#9dcad7}
+:root[data-theme="light"] .aiAuthClientSummary:hover,
+:root[data-theme="light"] .aiAuthGrantSummary:hover {background:#f3fafc}
+:root[data-theme="light"] .aiAuthIdentity .securityGrantIcon {background:#ebf7fa;border-color:#d4e8ef}
+:root[data-theme="light"] .aiAuthNameBlock strong {color:#183b47}
+:root[data-theme="light"] .aiAuthNameBlock small,
+:root[data-theme="light"] .aiAuthGrantId small,
+:root[data-theme="light"] .aiAuthActivity,
+:root[data-theme="light"] .aiAuthScopeCount {color:#557681}
+:root[data-theme="light"] .aiAuthClientBody {background:#f6fafb;border-color:#deecf0}
+:root[data-theme="light"] .aiAuthGrant {background:#fff;border-color:#dce9ee}
+:root[data-theme="light"] .aiAuthGrantId strong {color:#224653}
+:root[data-theme="light"] .aiAuthGrantMeta dt {color:#567682}
+:root[data-theme="light"] .aiAuthGrantMeta dd {color:#204653}
+:root[data-theme="light"] .aiAuthPermissions>strong {color:#365e69}
+:root[data-theme="light"] .aiAuthRevokeActions small {color:#526e78}
+@media (max-width:850px) {
+  .aiAuthClientSummary {grid-template-columns:minmax(130px,1fr) auto 18px;gap:11px}
+  .aiAuthActivity {display:none}
+}
+@media (max-width:640px) {
+  .aiAuthClientSummary {padding:11px 12px;min-height:66px;gap:9px}
+  .aiAuthIdentity {gap:8px}
+  .aiAuthIdentity .securityGrantIcon {width:33px;height:33px}
+  .aiAuthNameBlock strong {font-size:13px}
+  .aiAuthClientSummary .grantState,.aiAuthGrantSummary .grantState {font-size:10px;padding:3px 6px}
+  .aiAuthClientBody {padding:7px}
+  .aiAuthGrantSummary {grid-template-columns:minmax(100px,1fr) auto 18px;gap:8px;padding:9px}
+  .aiAuthGrantId strong {font-size:11px}
+  .aiAuthScopeCount {display:none}
+  .aiAuthGrantBody {padding:11px}
+  .aiAuthGrantMeta {grid-template-columns:1fr;gap:9px}
+  .aiAuthRevokeActions {flex-direction:column;align-items:stretch;gap:10px}
+  .aiAuthRevokeActions button {width:100%}
+}

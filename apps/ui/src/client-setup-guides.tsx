@@ -1,5 +1,5 @@
 import React from "react";
-import { ClaudeInstallWalkthrough } from "./claude-install-walkthrough.js";
+import { ClientInstallWalkthrough } from "./client-install-walkthrough.js";
 import { useI18n } from "./i18n.js";
 import "./client-setup-guides.css";
 
@@ -91,14 +91,14 @@ export function ClientMcpGuide({
       <small>{tr("Click path in the app", "在平台内的点击路径")}</small>
       <strong>{info.path}</strong>
     </div>
-    {client !== "claude" && <ol className="installClientChecklist">
+    {client === "cursor" && <ol className="installClientChecklist">
       {info.steps.map((step, i) => <li key={i}><span>{String(i + 1).padStart(2, "0")}</span><p>{step}</p></li>)}
     </ol>}
     <div className="installEndpointPanel">
       <div><small>{tr("PASTE THIS REMOTE MCP URL", "在平台里粘贴这个 REMOTE MCP 地址")}</small><div className="docsCodeLine"><code>{endpoint}</code>{copyEndpoint}</div></div>
       <p>{tr("Connection name", "连接名称")}: <strong>Remote Arc</strong> · {tr("Transport", "传输方式")}: <strong>Streamable HTTP + OAuth</strong></p>
     </div>
-    {client === "claude" && <ClaudeInstallWalkthrough endpoint={endpoint} />}
+    {client !== "cursor" && <ClientInstallWalkthrough client={client} />}
     {client === "cursor" && <div className="installCursorJson">
       <strong>{tr("Manual alternative · mcp.json", "手动备选 · mcp.json")}</strong>
       <pre>{JSON.stringify({mcpServers:{"remote-arc":{url:endpoint}}},null,2)}</pre>

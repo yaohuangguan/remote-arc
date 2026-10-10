@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { legacyLanguageRedirect, localizedPages } from "../src/marketing-locale.ts";
+import { chinesePages, pageForLanguage } from "../../ui/src/marketing-paths.ts";
+import { chineseResourceSeo } from "../src/zh-resources.ts";
+import { releaseChinese } from "../../ui/src/release-locales.ts";
 import { readFileSync } from "node:fs";
 import {
   canonicalForPath,
@@ -59,6 +63,70 @@ for (const path of known) {
 const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
 assert.equal(new Set(locs).size, locs.length, "sitemap URLs must be unique");
 
+// Client routes and search-indexed paths must stay in sync.
+assert.deepEqual([...chinesePages].sort(), [...localizedPages].sort());
+assert.equal(pageForLanguage("/", "zh"), "/zh");
+assert.equal(pageForLanguage("/docs/mcp", "zh"), "/zh/docs/mcp");
+assert.equal(pageForLanguage("/zh/pricing", "en"), "/pricing");
+assert.equal(pageForLanguage("/blogs/why-i-built-remote-arc", "zh"), "/zh/blogs/why-i-built-remote-arc");
+// Each translated page must be independently indexable and paired with English.
+for (const path of ["/zh", "/zh/docs", "/zh/docs/mcp", "/zh/docs/long-running-work",
+  "/zh/install/chatgpt", "/zh/install/claude", "/zh/install/cursor", "/zh/pricing", "/zh/downloads"]) {
+  assert.equal(marketingStatusCode(path), 200, path + " should be indexable");
+  assert.equal(canonicalForPath(path), "https://remotearc.app" + path);
+  assert.ok(sitemap.includes("https://remotearc.app" + path), "sitemap missing " + path);
+}
+assert.equal(marketingStatusCode("/zh/blogs"), 200, "translated blog index must be indexable");
+assert.equal(marketingStatusCode("/zh/blogs/unknown-article"), 404, "unknown Chinese blog article must stay 404");
+assert.equal(legacyLanguageRedirect(new URL("https://remotearc.app/docs?lang=zh&ref=abc")), "/zh/docs?ref=abc");
+assert.equal(legacyLanguageRedirect(new URL("https://remotearc.app/zh/pricing?lang=en")), "/pricing");
+assert.equal(legacyLanguageRedirect(new URL("https://remotearc.app/blogs?lang=zh")), "/zh/blogs");
+assert.equal(legacyLanguageRedirect(new URL("https://remotearc.app/docs?lang=fr")), null);
+const zhHome = renderMarketingHtml('<html lang="en"><head><title>Remote Arc</title></head><body><div id="root"></div></body></html>', "/zh");
+assert.ok(zhHome.includes('lang="zh-CN"'));
+assert.ok(zhHome.includes('hreflang="zh-CN"'));
+assert.ok(zhHome.includes('hreflang="en"'));
+assert.ok(zhHome.includes('href="https://remotearc.app/zh"'));
+assert.ok(zhHome.includes("别让 AI 只停留在聊天"));
+const zhDocs = renderMarketingHtml('<html lang="en"><head><title>Remote Arc</title></head><body><div id="root"></div></body></html>', "/zh/docs");
+assert.ok(zhDocs.includes("Remote Arc 中文文档"));
+assert.ok(zhDocs.includes("权限与安全边界"));
+assert.ok(sitemap.includes('xmlns:xhtml="http://www.w3.org/1999/xhtml"'));
+assert.ok(sitemap.includes('hreflang="zh-CN"'));
+
+// All Resources links and detail pages must have real Chinese URL, metadata,
+// server-visible Chinese content, and reciprocal English/Chinese alternates.
+const resourcePaths = Object.keys(chineseResourceSeo);
+assert.equal(resourcePaths.length, 24, "Resources needs blog index, five articles, use-case index, fifteen details, security and releases");
+for (const base of resourcePaths) {
+  const path = "/zh" + base;
+  assert.ok(localizedPages.includes(base), "missing localized route: " + base);
+  assert.equal(marketingStatusCode(path), 200, path + " must be indexable");
+  assert.equal(canonicalForPath(path), "https://remotearc.app" + path);
+  assert.ok(sitemap.includes("<loc>https://remotearc.app" + path + "</loc>"), path + " must be in the sitemap");
+  assert.ok(pageForLanguage(base, "zh") === path, "frontend URL mismatch for " + base);
+  const html = renderMarketingHtml('<html lang="en"><head><title>Remote Arc</title><link rel="canonical" href="https://remotearc.app/" /></head><body><div id="root"></div></body></html>', path);
+  assert.match(html, /<html lang="zh-CN"/);
+  assert.ok(html.includes('<link rel="canonical" href="https://remotearc.app' + path + '"'), "wrong Chinese canonical: " + path);
+  assert.ok(html.includes('hreflang="en"') && html.includes('hreflang="zh-CN"'), "incomplete language alternates: " + path);
+  assert.ok(html.includes(chineseResourceSeo[base].h1) || html.includes(chineseResourceSeo[base].title), "missing Chinese content: " + path);
+}
+const zhBlogIndex = renderMarketingHtml('<html lang="en"><head><title>Remote Arc</title></head><body><div id="root"></div></body></html>', "/zh/blogs");
+assert.ok(zhBlogIndex.includes("/zh/blogs/why-i-built-remote-arc"));
+assert.ok(zhBlogIndex.includes("为什么我做"));
+const zhBlogArticle = renderMarketingHtml('<html lang="en"><head><title>Remote Arc</title></head><body><div id="root"></div></body></html>', "/zh/blogs/how-remote-arc-works");
+assert.ok(zhBlogArticle.includes("本地 Agent"));
+assert.ok(zhBlogArticle.includes("第五步"));
+assert.ok(zhBlogArticle.includes('"inLanguage":"zh-CN"'), "Chinese article schema must declare Chinese language");
+const changelog = readFileSync(new URL("../../../CHANGELOG.md", import.meta.url), "utf8");
+const publishedVersions = [...changelog.matchAll(/^## (\d+\.\d+\.\d+) -/gm)].map(x => x[1]);
+const mainSource = readFileSync(new URL("../../ui/src/main.tsx", import.meta.url), "utf8");
+const legacyBlock = mainSource.split("const LEGACY_PRODUCT_RELEASES: ProductRelease[] = [")[1]?.split("const PRODUCT_RELEASES")[0] || "";
+const legacyVersions = [...legacyBlock.matchAll(/version: "(\d+\.\d+\.\d+)"/g)].map(x => x[1]);
+for (const version of [...publishedVersions, ...legacyVersions]) {
+  assert.ok(releaseChinese[version]?.title && releaseChinese[version]?.summary, "missing Chinese release summary: " + version);
+}
+assert.equal(Object.keys(releaseChinese).length, new Set([...publishedVersions, ...legacyVersions]).size, "stale release translations");
 const robots = robotsTxt();
 assert.ok(robots.includes("Sitemap: https://remotearc.app/sitemap.xml"));
 assert.ok(robots.includes("Disallow: /dashboard$"));
