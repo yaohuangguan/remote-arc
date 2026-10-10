@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider, LanguageSwitcher, useI18n } from "./i18n.js";
 import { baseMarketingPath, chinesePages, isWebsite, localizedWebsiteHref } from "./marketing-paths.js";
+import { releaseChinese } from "./release-locales.js";
 import { ThemeProvider, useTheme } from "./theme.js";
 import { UI_PREVIEW, installUiPreviewFetchMock } from "./preview.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
@@ -532,11 +533,11 @@ function PublicHeader({ user }: { user?: User | null }) {
               {tr("Resources", "资源")} <span aria-hidden="true">⌄</span>
             </button>
             <div className="publicNavDropdown resourceDropdown">
-              <a href="/blogs">
+              <a href={navHref("/blogs")}>
                 <strong>{tr("Blog", "博客")}</strong>
                 <small>{tr("Ideas, product notes and what we're building", "产品思考、开发记录与我们正在做的事")}</small>
               </a>
-              <a href="/use-cases">
+              <a href={navHref("/use-cases")}>
                 <strong>{tr("Use cases", "使用场景")}</strong>
                 <small>{tr("Real workflows with files, code and terminals", "文件、代码与终端的真实工作流")}</small>
               </a>
@@ -544,11 +545,11 @@ function PublicHeader({ user }: { user?: User | null }) {
                 <strong>{tr("Docs", "文档")}</strong>
                 <small>{tr("Setup, tools, permissions and reference", "配置、工具、权限与参考")}</small>
               </a>
-              <a href="/security-model">
+              <a href={navHref("/security-model")}>
                 <strong>{tr("Security", "安全")}</strong>
                 <small>{tr("Trust boundaries, permissions and limits", "信任边界、权限与真实限制")}</small>
               </a>
-              <a href="/releases">
+              <a href={navHref("/releases")}>
                 <strong>{tr("Releases", "版本发布")}</strong>
                 <small>{tr("What's new in Remote Arc", "查看 Remote Arc 的版本更新")}</small>
               </a>
@@ -2931,7 +2932,7 @@ const blogPosts = [
 ] as const;
 
 function BlogsPage({ user }: { user?: User | null }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const posts = [
     {
       ...blogPosts[4],
@@ -3015,7 +3016,7 @@ function BlogsPage({ user }: { user?: User | null }) {
 
       <section className="blogIndex blogListPlain">
         {posts.map((post) => (
-          <a className="blogPostRow" href={"/blogs/" + post.slug} key={post.slug}>
+          <a className="blogPostRow" href={localizedWebsiteHref("/blogs/" + post.slug, locale)} key={post.slug}>
             <div className="blogLeadMeta">
               <span>{post.tag}</span>
               <span>{post.date}</span>
@@ -3032,6 +3033,11 @@ function BlogsPage({ user }: { user?: User | null }) {
 }
 
 
+function BlogBackLink() {
+  const { tr, locale } = useI18n();
+  return <a className="blogBack" href={localizedWebsiteHref("/blogs", locale)}>← {tr("All posts", "全部文章")}</a>;
+}
+
 function GoVsTypescriptBenchmarkArticlePage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   const rows = [
@@ -3047,7 +3053,7 @@ function GoVsTypescriptBenchmarkArticlePage({ user }: { user?: User | null }) {
   return <PublicLayout user={user}>
     <article className="blogArticle">
       <header className="blogArticleHeader">
-        <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+        <BlogBackLink />
         <span className="eyebrow">{tr("ENGINEERING NOTES · 9 OCT 2026", "工程笔记 · 2026 年 10 月 9 日")}</span>
         <h1>{tr(
           "Why Remote Arc chose Go: measured against TypeScript on Mac and Windows",
@@ -3150,7 +3156,7 @@ function BlogArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("BUILDING REMOTE ARC", "构建 REMOTE ARC")}</span>
           <h1>{tr(
             "Why I built Remote Arc: AI should reach your computer without owning it",
@@ -3256,7 +3262,7 @@ function RemoteArcVsOpenClawArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("COMPARISON", "产品对比")}</span>
           <h1>{tr(
             "Remote Arc vs OpenClaw: two different layers of the AI stack",
@@ -3351,7 +3357,7 @@ function PowerfulAccessArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("SECURITY", "安全")}</span>
           <h1>{tr(
             "How Remote Arc keeps AI access powerful without exposing your computer",
@@ -3444,7 +3450,7 @@ function ArchitectureArticlePage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <article className="blogArticle">
         <header className="blogArticleHeader">
-          <a className="blogBack" href="/blogs">← {tr("All posts", "全部文章")}</a>
+          <BlogBackLink />
           <span className="eyebrow">{tr("ARCHITECTURE", "架构")}</span>
           <h1>{tr(
             "How Remote Arc works: Worker, Durable Objects, OAuth and the local agent",
@@ -7082,7 +7088,7 @@ const PRODUCT_RELEASES: ProductRelease[] = [
 ];
 
 function ReleasesPage({ user }: { user?: User | null }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const latest = PRODUCT_RELEASES[0]!;
 
   return (
@@ -7134,11 +7140,16 @@ function ReleasesPage({ user }: { user?: User | null }) {
                 </span>
               </aside>
               <div className="releaseBody">
-                <h2>{release.title}</h2>
-                <p className="releaseSummary">{release.summary}</p>
-                <ul>
-                  {release.changes.map((change) => <li key={change}>{change}</li>)}
-                </ul>
+                <h2>{locale === "zh" ? (releaseChinese[release.version]?.title ?? release.title) : release.title}</h2>
+                <p className="releaseSummary">{locale === "zh" ? (releaseChinese[release.version]?.summary ?? release.summary) : release.summary}</p>
+                {locale === "zh" ? (
+                  <details className="releaseOriginalNotes">
+                    <summary>{tr("Original technical change notes", "展开英文原始技术变更明细")}</summary>
+                    <ul>{release.changes.map((change) => <li key={change}>{change}</li>)}</ul>
+                  </details>
+                ) : (
+                  <ul>{release.changes.map((change) => <li key={change}>{change}</li>)}</ul>
+                )}
               </div>
             </article>
           ))}
