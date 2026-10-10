@@ -43,10 +43,10 @@ export function renderOtpEmail(code: string) {
 <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;color:transparent;">Your Remote Arc code: ${code}. Expires in 10 minutes.&#8199;&#65279;&#847;&#8199;&#65279;</div>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#f3f7fa" style="border-collapse:collapse;background-color:#f3f7fa;">
 <tr><td align="center" style="padding:36px 16px 42px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:560px;border-collapse:separate;border-spacing:0;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:560px;table-layout:fixed;border-collapse:separate;border-spacing:0;">
 <tr><td align="left" bgcolor="#071724" style="padding:28px 32px;background-color:#071724;border-radius:18px 18px 0 0;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-  <tr><td valign="middle" style="width:46px;padding-right:13px;"><img src="${BRAND_ORIGIN}/remote-arc-192.png" alt="Remote Arc" width="44" height="44" style="display:block;width:44px;height:44px;border:0;border-radius:11px;outline:none;text-decoration:none;"></td><td valign="middle"><span style="display:block;font-size:20px;font-weight:800;line-height:1.15;letter-spacing:-.4px;color:#f4fbff;">Remote Arc</span><span style="display:block;margin-top:5px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:1.7px;color:#65d5f7;text-transform:uppercase;">Your AI. Your computer. Your control.</span></td></tr>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;table-layout:fixed;border-collapse:collapse;">
+  <tr><td valign="middle" style="width:46px;padding-right:13px;"><img src="${BRAND_ORIGIN}/remote-arc-192.png" alt="Remote Arc" width="44" height="44" style="display:block;width:44px;height:44px;border:0;border-radius:11px;outline:none;text-decoration:none;"></td><td valign="middle"><span style="display:block;font-size:20px;font-weight:800;line-height:1.15;letter-spacing:-.4px;color:#f4fbff;">Remote Arc</span><span style="display:block;margin-top:5px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:1.1px;color:#65d5f7;text-transform:uppercase;">Your AI. Your control.</span></td></tr>
   </table>
 </td></tr>
 <tr><td align="left" bgcolor="#ffffff" style="padding:36px 34px 12px;background-color:#ffffff;border-left:1px solid #e1ebf0;border-right:1px solid #e1ebf0;">
