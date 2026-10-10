@@ -1,6 +1,7 @@
 import cliPackage from "../../../packages/cli/package.json" with { type: "json" };
 import { localizedPages, isChineseMarketingPath, unprefixedMarketingPath } from "./marketing-locale.js";
 import { chineseSeo } from "./zh-seo.js";
+import { chineseResourceSeo } from "./zh-resources.js";
 
 const SITE = "https://remotearc.app";
 
@@ -166,10 +167,19 @@ for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
   pages[path] = { title: title + " — Remote Arc", description, canonical: SITE + path };
 }
 
-function blogIndexHtml() {
-  const items = Object.entries(articles).map(function(entry) {
-    return '<li><a href="' + entry[0] + '">' + esc(entry[1].title) + '</a><p>' + esc(entry[1].description) + '</p></li>';
+function blogIndexHtml(chinese = false) {
+  const items = Object.entries(articles).map(([path, english]) => {
+    const translated = chinese ? chineseResourceSeo[path] : null;
+    const href = chinese ? "/zh" + path : path;
+    return '<li><a href="' + href + '">' + esc(translated?.title ?? english.title) + '</a><p>' +
+      esc(translated?.description ?? english.description) + '</p></li>';
   }).join("");
+  if (chinese) {
+    return '<main class="seo-blog-shell"><section><p class="seo-eyebrow">博客</p><h1>Remote Arc 博客</h1>' +
+      '<p>记录 Remote Arc 的真实工程实践、MCP 架构、安全设计和性能实测，解释产品做出这些技术取舍的原因。</p>' +
+      '<p>阅读每一篇完整中文文章，了解设备权限、OAuth、原生 Go Agent 与持久任务的真实能力和边界。</p><ol>' +
+      items + '</ol></section></main>';
+  }
   return '<main class="seo-blog-shell"><section><p class="seo-eyebrow">BLOG</p><h1>Remote Arc blog</h1>' +
     '<p>Engineering notes, architecture decisions, security trade-offs and product reasoning from building a controlled Remote MCP bridge between AI clients and real computers.</p>' +
     '<p>The articles explain why Remote Arc separates the hosted control plane from local operating-system execution, how OAuth and paired-device identities fit together, why terminal access is treated differently from narrower file tools, and where durable task execution stops being the same thing as fresh AI reasoning.</p>' +
@@ -552,10 +562,18 @@ for (const [slug, [title, description]] of Object.entries(useCaseSeo)) {
 function pageFor(pathname: string): SeoPage | null {
   if (isChineseMarketingPath(pathname)) {
     const base = unprefixedMarketingPath(pathname);
-    const original = pages[base];
-    const translated = chineseSeo[base];
+    const original = pages[base] ?? articles[base];
+    const translated = chineseSeo[base] ?? chineseResourceSeo[base];
     if (!original || !translated) return null;
-    return { ...original, title: translated.title, description: translated.description, canonical: SITE + pathname };
+    return {
+      ...original,
+      title: translated.title,
+      description: translated.description,
+      canonical: SITE + pathname,
+      blocks: original.type === "article"
+        ? [{ text: translated.intro }, ...translated.sections.map(section => ({ heading: section.heading, text: section.text }))]
+        : original.blocks,
+    };
   }
   return articles[pathname] ?? pages[pathname] ?? null;
 }
@@ -609,6 +627,7 @@ function howToSchema(pathname: string, page: SeoPage) {
 }
 
 function jsonLd(page: SeoPage, pathname: string) {
+  const schemaLanguage = page.canonical === SITE + "/zh" || page.canonical.startsWith(SITE + "/zh/") ? "zh-CN" : "en";
   const graph: unknown[] = [
     {
       "@type": "Organization",
@@ -624,7 +643,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       name: "Remote Arc",
       url: SITE,
       publisher: { "@id": SITE + "/#organization" },
-      inLanguage: "en"
+      inLanguage: schemaLanguage
     }
   ];
 
@@ -640,7 +659,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       publisher: { "@id": SITE + "/#organization" },
       mainEntityOfPage: page.canonical,
       image: SITE + "/demos/connect-workflow-poster.webp",
-      inLanguage: "en"
+      inLanguage: schemaLanguage
     });
   } else if (pathname === "/") {
     graph.push({
@@ -677,7 +696,7 @@ function jsonLd(page: SeoPage, pathname: string) {
       url: page.canonical,
       author: { "@id": SITE + "/#organization" },
       publisher: { "@id": SITE + "/#organization" },
-      inLanguage: "en"
+      inLanguage: schemaLanguage
     });
   } else {
     graph.push({
@@ -730,7 +749,7 @@ crawlPages["/downloads"] = {
 };
 
 function crawlablePageHtml(pathname: string, page: SeoPage) {
-  const translated = isChineseMarketingPath(pathname) ? chineseSeo[unprefixedMarketingPath(pathname)] : null;
+  const translated = isChineseMarketingPath(pathname) ? (chineseSeo[unprefixedMarketingPath(pathname)] ?? chineseResourceSeo[unprefixedMarketingPath(pathname)]) : null;
   const copy = translated ? {
     h1: translated.h1,
     intro: translated.intro,
@@ -822,10 +841,10 @@ export function renderMarketingHtml(html: string, pathname: string) {
   if (!page) {
     return html.replace('<div id="root"></div>', '<div id="root">' + notFoundHtml(pathname) + '</div>');
   }
-  if (pathname === "/blogs") {
-    return html.replace('<div id="root"></div>', '<div id="root">' + blogIndexHtml() + '</div>');
+  if (basePath === "/blogs") {
+    return html.replace('<div id="root"></div>', '<div id="root">' + blogIndexHtml(chinese) + '</div>');
   }
-  if (articles[pathname]) {
+  if (articles[basePath]) {
     return html.replace('<div id="root"></div>', '<div id="root">' + articleHtml(page) + '</div>');
   }
   return html.replace('<div id="root"></div>', '<div id="root">' + crawlablePageHtml(pathname, page) + '</div>');

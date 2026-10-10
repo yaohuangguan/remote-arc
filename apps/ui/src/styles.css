@@ -12394,6 +12394,23 @@ body{font-size:18px;line-height:1.6}
   font-size:13px;
   line-height:1.7;
 }
+.releaseOriginalNotes {
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid #d8e4e7;
+}
+.releaseOriginalNotes summary {
+  width:fit-content;
+  cursor:pointer;
+  color:#205f73;
+  font-size:13px;
+  font-weight:650;
+  line-height:1.6;
+}
+.releaseOriginalNotes summary:hover { text-decoration:underline; text-underline-offset:3px; }
+.releaseOriginalNotes ul { margin-top:12px; }
+:root[data-theme="dark"] .releaseOriginalNotes { border-color:#244552; }
+:root[data-theme="dark"] .releaseOriginalNotes summary { color:#9fd9e6; }
 .releaseBody ul{
   display:grid;
   gap:7px;

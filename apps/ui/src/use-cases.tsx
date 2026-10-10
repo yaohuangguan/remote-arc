@@ -1,5 +1,6 @@
 import React from "react";
 import { useI18n } from "./i18n.js";
+import { localizedWebsiteHref } from "./marketing-paths.js";
 import { TaskAvailability } from "./product-docs.js";
 import "./public-docs.css";
 
@@ -162,14 +163,14 @@ function cases(tr: Tr) {
 }
 
 export function UseCaseCatalog() {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const items = cases(tr);
   return <main className="useCaseCatalog revisedUseCases">
     <header className="toolPageHeader"><span className="eyebrow">{tr("USE CASES", "使用场景")}</span><h1>{tr("What would you like done on your computer?", "你想让电脑上的哪项工作完成？")}</h1>
       <p>{tr("Start in your AI chat. Name the computer, describe the result and say how to check it. These examples show the tools, permissions and evidence each workflow needs.", "从 AI 聊天开始，说明目标电脑、想要的结果和检查方式。以下场景说明每种工作需要的工具、权限与证据。")}</p>
       <div className="useCaseEntry"><strong>{tr("Quick work uses tools. Ongoing work uses a saved Task.", "即时工作使用工具，持续工作保存为 Task。")}</strong><p>{tr("You do not need to configure every operation manually. Your AI can create an authorized long-running or scheduled task; Dashboard provides progress and stop controls.", "无需手动配置每次操作。AI 可以创建已授权长任务或定时任务，Dashboard 提供进度与停止控制。")}</p><a href="/docs/long-running-work">{tr("Understand durable work", "了解持久工作")} →</a></div>
     </header>
-    <section className="useCaseGrid" aria-label={tr("Workflows", "工作流程")}>{items.map(item => <a className="useCaseCard" key={item.slug} href={"/use-cases/" + item.slug}>
+    <section className="useCaseGrid" aria-label={tr("Workflows", "工作流程")}>{items.map(item => <a className="useCaseCard" key={item.slug} href={localizedWebsiteHref("/use-cases/" + item.slug, locale)}>
       <span className="eyebrow">{item.category}</span><h2>{item.title}</h2><p>{item.intro}</p><span className="caseMode">{item.durable ? tr("Saved Task · staged release", "持久 Task · 准备发布") : tr("Direct tools", "直接工具调用")}</span><b aria-hidden="true">↗</b>
     </a>)}</section>
     <TaskAvailability />
@@ -178,10 +179,10 @@ export function UseCaseCatalog() {
 }
 
 export function UseCaseDetail({ slug }: { slug: UseCaseSlug }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const item = cases(tr).find(entry => entry.slug === slug)!;
   return <main className="technicalDoc revisedUseCases">
-    <header className="articleHeader"><a className="caseBack" href="/use-cases">← {tr("All use cases", "全部使用场景")}</a><span className="eyebrow">{item.category}</span><h1>{item.title}</h1><p>{item.intro}</p>{item.durable && <TaskAvailability />}</header>
+    <header className="articleHeader"><a className="caseBack" href={localizedWebsiteHref("/use-cases", locale)}>← {tr("All use cases", "全部使用场景")}</a><span className="eyebrow">{item.category}</span><h1>{item.title}</h1><p>{item.intro}</p>{item.durable && <TaskAvailability />}</header>
     <article className="technicalArticle useCaseDetailBody">
       <section><h2>{tr("Ask in your AI chat", "在 AI 聊天中提出请求")}</h2><blockquote className="casePrompt">{item.prompt}</blockquote><p>{tr("This is a sample request, not an automatically started task. The AI resolves the device and checks your existing authorization before using tools or saving ongoing work.", "这是示例请求，不会自动启动任务。AI 会先确认设备和已有授权，再使用工具或保存持续工作。")}</p></section>
       <section><h2>{tr("How the work proceeds", "工作如何推进")}</h2><ol>{item.steps.map(step => <li key={step}>{step}</li>)}</ol></section>
