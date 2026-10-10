@@ -39,6 +39,9 @@ import {
   handlePairingLookup,
 } from "./device.js";
 import { readAudit } from "./audit.js";
+import { archiveOldAudit } from "./audit-archive.js";
+import { recordMcpTelemetry } from "./relay-telemetry.js";
+import { limitMcpIngress } from "./mcp-edge-guard.js";
 import { getMonthlyUsage } from "./usage.js";
 import { getAccountEntitlements } from "./entitlements.js";
 import { getMonthlyPlusUsage } from "./plus-usage.js";
@@ -95,6 +98,12 @@ type Env = TaskEventEnv & {
   EMAIL_AUTH_SECRET?: string;
   EMAIL_FROM?: string;
   MONTHLY_TOOL_CALL_LIMIT?: string;
+  FREE_MONTHLY_TOOL_CALL_LIMIT?: string;
+  AUDIT_ARCHIVE?: R2Bucket;
+  AUDIT_ARCHIVE_ENABLED?: string;
+  AUDIT_RETENTION_DAYS?: string;
+  MCP_ANALYTICS?: AnalyticsEngineDataset;
+  MCP_METRICS_SAMPLE_RATE?: string;
   OPENAI_APPS_CHALLENGE?: string;
   REVIEWER_EMAIL?: string;
   REVIEWER_PASSWORD_SHA256?: string;
@@ -111,6 +120,9 @@ type Env = TaskEventEnv & {
   ALERT_EMAIL?: string;
   ALERT_FROM_EMAIL?: string;
   MCP_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
+  MCP_EDGE_RATE_LIMITER?: { limit(input: { key: string }): Promise<{ success: boolean }> };
+  MCP_ANON_RATE_LIMITER?: { limit(input: { key: string }): Promise<{ success: boolean }> };
+  INCIDENT_RATE_LIMITER?: { limit(input: { key: string }): Promise<{ success: boolean }> };
   AUTH_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
   EMAIL_RATE_LIMITER: { limit(input: { key: string }): Promise<{ success: boolean }> };
 };
@@ -147,8 +159,10 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
       url.pathname === "/api/pairing/approve";
 
     if (authSensitive) {
+      // Use Cloudflare's trusted visitor IP for pre-auth protection.
+      // Querystring client_id is attacker-controlled: never use it as the
+      // primary rate-limit identity for login, OAuth or device pairing.
       const actor =
-        url.searchParams.get("client_id") ||
         request.headers.get("cf-connecting-ip") ||
         request.headers.get("user-agent") ||
         "anonymous";
@@ -630,6 +644,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
     }
 
     if (url.pathname === "/mcp" || url.pathname === "/mcp/") {
+      const ingressLimit = await limitMcpIngress(request, env);
+      if (ingressLimit) return ingressLimit;
       const identity = await authenticateMcp(request, env);
       const validIdentity =
         identity && identity.resource === (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp"
@@ -774,8 +790,13 @@ export default {
     env: Env,
     ctx: ExecutionContext,
   ): Promise<Response> {
+    const started = Date.now();
+    const isMcpRequest = ["/mcp", "/mcp/"].includes(new URL(request.url).pathname);
     try {
       const response = await handleFetch(request, env, ctx);
+      if (isMcpRequest) recordMcpTelemetry(env, {
+        status: response.status, durationMs: Date.now() - started, method: request.method,
+      });
       if (response.status >= 500) {
         ctx.waitUntil(
           recordServiceIncident(
@@ -791,6 +812,9 @@ export default {
       }
       return response;
     } catch (error) {
+      if (isMcpRequest) recordMcpTelemetry(env, {
+        status: 500, durationMs: Date.now() - started, method: request.method,
+      });
       const message = error instanceof Error ? error.message : String(error);
       console.error("worker_unhandled_exception", { message });
       ctx.waitUntil(
@@ -827,6 +851,13 @@ export default {
     }
     if (controller.cron === "*/5 * * * *") {
       ctx.waitUntil(runSyntheticMonitor(env));
+      if (env.AUDIT_ARCHIVE_ENABLED === "1") {
+        ctx.waitUntil(archiveOldAudit(env).then(({ archived, batches }) => {
+          if (archived) console.info("audit_archive_completed", { archived, batches });
+        }).catch((error) => {
+          console.error("audit_archive_failed", { message: error instanceof Error ? error.message : String(error) });
+        }));
+      }
     }
   },
 };

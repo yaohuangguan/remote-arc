@@ -13,6 +13,7 @@ type EmailBinding = {
 export type MonitorEnv = {
   DB: D1Database;
   REGISTRY: DurableObjectNamespace;
+  INCIDENT_RATE_LIMITER?: { limit(input: { key: string }): Promise<{ success: boolean }> };
   PUBLIC_ORIGIN: string;
   APP_ORIGIN?: string;
   MARKETING_ORIGIN?: string;
@@ -113,6 +114,21 @@ export async function recordServiceIncident(
   env: MonitorEnv,
   incident: IncidentInput,
 ) {
+  // A 5xx flood must not insert an unbounded number of incident rows into
+  // the same D1 database that is already having trouble.
+  if (env.INCIDENT_RATE_LIMITER) {
+    try {
+      const { success } = await env.INCIDENT_RATE_LIMITER.limit({
+        key: incident.kind === "exception" ? "incident:exception" : "incident:5xx",
+      });
+      if (!success) return;
+    } catch (error) {
+      console.warn("incident_rate_limit_unavailable", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return; // Fail closed on incident persistence, not on the user request.
+    }
+  }
   const id = crypto.randomUUID();
   const createdAt = nowIso();
 

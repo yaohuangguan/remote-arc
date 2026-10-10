@@ -12,7 +12,7 @@
     "logs": {
       "enabled": true,
       "invocation_logs": true,
-      "head_sampling_rate": 1
+      "head_sampling_rate": 0.1
     }
   },
   "triggers": {
@@ -21,6 +21,12 @@
       "*/5 * * * *"
     ]
   },
+  "analytics_engine_datasets": [
+    {
+      "binding": "MCP_ANALYTICS",
+      "dataset": "remote_arc_mcp_health"
+    }
+  ],
   "durable_objects": {
     "bindings": [
       {
@@ -80,6 +86,9 @@
     "MARKETING_ORIGIN": "https://remotearc.app",
     "ALLOW_SIGNUPS": "1",
     "MONTHLY_TOOL_CALL_LIMIT": "10000",
+    "MCP_METRICS_SAMPLE_RATE": "0.1",
+    "AUDIT_ARCHIVE_ENABLED": "0",
+    "AUDIT_RETENTION_DAYS": "30",
     "OPERATOR_EMAIL": "moviegoer24@gmail.com",
     "REVIEWER_DEMO_DEVICE_ID": "review-desktop-v1",
     "REVIEWER_EMAIL": "openai-reviewer@remotearc.app",
@@ -93,6 +102,30 @@
       "namespace_id": "41001",
       "simple": {
         "limit": 120,
+        "period": 60
+      }
+    },
+    {
+      "name": "MCP_EDGE_RATE_LIMITER",
+      "namespace_id": "41004",
+      "simple": {
+        "limit": 600,
+        "period": 60
+      }
+    },
+    {
+      "name": "MCP_ANON_RATE_LIMITER",
+      "namespace_id": "41005",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    },
+    {
+      "name": "INCIDENT_RATE_LIMITER",
+      "namespace_id": "41006",
+      "simple": {
+        "limit": 6,
         "period": 60
       }
     },
