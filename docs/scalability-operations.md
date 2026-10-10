@@ -8,9 +8,9 @@ capacity certification.
 ## What is in the application
 
 - Per-user/client MCP rate limit: 120 requests / 60 seconds (existing).
-- New pre-D1 IP budget: 600 MCP HTTP requests / 60 seconds, and a separate 60 / 60 seconds limit for anonymous MCP discovery. IPs are from **Cloudflare-managed** `cf-connecting-ip` only.
+- New pre-D1 IP budget: 3,000 MCP HTTP requests / 60 seconds (kept deliberately generous because ChatGPT/Claude may share outbound IP addresses), and a separate 60 / 60 seconds limit for anonymous MCP discovery. IPs are from **Cloudflare-managed** `cf-connecting-ip` only.
 - Login/OAuth/device pairing: rate-limit identity now prefers Cloudflare's real IP rather than caller-supplied `client_id`. Existing auth/email budgets remain.
-- `MCP_ANALYTICS` emits sampled anonymous MCP HTTP latency/status and device-tool latency/outcome. Default sampling is 10% of successful requests, **100% of errors**; no tokens, IPs, device names, file names, prompts or tool parameters. The sampling rate is tunable with `MCP_METRICS_SAMPLE_RATE`.
+- Optional `MCP_ANALYTICS` emits sampled anonymous MCP HTTP latency/status and device-tool latency/outcome **once Analytics Engine has been enabled and the dataset binding deployed**. Default sampling is 10% of successful requests, **100% of errors**; no tokens, IPs, device names, file names, prompts or tool parameters. The sampling rate is tunable with `MCP_METRICS_SAMPLE_RATE`.
 - `AUDIT_ARCHIVE_ENABLED=0` by default: no audit deletion until a private R2 bucket, migration and verification are ready.
 - Optional `FREE_MONTHLY_TOOL_CALL_LIMIT` lets the operator give free accounts a lower budget than Plus; *absent it*, current 10,000-call behavior is unchanged. Admin stays exempt. Existing valid Plus grants count as Plus.
 - Existing global account security pause, device permission system, Undo, and 45-second device timeout are unchanged.
@@ -33,8 +33,24 @@ can cause overload even when storage is well below its 10 GB Paid limit.
 
 ## MCP error rate / P95 latency
 
-Use Cloudflare Analytics Engine dataset `remote_arc_mcp_health`, after the
-Worker deployment has created the dataset and traffic has generated points.
+**Deployment prerequisite:** Cloudflare API error `10089` means Analytics
+Engine is not yet activated for this account. To avoid blocking all production
+releases, the `MCP_ANALYTICS` binding is intentionally omitted until you
+enable Analytics Engine in Cloudflare Dashboard > Workers & Pages >
+Analytics Engine. Then add this top-level Wrangler binding and redeploy:
+
+```json
+"analytics_engine_datasets": [
+  { "binding": "MCP_ANALYTICS", "dataset": "remote_arc_mcp_health" }
+]
+```
+
+Until activation, the existing Cloudflare Workers native metrics/observability
+and D1 Dashboard metrics still work, but the custom MCP HTTP/tool P95 dataset
+will have **no data**. Do not claim that custom metric collection is active.
+
+After activation, use Cloudflare Analytics Engine dataset
+`remote_arc_mcp_health` once traffic has generated points.
 The dataset schema is:
 
 | Column | Value |
@@ -126,8 +142,7 @@ They protect D1 from most untrusted bursts but **do not remove the cost of
 a distributed request flood before Worker execution**.
 
 Configure a zone-level WAF rate-limit rule for `mcp.remotearc.app/mcp`
-and `/mcp/` (e.g. start with 300 requests/60 sec/IP, **Block** or 429,
-review against real shared NAT/enterprise customers). API clients cannot
+and `/mcp/` (start by monitoring; if necessary test a conservative 2,000–3,000 requests/60 sec/IP, **Block** or 429, and review against real ChatGPT/Claude shared egress IPs). API clients cannot
 complete interactive JavaScript challenges. Check Cloudflare account/plan
 availability and test ChatGPT, Claude, Cursor connectors before enforcement.
 Preserve normal OAuth discovery endpoints, which clients need to authenticate.

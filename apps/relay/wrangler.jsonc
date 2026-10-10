@@ -21,12 +21,6 @@
       "*/5 * * * *"
     ]
   },
-  "analytics_engine_datasets": [
-    {
-      "binding": "MCP_ANALYTICS",
-      "dataset": "remote_arc_mcp_health"
-    }
-  ],
   "durable_objects": {
     "bindings": [
       {
@@ -109,7 +103,7 @@
       "name": "MCP_EDGE_RATE_LIMITER",
       "namespace_id": "41004",
       "simple": {
-        "limit": 600,
+        "limit": 3000,
         "period": 60
       }
     },
