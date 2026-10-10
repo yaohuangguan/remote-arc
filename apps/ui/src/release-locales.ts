@@ -1,5 +1,6 @@
 /** Reviewed summaries for the original version history. Full source notes remain available in English. */
 export const releaseChinese: Record<string, { title: string; summary: string }> = {
+ "0.6.1": {title:"0.6.1 预发布：原生暂停、恢复与完全断开",summary:"RC.3 至 RC.5 完善设备生命周期控制：Dashboard 可暂停执行、经授权恢复，或完全断开并关闭自动恢复。暂停状态仅保留受监督的唤醒连接，不开放文件、终端等普通工具；执行权限在前后台切换和重启后仍保持暂停。另改进 Windows 登录后台启动与 macOS 旧服务迁移。本版本仍处于预发布阶段。"},
  "0.6.0": {title:"原生 Go Agent 与执行核心成为默认运行时",summary:"默认使用完整原生 Go Agent，包含文件、进程、策略及 Undo 执行核心；保留 TypeScript 兼容回退。加强 Windows 路径安全、跨平台恢复测试、Homebrew 和六个平台二进制发布，并区分文件 Atomic 与 Durable 持久化策略。"},
  "0.5.0": {title:"完整原生 Go 设备运行时",summary:"新增可选的完整 Go Agent：包括配对、Relay 连接、文件及进程工具、Local Undo、任务检查点、日志和后台恢复，同时保持 TS/Go 身份与执行锁兼容。"},
  "0.4.8": {title:"Dashboard 支持设备本地执行日志",summary:"在 Dashboard 中按需查看配对电脑的本地工具调用、执行结果、重连与恢复事件，不把设备标准输出或文件内容长期保存到托管审计数据中。"},
