@@ -40,7 +40,7 @@ export function renderOtpEmail(code: string) {
 <title>Remote Arc verification code</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f3f7fa;color:#193243;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;">
-<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;color:transparent;">Your Remote Arc code: ${code}. Expires in 10 minutes.&#8199;&#65279;&#847;&#8199;&#65279;</div>
+<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;color:transparent;">Your one-time Remote Arc sign-in code expires in 10 minutes.&#8199;&#65279;&#847;&#8199;&#65279;</div>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#f3f7fa" style="border-collapse:collapse;background-color:#f3f7fa;">
 <tr><td align="center" style="padding:36px 16px 42px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:560px;table-layout:fixed;border-collapse:separate;border-spacing:0;">
