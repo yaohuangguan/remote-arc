@@ -8,7 +8,7 @@ capacity certification.
 ## What is in the application
 
 - Per-user/client MCP rate limit: 120 requests / 60 seconds (existing).
-- New pre-D1 IP budget: 600 MCP HTTP requests / 60 seconds, and a separate 60 / 60 seconds limit for anonymous MCP discovery. IPs are from **Cloudflare-managed** `cf-connecting-ip` only.
+- New pre-D1 IP budget: 3,000 MCP HTTP requests / 60 seconds (kept deliberately generous because ChatGPT/Claude may share outbound IP addresses), and a separate 60 / 60 seconds limit for anonymous MCP discovery. IPs are from **Cloudflare-managed** `cf-connecting-ip` only.
 - Login/OAuth/device pairing: rate-limit identity now prefers Cloudflare's real IP rather than caller-supplied `client_id`. Existing auth/email budgets remain.
 - Optional `MCP_ANALYTICS` emits sampled anonymous MCP HTTP latency/status and device-tool latency/outcome **once Analytics Engine has been enabled and the dataset binding deployed**. Default sampling is 10% of successful requests, **100% of errors**; no tokens, IPs, device names, file names, prompts or tool parameters. The sampling rate is tunable with `MCP_METRICS_SAMPLE_RATE`.
 - `AUDIT_ARCHIVE_ENABLED=0` by default: no audit deletion until a private R2 bucket, migration and verification are ready.
@@ -142,8 +142,7 @@ They protect D1 from most untrusted bursts but **do not remove the cost of
 a distributed request flood before Worker execution**.
 
 Configure a zone-level WAF rate-limit rule for `mcp.remotearc.app/mcp`
-and `/mcp/` (e.g. start with 300 requests/60 sec/IP, **Block** or 429,
-review against real shared NAT/enterprise customers). API clients cannot
+and `/mcp/` (start by monitoring; if necessary test a conservative 2,000–3,000 requests/60 sec/IP, **Block** or 429, and review against real ChatGPT/Claude shared egress IPs). API clients cannot
 complete interactive JavaScript challenges. Check Cloudflare account/plan
 availability and test ChatGPT, Claude, Cursor connectors before enforcement.
 Preserve normal OAuth discovery endpoints, which clients need to authenticate.

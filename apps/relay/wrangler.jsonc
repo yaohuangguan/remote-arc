@@ -103,7 +103,7 @@
       "name": "MCP_EDGE_RATE_LIMITER",
       "namespace_id": "41004",
       "simple": {
-        "limit": 600,
+        "limit": 3000,
         "period": 60
       }
     },
