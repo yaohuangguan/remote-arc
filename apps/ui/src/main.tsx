@@ -2368,7 +2368,7 @@ function Landing({ user }: { user?: User | null }) {
           )}</p>
           <div className="heroAiPlanNote">
             <strong>{tr("No model API key to configure. No pay-per-token API bill to top up.", "不用配置模型 API Key，也不用额外充值按量计费的 API Token。")}</strong>
-            <span>{tr("Some free AI chat plans support custom MCP connectors too. Your provider's tool availability and normal chat limits still apply.", "部分免费 AI 聊天套餐也支持自定义 MCP 连接器；具体工具权限与聊天额度仍由 AI 服务商决定。")}</span>
+            <span>{tr("A compatible free chat can be enough—for example, Claude Free currently supports one custom MCP connector. Your AI provider’s tool permissions, chat limits and Remote Arc tool-call limits still apply.", "如果免费聊天套餐支持自定义 MCP，也可以直接使用，例如 Claude Free 目前支持一个自定义连接器。AI 服务商的工具权限、聊天额度和 Remote Arc 工具调用额度仍然适用。")}</span>
           </div>
           <div className="heroPrimaryCommand">
             <span>{tr("START HERE · RUN ON YOUR COMPUTER", "从这里开始 · 在电脑上运行")}</span>
