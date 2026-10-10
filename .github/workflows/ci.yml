@@ -39,7 +39,7 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: apps/agent/go.mod
           cache-dependency-path: |
@@ -79,7 +79,7 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: apps/agent/go.mod
           cache-dependency-path: |
