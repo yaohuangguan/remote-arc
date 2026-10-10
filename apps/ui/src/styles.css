@@ -9817,6 +9817,75 @@ body{font-size:18px;line-height:1.6}
 .installManualHeader .installClientSwitcher{
   margin:0 0 28px;
 }
+.installManualHeader .toolPageTitleRow{
+  display:block;
+  max-width:870px;
+}
+.installExampleFirst{
+  max-width:1160px;
+  padding:34px 0 0;
+  scroll-margin-top:92px;
+}
+.installExampleIntro{max-width:820px}
+.installExampleIntro .eyebrow{display:block;margin-bottom:8px}
+.installExampleIntro h2,
+.installQuickStart h2{
+  margin:0 0 9px;
+  font-size:clamp(22px,2.4vw,28px);
+  line-height:1.26;
+  letter-spacing:-.025em;
+}
+.installExampleIntro p,
+.installQuickStartCopy p{
+  margin:0;
+  color:var(--muted);
+  font-size:15px;
+  line-height:1.75;
+}
+.installExampleFirst .remoteSessionDemo{
+  margin-top:22px;
+  border-radius:17px;
+}
+.installQuickStart{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(340px,.85fr);
+  gap:20px 34px;
+  align-items:center;
+  max-width:1160px;
+  margin:34px 0 0;
+  padding:25px 0 27px;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  scroll-margin-top:92px;
+}
+.installQuickStartCopy .eyebrow{display:block;margin-bottom:8px}
+.installQuickStart .installPrimaryCommand{max-width:100%}
+.installQuickStartMcp{
+  grid-column:1/-1;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px 14px;
+  margin-top:2px;
+  color:var(--muted);
+  font-size:12px;
+}
+.installQuickStartMcp>span{font-weight:650}
+.installQuickStartMcp>code{
+  overflow-wrap:anywhere;
+  color:var(--sky-light);
+  font-size:13px;
+}
+.installQuickStartMcp>button{flex-shrink:0}
+@media(max-width:900px){
+  .installQuickStart{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .installExampleFirst{padding-top:26px}
+  .installExampleFirst .remoteSessionDemo{margin-top:16px}
+  .installQuickStart{margin-top:24px;padding:22px 0}
+}
+
 .toolPageTitleRow{
   display:grid;
   grid-template-columns:minmax(0,1fr) minmax(340px,.72fr);

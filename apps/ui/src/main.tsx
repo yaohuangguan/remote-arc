@@ -2160,14 +2160,6 @@ function ClientInstallPage({
               <h1>{config.name} {tr("installation", "安装")}</h1>
               <p>{config.intro}</p>
             </div>
-            <div className="installPrimaryCommand compactCommand">
-              <span>{tr("CONNECT THIS MCP SERVER IN YOUR AI", "在 AI 平台里添加此 MCP 地址")}</span>
-              <div className="installHeroCommand">
-                <code>{MCP_ENDPOINT}</code>
-                <CopyButton value={MCP_ENDPOINT} />
-              </div>
-              <small>{tr("Remote HTTPS + OAuth · paste into your MCP App / Connector setup", "远程 HTTPS + OAuth · 粘贴至平台的 MCP App / Connector 配置")}</small>
-            </div>
           </div>
 
           <div className="toolPageStatusLine">
@@ -2175,6 +2167,42 @@ function ClientInstallPage({
             <a href={config.externalHref} target="_blank" rel="noreferrer">{config.externalLabel} ↗</a>
           </div>
         </header>
+
+        <section id="installation-example" className="installExampleFirst">
+          <div className="installExampleIntro">
+            <span className="eyebrow">{tr("SEE IT IN ACTION", "看看实际效果")}</span>
+            <h2>{tr("Example session", "示例会话")}</h2>
+            <p>{tr(
+              "See what a Remote Arc conversation looks like: the AI selects a paired computer, calls approved tools, and returns the result right in your chat.",
+              "先看看 Remote Arc 如何工作：AI 选择已配对的电脑，调用该设备允许的工具，并直接在聊天中返回结果。",
+            )}</p>
+          </div>
+          <InstallTypewriterDemo config={config.demo} />
+        </section>
+
+        <section id="installation-command" className="installQuickStart" aria-label={tr("Install Remote Arc on your computer", "在电脑上安装 Remote Arc")}>
+          <div className="installQuickStartCopy">
+            <span className="eyebrow">{tr("NEXT · GET STARTED", "下一步 · 开始安装")}</span>
+            <h2>{tr("Install and pair your computer", "安装并配对你的电脑")}</h2>
+            <p>{tr(
+              "Run this on the Windows, macOS or Linux computer you want " + config.name + " to use. Then connect the MCP App / Connector below.",
+              "在你希望 " + config.name + " 使用的 Windows、macOS 或 Linux 电脑上运行，然后按下方步骤连接 MCP App / Connector。",
+            )}</p>
+          </div>
+          <div className="installPrimaryCommand compactCommand">
+            <span>{tr("RUN ON YOUR COMPUTER", "在你的电脑上运行")}</span>
+            <div className="installHeroCommand">
+              <code>npx remotelink</code>
+              <CopyButton value="npx remotelink" />
+            </div>
+            <small>{tr("Pairs your computer through browser approval · requires Node.js for this npx entry", "通过浏览器确认完成配对 · 此 npx 安装方式需要 Node.js")}</small>
+          </div>
+          <div className="installQuickStartMcp">
+            <span>{tr("NEXT · ADD THIS REMOTE MCP ADDRESS IN YOUR AI CLIENT", "接下来 · 在 AI 客户端添加这个远程 MCP 地址")}</span>
+            <code>{MCP_ENDPOINT}</code>
+            <CopyButton value={MCP_ENDPOINT} />
+          </div>
+        </section>
 
         <div className="installMustDo" aria-label={tr("Both setup steps are required", "安装必须完成两端设置")}>
           <article className="installMustDoCard">
@@ -2187,7 +2215,7 @@ function ClientInstallPage({
             <span>{tr("REQUIRED 02 · LOCAL COMPUTER", "必需 02 · 目标电脑")}</span>
             <h2>{tr("Start and pair the local agent", "启动并配对本地 Agent")}</h2>
             <p>{tr("Run the CLI on the machine you want the AI to use. The MCP connection alone cannot access local files.", "在需要使用的电脑上运行本地命令。只有 MCP 连接仍无法访问本机文件。")}</p>
-            <div className="docsCodeLine"><code>npx remotelink</code><CopyButton value="npx remotelink" /></div>
+            <a href="#installation-command">{tr("Copy the installation command", "复制安装命令")} ↗</a>
             <a href="#installation">{tr("Device pairing steps", "查看电脑配对步骤")} ↗</a>
           </article>
         </div>
@@ -2200,9 +2228,10 @@ function ClientInstallPage({
         <div className="manualLayout">
           <aside className="manualToc">
             <strong>{tr("SETUP", "配置")}</strong>
+            <a href="#installation-example">{tr("Example session", "示例会话")}</a>
+            <a href="#installation-command">{tr("Installation command", "安装命令")}</a>
             <a href="#installation-client">{tr("MCP App / Connector (required)", "MCP App / Connector（必需）")}</a>
             <a href="#installation">{tr("Computer setup (required)", "电脑端配置（必需）")}</a>
-            <a href="#installation-example">{tr("Example session", "示例会话")}</a>
             <a href="/connect-ai">{tr("Connect another AI", "连接其他 AI")}</a>
             <a href="/docs">{tr("Documentation", "文档")}</a>
           </aside>
@@ -2256,15 +2285,6 @@ function ClientInstallPage({
                   "更换 AI 客户端不会改变设备策略。可信写入区域、Sensitive Path Policy、Local Undo 和逐设备 Skill 列表仍然生效。",
                 )}</p>
               </div>
-            </section>
-
-            <section id="installation-example">
-              <h2>{tr("Example session", "示例会话")}</h2>
-              <p>{tr(
-                "This is the shape of a normal Remote Arc request after setup: the AI chooses a paired device, calls only the tools allowed for that device, and receives the result in the same conversation.",
-                "完成配置后，一次普通 Remote Arc 请求大致如下：AI 选择已配对设备，只调用该设备允许的工具，并在同一对话中收到结果。",
-              )}</p>
-              <InstallTypewriterDemo config={config.demo} />
             </section>
 
             <section className="manualFooterLinks">
