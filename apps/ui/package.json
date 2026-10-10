@@ -16,9 +16,9 @@
   },
   "dependencies": {
     "@remotearc/protocol": "workspace:*",
-    "@vitejs/plugin-react": "^5.0.4",
-    "vite": "^7.1.7",
-    "typescript": "^6.0.3",
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.3",
+    "typescript": "^7.0.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
