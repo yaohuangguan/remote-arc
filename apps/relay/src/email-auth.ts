@@ -6,6 +6,7 @@ import {
   sessionCookie,
 } from "./auth.js";
 import { authPage, escapeAuthHtml } from "./auth-page.js";
+import { renderOtpEmail } from "./email-template.js";
 import { emailFormToken, validEmailFormToken } from "./email-form-csrf.js";
 
 type EmailEnv = {
@@ -157,6 +158,7 @@ export async function handleEmailCodeRequest(request: Request, env: EmailEnv) {
 
   let sent = false;
   try {
+    const emailMessage = renderOtpEmail(code);
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -166,9 +168,7 @@ export async function handleEmailCodeRequest(request: Request, env: EmailEnv) {
       body: JSON.stringify({
         from: env.EMAIL_FROM || "Remote Arc <login@remotearc.app>",
         to: [email],
-        subject: "Your Remote Arc sign-in code",
-        text: `Your Remote Arc sign-in code is ${code}. It expires in 10 minutes. If you didn't request it, ignore this message.`,
-        html: `<div style="font:16px/1.6 system-ui,sans-serif;color:#132937"><h2>Sign in to Remote Arc</h2><p>Your one-time verification code:</p><p style="font-size:32px;font-weight:750;letter-spacing:7px">${code}</p><p>Expires in 10 minutes. If this wasn't you, simply ignore the message.</p></div>`,
+        ...emailMessage,
       }),
     });
     sent = response.ok;
