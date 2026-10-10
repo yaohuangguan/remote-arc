@@ -1,0 +1,76 @@
+.claudeWalkthrough { margin: 28px 0 24px; min-width: 0; }
+.claudeGuideIntro { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.claudeGuideIntro h3 { color:var(--text); font-size:clamp(21px,2.5vw,28px); line-height:1.25; margin:6px 0 7px; letter-spacing:-.025em; }
+.claudeGuideIntro p { margin:0; color:var(--muted); font-size:15px; line-height:1.65; }
+.claudeGuideCount { color:var(--text); white-space:nowrap; font:750 26px ui-monospace,SFMono-Regular,Consolas,monospace; }
+.claudeGuideCount span { color:var(--muted); font-size:14px; }
+.claudeGuideLayout { display:flex; flex-direction:column; gap:12px; min-width:0; }
+.claudeGuideNav { display:flex; gap:8px; overflow-x:auto; scrollbar-width:thin; padding:2px 2px 10px; scroll-snap-type:x proximity; }
+.claudeGuideStep { display:flex; align-items:center; gap:10px; flex:1 0 0; min-width:138px; padding:13px 14px; text-align:left; border-radius:11px; cursor:pointer; border:1px solid var(--line); background:var(--panel); color:var(--text); font:inherit; scroll-snap-align:start; transition:border-color .15s,background .15s; }
+.claudeGuideStep:hover { border-color:var(--sky-light); }
+.claudeGuideStep.active { border-color:var(--sky); background:var(--sky-soft); box-shadow:inset 0 -3px 0 var(--sky); }
+.claudeGuideStepNum { display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:var(--sky-soft);color:var(--sky-light);font:700 12px ui-monospace,SFMono-Regular,Consolas,monospace; }
+.claudeGuideStepText { min-width:0;display:flex;flex-direction:column;gap:3px; }
+.claudeGuideStepText small { color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.06em; }
+.claudeGuideStepText strong { color:var(--text);font-size:13px;line-height:1.45;font-weight:700; }
+.claudeGuideStep:focus-visible,.claudeGuidePreview:focus-visible,.claudeGuideControls button:focus-visible,.claudeGuideModalHeader button:focus-visible,.claudeGuideModalActions a:focus-visible {outline:2px solid var(--sky);outline-offset:3px;}
+.claudeGuideMain { background:var(--panel); border:1px solid var(--line); border-radius:16px; overflow:hidden; min-width:0; }
+.claudeGuideText { padding:24px 30px 17px; max-width:920px; }
+.claudeGuideText>span { color:var(--sky-light);font-size:12px;font-weight:800;letter-spacing:.09em; }
+.claudeGuideText h4 { color:var(--text);font-size:clamp(18px,2.1vw,23px);line-height:1.35;letter-spacing:-.015em;margin:7px 0 9px; }
+.claudeGuideText p { margin:0;color:var(--muted);font-size:15px;line-height:1.75; }
+.claudeGuidePreview { display:block; width:calc(100% - 48px); margin:0 24px; padding:0; cursor:zoom-in; border:1px solid #363c43; background:#111; color:#fff; border-radius:12px; overflow:hidden; font:inherit; }
+.claudeGuidePreview:hover { border-color:#718692; }
+.claudeGuideImageArea { width:100%; display:flex; justify-content:center; align-items:center; padding:20px; background:#111; box-sizing:border-box; min-width:0; }
+.claudeGuideImageArea img { display:block; max-width:100%; width:auto; height:auto; object-fit:contain; border-radius:5px; }
+.claudeGuideImageArea--chatgpt img { width:min(100%,680px); }
+.claudeGuideImageArea--claude img { width:min(100%,1100px); }
+.claudeGuidePreviewCaption { display:flex; justify-content:center; gap:7px;align-items:center; padding:11px 14px; background:#1b1b1b; border-top:1px solid #343434; font-size:12px; font-weight:650; color:#c7d6db; }
+.claudeGuideHint { margin:0;padding:15px 30px 0;display:flex;gap:10px;align-items:flex-start;color:var(--muted);font-size:13px;line-height:1.65; }
+.claudeGuideHint span { color:var(--sky-light);font-size:16px; }
+.claudeGuideControls { padding:21px 30px 24px;display:flex;justify-content:space-between;align-items:center;gap:18px; }
+.claudeGuideControls button { flex:0 0 auto;background:var(--panel);color:var(--text);border:1px solid var(--line);padding:12px 16px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer; }
+.claudeGuideControls button:last-child { color:#fff;background:var(--sky);border-color:var(--sky); }
+.claudeGuideControls button:disabled { opacity:.4;cursor:not-allowed; }
+.claudeGuideProgress { display:block;height:5px;flex:1;max-width:220px;background:var(--line);border-radius:99px;overflow:hidden; }
+.claudeGuideProgress i { display:block;height:100%;background:var(--sky);transition:width .2s ease; }
+.claudeGuideOverlay { position:fixed;inset:0;z-index:10050;display:grid;place-items:center;overflow:auto;padding:20px;background:rgba(0,0,0,.85); }
+.claudeGuideModal { width:min(1320px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:15px;box-shadow:0 18px 90px #0008; }
+.claudeGuideModalHeader { display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;color:var(--text); }
+.claudeGuideModalHeader strong { font-size:16px;line-height:1.4; }
+.claudeGuideModalActions { display:flex;align-items:center;gap:14px; }
+.claudeGuideModalActions a { color:var(--sky-light);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap; }
+.claudeGuideModalActions a:hover {text-decoration:underline;}
+.claudeGuideModalHeader button { flex:0 0 34px;height:34px;border:1px solid var(--line);border-radius:7px;color:var(--text);background:transparent;font-size:22px;cursor:pointer; }
+.claudeGuideModalContent {background:#111;padding:20px;}
+.claudeGuideModalContent .claudeGuideImageArea {padding:0;}
+.claudeGuideModalContent .claudeGuideImageArea img {width:auto;max-width:100%;height:auto;max-height:none;}
+.claudeGuideModal>p {color:var(--muted);font-size:13px;line-height:1.7;margin:14px 20px 19px;}
+@media(max-width:900px) {
+ .claudeGuideStep {flex:0 0 180px;}
+ .claudeGuideText {padding:20px 20px 15px;}
+ .claudeGuidePreview {width:calc(100% - 32px);margin:0 16px;}
+ .claudeGuideImageArea {padding:14px;}
+ .claudeGuideHint {padding:14px 20px 0;}
+ .claudeGuideControls {padding:18px 20px 20px;}
+}
+@media(max-width:520px) {
+ .claudeGuideIntro {align-items:start;}
+ .claudeGuideCount {font-size:19px;}
+ .claudeGuideStep {flex-basis:158px;padding:11px;}
+ .claudeGuideText {padding:16px 15px 13px;}
+ .claudeGuideText p {font-size:14px;}
+ .claudeGuidePreview {width:calc(100% - 20px);margin:0 10px;}
+ .claudeGuideImageArea {padding:9px;}
+ .claudeGuideHint {padding:11px 13px 0;}
+ .claudeGuideControls {gap:10px;padding:16px 12px 18px;}
+ .claudeGuideControls button {font-size:12px;padding:10px 11px;}
+ .claudeGuideOverlay {padding:8px;}
+ .claudeGuideModal {max-height:calc(100dvh - 16px);}
+ .claudeGuideModalHeader {padding:12px;gap:8px;}
+ .claudeGuideModalHeader strong {font-size:13px;}
+ .claudeGuideModalActions {gap:7px;}
+ .claudeGuideModalActions a {font-size:11px;}
+ .claudeGuideModalContent {padding:8px;}
+}
+@media(prefers-reduced-motion:reduce) {.claudeGuideStep,.claudeGuideProgress i {transition:none;}}

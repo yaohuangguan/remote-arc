@@ -2192,6 +2192,11 @@ function ClientInstallPage({
           </article>
         </div>
 
+        {slug !== "cursor" && <div className="installFullWidthGuide">
+          <ClientMcpGuide client={slug} endpoint={MCP_ENDPOINT}
+            cursorInstallUrl={cursorMcpInstallUrl()} copyEndpoint={<CopyButton value={MCP_ENDPOINT} />} />
+        </div>}
+
         <div className="manualLayout">
           <aside className="manualToc">
             <strong>{tr("SETUP", "配置")}</strong>
@@ -2203,8 +2208,8 @@ function ClientInstallPage({
           </aside>
 
           <article className="manualArticle">
-            <ClientMcpGuide client={slug} endpoint={MCP_ENDPOINT}
-              cursorInstallUrl={cursorMcpInstallUrl()} copyEndpoint={<CopyButton value={MCP_ENDPOINT} />} />
+            {slug === "cursor" && <ClientMcpGuide client={slug} endpoint={MCP_ENDPOINT}
+              cursorInstallUrl={cursorMcpInstallUrl()} copyEndpoint={<CopyButton value={MCP_ENDPOINT} />} />}
             <section id="installation">
               <h2>{tr("Setup", "配置")}</h2>
               <p>{tr(
