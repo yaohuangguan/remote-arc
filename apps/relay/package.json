@@ -11,7 +11,7 @@
     "test:security": "tsx scripts/host-routing-test.ts && tsx scripts/oauth-security-test.ts && tsx scripts/email-auth-test.ts && tsx scripts/security-controls-test.ts && tsx scripts/approval-broker-test.ts && tsx scripts/mcp-error-contract-test.ts && tsx scripts/file-resource-chunk-test.ts && tsx scripts/device-revocation-test.ts && tsx scripts/device-pause-test.ts && tsx scripts/scalability-guardrails-test.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "^2.1.0",
+    "@modelcontextprotocol/server": "^2.3.1",
     "@remotearc/protocol": "workspace:*",
     "zod": "^4.6.5"
   },
@@ -20,6 +20,6 @@
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "wrangler": "^4.38.0",
-    "ws": "^8.18.3"
+    "ws": "^8.22.0"
   }
 }
