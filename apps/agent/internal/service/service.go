@@ -66,6 +66,31 @@ func RunCommand(ctx context.Context, name string, args ...string) (string, error
 }
 func (c *Controller) dir() string    { return filepath.Join(c.Home, ".remotearc", "agent") }
 func (c *Controller) marker() string { return filepath.Join(c.dir(), "go-runtime.json") }
+
+// Windows HKCU Run must never point directly at the console-subsystem Go
+// executable: Windows creates a visible console on login, and closing that
+// window terminates the background supervisor. Windows Script Host (wscript)
+// is a GUI-subsystem host and launches the supervisor with window style 0.
+func (c *Controller) windowsStartupScriptPath() string {
+	return filepath.Join(c.dir(), "windows-autostart.vbs")
+}
+func windowsScriptEscape(s string) string { return strings.ReplaceAll(s, "\"", "\"\"") }
+func windowsStartupScript(binary string) string {
+	return "Option Explicit\r\n" +
+		"Dim shell\r\n" +
+		"Set shell = CreateObject(\"WScript.Shell\")\r\n" +
+		"shell.Run Chr(34) & \"" + windowsScriptEscape(binary) + "\" & Chr(34) & \" --supervise\", 0, False\r\n"
+}
+func (c *Controller) windowsRunValue() string {
+	return "wscript.exe //B //Nologo \"" + c.windowsStartupScriptPath() + "\""
+}
+func (c *Controller) writeWindowsStartupScript(binary string) error {
+	return config.DurableWrite(c.windowsStartupScriptPath(), []byte(windowsStartupScript(binary)), 0600)
+}
+func (c *Controller) installedWindowsStartupScript(binary string) bool {
+	b, e := os.ReadFile(c.windowsStartupScriptPath())
+	return e == nil && string(b) == windowsStartupScript(binary)
+}
 func (c *Controller) read() (Registration, error) {
 	var r Registration
 	b, e := os.ReadFile(c.marker())
@@ -146,7 +171,9 @@ func (c *Controller) Status(ctx context.Context) Status {
 		s.Service = "registry-run"
 		key := `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 		out, e := c.Run(ctx, "reg.exe", "query", key, "/v", "Remote Arc Agent")
-		s.Enabled = e == nil && reg.Engine == "go" && strings.Contains(out, reg.Binary)
+		s.Enabled = e == nil && reg.Engine == "go" && reg.Binary != "" &&
+			strings.Contains(strings.ToLower(out), strings.ToLower(c.windowsRunValue())) &&
+			c.installedWindowsStartupScript(reg.Binary)
 		if reg.Binary != "" {
 			s.PID = c.pid(ctx, reg.Binary, "--supervise")
 			s.WorkerPID = c.pid(ctx, reg.Binary, "--agent")
@@ -190,10 +217,37 @@ func (c *Controller) installBinary() (Registration, error) {
 	}
 	return reg, nil
 }
+
+// launchd keeps the loaded job definition in memory. Updating a plist alone
+// does not replace an existing label, even when launchctl reports no live PID.
+func (c *Controller) loadedMacJob(ctx context.Context) (loaded bool, active bool, program string) {
+	if c.Platform != "darwin" {
+		return false, false, ""
+	}
+	out, err := c.Run(ctx, "launchctl", "print", "gui/"+c.UID+"/"+Label)
+	if err != nil {
+		return false, false, ""
+	}
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "program = ") {
+			program = strings.TrimSpace(strings.TrimPrefix(line, "program = "))
+		}
+	}
+	return true, regexp.MustCompile(`(?m)^\s*pid\s*=\s*[1-9]\d*`).MatchString(out), program
+}
+
 func (c *Controller) Enable(ctx context.Context) (Status, error) {
 	current := c.Status(ctx)
 	if c.Foreign(ctx) {
 		return current, errors.New("A TS background service is registered. Disable TS recovery and stop its agent locally before selecting Go recovery.")
+	}
+	if c.Platform == "darwin" {
+		loaded, running, program := c.loadedMacJob(ctx)
+		reg, _ := c.read()
+		if loaded && running && (program == "" || reg.Binary == "" || program != reg.Binary) {
+			return current, errors.New("An existing launchd Agent is running from a different runtime or binary. Stop that Agent explicitly before switching background recovery.")
+		}
 	}
 	if current.Enabled && current.Active && current.Version == c.Version {
 		return current, nil
@@ -211,7 +265,9 @@ func (c *Controller) Enable(ctx context.Context) (Status, error) {
 		case "linux":
 			_, e = c.Run(ctx, "systemctl", "--user", "enable", Unit)
 		case "windows":
-			_, e = c.Run(ctx, "reg.exe", "add", `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, "/v", "Remote Arc Agent", "/t", "REG_SZ", "/d", `"`+reg.Binary+`" --supervise`, "/f")
+			if e = c.writeWindowsStartupScript(reg.Binary); e == nil {
+				_, e = c.Run(ctx, "reg.exe", "add", `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, "/v", "Remote Arc Agent", "/t", "REG_SZ", "/d", c.windowsRunValue(), "/f")
+			}
 		}
 		return c.Status(ctx), e
 	}
@@ -229,6 +285,14 @@ func (c *Controller) Enable(ctx context.Context) (Status, error) {
 	run := func(name string, args ...string) error { _, e := c.Run(ctx, name, args...); return e }
 	switch c.Platform {
 	case "darwin":
+		// An idle job with the same label may still contain an old Node/TS
+		// definition. Boot it out before rewriting and bootstrapping Go.
+		loaded, running, _ := c.loadedMacJob(ctx)
+		if loaded && !running {
+			if _, e = c.Run(ctx, "launchctl", "bootout", "gui/"+c.UID+"/"+Label); e != nil {
+				return current, fmt.Errorf("Could not unload stale launchd job before updating: %w", e)
+			}
+		}
 		plist := `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Label</key><string>` + Label + `</string><key>ProgramArguments</key><array><string>` + xml(reg.Binary) + `</string><string>--agent</string></array><key>RunAtLoad</key><true/><key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict><key>ThrottleInterval</key><integer>5</integer><key>StandardOutPath</key><string>` + xml(filepath.Join(logs, "agent.log")) + `</string><key>StandardErrorPath</key><string>` + xml(filepath.Join(logs, "agent-error.log")) + `</string></dict></plist>`
 		if current.Active {
 			_, _ = c.Run(ctx, "launchctl", "bootout", "gui/"+c.UID+"/"+Label)
@@ -248,10 +312,15 @@ func (c *Controller) Enable(ctx context.Context) (Status, error) {
 			e = run("systemctl", "--user", "enable", "--now", Unit)
 		}
 	case "windows":
-		command := `"` + reg.Binary + `" --supervise`
-		if e = run("reg.exe", "add", `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, "/v", "Remote Arc Agent", "/t", "REG_SZ", "/d", command, "/f"); e == nil {
-			script := `Start-Process -FilePath ` + psQuote(reg.Binary) + ` -ArgumentList '--supervise' -WindowStyle Hidden`
-			e = run("powershell.exe", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", script)
+		// Use the *same* silent launcher on initial enable and at user login.
+		// The Windows Script Host process exits after spawning the hidden
+		// supervisor; the Go supervisor still owns the existing execution
+		// and supervisor leases.
+		if e = c.writeWindowsStartupScript(reg.Binary); e == nil {
+			e = run("reg.exe", "add", `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, "/v", "Remote Arc Agent", "/t", "REG_SZ", "/d", c.windowsRunValue(), "/f")
+		}
+		if e == nil {
+			e = run("wscript.exe", "//B", "//Nologo", c.windowsStartupScriptPath())
 		}
 	}
 	if e != nil {
@@ -311,7 +380,19 @@ func (c *Controller) Foreign(ctx context.Context) bool {
 	reg, _ := c.read()
 	if c.Platform == "windows" {
 		out, e := c.Run(ctx, "reg.exe", "query", `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, "/v", "Remote Arc Agent")
-		return e == nil && (reg.Engine != "go" || reg.Binary == "" || !strings.Contains(out, reg.Binary))
+		if e != nil {
+			return false
+		}
+		if reg.Engine != "go" || reg.Binary == "" {
+			return true
+		}
+		// Accept our old direct-console Run registration as owned, so it can
+		// be safely migrated to the silent launcher. Other user startup
+		// entries must never be silently overwritten.
+		newOwned := strings.Contains(strings.ToLower(out), strings.ToLower(c.windowsRunValue())) && c.installedWindowsStartupScript(reg.Binary)
+		oldOwned := strings.Contains(strings.ToLower(out), strings.ToLower(reg.Binary)) &&
+			strings.Contains(strings.ToLower(out), "--supervise")
+		return !newOwned && !oldOwned
 	}
 	b, e := os.ReadFile(c.serviceFile())
 	if e != nil {

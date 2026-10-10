@@ -25,7 +25,18 @@ if (candidateMatch) {
 const mode = process.argv[2] || "--write";
 if (mode === "--notes") {
   const requested = process.argv[3] || latest.version;
-  const release = releases.find((item) => item.version === requested);
+  let release = releases.find((item) => item.version === requested);
+  if (!release && candidateMatch && requested === cliPackage.version) {
+    const header = "## " + candidateMatch[1] + " - Unreleased";
+    const start = changelog.indexOf(header);
+    if (start < 0) throw new Error("Candidate notes require an Unreleased CHANGELOG section.");
+    const next = changelog.indexOf("\n## ", start + header.length);
+    const section = changelog.slice(start + header.length, next < 0 ? undefined : next);
+    const title = section.match(/^###\s+(.+)$/m)?.[1];
+    const changes = [...section.matchAll(/^-\s+(.+)$/gm)].map((match) => match[1].trim());
+    if (!title || !changes.length) throw new Error("Candidate release notes are incomplete.");
+    release = { version: requested, title: requested + " — " + title, date: new Date().toISOString().slice(0, 10), changes };
+  }
   if (!release) throw new Error("Release " + requested + " was not found in CHANGELOG.md");
   process.stdout.write(releaseNotesMarkdown(release));
   process.exit(0);

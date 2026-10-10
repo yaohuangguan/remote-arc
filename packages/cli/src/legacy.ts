@@ -552,6 +552,7 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
               "undo_history_v1",
               "background_agent_v1",
               "background_recovery_v2",
+              "device_stop_v1",
             ],
           }),
         );
@@ -702,7 +703,9 @@ async function connectAgent(config: SavedConfig): Promise<"stopped" | "rePair"> 
                     })),
                     desired_enabled: false,
                   };
-                  exitAfterResponse = stopCurrent && runningAsBackgroundAgent;
+                  // Stop the connected owner even when it is a foreground
+                  // terminal. Disabling the supervisor alone is not a stop.
+                  exitAfterResponse = stopCurrent;
                 }
               });
               backgroundSettings = change.catch(() => undefined);

@@ -2,6 +2,29 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.6.1 - Unreleased
+
+### RC.5: native pause, resume and complete disconnect
+
+- Running: Go execution core and tools available. Paused: supervised, authenticated wake-only outbound connection with **no execution core** and no ordinary computer tools; Dashboard resumes via an explicit owner-authorized control request.
+- Disconnect: disable supervision, drop both execution and wake connections, and require local restart. A paused device can be fully disconnected.
+- Persist executionPaused and re-read it after the execution lease transfers between foreground and background processes, so a paused device survives worker restarts without restoring terminal/file permissions.
+
+### RC.4: silent Windows login recovery and runtime fixes
+
+- Start the native Windows Go supervisor invisibly at user login instead of showing a console window. Closing an incidental CMD window no longer stops the real supervisor.
+- Migrate legacy direct-console HKCU Run entries to a validated Windows Script Host launcher while preserving existing device pairing and execution lease ownership.
+- Keep the desktop's Stop Agent and explicit recovery-disabled semantics intact; this is user-login recovery, not an elevated Windows service.
+
+### RC.3: macOS background recovery migration and remote Stop Agent
+
+- Restore a version-gated Stop Agent button for any online foreground or background executor, disable automatic recovery first, and confirm the device has actually disconnected.
+- Prevent older device runtimes from reporting a successful remote stop they do not implement; preserve their pairing and original owner.
+- Wait for an abandoned 15-second TS/Go execution lease to expire before attempting Windows Go background recovery; never steal a live lease.
+
+- Replace an idle stale loaded launchd Node/TS job with the Go service before bootstrapping the same label. Fail closed when a foreign loaded job is executing, preserving pairing and current foreground work.
+- Follow-up device-side patch to 0.6.0; published 0.6.0 binary hashes remain immutable.
+
 ## 0.6.0 - 2026-10-09
 
 ### Native Go Agent and Execution Core by default

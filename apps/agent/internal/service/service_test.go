@@ -19,20 +19,27 @@ func TestNativeServiceInstallationIdempotencyAndDisablePreservesWorker(t *testin
 			c := &Controller{Home: dir, Platform: platform, Executable: source, Version: "test", UID: "501", Wait: func(time.Duration) {}}
 			var calls []string
 			disabled := false
+			registryValue := ""
 			c.Run = func(ctx context.Context, name string, args ...string) (string, error) {
 				line := name + " " + strings.Join(args, " ")
 				calls = append(calls, line)
 				switch {
 				case strings.Contains(line, "reg.exe query"):
-					r, e := c.read()
-					if e != nil || disabled {
+					if registryValue == "" || disabled {
 						return "", errors.New("absent")
 					}
-					return r.Binary, nil
+					return registryValue, nil
 				case strings.Contains(line, "reg.exe delete"), strings.Contains(line, "launchctl disable"), strings.Contains(line, "systemctl --user disable"):
 					disabled = true
 				case strings.Contains(line, "reg.exe add"), strings.Contains(line, "launchctl enable"), strings.Contains(line, "systemctl --user enable"):
 					disabled = false
+					if platform == "windows" {
+						for i := range args {
+							if args[i] == "/d" && i+1 < len(args) {
+								registryValue = args[i+1]
+							}
+						}
+					}
 				case strings.Contains(line, "Get-CimInstance"):
 					return "101", nil
 				case strings.Contains(line, "is-enabled"):
@@ -48,7 +55,11 @@ func TestNativeServiceInstallationIdempotencyAndDisablePreservesWorker(t *testin
 					}
 					return "", nil
 				case strings.Contains(line, "launchctl print "):
-					return "pid = 101", nil
+					r, err := c.read()
+					if err != nil {
+						return "", errors.New("not loaded")
+					}
+					return "program = " + r.Binary + "\npid = 101", nil
 				}
 				return "", nil
 			}
@@ -64,12 +75,33 @@ func TestNativeServiceInstallationIdempotencyAndDisablePreservesWorker(t *testin
 			if string(bytes) != "binary-fixture" || r.Engine != "go" {
 				t.Fatal("binary was not persisted")
 			}
+			if platform == "windows" {
+				if !strings.Contains(strings.ToLower(registryValue), "wscript.exe") || strings.Contains(registryValue, r.Binary) {
+					t.Fatalf("Windows login must use silent script instead of console binary: %s", registryValue)
+				}
+				data, err := os.ReadFile(c.windowsStartupScriptPath())
+				if err != nil || string(data) != windowsStartupScript(r.Binary) {
+					t.Fatalf("Windows startup script mismatch: %v", err)
+				}
+				if !strings.Contains(string(data), " --supervise") || !strings.Contains(string(data), ", 0, False") {
+					t.Fatal("not a hidden, non-blocking supervisor start")
+				}
+				found := false
+				for _, line := range calls {
+					if strings.Contains(line, "wscript.exe //B //Nologo") {
+						found = true
+					}
+				}
+				if !found {
+					t.Fatal("initial Go activation did not use the silent host")
+				}
+			}
 			calls = nil
 			if _, e = c.Enable(context.Background()); e != nil {
 				t.Fatal(e)
 			}
 			for _, line := range calls {
-				if strings.Contains(line, "Start-Process") || strings.Contains(line, "bootstrap") || strings.Contains(line, "enable --now") {
+				if strings.Contains(line, "Start-Process") || strings.Contains(line, "wscript.exe //B") || strings.Contains(line, "bootstrap") || strings.Contains(line, "enable --now") {
 					t.Fatal("healthy service restarted")
 				}
 			}
