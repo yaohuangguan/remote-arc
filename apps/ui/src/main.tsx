@@ -3007,10 +3007,10 @@ function BlogsPage({ user }: { user?: User | null }) {
           "Engineering notes, architecture decisions, security trade-offs and product reasoning from building Remote Arc.",
           "记录 Remote Arc 的工程实现、架构决策、安全取舍和产品思考。",
         )}</p>
-        <nav className="readingPageLinks">
-          <a href="/docs">{tr("Docs", "文档")} →</a>
-          <a href="/security-model">{tr("Security", "安全")} →</a>
-          <a href="/docs#docs-routing">{tr("Architecture notes", "架构说明")} →</a>
+        <nav className="readingPageLinks" aria-label={tr("Explore related resources", "相关资源")}>
+          <a href={localizedWebsiteHref("/docs", locale)}>{tr("Docs", "文档")} →</a>
+          <a href={localizedWebsiteHref("/security-model", locale)}>{tr("Security", "安全")} →</a>
+          <a href={localizedWebsiteHref("/docs#docs-routing", locale)}>{tr("Architecture notes", "架构说明")} →</a>
         </nav>
       </section>
 
