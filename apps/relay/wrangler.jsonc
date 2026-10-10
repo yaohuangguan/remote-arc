@@ -21,12 +21,6 @@
       "*/5 * * * *"
     ]
   },
-  "analytics_engine_datasets": [
-    {
-      "binding": "MCP_ANALYTICS",
-      "dataset": "remote_arc_mcp_health"
-    }
-  ],
   "durable_objects": {
     "bindings": [
       {
