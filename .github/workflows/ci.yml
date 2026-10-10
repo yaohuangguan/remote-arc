@@ -58,7 +58,7 @@ jobs:
           if [[ "$CLI_VERSION" != *-* ]]; then
             node scripts/verify-device-artifacts.mjs
           fi
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: go-device-binaries
           path: work/go-device/*
@@ -89,7 +89,7 @@ jobs:
       - run: pnpm test:device
       - run: node scripts/go-device-soak.mjs --duration-seconds 60 --report work/benchmarks/soak.json
       - run: node benchmarks/agent.mjs --samples 20 --rounds 1 --profiles atomic --report work/benchmarks/agent-smoke.json
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: agent-validation-${{ matrix.os }}
