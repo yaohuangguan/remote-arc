@@ -1,6 +1,8 @@
 # Install command tabs and production verification
 
-The homepage defaults to npx. The same command card offers curl for native macOS/Linux/WSL installation and Homebrew, with the relevant requirements and matching copy action. Windows users can use npx or the native download link. The curl/Homebrew command blocks include remotelink for the first launch; installation does not authorize a device or grant tools by itself. The Homebrew tab links to the full tap/trust instructions. Lazy-loaded download pages restore the requested Homebrew or shell-install fragment after mounting.
+The homepage defaults to npx and offers a compact curl tab for native macOS/Linux/WSL installation. Homebrew remains in the Downloads guide rather than the homepage. The curl command includes remotelink for the first launch; installation does not authorize a device or grant tools by itself. Lazy-loaded download pages restore requested Homebrew or shell-install fragments after mounting.
+
+The laptop Hero uses a two-line headline, a one-sentence introduction and a topology that scales with viewport height. Full product and free-plan explanations sit in the lower page. It has no fixed-height clipping. Browser checks cover ten viewports (320–2560 CSS pixels), both languages and both themes, including two-tab switching, copy states and the Connect/Arc visualization.
 
 The tabs support Left/Right, Home/End, roving focus, labeled panels and clipboard failure feedback. Changing methods clears old copy status, including a still-pending clipboard request. The card uses the existing theme tokens and respects reduced motion.
 

@@ -24,6 +24,7 @@ import { SecurityAuthorizations } from "./security-authorizations.js";
 import { waitForAgentOffline, waitForRecoveryState } from "./background-recovery.js";
 import "./styles.css";
 import "./dashboard.css";
+import "./laptop-hero.css";
 
 declare const __REMOTEARC_CLI_VERSION__: string;
 
@@ -2485,13 +2486,9 @@ function Landing({ user }: { user?: User | null }) {
           <span className="eyebrow">{tr("PERSISTENT AGENT RUNTIME", "持久化 AGENT RUNTIME")}</span>
           <HeroHeadline />
           <p>{tr(
-            "Don't just chat with AI. In a compatible AI chat, ask it to inspect files, fix code and run approved tools on your own computers. Remote Arc connects your tools and computers, so you can manage your device fleet, create your AI teammates, and keep work moving across chats.",
-            "别让 AI 只停留在聊天。就在你熟悉的 AI 对话里，让它检查文件、修复代码、执行电脑上已授权的工具。Remote Arc 连接你的工具与电脑，让你管理设备集群、创建 AI 队友，并让工作跨对话持续推进。"
+            "Your AI. Your apps. Your computers. Working together, without an API key.",
+            "你的 AI、应用与电脑，一起动手完成任务。无需 API Key。"
           )}</p>
-          <div className="heroAiPlanNote">
-            <strong>{tr("No model API key to configure. No pay-per-token API bill to top up.", "不用配置模型 API Key，也不用额外充值按量计费的 API Token。")}</strong>
-            <span>{tr("A compatible free chat can be enough—for example, Claude Free currently supports one custom MCP connector. Your AI provider’s tool permissions, chat limits and Remote Arc tool-call limits still apply.", "如果免费聊天套餐支持自定义 MCP，也可以直接使用，例如 Claude Free 目前支持一个自定义连接器。AI 服务商的工具权限、聊天额度和 Remote Arc 工具调用额度仍然适用。")}</span>
-          </div>
           <InstallCommands />
           <div className="landingActions">
             <a className="primaryButton goldButton" href="/install/chatgpt">{tr("Installation guide", "安装指南")}</a>
