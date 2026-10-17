@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test:scheduling": "tsx scripts/schedule-clock-test.ts",
     "test:seo": "tsx scripts/seo-smoke.mjs",
-    "test:apps": "tsx scripts/apps-test.ts && tsx scripts/apps-expansion-test.ts && tsx scripts/apps-directory.ts --check",
+    "test:apps": "tsx scripts/apps-test.ts && tsx scripts/apps-expansion-test.ts && tsx scripts/apps-connect-preflight-test.ts && tsx scripts/apps-directory.ts --check",
+    "apps:preflight": "tsx scripts/apps-connect-preflight.ts",
     "test:security": "pnpm test:apps && tsx scripts/host-routing-test.ts && tsx scripts/oauth-security-test.ts && tsx scripts/email-auth-test.ts && tsx scripts/security-controls-test.ts && tsx scripts/approval-broker-test.ts && tsx scripts/mcp-error-contract-test.ts && tsx scripts/file-resource-chunk-test.ts && tsx scripts/device-revocation-test.ts && tsx scripts/device-pause-test.ts && tsx scripts/scalability-guardrails-test.ts && tsx scripts/admin-operations-test.ts && tsx scripts/engagement-smoke.mjs && tsx scripts/model-billing-test.ts && tsx scripts/admin-service-test.mjs",
     "test:model-billing": "tsx scripts/model-billing-test.ts"
   },

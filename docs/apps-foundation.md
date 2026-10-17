@@ -1,6 +1,6 @@
 # Native Apps foundation
 
-Remote Arc runs its own connector infrastructure and calls provider APIs directly. There is no Lindy or Composio runtime dependency. The default product model is Remote Arc-owned OAuth clients with per-user consent; end users do not register developer applications. User-owned API credentials are also supported for six providers. Enterprise-owned OAuth clients and remote official MCP adapters remain future extensions.
+Remote Arc runs its own connector infrastructure and calls provider APIs directly. There is no Lindy or Composio runtime dependency. The default product model is Remote Arc-owned OAuth clients with per-user consent; end users do not register developer applications. User-owned API credentials are supported for Runway and WhatsApp Business; the remaining 27 connectors use platform-managed OAuth. Enterprise-owned OAuth clients and remote official MCP adapters remain future extensions.
 
 ## Implemented surface
 

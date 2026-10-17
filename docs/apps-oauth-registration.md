@@ -1,6 +1,6 @@
 # Apps: developer registration and end-user authorization
 
-Status: implementation in progress. No connector OAuth applications have been registered or configured in production. This guide prepares the developer setup; it does not claim real-account acceptance has passed.
+Status: OAuth implementation merged; production platform clients still require operator registration and configuration. Check live `/api/apps/status` for current readiness. A code release and an OAuth configuration flag do not establish real-account acceptance.
 
 ## Two separate responsibilities
 
@@ -43,7 +43,7 @@ Use the actual HTTPS App origin of the environment being registered. Production 
 | Google | `https://mcp.remotearc.app/api/apps/oauth/gmail/callback`, `https://mcp.remotearc.app/api/apps/oauth/google_calendar/callback` |
 | Microsoft | `https://mcp.remotearc.app/api/apps/oauth/outlook/callback`, `https://mcp.remotearc.app/api/apps/oauth/microsoft_calendar/callback` |
 
-The original four platform registrations cover six initial connectors. The current generated pack expands this to fifteen platform registrations covering 27 OAuth connectors, plus two user-owned API credential connectors. The table above documents the original callbacks; the generated pack is the complete current callback list. The pack declares the full supported scope set so it can support both read and write users. The actual authorization URL requests only the user's selected permissions.
+The original four platform registrations cover six initial connectors. The current generated pack covers fifteen identity-platform registrations for 27 OAuth connectors, plus two user-owned API credential connectors. The table above documents the original callbacks; the generated pack is the complete current callback list. The pack declares the full supported scope set so it can support both read and write users. The actual authorization URL requests only the user's selected permissions.
 
 ## GitHub
 
@@ -89,11 +89,11 @@ Reference: [register an application](https://learn.microsoft.com/en-us/graph/aut
 
 ## Server configuration and activation
 
-All eight client ID/secret values and the token vault key are server-side configuration. Never commit them, put them in browser variables, send them through an AI prompt, or ask end users to supply them. Enter credentials through the deployment platform's secret mechanism; the client IDs can also be stored there for consistent operations.
+All configured platform client ID/secret pairs and the token vault key are server-side configuration. Never commit them, put them in browser variables, send them through an AI prompt, or ask end users to supply them. Enter credentials through the deployment platform's secret mechanism; the client IDs can also be stored there for consistent operations.
 
 `APP_TOKEN_KEY` must be base64 encoding of 32 cryptographically random bytes. Generate it in the deployment environment and save it securely without printing it into chat or a build log. Existing encrypted connection and approval records depend on it; changing it without a migration invalidates those records. Separate environments require separate keys.
 
-Keep `ENABLE_APPS` unset until the connector code and schema are released through the protected production workflow and the following acceptance checks pass in an isolated environment. Only then set it to `1`. Registering an OAuth client alone does not activate Apps.
+`ENABLE_APPS=1` enables the Apps runtime, which is already deployed. A provider still reports `ready: false` and cannot authorize until its required credentials and platform settings exist. Registering an OAuth client alone does not verify or activate a usable connection. Apply credentials through the protected deployment workflow without modifying or rotating `APP_TOKEN_KEY`.
 
 ## Real-account acceptance
 
@@ -111,3 +111,18 @@ Protocol mocks and SQLite tests provide development coverage. They do not replac
 [Composio managed auth](https://docs.composio.dev/docs/authentication/custom-app-vs-managed-app) supplies developer OAuth applications for supported integrations. Its customers can skip those registrations, while every end user still grants consent for their own account. Composio stores and refreshes those connected-account credentials. Using a customer's own OAuth client is also supported for branding, scopes, and quotas.
 
 This implementation uses Remote Arc's own direct adapters and credentials. The product follows a comparable user-authorization experience while retaining its own authentication, execution, approvals, and cost controls across Connect and Arc Agent. Neither Lindy nor Composio is part of the runtime or deployment architecture.
+
+
+## Read-only production readiness preflight
+
+Use the registry-derived operator check before and after configuring each identity platform:
+
+```sh
+pnpm --filter @remotearc/relay apps:preflight
+pnpm --filter @remotearc/relay apps:preflight --json
+pnpm --filter @remotearc/relay apps:preflight --require-p0
+```
+
+This tool queries only the **public metadata** endpoint. It does not access Cloudflare secrets, create provider OAuth applications, authenticate any user, modify D1, or trigger provider API costs. It shows group-level Client ID/Secret **names** and exact callback URLs; ready means configured, not tested.
+
+Prioritize GitHub, Google, Slack, Microsoft and Notion. After registration, confirm provider API enablement, external consent/review eligibility, token rotation, and end-to-end operations with a specifically authorized test account. Mark a provider live-verified only after it successfully reads, and where permitted writes to, a dedicated test resource. Provider review may take longer than this engineering work.
